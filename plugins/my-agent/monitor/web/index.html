@@ -610,7 +610,7 @@ function stats(t, R) {
   evs.filter(e => e.k === 'agent').forEach(e => { if (e.live) { (models[e.model] = models[e.model] || { calls:0, tok:0, min:0, cost:0, live:0 }).live++; models[e.model].calls++; }
     else addM(modelOf(e), num(e.tok), num(e.dur), num(e.c), 1); });
   const mt = Object.values(mainOf(t, R)).reduce((a, [tk, c]) => [a[0] + tk, a[1] + c], [0, 0]);
-  models[L('opus · main session (approx.)', 'opus · 메인 세션 (근사)')] = { calls: 0, tok: mt[0], min: evs.length ? dm(evs[0].t, revEnd(t, R)) : 0, cost: mt[1], live: t.status === 'running' ? 1 : 0, main: true, nil: !hasMain(t) };
+  models[L('opus · main', 'opus · main')] = { calls: 0, tok: mt[0], min: evs.length ? dm(evs[0].t, revEnd(t, R)) : 0, cost: mt[1], live: t.status === 'running' ? 1 : 0, main: true, nil: !hasMain(t) };
   return { steps, models };
 }
 const money = c => c == null ? '–' : '$' + (+c).toFixed(2);
@@ -826,7 +826,7 @@ function replay(t) {
   const tokSoFar = done.reduce((a, x) => a + num(x.tok), 0), costSoFar = done.reduce((a, x) => a + num(x.c), 0);
   const lv = LV_OF(e.a);
   return `<div class="rp-ctrl"><button data-rp="first">${L('First', '처음')}</button><button data-rp="prev">${L('Prev', '이전')}</button><button data-rp="next" class="primary">${L('Next', '다음')}</button>
-      <button data-rp="play">${st.playing ? L('Pause ␣', '멈춤 ␣') : L('Auto-play ␣', '자동 재생 ␣')}</button>
+      <button data-rp="play">${st.playing ? L('Pause', '멈춤') : L('Auto-play', '자동 재생')}</button>
       <span class="seg">${[0.5, 1, 2, 4].map(v => `<button data-speed="${v}" aria-pressed="${(st.speed || 1) === v}">${v}×</button>`).join('')}</span><input type="range" min="0" max="${n - 1}" value="${i}" id="rp-range" aria-label="${L('Replay position', '재생 위치')}"><span class="count">${i + 1} / ${n}</span><span class="note" style="margin:0">${L('← → move · Space play', '← → 이동 · Space 재생')}</span></div>
     <div class="rp-grid">
       <div>${t.revs ? `<span class="badge rev">rev${rOf(e)}</span>` : ''}${vsteps(t, stats(t, rOf(e)), { key: 'rpstep', compact: true, sel: curStep, R: rOf(e), state: n => (t.revs && rOf(e) > 0 && n < t.revs[rOf(e)].back) ? 'inh' : e.k === 'rev' && n === curStep ? 'cut' : n < curStep ? 'done' : n === curStep ? 'cur' : 'todo' })}</div>
@@ -966,6 +966,8 @@ async function selectTask(key) {
   lastSig = JSON.stringify([TASKS, FULL[key], st.offline]);
   entering(); vt(() => renderAll()); setTimeout(() => scramble(document.querySelector('#task-head h2')), 30);
 }
+const hashTask = /^#task=(.+)$/.exec(location.hash);   // monitor-up.py --task: open on that task
+if (hashTask) try { st.task = decodeURIComponent(hashTask[1]); } catch (err) {}
 poll(); setInterval(poll, POLL_MS);
 </script>
 </body>

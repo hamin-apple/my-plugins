@@ -5,6 +5,7 @@ __pycache__/
 
 # my-agent
 plugins/my-agent/.superpowers/
+plugins/my-agent/monitor/menubar/build/
 # my-agent monitor test fixtures (generated)
 plugins/my-agent/monitor/tests/fixtures/projects/
 plugins/my-agent/monitor/tests/fixtures/claude-projects/

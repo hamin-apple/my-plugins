@@ -189,7 +189,9 @@ my-agent는 phase 4개, 단계 8개, 게이트 5개(G1a, G1b, G2, G3, E)를 거�
 
 - **위치:** 코드를 `~/dev/my-agent/monitor/`로 옮깁니다. 폴더 안 구조와 테스트는 그대로입니다.
 - **`GET /api/health`:** `{"app": "my-agent-monitor", "root": <monitor 폴더 절대 경로>}`를 돌려줍니다. 실행 스크립트가 이미 떠 있는 서버를 알아보는 데 씁니다.
-- **`monitor-up.py`:** 이미 떠 있으면 URL만 출력하고, 없으면 빈 포트에 서버를 띄웁니다. `--open`, `--no-open`, `status`, `stop`을 받습니다. 어떤 경우에도 exit 0입니다.
+- **`monitor-up.py`:** 이미 떠 있으면 URL만 출력하고, 없으면 빈 포트에 서버를 띄웁니다. `--open`, `--no-open`, `--window`, `--tab`, `--task <key>`, `status`, `stop`을 받습니다. 여는 방식(`window`/`tab`)은 옵션, `~/dev/agent-tasks/monitor-config.json`, 기본값 `window` 순서로 정합니다. 브라우저(`default`/`safari`/`chrome`)는 `--browser` 옵션, 설정 파일의 `browser`, 기본값 `default`(기본 브라우저를 알아냄) 순서로 정하고, `monitor-up.py set-browser <값>`이 설정 파일의 `browser`만 바꿔 씁니다. 고른 브라우저가 열리지 않으면 기본 브라우저 탭으로 대체합니다. 어떤 경우에도 exit 0입니다.
+- **작업 링크:** `/#task=<key>`(key는 `<sha1 8자>/<task-id>`, URL 인코딩)로 열면 그 작업이 골라집니다. 키가 틀리거나 끝난 작업이면 기존 선택 규칙을 따릅니다.
+- **메뉴바 앱:** `monitor/menubar/`의 작은 앱이 진행 중 작업 수와 작업별 줄을 보이고 `monitor-up.py`를 실행합니다(`monitor/menubar/README.md`).
 - **가격표 덮어쓰기:** `~/dev/agent-tasks/prices.json`이 있으면 모니터 폴더의 `prices.json` 대신 씁니다.
 - **누가 띄우나:** my-agent Router가 Intake에서 작업 위치를 정한 직후, 그리고 `/my-agent:monitor`를 직접 부를 때입니다.
 - **수명:** 세션이 끝나도 서버는 남습니다. `/my-agent:monitor stop`으로 끕니다.

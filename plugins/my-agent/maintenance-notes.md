@@ -94,6 +94,7 @@
 ## 모니터 (`monitor/`, 레벨 밖)
 
 - `monitor-up.py`가 8765–8775 중 첫 빈 포트에 띄운다. 상태는 `~/dev/agent-tasks/monitor.json`, 출력은 `monitor.log`. 끄기는 `/my-agent:monitor stop`.
+- 여는 방식은 `~/dev/agent-tasks/monitor-config.json`(`window`/`tab`). 메뉴바 앱은 `monitor/menubar/`이고, 로그인 항목 해제는 `login-item.sh uninstall`.
 - 가격표는 `~/dev/agent-tasks/prices.json`이 있으면 그것을 쓴다.
 - 알려진 표시 문제: `call:`만 있고 `start:`가 없는 호출(거부되었거나 시작하지 못한 에이전트)은 계속 "running"으로 보인다. 내용 없는 partial의 `result=-`가 결과 칸에 `-`로 보인다.
 

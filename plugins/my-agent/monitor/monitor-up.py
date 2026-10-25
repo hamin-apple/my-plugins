@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Start the my-agent monitor once and print its URL (architecture 4.7.4, monitor spec 6.1).
 
-usage: monitor-up.py [--open | --no-open] [--ports A-B]
+usage: monitor-up.py [--open | --no-open] [--window | --tab] [--browser default|safari|chrome] [--task KEY] [--ports A-B]
+       monitor-up.py set-browser default|safari|chrome
        monitor-up.py status [--ports A-B]
        monitor-up.py stop [--ports A-B]
 
@@ -20,8 +21,11 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
+
+from monitor.opener import BROWSERS, open_monitor, read_browser, read_mode, write_browser
 
 ROOT = Path(__file__).resolve().parent
 HOST = '127.0.0.1'
@@ -75,11 +79,16 @@ def read_state():
         return None
 
 
-def start(ports, open_browser):
+def start(ports, open_browser, mode=None, task=None, browser=None):
+    def show(port):
+        link = url(port) + ('#task=' + urllib.parse.quote(task, safe='') if task else '')
+        open_monitor(link, mode or read_mode(tasks_dir()),
+                     browser=browser if browser in BROWSERS else read_browser(tasks_dir()))
+
     port = find_running(ports)
     if port is not None:
         if open_browser is True:
-            subprocess.run(['open', url(port)], check=False)
+            show(port)
         return f'monitor: {url(port)} (running)'
     free = next((p for p in ports if port_free(p)), None)
     if free is None:
@@ -96,7 +105,7 @@ def start(ports, open_browser):
                      'started': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             (d / 'monitor.json').write_text(json.dumps(state), encoding='utf-8')
             if open_browser is not False:
-                subprocess.run(['open', url(free)], check=False)
+                show(free)
             return f'monitor: {url(free)} (started)'
         if proc.poll() is not None:
             break
@@ -134,6 +143,14 @@ def stop(ports):
     return f"monitor: stopped {st['port']}"
 
 
+def set_browser(value):
+    if value not in BROWSERS:
+        return f"monitor: browser not changed (expected one of {', '.join(BROWSERS)})"
+    if not write_browser(tasks_dir(), value):
+        return 'monitor: browser not changed (cannot write monitor-config.json)'
+    return f'monitor: browser set to {value}'
+
+
 def parse_ports(text: str):
     a, _, b = text.partition('-')
     lo, hi = int(a), int(b or a)
@@ -144,16 +161,22 @@ def parse_ports(text: str):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument('action', nargs='?', choices=('start', 'status', 'stop'), default='start')
+    ap.add_argument('action', nargs='?', choices=('start', 'status', 'stop', 'set-browser'), default='start')
+    ap.add_argument('value', nargs='?', default=None, help='for set-browser: default | safari | chrome')
     g = ap.add_mutually_exclusive_group()
-    g.add_argument('--open', dest='open_browser', action='store_const', const=True, help='always open the browser')
-    g.add_argument('--no-open', dest='open_browser', action='store_const', const=False, help='never open the browser')
+    g.add_argument('--open', dest='open_browser', action='store_const', const=True, help='always open the monitor')
+    g.add_argument('--no-open', dest='open_browser', action='store_const', const=False, help='never open the monitor')
+    m = ap.add_mutually_exclusive_group()
+    m.add_argument('--window', dest='mode', action='store_const', const='window', help='open in a new window this time')
+    m.add_argument('--tab', dest='mode', action='store_const', const='tab', help='open in a browser tab this time')
+    ap.add_argument('--browser', default=None, metavar='B', help='open in default | safari | chrome this time (unknown: use the config)')
+    ap.add_argument('--task', default=None, metavar='KEY', help='open with this task selected (<sha1 8>/<task-id>)')
     ap.add_argument('--ports', default='8765-8775')
     args = ap.parse_args(argv)
     try:
         ports = parse_ports(args.ports)
-        line = {'start': lambda: start(ports, args.open_browser), 'status': lambda: status(ports),
-                'stop': lambda: stop(ports)}[args.action]()
+        line = {'start': lambda: start(ports, args.open_browser, args.mode, args.task, args.browser), 'status': lambda: status(ports),
+                'stop': lambda: stop(ports), 'set-browser': lambda: set_browser(args.value)}[args.action]()
     except Exception as exc:   # one line and exit 0 whatever happens: my-agent must not stop for the monitor
         line = f'monitor: not started ({type(exc).__name__}: {exc})'
     print(line, flush=True)

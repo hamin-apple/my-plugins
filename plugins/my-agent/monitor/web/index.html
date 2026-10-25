@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>my-agent monitor</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --t1: #8fb0ff; --t2: #e8b45c; --t3: #5fd0ae; --t4: #b4bdc8;
+  --bg: #eef1f4; --surface: #fff; --surface-2: #f6f8fa; --ink: #17202a; --muted: #5a6674; --line: #d3dae2;
+  --accent: #2552c9;
+  --l1: #2552c9; --l1-soft: #e3eafb; --l2: #a86a10; --l2-soft: #f8edda;
+  --l3: #17806a; --l3-soft: #dcf1ea; --l4: #5d6775; --l4-soft: #e7eaee;
+  --gate: #c43d12; --gate-soft: #fbe5dc; --ok: #1d7a3e; --ok-soft: #dff2e5; --run: #2552c9;
+  --term-bg: #121a23; --term-ink: #d8e1ea; --term-dim: #7f8d9c;
+  --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #0e1319; --surface: #151c24; --surface-2: #1a232d; --ink: #e4eaf0; --muted: #93a1b0; --line: #2a3542;
+  --accent: #7ea3ff; --l1: #7ea3ff; --l1-soft: #1c2a47; --l2: #e2aa4f; --l2-soft: #3a2c14;
+  --l3: #4cc5a3; --l3-soft: #133a31; --l4: #a3adba; --l4-soft: #262f3a;
+  --gate: #ff8a5c; --gate-soft: #3e2016; --ok: #5fd08a; --ok-soft: #143222; --run: #7ea3ff;
+  --term-bg: #0a0f14; color-scheme: dark; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.55 var(--sans); }
+code, .mono { font-family: var(--mono); font-size: .9em; }
+button { font: inherit; color: inherit; cursor: pointer; }
+h2, h3 { margin: 0; line-height: 1.3; }
+
+/* top bar */
+.top { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+  padding: 10px 18px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .brand { font-family: var(--mono); font-weight: 600; font-size: 16px; }
+.top .live { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; }
+.dot.run { background: var(--run); animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.top .spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 4px 10px; font-size: 12px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.task-select { display: none; font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); }
+
+/* shell */
+.shell { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: calc(100vh - 50px); }
+aside.tasks { border-right: 1px solid var(--line); background: var(--surface); padding: 14px 10px; }
+aside.tasks h3 { font-size: 12px; letter-spacing: .06em; color: var(--muted); padding: 0 8px 8px; }
+.filter { display: flex; gap: 4px; padding: 0 6px 10px; flex-wrap: wrap; }
+.filter button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--muted); }
+.filter button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.titem { display: block; width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: 8px; padding: 8px 10px; margin-bottom: 4px; }
+.titem:hover { background: var(--surface-2); }
+.titem[aria-current="true"] { background: var(--l1-soft); border-color: var(--l1); }
+.titem .id { font-family: var(--mono); font-size: 12.5px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+.titem .meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.titem .mini-rail { display: flex; gap: 2px; margin-top: 5px; }
+.titem .mini-rail i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+.titem .mini-rail i.done { background: var(--ok); }
+.titem .mini-rail i.cur { background: var(--run); }
+.titem .mini-rail i.stop { background: var(--gate); }
+.badge { font-size: 11px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.badge.run { color: var(--run); border-color: var(--run); }
+.badge.wait { color: var(--gate); border-color: var(--gate); background: var(--gate-soft); }
+.badge.done { color: var(--ok); border-color: var(--ok); }
+.badge.stop { color: var(--gate); border-color: var(--gate); }
+
+main { padding: 16px 20px 60px; min-width: 0; }
+.task-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin-bottom: 12px; }
+.task-head h2 { font-family: var(--mono); font-size: 19px; }
+.task-head .t { color: var(--muted); }
+.task-head .where { font-size: 12px; color: var(--muted); width: 100%; }
+nav.tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+nav.tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 7px 12px; color: var(--muted); font-weight: 500; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+nav.tabs .k { font-family: var(--mono); font-size: 11px; margin-right: 5px; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel > .ph { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.panel > .ph h3 { font-size: 14px; }
+.panel > .ph small { color: var(--muted); font-size: 12px; }
+
+/* layouts */
+.panels { display: grid; gap: 14px; }
+body.lay-a .panel[data-view]:not(.on) { display: none; }
+body.lay-b aside.tasks, body.lay-c aside.tasks { display: none; }
+body.lay-b .shell, body.lay-c .shell { grid-template-columns: minmax(0, 1fr); }
+body.lay-b .task-select, body.lay-c .task-select { display: inline-block; }
+body.lay-b nav.tabs, body.lay-c nav.tabs { display: none; }
+body.lay-b .panels { grid-template-columns: 1fr 1fr 1.3fr; }
+body.lay-b .panel[data-view="status"] { grid-column: 1 / -1; }
+body.lay-b .arch-grid { grid-template-columns: 1fr; }
+body.lay-b .lv .chips { grid-template-columns: 1fr 1fr; }
+body.lay-b .log-wrap { max-height: 520px; overflow: auto; }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; } aside.tasks { display: none; } .task-select { display: inline-block; }
+  body.lay-b .panels { grid-template-columns: 1fr; }
+}
+
+/* status panel */
+.rail { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.phase { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--surface-2); }
+.phase.done { border-color: var(--ok); }
+.phase.cur { border-color: var(--run); box-shadow: 0 0 0 2px var(--l1-soft); }
+.phase .pn { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; }
+.steps { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.step { font-size: 12px; display: flex; gap: 6px; align-items: center; color: var(--muted); }
+.step b { font-family: var(--mono); font-weight: 500; width: 14px; }
+.step.done { color: var(--ink); } .step.done::before { content: "✓"; color: var(--ok); width: 10px; }
+.step.cur { color: var(--run); font-weight: 600; } .step.cur::before { content: "▶"; width: 10px; font-size: 10px; }
+.step.todo::before, .step.skip::before { content: "·"; width: 10px; }
+.step.skip { text-decoration: line-through; }
+.gate-lamp { font-family: var(--mono); font-size: 11px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); }
+.gate-lamp.ok { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+.gate-lamp.wait { border-color: var(--gate); color: var(--gate); background: var(--gate-soft); animation: pulse 1.4s infinite; }
+.now { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 760px) { .now { grid-template-columns: 1fr; } .rail { grid-template-columns: 1fr 1fr; } }
+.now-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.now-box h4 { margin: 0 0 6px; font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.detail-col .agent-row, .side .agent-row { grid-template-columns: auto minmax(0, 1fr); } .detail-col .agent-row .tm, .side .agent-row .tm { grid-column: 2; text-align: left; }
+.agent-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px dashed var(--line); font-size: 13px; }
+.agent-row:first-of-type { border-top: 0; }
+.agent-row .nm { font-family: var(--mono); font-size: 12.5px; }
+.agent-row .sub { color: var(--muted); font-size: 12px; }
+.agent-row .tm { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; }
+.wait-box { border: 1px solid var(--gate); background: var(--gate-soft); border-radius: 8px; padding: 8px 12px; margin-top: 10px; font-size: 13px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-family: var(--mono); font-size: 12.5px; }
+.bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 3px; }
+.bar i { display: block; height: 100%; width: 100%; background: var(--accent); border-radius: 99px; transform-origin: left; transform: scaleX(var(--p, 0)); transition: transform .9s cubic-bezier(.2,.8,.2,1); }
+.bar.live i { background: repeating-linear-gradient(45deg, var(--accent) 0 8px, color-mix(in srgb, var(--accent) 65%, var(--surface)) 8px 16px); background-size: 22px 22px; animation: stripes .7s linear infinite; }
+.bar.warn i { background-color: var(--l2); } .bar.bad i { background: var(--gate); }
+.bar.ok i { background: var(--ok); }
+@keyframes stripes { to { background-position: 22px 0; } }
+.fnew { font-weight: 600; background: linear-gradient(90deg, var(--accent), var(--l3), var(--l2), var(--accent)); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad 3s linear infinite; }
+.fnew.typing::after { content: "▍"; color: var(--accent); -webkit-text-fill-color: var(--accent); animation: caret .7s step-end infinite; }
+@keyframes grad { to { background-position: -300% 0; } }
+@keyframes caret { 50% { opacity: 0; } }
+.mock { margin-top: 10px; border: 1px dashed var(--accent); border-radius: 8px; padding: 8px 10px; }
+.mock h5 { margin: 0 0 6px; font-size: 12px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mock pre { margin: 0; background: var(--term-bg); color: var(--term-ink); border-radius: 6px; padding: 8px 10px; font: 12px/1.5 var(--mono); white-space: pre-wrap; }
+.diff .dl { display: block; padding: 0 6px; border-radius: 3px; }
+body.entering .diff .dl, .diff.fresh .dl { animation: rise .35s backwards; animation-delay: calc(var(--i) * 40ms); }
+.diff .dl.add { background: color-mix(in srgb, var(--ok) 30%, transparent); }
+.diff .dl.del { background: color-mix(in srgb, var(--gate) 30%, transparent); text-decoration: line-through; }
+.fsplit { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.fside { position: sticky; top: 64px; } .fside .preview, .fside .mock { margin-top: 0; } .fside .preview { max-height: calc(100vh - 140px); min-height: 220px; }
+@media (max-width: 860px) { .fsplit { grid-template-columns: 1fr; } .fside { position: static; } }
+.lvcard { display: flex; flex-direction: column; gap: 5px; }
+.lvw { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 0 8px; border-left: 3px solid var(--c); background: var(--soft); border-radius: 5px; padding: 5px 8px; font-size: 12.5px; }
+.lvw > b { font-family: var(--mono); color: var(--c); grid-row: span 2; }
+.lvw .ln2 { font-size: 11px; color: var(--muted); }
+.lvw .items { display: flex; flex-direction: column; gap: 2px; }
+.lvw .items code { font-size: 11px; background: var(--surface); }
+.lvw .tm2 { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.lvw .none { color: var(--muted); opacity: .7; }
+body.entering .lvw, .lvw.fresh { animation: rise .35s backwards; }
+.kpis { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+@media (max-width: 1000px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi .kl { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; }
+.kpi .kv2 { font: 600 18px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .kv2.ok { color: var(--ok); } .kpi .kv2.warn { color: var(--l2); } .kpi .kv2.bad { color: var(--gate); }
+.kpi .ks { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .bar { margin: 2px 0 0; }
+.dash { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 960px) { .dash { grid-template-columns: 1fr; } }
+.p2h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 13px; } .p2h small { color: var(--muted); font-size: 11.5px; }
+.ltag { font-weight: 600; } .ltag.t1 { color: var(--t1); } .ltag.t2 { color: var(--t2); } .ltag.t3 { color: var(--t3); } .ltag.t4 { color: var(--t4); }
+.lvbadge { font: 600 11px var(--mono); padding: 0 6px; border-radius: 4px; color: var(--c); background: var(--soft); border: 1px solid var(--c); white-space: nowrap; }
+.sum-box { display: flex; flex-direction: column; gap: 7px; }
+.srow { display: grid; grid-template-columns: 66px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12.5px; }
+.srow .sl { color: var(--muted); font-size: 12px; }
+.srow .sv { font-family: var(--mono); font-size: 12.5px; text-align: right; } .srow .sv small { color: var(--muted); font-family: var(--sans); }
+.srow:last-child { grid-template-columns: 66px minmax(0, 1fr); } .srow:last-child .sv { text-align: left; }
+.cells { display: flex; gap: 3px; } .cells i { flex: 1; height: 10px; border-radius: 3px; background: var(--line); }
+.cells i.pass { background: var(--ok); animation: pop .5s backwards; } .cells i.fail { background: var(--gate); }
+.cells i.run { background: linear-gradient(90deg, var(--line) 25%, var(--l1-soft) 50%, var(--line) 75%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+.pills { display: flex; gap: 4px; flex-wrap: wrap; grid-column: 2 / -1; }
+.pill { font: 11.5px var(--mono); padding: 0 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.pill.warn { border-color: var(--l2); color: var(--l2); } .pill.bad { border-color: var(--gate); color: var(--surface); background: var(--gate); }
+.gauge { display: grid; grid-template-columns: 110px minmax(0, 1fr) 92px; gap: 8px; align-items: center; font-size: 12.5px; padding: 3px 0; }
+.gauge .gv { font-family: var(--mono); font-size: 12px; text-align: right; }
+.gauge .bar { margin: 0; }
+.crit { display: flex; gap: 3px; margin-top: 6px; }
+.crit span { flex: 1; height: 18px; border-radius: 4px; background: var(--line); display: grid; place-items: center; font: 600 10.5px var(--mono); color: var(--muted); }
+.crit span.pass { background: var(--ok); color: var(--surface); animation: pop .5s backwards; }
+.crit span.fail { background: var(--gate); color: var(--surface); }
+.crit span.run { background: linear-gradient(90deg, var(--line) 25%, var(--l1-soft) 50%, var(--line) 75%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+/* running step: pulse ring + shimmer */
+.vs.cur .no { animation: ring 1.6s ease-out infinite; }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--run) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.vs.cur { background: linear-gradient(90deg, var(--surface) 30%, var(--l1-soft) 50%, var(--surface) 70%); background-size: 250% 100%; animation: shimmer 2.6s linear infinite; }
+.dots3 { display: inline-flex; gap: 3px; vertical-align: middle; }
+.dots3 i { width: 5px; height: 5px; border-radius: 50%; background: var(--run); animation: bounce 1s ease-in-out infinite; }
+.dots3 i:nth-child(2) { animation-delay: .15s; } .dots3 i:nth-child(3) { animation-delay: .3s; }
+@keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-4px); opacity: 1; } }
+/* entrance */
+body.entering .panel.on .now-box, body.entering .panel.on .vs, body.entering .panel.on .vph, body.entering .panel.on .vgate, body.entering .panel.on .lv, body.entering .panel.on .frow { animation: rise .45s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i, 0) * 28ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.num { font-variant-numeric: tabular-nums; }
+/* ripple */
+button { position: relative; overflow: hidden; }
+.rpl { position: absolute; border-radius: 50%; background: color-mix(in srgb, var(--accent) 35%, transparent); transform: scale(0); animation: rpl .6s ease-out forwards; pointer-events: none; }
+@keyframes rpl { to { transform: scale(1); opacity: 0; } }
+/* timeline */
+.tl { position: relative; font-size: 12px; }
+.tl-axis { position: relative; height: 18px; margin-left: 170px; border-bottom: 1px solid var(--line); font: 10.5px var(--mono); color: var(--muted); }
+.tl-axis span { position: absolute; transform: translateX(-50%); }
+.tl-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: center; min-height: 26px; border-bottom: 1px dashed var(--line); }
+.tl-band { opacity: .7; } .tl-row .tl-mark { opacity: .35; }
+.tl-row .lb { font: 11.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+.tl-row .lb small { color: var(--muted); font-family: var(--sans); }
+.tl-track { position: relative; height: 26px; }
+.tl-bar { position: absolute; top: 6px; height: 14px; border-radius: 4px; background: var(--c, var(--accent)); transform-origin: left; min-width: 4px; cursor: pointer; transition: width .6s ease; }
+body.entering .tl-bar { animation: grow .8s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+.tl-bar.live { background: repeating-linear-gradient(45deg, var(--c) 0 6px, color-mix(in srgb, var(--c) 60%, var(--surface)) 6px 12px); background-size: 17px 17px; animation: stripes .7s linear infinite; }
+body.entering .tl-bar.live { animation: grow .8s backwards, stripes .7s linear infinite; }
+.tl-bar.mm { outline: 2px solid var(--gate); outline-offset: 1px; }
+@keyframes grow { from { transform: scaleX(0); } }
+.tl-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--gate); }
+.tl-mark b { position: absolute; top: -2px; left: 3px; font: 600 10px var(--mono); color: var(--gate); white-space: nowrap; }
+.tl-band { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+.tl-band span { position: absolute; top: 2px; left: 3px; font: 10px var(--mono); color: var(--muted); }
+.tl-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 8px 0; }
+.tl-legend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.mm-tag { font: 600 10.5px var(--mono); color: var(--surface); background: var(--gate); border-radius: 4px; padding: 0 5px; }
+.console .ln.mm { color: #ffb79b; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
+
+/* architecture */
+.arch-grid { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 320px); gap: 14px; justify-content: start; align-items: start; }
+@media (max-width: 900px) { .arch-grid { grid-template-columns: 1fr; } }
+.lv { border-left: 4px solid var(--c); background: var(--soft); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.lv1 { --c: var(--l1); --soft: var(--l1-soft); } .lv2 { --c: var(--l2); --soft: var(--l2-soft); }
+.lv3 { --c: var(--l3); --soft: var(--l3-soft); } .lv4 { --c: var(--l4); --soft: var(--l4-soft); }
+.lv .lh { font-size: 12px; display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; }
+.lv .lh b { color: var(--c); font-family: var(--mono); }
+.lv .lh span { color: var(--muted); }
+.lv .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.chip { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 8px; font-size: 12px; position: relative; opacity: .55; }
+.chip.used { opacity: 1; }
+.chip.live { opacity: 1; border-color: var(--c); box-shadow: 0 0 0 2px var(--c) inset; }
+.chip.sel { outline: 2px solid var(--ink); }
+.chip b { font-family: var(--mono); font-size: 12px; display: block; }
+.chip small { color: var(--muted); }
+.chip .cnt { position: absolute; top: 4px; right: 6px; font-family: var(--mono); font-size: 11px; color: var(--c); }
+.chip.live .cnt::after { content: " ●"; animation: pulse 1.4s infinite; }
+.arch-detail { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.arch-detail ul { padding-left: 18px; margin: 6px 0; }
+.legend { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+
+/* file tree */
+.ftree { font-family: var(--mono); font-size: 12.5px; }
+.frow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 3px 6px; border-radius: 4px; border: 0; background: transparent; width: 100%; text-align: left; }
+.frow:hover { background: var(--surface-2); }
+.frow.sel { background: var(--l1-soft); }
+.frow.todo { color: var(--muted); opacity: .6; }
+.frow.live .fn::after { content: " ●"; color: var(--run); animation: pulse 1.4s infinite; }
+.frow .fm { color: var(--muted); font-size: 11.5px; }
+.fgroup { font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 10px 0 4px; letter-spacing: .04em; }
+.preview { margin-top: 10px; background: var(--term-bg); color: var(--term-ink); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; max-height: 260px; overflow: auto; }
+.preview .h { color: var(--term-dim); }
+
+/* log */
+.log-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.sgroup { margin-bottom: 10px; }
+.sgroup > summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 4px 0; list-style: none; display: flex; gap: 8px; align-items: center; }
+.sgroup > summary::-webkit-details-marker { display: none; }
+.sgroup > summary::before { content: "▸"; color: var(--muted); }
+.sgroup[open] > summary::before { content: "▾"; }
+.sgroup > summary .sm { font-weight: 400; color: var(--muted); font-size: 12px; }
+.ev { display: grid; grid-template-columns: 44px 18px minmax(0, 1fr) auto; gap: 6px; padding: 4px 0 4px 14px; border-left: 2px solid var(--line); margin-left: 4px; font-size: 13px; align-items: start; }
+.ev .tt { font-family: var(--mono); font-size: 11.5px; color: var(--muted); padding-top: 1px; }
+.ev .ic { text-align: center; }
+.ev .tx small { color: var(--muted); display: block; font-size: 12px; }
+.ev .rt { font-family: var(--mono); font-size: 11.5px; color: var(--muted); text-align: right; white-space: nowrap; }
+.ev.popup { background: var(--gate-soft); border-left-color: var(--gate); border-radius: 0 6px 6px 0; }
+.ev.agent .tx b { font-family: var(--mono); font-weight: 500; font-size: 12.5px; }
+.ev.mismatch .rt { color: var(--gate); }
+.ev.new { animation: flash 2s; }
+@keyframes flash { from { background: var(--l1-soft); } }
+.res { font-family: var(--mono); font-size: 11px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--ok); color: var(--ok); }
+.res.run { border-color: var(--run); color: var(--run); }
+
+.utab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.utab th, .utab td { white-space: nowrap; }
+.utab th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+.utab td { border-bottom: 1px dashed var(--line); padding: 4px 6px; font-family: var(--mono); font-size: 12px; }
+.utab td:first-child { font-family: var(--sans); }
+.utab td.n, .utab th.n { text-align: right; }
+.utab tr.cur td { background: var(--l1-soft); }
+.utab tr.todo td { color: var(--muted); opacity: .6; }
+.utab tr.sum td { font-weight: 600; border-bottom: 0; border-top: 1px solid var(--line); }
+.utab tr[data-step] { cursor: pointer; } .utab tr[data-step]:hover td { background: var(--surface-2); }
+.utab tr.sel td { outline: 1px solid var(--accent); }
+.spark { display: inline-block; height: 6px; background: var(--accent); border-radius: 3px; vertical-align: middle; margin-right: 4px; }
+.mtag { font-family: var(--mono); font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); }
+.mtag.opus { color: var(--l2); border-color: var(--l2); } .mtag.sonnet { color: var(--l3); border-color: var(--l3); } .mtag.haiku { color: var(--l1); border-color: var(--l1); }
+.u2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 12px; margin-top: 12px; }
+@media (max-width: 900px) { .u2 { grid-template-columns: 1fr; } }
+.stepd { margin-top: 12px; border: 1px solid var(--accent); border-radius: 8px; padding: 10px 12px; }
+.stepd h4 { margin: 0 0 6px; font-size: 13px; }
+.phase .step { cursor: pointer; border-radius: 4px; padding: 0 3px; } .phase .step:hover { background: var(--surface); }
+.phase .step.sel { outline: 1px solid var(--accent); }
+.step .sm2 { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+/* replay */
+.rp-ctrl { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.rp-ctrl button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 6px; padding: 3px 10px; font-size: 12.5px; }
+.rp-ctrl button.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.rp-ctrl input[type=range] { flex: 1; min-width: 120px; }
+.rp-ctrl .count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.rp-rail { display: flex; gap: 3px; margin-bottom: 10px; }
+.rp-rail span { flex: 1; text-align: center; font-size: 11px; padding: 3px 0; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+.rp-rail span.done { border-color: var(--ok); color: var(--ok); } .rp-rail span.cur { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.rp-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr) 230px; gap: 10px; }
+@media (max-width: 1000px) { .rp-grid { grid-template-columns: 1fr; } }
+.rp-mini .lv { padding: 5px 7px; margin-bottom: 5px; } .rp-mini .lv .chips { grid-template-columns: 1fr 1fr; gap: 3px; }
+.rp-mini .chip { padding: 2px 5px; font-size: 11px; } .rp-mini .chip b { font-size: 11px; }
+.console { background: var(--term-bg); color: var(--term-ink); border-radius: 8px; padding: 10px 12px; font: 12px/1.55 var(--mono); max-height: 380px; overflow: auto; }
+.console .ln { color: var(--term-dim); } .console .ln.last { color: var(--term-ink); }
+.console .ln.last::before { content: "▶ "; color: var(--ok); }
+.console .pop { border: 1px solid var(--gate); color: #ffb79b; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+.rp-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 13px; }
+.mode-seg { margin-left: auto; }
+.prog { display: grid; grid-template-columns: minmax(0, 460px) minmax(0, 420px); gap: 14px; align-items: start; }
+
+@media (max-width: 700px) { .prog { grid-template-columns: 1fr; } }
+.detail-col .now-box { min-height: 200px; }
+.detail-col .ev { grid-template-columns: 44px 18px minmax(0, 1fr); } .detail-col .ev .rt { grid-column: 3; text-align: left; }
+.vs .st2 { font-family: var(--mono); font-size: 10.5px; color: var(--muted); display: block; font-weight: 400; }
+.vs.inh { opacity: .7; border-style: dashed; } .vs.inh .no { border-style: dashed; color: var(--ok); }
+.vs.cut { border-color: var(--gate); } .vs.cut .no { border-color: var(--gate); color: var(--gate); background: var(--gate-soft); }
+.revs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.revs button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 6px; padding: 2px 8px; font: 12px var(--mono); color: var(--muted); }
+.revs button[aria-pressed="true"] { border-color: var(--gate); color: var(--gate); background: var(--gate-soft); }
+.revband { border: 1px solid var(--gate); border-left: 4px solid var(--gate); background: var(--gate-soft); border-radius: 6px; padding: 7px 10px; font-size: 12.5px; margin: 4px 0; }
+.revband b { font-family: var(--mono); color: var(--gate); }
+.revband .note { margin-top: 2px; }
+.ev.rev { background: var(--gate-soft); border-left: 3px solid var(--gate); border-radius: 0 6px 6px 0; }
+.badge.rev { color: var(--gate); border-color: var(--gate); font-family: var(--mono); }
+.side { display: flex; flex-direction: column; gap: 12px; }
+.vlist { display: flex; flex-direction: column; gap: 6px; }
+.vph { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; margin-top: 6px; display: flex; gap: 8px; align-items: center; }
+.vph:first-child { margin-top: 0; }
+.vgate { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); padding: 2px 0 2px 14px; }
+.vgate::before { content: ""; width: 2px; height: 14px; background: var(--line); }
+.vs { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.vs .vh { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; }
+.vs .no { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 600 12px var(--mono); border: 1px solid var(--line); color: var(--muted); }
+.vs.done .no { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
+.vs.cur { border-color: var(--run); box-shadow: 0 0 0 2px var(--l1-soft); }
+.vs.cur .no { background: var(--run); color: var(--surface); border-color: var(--run); }
+.vs.todo { opacity: .55; }
+.vs.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+.vs { scroll-margin-top: 70px; }
+.vs .nm { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vs .who { font-size: 12px; color: var(--muted); display: block; font-weight: 400; }
+.vs .st { font-family: var(--mono); font-size: 11.5px; color: var(--muted); text-align: right; white-space: nowrap; line-height: 1.45; }
+.vs .vb { border-top: 1px dashed var(--line); padding: 8px 10px 10px; cursor: default; }
+.vs.compact .vh { padding: 5px 8px; grid-template-columns: 22px minmax(0, 1fr) auto; } .vs.compact .no { width: 20px; height: 20px; font-size: 11px; }
+.vs.compact .nm { font-size: 12.5px; }
+.rp-grid { grid-template-columns: 230px minmax(0, 1fr) 230px; }
+.note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.mock-tag { font-size: 11px; color: var(--gate); border: 1px dashed var(--gate); border-radius: 4px; padding: 0 6px; }
+/* v16: dashboard tiles live in the right column */
+.kpis { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); margin-bottom: 0; }
+.kpi .ks { white-space: normal; }
+.dash { grid-template-columns: minmax(0, 400px) minmax(0, 1fr); }
+.kpi.w2 { grid-column: span 2; }
+.kpi .kv2 { font-size: 15px; }
+.kpi .kv2 small.ks { font-weight: 400; font-size: 11px; }
+body.entering .kpi { animation: rise .35s backwards; animation-delay: calc(var(--i, 0) * 40ms); }
+@media (max-width: 520px) { .kpis { grid-template-columns: minmax(0, 1fr); } }
+.panel > .ph { align-items: center; }
+.ph-l { display: inline-flex; align-items: center; gap: 12px; }
+.ph-r { display: inline-flex; align-items: center; gap: 10px; }
+.comp-btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 3px 10px; font-size: 12px; }
+.comp-btn:hover { border-color: var(--accent); color: var(--accent); }
+.comp-open { margin-top: 10px; width: 100%; border: 1px dashed var(--line); background: var(--surface-2); color: var(--muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; text-align: left; }
+.comp-open:hover { color: var(--ink); border-color: var(--muted); }
+.lang-seg button { font-size: 11.5px; }
+.etag { font: 500 10.5px/1.5 var(--mono); color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+/* v17: resizable, collapsible sidebar */
+.shell { grid-template-columns: var(--side-w, 290px) minmax(0, 1fr); }
+aside.tasks { position: relative; min-width: 0; }
+.side-head { display: flex; align-items: center; gap: 6px; padding: 0 8px 8px; }
+.side-head h3 { flex: 1; padding: 0 !important; margin: 0; }
+.side-toggle { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 6px; width: 26px; height: 24px; font-size: 12px; line-height: 1; flex: none; }
+.side-toggle:hover { color: var(--ink); border-color: var(--muted); }
+.resizer { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 3; touch-action: none; }
+.resizer:hover, .resizer.drag { background: linear-gradient(var(--accent), var(--accent)) center / 2px 100% no-repeat; }
+body.resizing { cursor: col-resize; user-select: none; }
+body.side-min .shell { grid-template-columns: 58px minmax(0, 1fr); }
+body.side-min aside.tasks { padding: 14px 6px; }
+body.side-min .side-head h3, body.side-min #filter, body.side-min #side-note, body.side-min .resizer { display: none; }
+body.side-min .side-head { justify-content: center; padding: 0 0 10px; }
+.tmin { display: grid; place-items: center; width: 44px; height: 34px; margin: 0 auto 4px; border: 1px solid transparent; border-radius: 8px; background: transparent; font: 700 14px/1 var(--mono); }
+.tmin:hover { background: var(--surface-2); }
+.tmin[aria-current="true"] { background: var(--l1-soft); border-color: var(--l1); }
+.tmin.run { color: var(--run); } .tmin.wait, .tmin.stop { color: var(--gate); } .tmin.done { color: var(--ok); }
+</style>
+</head>
+<body class="lay-a">
+
+<div class="top">
+  <span class="brand">my-agent monitor</span>
+  <span class="live"><i class="dot run" id="live-dot"></i><span id="live-txt"></span></span>
+  <select class="task-select" id="task-select"></select>
+  <span class="spacer"></span>
+  <span class="seg lang-seg" id="lang-seg" role="group" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="ko" aria-pressed="false">한국어</button></span>
+</div>
+
+<div class="shell">
+  <aside class="tasks">
+    <div class="side-head"><h3>Tasks (task-id)</h3><button class="side-toggle" id="side-toggle" data-side="1"></button></div>
+    <div class="filter" id="filter">
+      <button data-f="all" aria-pressed="true"></button>
+      <button data-f="running" aria-pressed="false"></button>
+      <button data-f="done" aria-pressed="false"></button>
+      <button data-f="stopped" aria-pressed="false"></button>
+    </div>
+    <div id="task-list"></div>
+    <p class="note" style="padding:0 8px" id="side-note"></p>
+    <div class="resizer" id="resizer" role="separator" aria-orientation="vertical"></div>
+  </aside>
+
+  <main>
+    <div class="task-head" id="task-head"></div>
+    <nav class="tabs" id="tabs" role="tablist">
+      <button data-tab="status" aria-selected="true"><span class="k">1</span>Dashboard</button>
+      <button data-tab="arch" aria-selected="false"><span class="k">2</span>Architecture</button>
+      <button data-tab="files" aria-selected="false"><span class="k">3</span>Deliverables</button>
+      <button data-tab="log" aria-selected="false"><span class="k">4</span>Log</button>
+    </nav>
+    <div class="panels">
+      <section class="panel on" data-view="status" id="p-status"></section>
+      <section class="panel" data-view="arch" id="p-arch"></section>
+      <section class="panel" data-view="files" id="p-files"></section>
+      <section class="panel" data-view="log" id="p-log"></section>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => (s == null ? '–' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = s => esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+
+/* ---------- language: UI labels only; text read from task files stays as written ---------- */
+let LANG = 'en';
+try { if (localStorage.getItem('ma-lang') === 'ko') LANG = 'ko'; } catch (e) {}
+const L = (en, ko) => LANG === 'ko' ? ko : en;
+const fmtMin = m => { m = Math.round(m); return m >= 60 ? L(`${Math.floor(m / 60)}h ${m % 60}m`, `${Math.floor(m / 60)}시간 ${m % 60}분`) : L(m + 'm', m + '분'); };
+
+const PHASES = [
+  { n: '① Define', steps: [[1,'Intake'],[2,'Explore → Scope']], gate: 'G1a' },
+  { n: '② Plan', steps: [[3,'Plan'],[4,'Plan Review']], gate: 'G1b' },
+  { n: '③ Build', steps: [[5,'Execute'],[6,'Merge · Self-check']], gate: 'G2' },
+  { n: '④ Accept', steps: [[7,'Verify'],[8,'Review → Deliver']], gate: 'G3' }
+];
+const STEP_NAME = {1:'Intake',2:'Explore → Scope',3:'Plan',4:'Plan Review → G1b',5:'Execute',6:'Merge · Self-check',7:'Verify',8:'Review → Deliver'};
+/* effort fixed in each agent definition (design v0.18, 4.5) */
+const EFFORT = { architect:'high', 'plan-reviewer':'high', verifier:'high', reviewer:'high', explorer:'low', researcher:'medium', writer:'medium', coder:'medium' };
+const etag = (a, eff) => (eff || EFFORT[a]) ? ` <span class="etag" title="effort">${eff || EFFORT[a]}</span>` : '';
+const PROF = { dev: ['dev', '개발'], research: ['research · docs', '조사·문서'], general: ['general', '일반'] };
+const prof = t => PROF[t.profile] ? L(...PROF[t.profile]) : '–';
+
+const LEVELS = [
+  { id:'L1', cls:'lv1', name:'Orchestration', where:['main session · opus','메인 세션 · opus'], comps:[
+    ['router','router','profile · task ID'],['orchestrator','orchestrator','delegate · merge'],['gatekeeper','gatekeeper','popup questions'],['recorder','recorder','run-log · retro']]},
+  { id:'L2', cls:'lv2', name:'Design · Judge', where:['subagents','서브에이전트'], comps:[
+    ['architect','architect','plan · opus · high'],['plan-reviewer','plan-reviewer','plan verdict · sonnet · high'],['verifier','verifier','criteria verdict · opus · high'],['reviewer','reviewer','quality verdict · sonnet · high']]},
+  { id:'L3', cls:'lv3', name:'Workers', where:['subagents','서브에이전트'], comps:[
+    ['explorer','explorer','fact finding · sonnet · low'],['researcher','researcher','web research · sonnet · medium'],['writer','writer','drafts · sonnet · medium'],['coder','coder','slice build · sonnet · medium']]},
+  { id:'L4', cls:'lv4', name:'Tools · Guards', where:['no LLM judgment','LLM 판단 없음'], comps:[
+    ['tools','tools','built-in · MCP'],['hooks','hooks','G1b · scope · log'],['perms','permissions','G2 ask · deny'],['scripts','scripts','run-log · feedback']]}
+];
+const COMP_DESC = {
+  router:['Classifies the request and sets the profile and task ID.','요청을 분류해 프로파일과 작업 ID를 정합니다.'],
+  orchestrator:['Hands each phase to L2 and L3 in order and merges the results.','phase 순서대로 L2·L3에 맡기고 결과를 합칩니다.'],
+  gatekeeper:['Shows the G1a, G1b, G3 and E popups.','G1a·G1b·G3·E 팝업을 띄웁니다.'],
+  recorder:['Writes phase entries, popup answers and the cost (reference) to run-log.','phase 진입, 팝업 결과, 금액(참고)을 run-log에 남깁니다.'],
+  architect:['Writes the HOW, the slices, the parallel groups and the mock-up.','HOW, 작업 분할, 병렬 그룹, mock-up을 씁니다.'],
+  'plan-reviewer':['Judges the plan independently.','계획을 독립적으로 판정합니다.'],
+  verifier:['Gives PASS or FAIL for each completion criterion.','완료 기준마다 PASS/FAIL을 판정합니다.'],
+  reviewer:['Judges quality. G3 needs BLOCKER 0.','품질을 판정합니다. BLOCKER 0이어야 G3로 갑니다.'],
+  explorer:['Collects where the relevant files are and the facts.','관련 파일 위치와 사실을 모읍니다.'],
+  researcher:['Researches one sub-question and writes a note.','하위 질문 하나를 조사해 노트를 씁니다.'],
+  writer:['Writes drafts and the prototype.','초안과 prototype을 씁니다.'],
+  coder:['Builds one approved slice.','승인된 slice 하나를 구현합니다.'],
+  tools:['Built-in tools and MCP tools.','내장 도구와 MCP 도구.'],
+  hooks:['plan-approved-check, scope-guard, subagent-log and others.','plan-approved-check, scope-guard, subagent-log 등.'],
+  perms:['G2 popup for risky actions such as commits, installs and external sends.','커밋, 설치, 외부 전송 같은 위험한 행동에 G2 팝업.'],
+  scripts:['run-log and feedback scripts.','run-log, feedback 스크립트.']
+};
+
+
+
+/* ---------- tasks: summaries from /api/tasks, full task JSON from /api/tasks/<key> ---------- */
+let TASKS = [];
+const FULL = {};
+
+const mocksOf = t => t.mocks || [];
+/* line diff (LCS) */
+function lineDiff(a, b) {
+  const A = a.split('\n'), B = b.split('\n'), n = A.length, m = B.length;
+  const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) { if (A[i] === B[j]) { out.push([' ', A[i]]); i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) out.push(['-', A[i++]]); else out.push(['+', B[j++]]); }
+  while (i < n) out.push(['-', A[i++]]); while (j < m) out.push(['+', B[j++]]);
+  return out;
+}
+function mockDiff(t, x, y) {
+  const a = mocksOf(t)[x], b = mocksOf(t)[y], d = lineDiff(a.body, b.body);
+  const add = d.filter(l => l[0] === '+').length, del = d.filter(l => l[0] === '-').length;
+  return `<div class="mock"><h5>Mock-up diff <span class="badge rev">rev${a.r}</span> → <span class="badge rev">rev${b.r}</span>
+    <span class="note" style="margin:0"><b style="color:var(--ok)">+${add}</b> <b style="color:var(--gate)">−${del}</b> · ${esc(a.at)} → ${esc(b.at)}</span></h5>
+    <pre class="diff">${d.map(([k, l], i) => `<span class="dl ${k === '+' ? 'add' : k === '-' ? 'del' : ''}" style="--i:${i}">${k === ' ' ? ' ' : k} ${esc(l)}</span>`).join('')}</pre></div>`;
+}
+const mockBlock = (t, m) => `<div class="mock"><h5>Mock-up ${t.revs ? `<span class="badge rev">rev${m.r}</span>` : ''} <span class="badge">${esc(m.kind)}</span>
+  <span class="note" style="margin:0">plan.md ## Mock-up · ${esc(m.at)} ${L('approved at G1b', 'G1b 승인')}</span>${m.proto ? ` <span class="badge">+ ${esc(m.proto)}</span>` : ''}</h5><pre>${esc(m.body)}</pre></div>`;
+
+/* ---------- state ---------- */
+const st = { task: null, tab: 'status', filter: 'all', comp: 'coder', file: 'plan.md' };
+const cur = () => FULL[st.task];
+const statusTxt = t => t.status === 'running' ? (t.waiting ? L('Awaiting answer', '답 기다림') : L('Running', '진행 중')) : t.status === 'done' ? L('Done', '완료') : L('Stopped', '중단');
+const statusBadge = t => `<span class="badge ${t.status === 'running' ? (t.waiting ? 'wait' : 'run') : t.status === 'done' ? 'done' : 'stop'}">${statusTxt(t)}</span>`;
+const stepState = (t, n) => t.status === 'done' ? 'done' : n < t.step ? 'done' : n === t.step ? (t.status === 'stopped' ? 'stop' : 'cur') : 'todo';
+
+/* sidebar width and collapsed state are per-viewer conveniences */
+try { st.sideMin = localStorage.getItem('ma-side-min') === '1'; const w = +localStorage.getItem('ma-side-w'); if (w) document.documentElement.style.setProperty('--side-w', w + 'px'); } catch (e) {}
+/* top bar and sidebar labels */
+function renderChrome() {
+  document.documentElement.lang = LANG;
+  $('live-txt').textContent = st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks docs/agent/ every 2s', '실시간 · 2초마다 docs/agent/ 확인');
+  $('live-dot').classList.toggle('run', !st.offline && !st.liveWait && TASKS.some(t => t.status === 'running'));
+  $('task-select').setAttribute('aria-label', L('Select task', '작업 선택'));
+  const F = { all: ['All', '전체'], running: ['Running', '진행 중'], done: ['Done', '완료'], stopped: ['Stopped', '중단'] };
+  document.querySelectorAll('#filter button').forEach(b => b.textContent = L(...F[b.dataset.f]));
+  const np = new Set(TASKS.map(t => t.project)).size;
+  $('side-note').innerHTML = TASKS.length ? L(`Tasks found in <code>docs/agent/</code> of ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳의 <code>docs/agent/</code>에서 찾은 작업입니다.`)
+    : L('No tasks yet. my-agent lists projects in <code>~/dev/agent-tasks/projects.txt</code>.', '아직 작업이 없습니다. my-agent가 <code>~/dev/agent-tasks/projects.txt</code>에 프로젝트를 적습니다.');
+  document.querySelectorAll('#lang-seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
+}
+
+function renderList() {
+  const list = TASKS.filter(t => st.filter === 'all' || t.status === st.filter);
+  document.body.classList.toggle('side-min', !!st.sideMin);
+  const tg = $('side-toggle'); tg.textContent = st.sideMin ? '»' : '«';
+  tg.title = st.sideMin ? L('Expand', '펴기') : L('Collapse', '접기'); tg.setAttribute('aria-label', tg.title); tg.setAttribute('aria-expanded', !st.sideMin);
+  if (st.sideMin) {
+    const ic = t => t.status === 'running' ? (t.waiting ? ['wait', '?'] : ['run', '<i class="dot run"></i>']) : t.status === 'done' ? ['done', '✓'] : ['stop', '■'];
+    $('task-list').innerHTML = TASKS.map(t => `<button class="tmin ${ic(t)[0]}" data-task="${t.key}" aria-current="${t.key === st.task}" title="${esc(t.id)} · ${statusTxt(t)}" aria-label="${esc(t.id)} · ${statusTxt(t)}">${ic(t)[1]}</button>`).join('');
+  } else
+  $('task-list').innerHTML = list.map(t => `
+    <button class="titem" data-task="${t.key}" aria-current="${t.key === st.task}">
+      <span class="id">${t.status === 'running' ? '<i class="dot run"></i>' : ''}${esc(t.id)}</span>
+      <span class="meta">${statusBadge(t)}<span>${esc(prof(t))}</span><span>${esc(t.project)}</span></span>
+      <span class="mini-rail">${[1,2,3,4,5,6,7,8].map(n => `<i class="${stepState(t,n)}"></i>`).join('')}</span>
+    </button>`).join('');
+  $('task-select').innerHTML = TASKS.map(t => `<option value="${t.key}" ${t.key === st.task ? 'selected' : ''}>${t.id} · ${statusTxt(t)}</option>`).join('');
+}
+
+function renderHead() {
+  const t = cur();
+  $('task-head').innerHTML = `<h2>${esc(t.id)}</h2>${statusBadge(t)}<span class="t">${esc(t.title)}</span>
+    <span class="where">${L('profile', '프로파일')} ${esc(prof(t))} · ${L('folder', '작업 위치')} <code>${esc(t.project)}/docs/agent/${esc(t.id)}/</code> · ${L('started', '시작')} ${esc(t.started)} · ${L('elapsed', '경과')} ${fmtMin(t.elapsed)}</span>`;
+}
+
+const num = s => parseFloat(String(s || '0')) || 0;
+const mins = hm => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+const dm = (a, b) => (((mins(b) - mins(a)) % 1440) + 1440) % 1440;   /* minutes from a to b, across midnight */
+const modelOf = e => (e.actual || e.model || '').split(' ')[0];
+const latestRev = t => t.revs ? t.revs.length - 1 : 0;
+const rOf = e => e.r || 0;
+const mainOf = (t, R) => R === 'all' ? (t.revs ? Object.values(t.mainR || {}).reduce((acc, m) => { Object.entries(m).forEach(([k, v]) => { acc['r' + Object.keys(acc).length] = v; }); return acc; }, {}) : (t.main || {}))
+  : t.revs ? ((t.mainR || {})[R] || {}) : (R === 0 ? (t.main || {}) : {});
+const hasMain = t => !!(t.revs ? t.mainR : t.main);
+const revEnd = (t, R) => R !== 'all' && t.revs && R < latestRev(t) ? t.revs[R + 1].at : t.now;
+/* state of step n when looking at revision R */
+function rstate(t, R, n) {
+  const Lr = latestRev(t);
+  if (t.revs && R < Lr) { const cut = t.revs[R + 1].from; return n < cut ? 'done' : n === cut ? 'cut' : 'todo'; }
+  if (t.revs && R > 0 && n < t.revs[R].back) return 'inh';
+  const x = stepState(t, n); return x === 'stop' ? 'cur' : x;
+}
+function stats(t, R) {
+  if (R === undefined) R = latestRev(t);
+  const steps = {};
+  for (let n = 1; n <= 8; n++) steps[n] = { tok: 0, min: 0, cost: 0, agents: 0, start: null, end: null };
+  const evs = R === 'all' ? t.log : t.log.filter(e => rOf(e) === R);
+  evs.forEach(e => { const s = steps[e.s]; if (!s) return; if (!s.start) s.start = e.t;
+    if (e.k === 'agent' && !e.live) { s.tok += num(e.tok); s.cost += num(e.c); s.agents++; } else if (e.k === 'agent') s.agents++; });
+  if (R !== 'all') Object.entries(mainOf(t, R)).forEach(([n, [tk, c]]) => { steps[n].tok += tk; steps[n].cost += c; });
+  const started = Object.keys(steps).map(Number).filter(n => steps[n].start);
+  started.forEach((n, i) => { const nx = started[i + 1]; const end = nx ? steps[nx].start : revEnd(t, R);
+    steps[n].end = end; steps[n].min = dm(steps[n].start, end); });
+  const models = {};
+  const addM = (m, tok, min, cost, call) => { const r = models[m] = models[m] || { calls: 0, tok: 0, min: 0, cost: 0, live: 0 };
+    r.tok += tok; r.min += min; r.cost += cost; r.calls += call; };
+  evs.filter(e => e.k === 'agent').forEach(e => { if (e.live) { (models[e.model] = models[e.model] || { calls:0, tok:0, min:0, cost:0, live:0 }).live++; models[e.model].calls++; }
+    else addM(modelOf(e), num(e.tok), num(e.dur), num(e.c), 1); });
+  const mt = Object.values(mainOf(t, R)).reduce((a, [tk, c]) => [a[0] + tk, a[1] + c], [0, 0]);
+  models[L('opus · main session (approx.)', 'opus · 메인 세션 (근사)')] = { calls: 0, tok: mt[0], min: evs.length ? dm(evs[0].t, revEnd(t, R)) : 0, cost: mt[1], live: t.status === 'running' ? 1 : 0, main: true, nil: !hasMain(t) };
+  return { steps, models };
+}
+const money = c => c == null ? '–' : '$' + (+c).toFixed(2);
+const isMM = e => e.k === 'agent' && !e.live && e.actual && e.model && e.actual.split(' ')[0] !== e.model.split(' ')[0];
+const mmTag = e => isMM(e) ? ` <span class="mm-tag">MISMATCH ${esc(e.model)}→${esc(e.actual)}</span>` : '';
+/* count-up: <span class="num" data-cu="key" data-v="123" data-f="k|$|n"> */
+const CU = new Map();
+const cu = (key, v, f) => `<span class="num" data-cu="${key}" data-v="${v}" data-f="${f}">${f === '$' ? money(CU.get(key) ?? 0) : Math.round(CU.get(key) ?? 0) + (f === 'k' ? 'k' : '')}</span>`;
+function runCountUps() {
+  document.querySelectorAll('[data-cu]').forEach(el => {
+    const key = el.dataset.cu, to = +el.dataset.v, f = el.dataset.f, from = CU.get(key) ?? 0;
+    const show = v => el.textContent = f === '$' ? money(v) : Math.round(v) + (f === 'k' ? 'k' : '');
+    if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) { show(to); CU.set(key, to); return; }
+    const t0 = performance.now(), d = 900;
+    const tick = now => { const k = Math.min((now - t0) / d, 1), e = 1 - Math.pow(1 - k, 3); show(from + (to - from) * e); if (k < 1) requestAnimationFrame(tick); else CU.set(key, to); };
+    requestAnimationFrame(tick);
+  });
+}
+function stagger() { document.querySelectorAll('.panel.on').forEach(p => p.querySelectorAll('.now-box, .kpi, .vs, .vph, .vgate, .lv, .frow').forEach((el, i) => el.style.setProperty('--i', i))); }
+const BARS = new Map();
+function setBars() { const ent = document.body.classList.contains('entering');
+  document.querySelectorAll('.bar[data-p]').forEach((b, idx) => { const i = b.querySelector('i'), key = st.task + st.tab + idx, prev = BARS.get(key);
+    if (!ent && prev != null) { i.style.transition = 'none'; i.style.setProperty('--p', prev); i.offsetWidth; i.style.transition = ''; }
+    requestAnimationFrame(() => i.style.setProperty('--p', b.dataset.p)); BARS.set(key, b.dataset.p); }); }
+/* text scramble for the task id */
+let scrRaf;
+function scramble(el) {
+  if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  cancelAnimationFrame(scrRaf); const fin = el.textContent, gl = '!<>-_/[]{}=+*^?#', t0 = performance.now();
+  const tick = now => { const fx = Math.floor((now - t0) / 28); el.textContent = [...fin].map((c, i) => i < fx || c === '-' ? c : gl[Math.floor(Math.random() * gl.length)]).join(''); if (fx < fin.length) scrRaf = requestAnimationFrame(tick); };
+  scrRaf = requestAnimationFrame(tick);
+}
+/* typing for new file names and the newest console line */
+function typeFiles() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.fnew[data-type]').forEach((el, k) => { const full = el.dataset.type; el.textContent = ''; el.classList.add('typing'); let i = 0;
+    setTimeout(() => { const iv = setInterval(() => { el.textContent = full.slice(0, ++i); if (i >= full.length) { clearInterval(iv); setTimeout(() => el.classList.remove('typing'), 600); } }, 45); }, k * 250); });
+}
+function typeLast() {
+  const el = document.querySelector('.console .ln.last .tx2'); if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const full = el.textContent; el.textContent = ''; let i = 0;
+  const step = () => { i += 2; el.textContent = full.slice(0, i); if (i < full.length) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+const mtag = m => { m = m || '–'; return `<span class="mtag ${m.split(' ')[0]}">${esc(m)}</span>`; };
+const bar = (v, max) => `<span class="spark" style="width:${Math.max(2, Math.round(v / max * 60))}px"></span>`;
+
+const GATE_AFTER = {2:'G1a Scope confirmed',4:'G1b Plan approved',8:'G3 Final acceptance'};
+const GATE_ID = {2:'G1a',4:'G1b',8:'G3'};
+function vsteps(t, S, o) {
+  o.R = o.R ?? latestRev(t);
+  const gl = g => t.gates[g] === 'ok' ? `<span class="gate-lamp ok">${L('passed', '통과')}</span>` : t.gates[g] === 'wait' ? `<span class="gate-lamp wait">${L('awaiting answer', '답 기다림')}</span>` : t.gates[g] === 'skip' ? `<span class="gate-lamp">${L('merged into G1b', 'G1b에 합침')}</span>` : `<span class="gate-lamp">${L('pending', '대기')}</span>`;
+  let h = '';
+  PHASES.forEach(p => {
+    h += `<div class="vph">${p.n}</div>`;
+    p.steps.forEach(([n]) => {
+      const ss = o.state(n), sd = S.steps[n];
+      h += `<div class="vs ${ss} ${o.compact ? 'compact' : ''} ${n === o.sel ? 'sel' : ''}" data-${o.key}="${n}">
+        <div class="vh"><span class="no">${ss === 'done' ? '✓' : n}</span>
+          <span class="nm">${esc(STEP_NAME[n])}${ss === 'cur' && t.status === 'running' ? ' <i class="dot run"></i>' : ''}</span>
+          <span class="st">${ss === 'inh' ? L(`from rev${o.R - 1}`, `rev${o.R - 1} 이어받음`) : ss === 'cut' ? `<span style="color:var(--gate)">→ rev${o.R + 1}</span>` : sd.start ? `${t.revs && o.R > 0 && n === t.revs[o.R].back ? '<span style="color:var(--gate)">↺ rev' + o.R + '</span> ' : ''}${fmtMin(sd.min)}${o.stats ? ` · ${sd.tok}k · ${money(sd.cost)}` : ''}` : ''}</span></div></div>`;
+      if (GATE_AFTER[n]) h += `<div class="vgate">${esc(GATE_AFTER[n])} ${gl(GATE_ID[n])}</div>`;
+    });
+  });
+  return `<div class="vlist">${h}</div>`;
+}
+function revChips(t, R, key) {
+  if (!t.revs) return '';
+  return `<div class="revs">${t.revs.map((v, i) => `<button data-${key}="${i}" aria-pressed="${i === R}">rev${i} · ${i === latestRev(t) ? L('current', '현재') : L('archived', '보관')}</button>`).join('')}</div>`;
+}
+const LV_OF = id => LEVELS.find(l => l.comps.some(c => c[0] === id)) || LEVELS[2];
+const compName = (lv, id) => (lv.comps.find(c => c[0] === id) || [id, id])[1];
+
+/* ---------- 1 Dashboard ---------- */
+function renderStatus() {
+  const t = cur();
+  const R = st.rev == null || st.rev > latestRev(t) ? latestRev(t) : st.rev;
+  const SR = stats(t, R);
+  const ms = Object.entries(stats(t, 'all').models).sort((a, b) => b[1].tok - a[1].tok);
+  const maxTok = Math.max(1, ...ms.map(([, r]) => r.tok));
+  const tot = ms.reduce((a, [, r]) => [a[0] + r.calls, a[1] + r.tok, a[2] + r.cost], [0, 0, 0]);
+  const modelTab = `<table class="utab"><tr><th>Model</th><th class="n">Calls</th><th class="n">Tokens</th><th class="n">Time</th><th class="n">Cost</th></tr>
+    ${ms.map(([m, r]) => `<tr><td>${mtag(m)}${r.live ? ' <i class="dot run"></i>' : ''}</td><td class="n">${r.main ? '–' : r.calls}</td><td class="n">${r.nil ? '–' : bar(r.tok, maxTok) + r.tok + 'k'}</td><td class="n">${r.nil ? '–' : fmtMin(r.min)}</td><td class="n">${r.nil ? '–' : money(r.cost)}</td></tr>`).join('')}
+    <tr class="sum"><td>Total</td><td class="n">${tot[0]}</td><td class="n">${cu('mt-' + t.id, tot[1], 'k')}</td><td class="n">${fmtMin(t.elapsed)}</td><td class="n">${cu('mc-' + t.id, tot[2], '$')}</td></tr></table>
+    ${(t.unpriced || []).length ? `<p class="note">${L('Not in prices.json: ', 'prices.json에 없는 모델: ')}${t.unpriced.map(esc).join(', ')}</p>` : ''}
+    ${t.log.filter(isMM).map(e => `<p class="note" style="color:var(--gate)">⚠ MISMATCH ${e.t} ${esc(e.tx)}: ${L('configured', '설정')} ${esc(e.model)} → ${L('actual', '실제')} ${esc(e.actual)}</p>`).join('')}`;
+  const sel = t.status !== 'done' && R === latestRev(t) ? t.step : 0;
+  const vl = revChips(t, R, 'rev') + vsteps(t, SR, { key: 'step', sel, R, stats: true, compact: true, state: n => rstate(t, R, n) });
+  const c = t.crit, cPass = c.res.filter(x => x === 'p').length;
+  const ratio = t.est ? t.tokens / t.est : 0, eLvl = (t.vfail >= 3 || t.sstop >= 2) ? 'bad' : (t.vfail >= 2 || t.sstop >= 1) ? 'warn' : 'ok';
+  const run = t.running[0];
+  const nowTile = t.status === 'done' ? `<div class="kv2 ok">✓ ${L('Done', '완료')}</div><div class="ks">${L('accepted at G3 · deliverable saved', 'G3 수용 · 결과물 저장됨')}</div>`
+    : t.status === 'stopped' ? `<div class="kv2 bad">■ ${L('Stopped', '중단')}</div><div class="ks">${(t.step ? L(`at ${t.step}. ${STEP_NAME[t.step]}`, `${t.step}. ${STEP_NAME[t.step]}에서`) : '–')}</div>`
+    : t.waiting ? `<div class="kv2 bad">? ${esc(t.waiting.gate)} ${L('awaiting', '대기')}</div><div class="ks">${L('answer the popup in the terminal', '터미널 팝업에 답하세요')} · ${esc(t.waiting.q)}</div>`
+    : `<div class="kv2">${t.step ? t.step + '. ' + esc(STEP_NAME[t.step]) : '–'} <span class="dots3"><i></i><i></i><i></i></span></div><div class="ks">${run ? `${mtag(run.model)}${etag(run.a, run.effort)} ${esc(run.id)} · ${esc(run.sub)} · ${L(`${dm(run.since, t.now)}m so far`, `${dm(run.since, t.now)}분째`)}` : L('L1 working', 'L1 처리 중')}</div>`;
+  const cells = Array.from({ length: c.total }, (_, i) => { const r = c.res[i]; return `<i class="${r === 'p' ? 'pass' : r === 'f' ? 'fail' : r === 'r' ? 'run' : ''}" title="${L('criterion', '기준')} ${i + 1}"></i>`; }).join('');
+  const tiles = `<div class="kpis">
+    <div class="kpi"><div class="kl">Now</div>${nowTile}</div>
+    <div class="kpi"><div class="kl">Elapsed</div><div class="kv2">${fmtMin(t.elapsed)}</div><div class="ks">${L('started', '시작')} ${esc(t.started)}</div></div>
+    <div class="kpi"><div class="kl">Criteria</div><div class="kv2">${cPass}/${c.total}</div><div class="cells">${cells}</div></div>
+    <div class="kpi"><div class="kl">Tokens</div><div class="kv2">${cu('tok-' + t.id, t.tokens, 'k')} <small class="ks">/ ${t.est ? t.est + 'k' : '–'} ${L('estimate', '예상')}</small></div>
+      <div class="bar ${ratio >= 1 ? 'warn' : ''} ${t.status === 'running' ? 'live' : ''}" data-p="${Math.min(1, ratio)}"><i></i></div><div class="ks">${t.est ? Math.round(ratio * 100) + '%' : '–'} ${L('of estimate', '사용')}</div></div>
+    <div class="kpi"><div class="kl">Escalation (E)</div><div class="kv2 ${eLvl}">${eLvl === 'bad' ? L('▲ E raised', '▲ E 발생') : eLvl === 'warn' ? L('△ Caution', '△ 주의') : L('● Normal', '● 정상')}</div>
+      <div class="ks" title="${L('Verify FAILs in a row · slices stopped (limits 3 · 2)', 'Verify 연속 FAIL · slice 중단 (한도 3 · 2)')}">${L(`Verify FAIL ${t.vfail}/3 · slice stops ${t.sstop}/2`, `Verify 연속 FAIL ${t.vfail}/3 · slice 중단 ${t.sstop}/2`)}</div></div>
+    <div class="kpi"><div class="kl">Cost</div><div class="kv2">${cu('mc-' + t.id, tot[2], '$')}</div><div class="ks">${L('estimate', '추정')} · statusline ${t.cost == null ? '–' : cu('cost-' + t.id, +t.cost, '$')}</div></div>
+  </div>`;
+  $('p-status').innerHTML = `<div class="dash">
+    <div class="panel2"><div class="p2h"><b>Steps</b><small>${L('click a step to replay it in Log', '누르면 기록에서 그 단계를 재생')}</small></div>${vl}</div>
+    <div class="side">${tiles}
+      <div class="now-box"><h4>Models <small style="font-weight:400;color:var(--muted)">${L('tokens × list price, estimate', '토큰 × 정가 추정')}</small></h4>${modelTab}</div></div></div>`;
+}
+
+/* ---------- 2 Architecture ---------- */
+function renderArch() {
+  const t = cur();
+  const cnt = {}; t.log.forEach(e => { cnt[e.a] = (cnt[e.a] || 0) + 1; });
+  const live = new Set(t.running.map(r => r.a));
+  if (t.status === 'running') live.add('orchestrator');
+  const c = st.comp, lv = LV_OF(c), comp = lv.comps.find(x => x[0] === c);
+  const evs = t.log.filter(e => e.a === c);
+  $('p-arch').innerHTML = `<div class="ph"><h3>2 · my-agent Architecture</h3><small>${L('components used in this task are highlighted', '이 작업에서 쓰인 구성 요소를 밝게 표시')}</small></div>
+    <div class="legend"><span>● ${L('running now', '지금 실행 중')}</span><span>${L('number = records in this task', '숫자 = 이 작업의 기록 수')}</span><span>${L('faded = not used yet', '흐린 칸 = 아직 안 쓰임')}</span></div>
+    <div class="arch-grid"><div>${LEVELS.map(l => `<div class="lv ${l.cls}"><div class="lh"><b>${l.id}</b><strong>${esc(l.name)}</strong><span>${esc(L(...l.where))}</span></div>
+      <div class="chips">${l.comps.map(([id, nm, sub]) => `<button class="chip ${cnt[id] ? 'used' : ''} ${live.has(id) ? 'live' : ''} ${id === c ? 'sel' : ''}" data-comp="${id}">
+        ${cnt[id] ? `<span class="cnt">${cnt[id]}</span>` : ''}<b>${esc(nm)}</b><small>${EFFORT[id] ? esc(sub.split(' · ')[0]) + '<br>' + esc(sub.split(' · ').slice(1).join(' · ')) : esc(sub)}</small></button>`).join('')}</div></div>`).join('')}</div>
+      <div class="arch-detail ${lv.cls}"><span class="badge">${lv.id} · ${esc(lv.name)}</span><h3 style="margin-top:6px;font-family:var(--mono)">${esc(comp[1])}</h3>
+        <p style="margin:4px 0;color:var(--muted)">${esc(L(...COMP_DESC[c]))}</p>
+        ${EFFORT[c] ? `<p class="note" style="margin:0 0 8px">model ${mtag(comp[2].split(' · ')[1])} · effort <span class="etag">${EFFORT[c]}</span> <span>${L('(fixed in the agent definition)', '(에이전트 정의에 고정)')}</span></p>` : ''}
+        <b style="font-size:12px">In this task</b>
+        ${evs.length ? `<ul>${evs.map(e => `<li><code>${e.t}</code> ${esc(e.sub || e.tx)}${e.res ? ` <span class="res">${esc(e.res)}</span>` : e.live ? ` <span class="res run">${L('running', '실행 중')}</span>` : ''}</li>`).join('')}</ul>` : `<p class="note">${L('no records', '기록 없음')}</p>`}
+      </div></div>`;
+}
+
+/* ---------- 3 Deliverables ---------- */
+function renderFiles() {
+  const t = cur();
+  const mk = /^mock:(\d+)$/.exec(st.file || ''), mock = mk ? mocksOf(t)[+mk[1]] : null;
+  const isDiff = st.file === 'mockdiff' && mocksOf(t).length > 1;
+  if (!mock && !isDiff && !t.files.some(f => f.p === st.file)) st.file = t.files.length ? t.files[0].p : null;
+  const f = mock || isDiff ? { p: 'mock', t: '', pv: '' } : t.files.find(x => x.p === st.file) || { p: '–', t: '', pv: '' };
+  const rows = t.files.map(x => `<button class="frow ${x.todo ? 'todo' : ''} ${x.live ? 'live' : ''} ${x.p === st.file ? 'sel' : ''}" data-file="${esc(x.p)}">
+      <span class="fn">${x.p.includes('/') && !x.p.endsWith('/') ? '│&nbsp;&nbsp;└ ' + esc(x.p.split('/')[1]) : '├ ' + esc(x.p)}</span>
+      <span class="fm">${x.todo ? L(`made at step ${x.s}`, `${x.s}단계에서 생김`) : `${x.s}. ${esc(STEP_NAME[x.s].split(' ')[0])} · ${esc(x.t)}`}</span></button>`).join('');
+  const d = t.deliver || { kind: 'none', label: null, items: [] }, M = mocksOf(t);
+  const dLabel = d.label || (d.kind === 'file' ? L('saved where the scope said', '범위 문서가 정한 위치에 저장') : t.status === 'stopped' ? L('stopped · nothing delivered', '중단 · 결과물 없음') : t.status === 'running' ? L('after G3', 'G3 뒤에 저장') : L('none', '없음'));
+  $('p-files').innerHTML = `<div class="ph"><h3>3 · Deliverables</h3><small>${L('click a file to preview it on the right', '파일을 누르면 오른쪽에 미리보기')}</small></div>
+    <div class="fsplit"><div>
+    <div class="fgroup">Final deliverable · ${esc(dLabel)}</div>
+    <div class="ftree">${d.items.length ? d.items.map(i => `<div class="frow"><span class="fn">${esc(i[0])}</span><span class="fm">${esc(i[1])} · ${esc(i[2])}</span></div>`).join('') : `<p class="note">${L('none', '없음')}</p>`}</div>
+    <div class="fgroup">Intermediate · mock-ups approved at G1b</div>
+    <div class="ftree">${M.length > 1 ? `<button class="frow ${st.file === 'mockdiff' ? 'sel' : ''}" data-file="mockdiff"><span class="fn">⇄ ${L('compare mock-ups', 'mock-up 비교')} rev0 → rev${M.at(-1).r}</span><span class="fm">${L('what the revision changed', '수정이 바꾼 것')}</span></button>` : ''}${M.map((m, i) => `<button class="frow ${st.file === 'mock:' + i ? 'sel' : ''}" data-file="mock:${i}"><span class="fn">◇ mock-up${t.revs ? ' rev' + m.r : ''} · ${esc(m.kind)}${m.proto ? ' + prototype' : ''}</span><span class="fm">3. Plan · ${esc(m.at)}</span></button>`).join('') || `<p class="note">${L('none yet (made at 3. Plan)', '아직 없음 (3. Plan에서 생김)')}</p>`}</div>
+    <div class="fgroup">Task files · ${esc(t.project)}/docs/agent/${esc(t.id)}/</div>
+    <div class="ftree">${rows}</div></div>
+    <div class="fside">${isDiff ? mockDiff(t, 0, M.length - 1) : mock ? mockBlock(t, mock) : `<div class="preview">${f.todo ? `<span class="h">${L('not created yet', '아직 만들어지지 않음')}</span>` : `<span class="h">── ${esc(f.p)} · ${esc(f.t)}\n</span>${esc(f.pv || L('(no preview sample)', '(미리보기 예시 없음)'))}`}</div>`}</div></div>`;
+}
+
+/* ---------- 4 Log ---------- */
+let lastTyped = '';
+function renderLog() {
+  const t = cur();
+  const mode = st.mode === 'timeline' ? 'timeline' : 'replay';
+  const head = `<div class="ph"><span class="ph-l"><h3>4 · Log</h3>
+      <span class="seg"><button data-mode="replay" aria-pressed="${mode === 'replay'}">Replay</button><button data-mode="timeline" aria-pressed="${mode === 'timeline'}">Parallel timeline</button></span></span><span class="ph-r"><small>run-log.md · task-id ${esc(t.id)}</small>
+      <button class="comp-btn" data-compwin="1" title="${L('Components at this moment · opens in a new window', '이 순간의 구성 요소 · 새 창으로 보기')}">↗ Components</button></span></div>`;
+  $('p-log').innerHTML = head + (mode === 'timeline' ? timeline(t) : replay(t));
+  syncCompWin();
+  const tk = t.id + ':' + st.ri; if (mode === 'replay' && tk !== lastTyped) { lastTyped = tk; typeLast(); typeFiles(); }
+}
+const MCOL = { opus: 'var(--l2)', sonnet: 'var(--l3)', haiku: 'var(--l1)' };
+function timeline(t) {
+  if (!t.log.length) return `<p class="note">${L('No run-log records yet.', '아직 run-log 기록이 없습니다.')}</p>`;
+  const t0 = mins(t.log[0].t), t1 = t0 + Math.max(1, dm(t.log[0].t, t.now)), W = t1 - t0, X = m => ((m - t0) / W * 100).toFixed(2) + '%';
+  const ticks = []; const stepM = W > 90 ? 30 : W > 40 ? 10 : 5;
+  for (let m = Math.ceil(t0 / stepM) * stepM; m <= t1; m += stepM) ticks.push(m);
+  const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  const bands = []; let last = 0;
+  t.log.forEach(e => { const key = rOf(e) + '-' + e.s; if (key !== last) { bands.push({ m: mins(e.t), lb: (t.revs && rOf(e) ? 'r' + rOf(e) + '·' : '') + e.s }); last = key; } });
+  const pops = t.log.filter(e => e.k === 'popup' || e.k === 'rev');
+  const bg = bands.map(b => `<div class="tl-band" style="left:${X(b.m)}"></div>`).join('') + pops.map(e => `<div class="tl-mark" style="left:${X(mins(e.t))}"></div>`).join('');
+  const head = `<div class="tl-row" style="border-bottom:1px solid var(--line)"><span class="lb"><small>Steps · gates</small></span><div class="tl-track">
+    ${bands.map(b => `<div class="tl-band" style="left:${X(b.m)}"><span>${b.lb}</span></div>`).join('')}
+    ${pops.map(e => `<div class="tl-mark" style="left:${X(mins(e.t))}" title="${esc(e.tx)}"><b style="top:12px">${e.k === 'rev' ? '↺' : esc(e.tx.split(' ')[0])}</b></div>`).join('')}</div></div>`;
+  /* an "×N" call is N parallel agents: one row each */
+  const items = [];
+  t.log.filter(e => e.k === 'agent').forEach(e => { const m = e.tx.match(/×(\d+)/); const n = m ? +m[1] : 1;
+    for (let j = 0; j < n; j++) items.push({ e, label: n > 1 ? e.tx.replace(/\s*×\d+/, '') + '-' + (j + 1) : e.tx, d: e.live ? null : Math.max(1, Math.round(num(e.dur) * (n > 1 ? [1, .8, .9, .7][j % 4] : 1))) }); });
+  const rows = items.map(({ e, label, d: dd }, i) => {
+    const s = mins(e.t), d = dd == null ? Math.max(1, mins(t.now) - s) : dd, m = modelOf(e);
+    return `<div class="tl-row"><span class="lb" title="${esc(e.tx)}"><span class="lvbadge ${LV_OF(e.a).cls}">${LV_OF(e.a).id}</span> ${esc(label.replace('my-agent:', ''))} <small>${L(`step ${e.s}`, `${e.s}단계`)}</small></span>
+      <div class="tl-track">${bg}<div class="tl-bar ${e.live ? 'live' : ''} ${isMM(e) ? 'mm' : ''}" style="left:${X(s)};width:calc(${(d / W * 100).toFixed(2)}%);--c:${MCOL[m] || 'var(--accent)'};--i:${i}" title="${esc(e.tx)} · ${esc(m)}${(e.effort || EFFORT[e.a]) ? ' · effort ' + (e.effort || EFFORT[e.a]) : ''} · ${e.live ? L('running', '실행 중') : esc(e.tok) + ' · ' + fmtMin(num(e.dur)) + ' · ' + money(e.c)}" data-jump="${t.log.indexOf(e)}"></div></div></div>`;
+  }).join('');
+  const peak = (() => { let mx = 0; for (let m = t0; m <= t1; m++) { const n = items.filter(({ e, d }) => mins(e.t) <= m && m < mins(e.t) + (d == null ? mins(t.now) - mins(e.t) : d)).length; mx = Math.max(mx, n); } return mx; })();
+  return `<div class="tl-legend"><span><i style="background:var(--l2)"></i>opus</span><span><i style="background:var(--l3)"></i>sonnet</span><span><i style="background:var(--l1)"></i>haiku</span>
+      <span><i style="background:var(--gate);width:2px"></i>${L('popup · gate · revision', '팝업·게이트·수정')}</span><span>${L('stripes = running', '줄무늬 = 실행 중')}</span><span>${L('red border = MISMATCH', '빨간 테두리 = MISMATCH')}</span><span style="margin-left:auto">${L(`peak concurrency ${peak}`, `최대 동시 실행 ${peak}개`)}</span></div>
+    <div class="tl"><div class="tl-axis">${ticks.map(m => `<span style="left:${X(m)}">${hm(m)}</span>`).join('')}</div>${head}${rows}</div>
+    <p class="note">${L('Click a bar to jump to that moment in Replay. Numbers in the top row are step numbers.', '막대를 누르면 재생에서 그 시점으로 갑니다. 위 칸의 숫자는 단계 번호입니다.')}</p>`;
+}
+function replay(t) {
+  const n = t.log.length;
+  if (!n) return `<p class="note">${L('No run-log records yet.', '아직 run-log 기록이 없습니다.')}</p>`;
+  if (st.ri == null || st.ri >= n) st.ri = 0;
+  const i = st.ri, e = t.log[i], upto = t.log.slice(0, i + 1);
+  const curStep = e.s;
+  const con = upto.map((x, j) => x.k === 'rev'
+    ? `<div class="pop" style="border-style:dashed">${esc(x.t)} ${L('[revision]', '[수정]')} ${esc(x.tx)}<br>${esc(x.sub || '')}</div>`
+    : x.k === 'popup'
+    ? `<div class="pop">${esc(x.t)} ${L('[popup]', '[팝업]')} ${esc(x.tx)}<br>${esc(x.sub || '')}</div>`
+    : `<div class="ln ${j === i ? 'last' : ''} ${isMM(x) ? 'mm' : ''}">${esc(x.t)} <span class="ltag t${LV_OF(x.a).id[1]}">${LV_OF(x.a).id} ${esc(x.a)}</span> <span class="tx2">${esc(x.tx)}${x.sub ? ' — ' + esc(x.sub) : ''}${isMM(x) ? ` ⚠ MISMATCH ${esc(x.model)}→${esc(x.actual)}` : ''}</span></div>`).join('');
+  const filesAt = k => { if (k < 0) return []; const ev = t.log[k]; return t.files.filter(f => !f.todo && f.s <= ev.s && (f.s < ev.s || mins(f.t) <= mins(ev.t))); };
+  const files = filesAt(i), before = new Set(filesAt(i - 1).map(f => f.p));
+  const mockNow = mocksOf(t).filter(m => m.r === rOf(e) && e.k === 'popup' && e.tx.startsWith('G1b'))[0];
+  const done = upto.filter(x => x.k === 'agent' && !x.live);
+  const tokSoFar = done.reduce((a, x) => a + num(x.tok), 0), costSoFar = done.reduce((a, x) => a + num(x.c), 0);
+  const lv = LV_OF(e.a);
+  return `<div class="rp-ctrl"><button data-rp="first">${L('First', '처음')}</button><button data-rp="prev">${L('Prev', '이전')}</button><button data-rp="next" class="primary">${L('Next', '다음')}</button>
+      <button data-rp="play">${st.playing ? L('Pause ␣', '멈춤 ␣') : L('Auto-play ␣', '자동 재생 ␣')}</button>
+      <span class="seg">${[0.5, 1, 2, 4].map(v => `<button data-speed="${v}" aria-pressed="${(st.speed || 1) === v}">${v}×</button>`).join('')}</span><input type="range" min="0" max="${n - 1}" value="${i}" id="rp-range" aria-label="${L('Replay position', '재생 위치')}"><span class="count">${i + 1} / ${n}</span><span class="note" style="margin:0">${L('← → move · Space play', '← → 이동 · Space 재생')}</span></div>
+    <div class="rp-grid">
+      <div>${t.revs ? `<span class="badge rev">rev${rOf(e)}</span>` : ''}${vsteps(t, stats(t, rOf(e)), { key: 'rpstep', compact: true, sel: curStep, R: rOf(e), state: n => (t.revs && rOf(e) > 0 && n < t.revs[rOf(e)].back) ? 'inh' : e.k === 'rev' && n === curStep ? 'cut' : n < curStep ? 'done' : n === curStep ? 'cur' : 'todo' })}</div>
+      <div><div class="console" id="rp-console">${con}</div>
+        <div class="rp-card"><b>${esc(e.t)} · ${curStep ?? '–'}. ${esc(STEP_NAME[curStep])}</b> · <span class="lvbadge ${lv.cls}">${lv.id} ${esc(compName(lv, e.a))}</span><br>
+          ${esc(e.tx)}${e.sub ? `<br><span class="note">${esc(e.sub)}</span>` : ''}
+          ${e.k === 'agent' && !e.live ? `<br>${mtag(modelOf(e))}${etag(e.a, e.effort)} ${esc(e.tok)} · ${fmtMin(num(e.dur))} · ${money(e.c)} · <span class="res">${esc(e.res)}</span>${mmTag(e)}` : ''}
+          <br><span class="note">${L(`cumulative so far ≈ ${tokSoFar}k tokens · ${money(costSoFar)}`, `이 시점까지 누적 ≈ ${tokSoFar}k 토큰 · ${money(costSoFar)}`)}</span></div>${mockNow ? mockBlock(t, mockNow) : ''}</div>
+      <div><div class="fgroup" style="margin-top:0">Task files at this moment</div><div class="ftree">${files.map(f => `<div class="frow"><span class="fn">├ ${before.has(f.p) ? esc(f.p) : `<span class="fnew" data-type="${esc(f.p)}">${esc(f.p)}</span>`}</span><span class="fm">${before.has(f.p) ? esc(f.t) : L('new', '새로 씀')}</span></div>`).join('') || `<p class="note">${L('none', '없음')}</p>`}</div></div>
+    </div>`;
+}
+/* "Components at this moment" lives in its own window and follows the replay position */
+let compWin = null;
+function compView() {
+  const t = cur(); if (!t || !t.log || !t.log.length) return `<p class="note">${L('No run-log records yet.', '아직 run-log 기록이 없습니다.')}</p>`;
+  const e = t.log[st.ri || 0], used = new Set(t.log.slice(0, (st.ri || 0) + 1).map(x => x.a)), lv = LV_OF(e.a);
+  return `<div class="ph"><h3>Components at this moment</h3><small>${esc(t.id)} · ${st.ri + 1} / ${t.log.length}</small></div>
+    <p class="note" style="margin:0 0 10px">${esc(e.t)} · ${e.s}. ${esc(STEP_NAME[e.s])} · <span class="lvbadge ${lv.cls}">${lv.id} ${esc(compName(lv, e.a))}</span></p>
+    <div class="legend"><span>${L('outlined = acting now', '테두리 = 지금 일하는 구성 요소')}</span><span>${L('faded = not used yet', '흐린 칸 = 아직 안 쓰임')}</span></div>
+    <div class="rp-mini">${LEVELS.map(l => `<div class="lv ${l.cls}"><div class="lh"><b>${l.id}</b><span>${esc(l.name)}</span></div><div class="chips">
+      ${l.comps.map(([id, nm]) => `<span class="chip ${used.has(id) ? 'used' : ''} ${id === e.a ? 'live' : ''}"><b>${esc(nm)}</b></span>`).join('')}</div></div>`).join('')}</div>`;
+}
+function syncCompWin() { if (!compWin || compWin.closed) return; const r = compWin.document.getElementById('root'); if (r) { compWin.document.documentElement.lang = LANG; r.innerHTML = compView(); } }
+function openCompWin() {
+  if (compWin && !compWin.closed) { compWin.focus(); syncCompWin(); return; }
+  /* reuse the size (and place) the window had last time; the first click also adopts an already open window of the same name */
+  let sz = null; try { sz = JSON.parse(localStorage.getItem('ma-comp-size')); } catch (x) {}
+  compWin = window.open('', 'ma-components', sz ? `width=${sz.w},height=${sz.h},left=${sz.x},top=${sz.y}` : 'width=560,height=640');
+  if (!compWin) return;
+  const d = compWin.document; d.open();
+  d.write(`<!DOCTYPE html><html lang="${LANG}"><head><meta charset="utf-8"><title>Components · my-agent<\/title>${document.querySelector('link[rel=stylesheet]').outerHTML}<style>${document.querySelector('style').textContent}
+body{padding:16px;background:var(--bg)} #root{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}<\/style><\/head><body><div id="root"></div><\/body><\/html>`);
+  d.close(); syncCompWin();
+  const w = compWin, save = () => { try { if (!w.closed) localStorage.setItem('ma-comp-size', JSON.stringify({ w: w.innerWidth, h: w.innerHeight, x: w.screenX, y: w.screenY })); } catch (x) {} };
+  let tm; w.addEventListener('resize', () => { clearTimeout(tm); tm = setTimeout(save, 300); }); w.addEventListener('pagehide', save); save();
+}
+let playTimer = null;
+function togglePlay() { st.playing = !st.playing; clearInterval(playTimer);
+  if (st.playing) playTimer = setInterval(() => { if (st.ri >= cur().log.length - 1) { st.playing = false; clearInterval(playTimer); renderLog(); return; } rpGo(st.ri + 1); }, 1200 / (st.speed || 1));
+  renderLog(); }
+document.addEventListener('keydown', e => {
+  if (st.tab !== 'log' || st.mode === 'timeline' || (e.target.closest && e.target.closest('input, select, textarea'))) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); rpGo(st.ri + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); rpGo(st.ri - 1); }
+  else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  else if (e.key === 'Home') { e.preventDefault(); rpGo(0); }
+  else if (e.key === 'End') { e.preventDefault(); rpGo(cur().log.length - 1); }
+});
+function rpGo(i) { st.ri = Math.max(0, Math.min(cur().log.length - 1, i)); renderLog(); const c = $('rp-console'); if (c) c.scrollTop = c.scrollHeight; }
+
+function renderAll() { renderChrome(); renderList();
+  const t = cur();
+  if (!t || t.error) {
+    $('task-head').innerHTML = t ? `<h2>${esc(t.id)}</h2><span class="where"><code>${esc(t.project)}/docs/agent/${esc(t.id)}/</code></span>` : '';
+    $('p-status').innerHTML = t ? `<div class="now-box"><h4>${L('Could not read this task', '이 작업을 읽을 수 없음')}</h4><p class="note">${esc(t.error)}</p></div>`
+      : `<p class="note">${st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : L('No tasks yet.', '아직 작업이 없습니다.')}</p>`;
+    ['p-arch', 'p-files', 'p-log'].forEach(id => $(id).innerHTML = '');
+  } else { renderHead(); renderStatus(); renderArch(); renderFiles(); renderLog(); }
+  document.querySelectorAll('.panel[data-view]').forEach(p => p.classList.toggle('on', p.dataset.view === st.tab));
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === st.tab));
+  afterRender();
+}
+function afterRender() { stagger(); setBars(); runCountUps(); }
+let entT;
+function entering() { document.body.classList.add('entering'); clearTimeout(entT); entT = setTimeout(() => document.body.classList.remove('entering'), 900); }
+const vt = fn => document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches ? document.startViewTransition(fn) : fn();
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.task) { selectTask(b.dataset.task); }
+  else if (b.dataset.tab) { st.tab = b.dataset.tab; entering(); vt(() => renderAll()); }
+  else if (b.dataset.lang) { LANG = b.dataset.lang; try { localStorage.setItem('ma-lang', LANG); } catch (x) {} lastTyped = ''; vt(() => renderAll()); }
+  else if (b.dataset.compwin) openCompWin();
+  else if (b.dataset.side) { st.sideMin = !st.sideMin; try { localStorage.setItem('ma-side-min', st.sideMin ? '1' : '0'); } catch (x) {} vt(() => renderList()); }
+  else if (b.dataset.f) { st.filter = b.dataset.f; document.querySelectorAll('#filter button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderList(); }
+  else if (b.dataset.comp) { st.comp = b.dataset.comp; renderArch(); }
+  else if (b.dataset.file) { st.file = b.dataset.file; entering(); renderFiles(); }
+  else if (b.dataset.rev != null && b.dataset.rev !== '') { st.rev = +b.dataset.rev; renderStatus(); afterRender(); }
+  else if (b.dataset.mode) { st.mode = b.dataset.mode; entering(); vt(() => { renderLog(); afterRender(); }); }
+  else if (b.dataset.rp) { const r = b.dataset.rp;
+    if (r === 'first') rpGo(0); else if (r === 'prev') rpGo(st.ri - 1); else if (r === 'next') rpGo(st.ri + 1);
+    else togglePlay(); }
+  else if (b.dataset.speed) { st.speed = +b.dataset.speed; if (st.playing) { st.playing = false; togglePlay(); } else renderLog(); }
+});
+/* Dashboard step → Log replay at that step's first record */
+document.addEventListener('click', e => { const s = e.target.closest('[data-step]'); if (!s || e.target.closest('button')) return; const t = cur();
+  const R = st.rev == null || st.rev > latestRev(t) ? latestRev(t) : st.rev, n = +s.dataset.step;
+  let k = t.log.findIndex(x => x.s === n && rOf(x) === R); if (k < 0) k = t.log.findIndex(x => x.s === n);
+  if (k < 0) return; st.tab = 'log'; st.mode = 'replay'; st.ri = k; entering(); vt(() => renderAll()); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-jump]'); if (!b) return; st.mode = 'replay'; st.ri = +b.dataset.jump; vt(() => { renderLog(); afterRender(); }); });
+/* drag the sidebar edge to resize (200–480px) */
+$('resizer').addEventListener('pointerdown', e => { const r = e.currentTarget; try { r.setPointerCapture(e.pointerId); } catch (x) {} r.classList.add('drag'); document.body.classList.add('resizing');
+  const move = ev => document.documentElement.style.setProperty('--side-w', Math.max(200, Math.min(480, ev.clientX)) + 'px');
+  const up = ev => { r.removeEventListener('pointermove', move); r.removeEventListener('pointerup', up); r.classList.remove('drag'); document.body.classList.remove('resizing');
+    try { localStorage.setItem('ma-side-w', Math.max(200, Math.min(480, ev.clientX))); } catch (x) {} };
+  r.addEventListener('pointermove', move); r.addEventListener('pointerup', up); });
+$('resizer').addEventListener('dblclick', () => { document.documentElement.style.removeProperty('--side-w'); try { localStorage.removeItem('ma-side-w'); } catch (x) {} });
+/* ripple */
+document.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (!b || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = b.getBoundingClientRect(), sz = Math.max(r.width, r.height) * 2, sp = document.createElement('span'); sp.className = 'rpl';
+  sp.style.cssText = `width:${sz}px;height:${sz}px;left:${e.clientX - r.left - sz / 2}px;top:${e.clientY - r.top - sz / 2}px`; b.appendChild(sp); sp.addEventListener('animationend', () => sp.remove()); });
+document.addEventListener('click', e => { const s = e.target.closest('[data-rpstep]'); if (!s) return; const k = cur().log.findIndex(x => x.s >= +s.dataset.rpstep); if (k >= 0) rpGo(k); });
+document.addEventListener('input', e => { if (e.target.id === 'rp-range') rpGo(+e.target.value); });
+$('task-select').addEventListener('change', e => selectTask(e.target.value));
+
+
+/* ---------- live data: poll the local server every 2 s ---------- */
+const POLL_MS = 2000;
+let lastSig = '';
+async function getJSON(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status + ' ' + url); return r.json(); }
+async function loadTask(key) {
+  const t = await getJSON('/api/tasks/' + encodeURIComponent(key).replace(/%2F/g, '/'));
+  const old = FULL[key];
+  if (old && old.log && t.log) {   /* follow the newest record only if replay was already at the end */
+    const seen = new Set(old.log.map(e => e.ts + e.k + e.tx));
+    t.log.forEach(e => { e.isNew = !seen.has(e.ts + e.k + e.tx); });
+    if (key === st.task && !st.playing && st.ri === old.log.length - 1 && t.log.length > old.log.length) st.ri = t.log.length - 1;
+  }
+  FULL[key] = t;
+  return t;
+}
+async function poll() {
+  try {
+    const data = await getJSON('/api/tasks');
+    TASKS = data.tasks;
+    if (!TASKS.some(t => t.key === st.task)) st.task = (TASKS.find(t => t.status === 'running') || TASKS[0] || {}).key || null;
+    if (st.task) await loadTask(st.task);
+    st.offline = false;
+  } catch (err) { st.offline = true; }
+  st.liveWait = TASKS.some(t => t.status === 'running' && t.waiting);
+  const sig = JSON.stringify([TASKS, st.task && FULL[st.task], st.offline]);
+  if (sig !== lastSig) { const first = !lastSig; lastSig = sig; if (first) entering(); renderAll(); if (first) setTimeout(() => scramble(document.querySelector('#task-head h2')), 30); }
+}
+async function selectTask(key) {
+  st.task = key; st.ri = 0; st.rev = null;
+  if (!FULL[key]) { try { await loadTask(key); } catch (err) { st.offline = true; } }
+  lastSig = JSON.stringify([TASKS, FULL[key], st.offline]);
+  entering(); vt(() => renderAll()); setTimeout(() => scramble(document.querySelector('#task-head h2')), 30);
+}
+poll(); setInterval(poll, POLL_MS);
+</script>
+</body>
+</html>

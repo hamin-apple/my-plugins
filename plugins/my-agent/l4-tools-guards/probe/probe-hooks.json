@@ -1,0 +1,72 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py PreToolUse '${CLAUDE_PLUGIN_ROOT}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py PostToolUse '${CLAUDE_PLUGIN_ROOT}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py PermissionRequest '${CLAUDE_PLUGIN_ROOT}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "^my-agent:",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py SubagentStart '${CLAUDE_PLUGIN_ROOT}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^my-agent:",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py SubagentStop '${CLAUDE_PLUGIN_ROOT}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py SessionStart '${CLAUDE_PLUGIN_ROOT}'",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

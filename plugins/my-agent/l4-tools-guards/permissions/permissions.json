@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git * commit*)",
+      "Bash(git * push*)",
+      "Bash(rm -rf:*)",
+      "Bash(npm i:*)",
+      "Bash(npm install:*)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(brew install:*)",
+      "mcp__plugin_slack_slack__slack_send_message",
+      "mcp__plugin_slack_slack__slack_schedule_message",
+      "mcp__plugin_github_github__create_pull_request",
+      "mcp__plugin_github_github__create_or_update_file",
+      "mcp__plugin_github_github__push_files",
+      "mcp__plugin_vercel_vercel__create_deployment"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push * --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * -f*)",
+      "Bash(git * push --force*)",
+      "Bash(git * push * --force*)",
+      "Bash(git * push -f*)",
+      "Bash(git * push * -f*)",
+      "Bash(*--no-verify*)",
+      "Read(//**/.env)",
+      "Read(//**/.env.*)",
+      "Read(//**/*.pem)",
+      "Read(//**/*.key)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.netrc)"
+    ]
+  }
+}

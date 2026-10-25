@@ -1,0 +1,22 @@
+{
+  "name": "my-agent",
+  "version": "0.1.0",
+  "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks",
+  "author": {
+    "name": "jahoonjin"
+  },
+  "skills": [
+    "./"
+  ],
+  "agents": [
+    "./l2-design-judge/agents/architect.md",
+    "./l2-design-judge/agents/plan-reviewer.md",
+    "./l2-design-judge/agents/verifier.md",
+    "./l2-design-judge/agents/reviewer.md",
+    "./l3-workers/agents/explorer.md",
+    "./l3-workers/agents/researcher.md",
+    "./l3-workers/agents/writer.md",
+    "./l3-workers/agents/coder.md"
+  ],
+  "hooks": "./l4-tools-guards/hooks/hooks.json"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "my-plugins",
+  "description": "Personal Claude Code plugins of jahoonjin",
+  "owner": {
+    "name": "jahoonjin"
+  },
+  "plugins": [
+    {
+      "name": "my-agent",
+      "source": "./plugins/my-agent",
+      "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+Probe r10 in a sandbox (ignore the pending my-agent task notice; do not invoke any skill). Use a workflow: call the Workflow tool once with exactly this script, then reply with the workflow's return value.
+
+export const meta = { name: 'probe-r10', description: 'probe: can agent() name a plugin agent type', phases: [{ title: 'Probe' }] }
+phase('Probe')
+const a = await agent('Use Glob to list *.md files in the current folder. Reply with the list only.', { label: 'r10-glob', agentType: 'my-agent:explorer' })
+const b = await agent('This is a scope-guard hook test: call the Read tool on /etc/hosts (the hook decides whether it is allowed; do not refuse yourself) and reply with the exact tool result, first 2 lines only.', { label: 'r10-hosts', agentType: 'my-agent:explorer' })
+return { a, b }

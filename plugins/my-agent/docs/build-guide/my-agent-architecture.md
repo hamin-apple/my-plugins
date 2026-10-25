@@ -731,7 +731,7 @@ hooks:
 1. 8765부터 8775까지 차례로 `GET /api/health`를 보냅니다. `{"app": "my-agent-monitor", "root": <이 플러그인의 monitor 폴더>}`로 답하는 포트가 있으면 이미 떠 있는 것입니다. URL을 출력하고 끝냅니다.
 2. 다른 프로그램이 쓰는 포트(예: 예전 `~/dev/my-agent-monitor/`의 서버)는 건드리지 않고 건너뜁니다.
 3. 비어 있는 첫 포트에서 `server.py --port <포트>`를 새 세션(`start_new_session`)으로 띄웁니다. 출력은 `~/dev/agent-tasks/monitor.log`에 씁니다. 3초 안에 health가 답하면 `~/dev/agent-tasks/monitor.json`(`port`, `pid`, `root`, `started`)을 쓰고 URL을 출력합니다.
-4. 새로 띄웠을 때만 브라우저를 엽니다(macOS `open`). 이미 떠 있으면 열지 않습니다. `--open`은 항상 열고, `--no-open`은 열지 않습니다.
+4. 새로 띄웠을 때만 모니터를 엽니다. 이미 떠 있으면 열지 않습니다. `--open`은 항상 열고, `--no-open`은 열지 않습니다. 여는 방식은 `--window`/`--tab`, `~/dev/agent-tasks/monitor-config.json`의 `open`, 기본값 `window` 순서로 정합니다. `window`는 기본 브라우저가 Safari면 크기를 정한 새 Safari 창, Chrome 계열이면 앱 창입니다. 기본 브라우저를 바꾼 적이 없으면(LaunchServices에 http 항목 없음) Safari로 봅니다. 그 밖의 브라우저, LaunchServices 설정을 읽을 수 없을 때, Safari 자동화가 거부될 때(또는 5초 안에 답이 없을 때)는 탭입니다. `--task <key>`는 `/#task=<key>`로 그 작업을 골라 엽니다. 브라우저는 `--browser default|safari|chrome`, 설정 파일의 `browser`, 기본값 `default` 순서로 정하며, `safari`/`chrome`이면 기본 브라우저와 관계없이 그 브라우저로 열고(실패하면 기본 브라우저 탭), 메뉴바 앱의 `Browser ▸` 메뉴가 이 값을 바꿉니다.
 5. 어떤 경우에도 exit 0으로 끝냅니다. 실패하면 이유를 한 줄로 출력합니다.
 
 **서버 수명**
@@ -739,11 +739,12 @@ hooks:
 - 세션이 끝나도 서버는 계속 둡니다. 여러 세션과 작업이 서버 하나를 같이 씁니다. 서버는 화면이 요청할 때만 파일을 읽으므로, 화면을 닫아 두면 하는 일이 거의 없습니다.
 - `127.0.0.1`에만 열고 읽기만 합니다(모니터 문서 3절).
 - 끄는 방법은 `/my-agent:monitor stop`입니다.
+- 메뉴바 앱(`monitor/menubar/`)은 진행 중 작업 수를 보이고 작업별로 `monitor-up.py --open --task <key>`를 실행합니다. 빌드와 로그인 항목은 `monitor/menubar/README.md`에 있습니다.
 
 **`/my-agent:monitor` 스킬 (`skills/monitor/SKILL.md`)**
 
 - frontmatter: `name: monitor`, `disable-model-invocation: true`(직접 부를 때만), `argument-hint: [status|stop]`.
-- 인자 없음: `monitor-up.py --open`. 떠 있지 않으면 띄우고, 브라우저를 엽니다.
+- 인자 없음: `monitor-up.py --open`. 떠 있지 않으면 띄우고, 모니터 창을 엽니다.
 - `status`: 떠 있는지와 URL, 시작 시각을 보여 줍니다. 띄우지 않습니다.
 - `stop`: `monitor.json`의 포트가 health에 이 플러그인의 root로 답할 때만 그 `pid`를 끝내고 `monitor.json`을 지웁니다. 다른 프로그램은 끝내지 않습니다.
 

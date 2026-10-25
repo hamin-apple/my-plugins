@@ -22,8 +22,8 @@ Run exactly one command, chosen by the arguments:
 
 Then report the printed line to the user in Korean, in one sentence, keeping the URL as it is:
 
-- `(started)`: 모니터를 띄우고 브라우저를 열었다
-- `(running…)`: 이미 떠 있다 (no argument: the browser was opened on it)
+- `(started)`: 모니터를 띄우고 모니터 창을 열었다(설정이 tab이면 탭)
+- `(running…)`: 이미 떠 있다 (no argument: 모니터 창을 열었다, 설정이 tab이면 탭)
 - `not running`, `stopped <port>`, `nothing to stop`: as they say
 - `not started (<reason>)`: 띄우지 못했다, with the reason
 

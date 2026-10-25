@@ -16,6 +16,18 @@ python3 server.py --port 9000
 my-agent starts it for you with `monitor-up.py` (Router at Intake, or `/my-agent:monitor`).
 `GET /api/health` answers `{"app": "my-agent-monitor", "root": "<this folder>"}` so `monitor-up.py` can tell its own server from anything else on the port.
 
+### Opening the monitor
+
+`monitor-up.py` opens a new window by default (about 1200x800), or a tab.
+
+- Setting: `~/dev/agent-tasks/monitor-config.json`, `{"open": "window"}` or `{"open": "tab"}`. Missing, broken or unknown values mean `window`.
+- Per run: `--window` or `--tab` beats the file. `--task <sha1 8>/<task-id>` opens the page with that task selected (`/#task=<key>`). `--open` always opens, `--no-open` never does.
+- Browser: `"browser": "default" | "safari" | "chrome"` in the same file (other keys are kept). Missing, broken or unknown means `default` (the system default browser, detected as below). `safari` always uses Safari (window: sized new window; tab: `open -a Safari`), `chrome` always uses Chrome (window: app window; tab: `open -b com.google.chrome`). If the chosen browser fails to open, the default browser's tab is used. Per run: `--browser default|safari|chrome` beats the file (an unknown value is ignored). `monitor-up.py set-browser <value>` writes the key; the menu bar app uses it.
+- Window by default browser (`browser` is `default`): Safari opens a sized new Safari window, and a default browser that was never changed (no http entry in LaunchServices) counts as Safari. Chrome, Edge, Brave, Chromium and Vivaldi open an app window. Any other browser, an unreadable LaunchServices file, or Safari automation being refused opens a tab.
+- Note: if Safari is not running and takes longer than 5 s to start, the window attempt times out and the tab fallback runs, so both a Safari window and a tab can appear.
+
+Menu bar app: [menubar/README.md](menubar/README.md). Opening from Shortcuts: [shortcuts-review.md](shortcuts-review.md).
+
 The server binds `127.0.0.1` only. The page polls every 2 s.
 
 | Source | Default | Override |

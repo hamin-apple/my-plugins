@@ -69,7 +69,7 @@ rep("  : t.revs ? (t.mainR[R] || {}) : (R === 0 ? (t.main || {}) : {});",
 rep("  evs.forEach(e => { const s = steps[e.s]; if (!s.start) s.start = e.t;",
     "  evs.forEach(e => { const s = steps[e.s]; if (!s) return; if (!s.start) s.start = e.t;")
 rep("  models[L('opus · main session', 'opus · 메인 세션')] = { calls: 0, tok: mt[0], min: evs.length ? mins(revEnd(t, R)) - mins(evs[0].t) : 0, cost: mt[1], live: t.status === 'running' ? 1 : 0, main: true };",
-    "  models[L('opus · main session (approx.)', 'opus · 메인 세션 (근사)')] = { calls: 0, tok: mt[0], min: evs.length ? mins(revEnd(t, R)) - mins(evs[0].t) : 0, cost: mt[1], live: t.status === 'running' ? 1 : 0, main: true, nil: !hasMain(t) };")
+    "  models[L('opus · main', 'opus · main')] = { calls: 0, tok: mt[0], min: evs.length ? mins(revEnd(t, R)) - mins(evs[0].t) : 0, cost: mt[1], live: t.status === 'running' ? 1 : 0, main: true, nil: !hasMain(t) };")
 rep("const money = c => '$' + c.toFixed(2);", "const money = c => c == null ? '–' : '$' + (+c).toFixed(2);")
 rep("<td class=\"n\">${bar(r.tok, maxTok)}${r.tok}k</td><td class=\"n\">${fmtMin(r.min)}</td><td class=\"n\">${money(r.cost)}</td></tr>`).join('')}",
     "<td class=\"n\">${r.nil ? '–' : bar(r.tok, maxTok) + r.tok + 'k'}</td><td class=\"n\">${r.nil ? '–' : fmtMin(r.min)}</td><td class=\"n\">${r.nil ? '–' : money(r.cost)}</td></tr>`).join('')}")

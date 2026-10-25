@@ -49,6 +49,11 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn('text/html', headers['Content-Type'])
 
+    def test_index_reads_task_from_hash(self):
+        body = self.get('/')[2].decode('utf-8')
+        self.assertIn('location.hash', body)
+        self.assertIn('/^#task=(.+)$/', body)
+
     def test_unknown_key_404(self):
         with self.assertRaises(urllib.error.HTTPError) as cm:
             self.get('/api/tasks/deadbeef/nope')

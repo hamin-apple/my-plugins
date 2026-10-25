@@ -1,0 +1,6 @@
+{
+  "note-good.md": "PASS",
+  "note-criterion-miss.md": "FAIL",
+  "note-broken-citation.md": "FAIL",
+  "note-injected.md": "FAIL"
+}

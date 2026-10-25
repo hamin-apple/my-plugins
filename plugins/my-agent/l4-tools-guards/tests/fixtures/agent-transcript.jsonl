@@ -1,0 +1,7 @@
+{"type": "user", "timestamp": "2026-10-25T00:00:00.000Z", "message": {"role": "user", "content": "run pwd"}}
+{"type": "assistant", "timestamp": "2026-10-25T00:00:02.000Z", "message": {"id": "msg_1", "model": "claude-haiku-5-5", "usage": {"input_tokens": 100, "output_tokens": 5, "cache_creation_input_tokens": 1000, "cache_read_input_tokens": 0}}}
+{"type": "assistant", "timestamp": "2026-10-25T00:00:03.000Z", "message": {"id": "msg_1", "model": "claude-haiku-5-5", "usage": {"input_tokens": 100, "output_tokens": 20, "cache_creation_input_tokens": 1000, "cache_read_input_tokens": 0}}}
+{"type": "user", "timestamp": "2026-10-25T00:00:04.000Z", "message": {"role": "user", "content": [{"type": "tool_result", "content": "/x"}]}}
+{"type": "assistant", "timestamp": "2026-10-25T00:00:12.000Z", "message": {"id": "msg_2", "model": "claude-haiku-5-5", "usage": {"input_tokens": 3, "output_tokens": 7, "cache_creation_input_tokens": 50, "cache_read_input_tokens": 1000}}}
+{"type": "assistant", "timestamp": "2026-10-25T00:00:12.500Z", "message": {"id": "msg_3", "model": "<synthetic>", "usage": {"input_tokens": 0, "output_tokens": 0}}}
+{"half written

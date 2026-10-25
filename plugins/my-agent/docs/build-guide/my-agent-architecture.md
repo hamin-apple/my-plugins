@@ -1,7 +1,7 @@
 # my-agent 아키텍처: HITL을 결합한 멀티 에이전트 오케스트레이션
 
 - 작성일: 2026-10-23
-- 상태: 설계 초안 v0.26 (저장소를 `~/dev/my-plugins` 마켓플레이스 안으로 옮김, 플러그인 버전을 플러그인 폴더 기준으로 셈). v0.25: 대화형 검증 반영(F30~F34, G2 git 옵션 빈틈, 메인 모델 검사, 이어 부른 서브에이전트 기록). 구현 0~9단계를 끝냄(2026-10-25, 설치는 사용자 승인으로 처음 `my-agent@my-agent-dev`, 옮긴 뒤 `my-agent@my-plugins`, 사용자 범위): 탐침 전부, 플러그인 뼈대, 기록 hook, G1b·판정 최신성·scope-guard hook, ask/deny 목록, 에이전트 8개, 세 프로파일과 시나리오 3건, workflow 규칙(F29), 개발 프로파일 검증 3건(`docs/dev-profile-validation.md`), 알림 확인(F34). 설치 뒤 확인까지 끝냄(작업 디렉터리 밖 쓰기: hook `ask`). v0.2 4레벨 구조, v0.3 G1b mock-up·prototype과 Q1~Q6 결정, v0.4 검토 반영(하드 게이트 범위, 설치 범위, 모순 정리, 팝업 규칙), v0.5 스킬 구성, 병합 충돌 처리, my-dev 은퇴 절차, v0.6 서브에이전트 호출 자동 기록(4.7.2절), v0.7 작업 중 수정 요청 절차(4.8.1절)와 작업 ID 규칙(4.7.3절), v0.8 재개·동시 작업·중단·작업 위치(4.8.2절)와 병렬 coder 규칙, v0.9 일관성 정리, hook 실패 시 차단, 권한 모드, 예상 규모, 환경 오류, v0.10 보안(4.12절)과 시험 방법(4.13절), v0.11 에이전트를 레벨 폴더에 둔 채 플러그인으로 불러옴(4.5.1절, Q12), v0.12 승인 전 허용 목록의 입력값, 자기 수정 시 잠김 방지, 새 세션 알림 범위, 작업 중 my-agent 변경 감지, v0.13 run-log의 모델 기대값(호출 인자 기록), `status` 표시 범위, 금액은 status line 스냅샷을 참고로만, v0.14 workflow 크기 medium과 workflow 에이전트 보호 조건, vault 저장 규칙, v0.15 일관성 정리(모델 우선순위, MISMATCH 범위, feedback 위치 등), v0.16 vault 저장을 없애고 결과물은 범위 문서에서 정한 위치로, v0.17 E 조건에서 예상 규모(토큰) 초과를 뺌. 예상 규모는 참고로만 보여 줌, v0.18 에이전트별 effort 고정(4.5절)과 run-log 기록, v0.19 모니터(`my-agent-monitor-design.md`)용 기록: run-log 줄 형식, `step:` 줄, 팝업 `ask:`/`answer:` 분리, G2 기록 hook, 작업자 중단 표시, 판정 파일 형식, 프로젝트 목록 등록, v0.20 모니터를 플러그인의 `monitor/`에 넣고 Router가 작업을 시작할 때 띄움, 수동 실행용 `/my-agent:monitor` 스킬(4.7.4절), v0.21 탐침 결과(F19~F27): worktree 에이전트의 `.active` 찾기, maxTurns 종료를 meta 파일로 찾아 `end=partial`로 기록, `stop:` 줄의 `mode=`·`effort=`, 스킬 frontmatter hook 경로를 `${CLAUDE_PLUGIN_ROOT}`로, v0.22 용어를 phase로 통일, my-dev를 건드리는 작업 항목(frontmatter 변경, 은퇴 절차)을 구현 순서에서 뺌. my-agent는 my-dev 없이 이 설계대로만 동작, v0.23 구현 2~7단계: F28(거부된 Skill은 hook도 없음)·F29(workflow `agentType`), git 밖 작업 위치의 `.active` 찾기, `NotebookEdit`도 G1b가 막음, manifest `version` 유지
+- 상태: 설계 초안 v0.26 (저장소를 `~/dev/my-plugins` 마켓플레이스 안으로 옮김, 플러그인 버전을 플러그인 폴더 기준으로 셈). v0.25: 대화형 검증 반영(F30~F34, G2 git 옵션 빈틈, 메인 모델 검사, 이어 부른 서브에이전트 기록). 구현 0~9단계를 끝냄(2026-10-25, 설치는 사용자 승인으로 처음 `my-agent@my-agent-dev`, 옮긴 뒤 `my-agent@my-plugins`, 사용자 범위): 탐침 전부, 플러그인 뼈대, 기록 hook, G1b·판정 최신성·scope-guard hook, ask/deny 목록, 에이전트 8개, 세 프로파일과 시나리오 3건, workflow 규칙(F29), 개발 프로파일 검증 3건(`docs/ref/dev-profile-validation.md`), 알림 확인(F34). 설치 뒤 확인까지 끝냄(작업 디렉터리 밖 쓰기: hook `ask`). v0.2 4레벨 구조, v0.3 G1b mock-up·prototype과 Q1~Q6 결정, v0.4 검토 반영(하드 게이트 범위, 설치 범위, 모순 정리, 팝업 규칙), v0.5 스킬 구성, 병합 충돌 처리, my-dev 은퇴 절차, v0.6 서브에이전트 호출 자동 기록(4.7.2절), v0.7 작업 중 수정 요청 절차(4.8.1절)와 작업 ID 규칙(4.7.3절), v0.8 재개·동시 작업·중단·작업 위치(4.8.2절)와 병렬 coder 규칙, v0.9 일관성 정리, hook 실패 시 차단, 권한 모드, 예상 규모, 환경 오류, v0.10 보안(4.12절)과 시험 방법(4.13절), v0.11 에이전트를 레벨 폴더에 둔 채 플러그인으로 불러옴(4.5.1절, Q12), v0.12 승인 전 허용 목록의 입력값, 자기 수정 시 잠김 방지, 새 세션 알림 범위, 작업 중 my-agent 변경 감지, v0.13 run-log의 모델 기대값(호출 인자 기록), `status` 표시 범위, 금액은 status line 스냅샷을 참고로만, v0.14 workflow 크기 medium과 workflow 에이전트 보호 조건, vault 저장 규칙, v0.15 일관성 정리(모델 우선순위, MISMATCH 범위, feedback 위치 등), v0.16 vault 저장을 없애고 결과물은 범위 문서에서 정한 위치로, v0.17 E 조건에서 예상 규모(토큰) 초과를 뺌. 예상 규모는 참고로만 보여 줌, v0.18 에이전트별 effort 고정(4.5절)과 run-log 기록, v0.19 모니터(`my-agent-monitor-design.md`)용 기록: run-log 줄 형식, `step:` 줄, 팝업 `ask:`/`answer:` 분리, G2 기록 hook, 작업자 중단 표시, 판정 파일 형식, 프로젝트 목록 등록, v0.20 모니터를 플러그인의 `monitor/`에 넣고 Router가 작업을 시작할 때 띄움, 수동 실행용 `/my-agent:monitor` 스킬(4.7.4절), v0.21 탐침 결과(F19~F27): worktree 에이전트의 `.active` 찾기, maxTurns 종료를 meta 파일로 찾아 `end=partial`로 기록, `stop:` 줄의 `mode=`·`effort=`, 스킬 frontmatter hook 경로를 `${CLAUDE_PLUGIN_ROOT}`로, v0.22 용어를 phase로 통일, my-dev를 건드리는 작업 항목(frontmatter 변경, 은퇴 절차)을 구현 순서에서 뺌. my-agent는 my-dev 없이 이 설계대로만 동작, v0.23 구현 2~7단계: F28(거부된 Skill은 hook도 없음)·F29(workflow `agentType`), git 밖 작업 위치의 `.active` 찾기, `NotebookEdit`도 G1b가 막음, manifest `version` 유지
 - 실행 환경: 로컬 Claude Code (CLI, 스킬, 서브에이전트, hooks)
 - 이전 문서와의 관계: `hitl-orchestration-guide.md`는 Managed Agents API를 기준으로 쓴 문서입니다. 개념만 참고하고, 구현은 이 문서를 따릅니다.
 
@@ -25,7 +25,7 @@
 | 표시 | 뜻 |
 |---|---|
 | **[공식]** | `docs/claude-code-*.md` (code.claude.com 원문) |
-| **[기사]** | `docs/effective-context-engineering.md` (Anthropic 엔지니어링 글) |
+| **[기사]** | `docs/ref/effective-context-engineering.md` (Anthropic 엔지니어링 글) |
 | **[my-dev]** | `~/dev/my-dev`의 SKILL.md, references, maintenance-notes |
 | **[Gemini]** | `docs/gemini-*.md`. 참고용이며 검증하지 않은 내용 |
 | **[제안]** | 이 문서가 새로 제안하는 설계. 결정이 필요함 |
@@ -529,7 +529,7 @@ claude plugin install my-agent@my-plugins
 ├── monitor/                        # 모니터 (읽기 전용, 레벨 밖): server.py · monitor-up.py · monitor/ · web/ · prices.json · tools/ · tests/ (4.7.4절)
 ├── maintenance-notes.md            # 레벨별 4개 절로 구성 (4.11절)
 ├── feedback.md                     # 회고에서 나온 개선점. 항목마다 레벨(L1~L4)과 상태(open/done) (4.11절)
-└── docs/                           # 참고 자료 (현재 폴더), dev-profile-validation.md (개발 프로파일 검증 기록)
+└── docs/ref/                       # 참고 자료, dev-profile-validation.md (개발 프로파일 검증 기록)
 
 <작업 프로젝트>/docs/agent/
 ├── .active                         # 진행 중인 작업: task · phase · session · started (4.7.3절, 작업이 끝나면 삭제)
@@ -1152,14 +1152,14 @@ my-agent는 **새 스킬로 처음부터 만듭니다.** 만드는 동안 my-dev
 4. **에이전트 정의 8개 (L2 4개, L3 4개):** (만듦 2026-10-25, 8개 모두 불러와짐) 레벨 폴더에 만들고 모델과 도구를 고정합니다. `plugin.json`의 `agents`에 나열하고, `claude plugin validate --strict`를 통과한 뒤 `/reload-plugins`로 불러 `my-agent:<name>`으로 호출되는지 확인합니다.
 5. **조사·문서 프로파일:** (만듦 2026-10-25, 판정자 점검 4/4) 병렬 researcher, verifier의 인용 확인, G3 뒤 결과물 저장(4.4절)을 만듭니다.
 6. **workflow:** (탐침 10 완료 2026-10-25, F29) 먼저 탐침 10번 결과로 `agent()`에 `my-agent:` 에이전트를 지정할 수 있는지 확인합니다. 그 결과에 따라 조사 Execute 단계에 쓸지 정하고(4.6절), 실행 규모를 계획서와 대조합니다.
-7. **개발 프로파일:** (만듦·검증 2026-10-25, 3건 모두 Verify ALL PASS·Review BLOCKER 0, `docs/dev-profile-validation.md`) my-dev의 references, hooks, scripts, tests를 참고해 3장 판정대로 새로 씁니다. `worktree.baseRef: "head"`를 settings에 넣고(사용자 승인), 첫 병렬 그룹만 worktree를 쓰는 규칙을 시험합니다(Q9). 그다음 아래 "개발 프로파일 검증"을 합니다.
+7. **개발 프로파일:** (만듦·검증 2026-10-25, 3건 모두 Verify ALL PASS·Review BLOCKER 0, `docs/ref/dev-profile-validation.md`) my-dev의 references, hooks, scripts, tests를 참고해 3장 판정대로 새로 씁니다. `worktree.baseRef: "head"`를 settings에 넣고(사용자 승인), 첫 병렬 그룹만 worktree를 쓰는 규칙을 시험합니다(Q9). 그다음 아래 "개발 프로파일 검증"을 합니다.
 8. **알림 확인:** (확인 2026-10-25, F34) G1·G3 팝업이 `claude-sessions` 알림으로 오는지 확인합니다(알림 구현은 하지 않음, Q3).
 9. **설치:** (설치 2026-10-25. 백업 `~/.claude/settings.json.backup-20261025-141535`, ask 16·deny 17·`worktree.baseRef: head` 병합, `marketplace add`, `install my-agent@my-agent-dev`. 새 세션에서 `--plugin-dir` 없이 에이전트 8개와 `/my-agent` 확인. 디렉터리 소스라 `~/dev/my-agent`를 제자리에서 읽음. v0.26에 `~/dev/my-plugins/plugins/my-agent`로 옮기고 `my-agent@my-plugins`로 다시 설치) 2~7단계와 4.13절 시나리오를 통과한 뒤, `~/.claude/settings.json`을 백업하고 로컬 마켓플레이스로 플러그인을 설치합니다(사용자 승인). `~/.claude/skills/`와 `~/.claude/agents/`에는 심링크를 만들지 않습니다. 설치한 뒤에는 `--plugin-dir`를 쓰지 않습니다.
 
 **개발 프로파일 검증**
 
 1. 개발 작업 3건을 my-agent 개발 프로파일로 실행합니다. 작은 작업, 여러 파일 작업, 병렬 slice 작업을 1건씩 고릅니다.
-2. 결과는 `docs/dev-profile-validation.md`에 표로 남깁니다: 사람에게 물은 횟수, 판정 결과(Verify, Review), 걸린 시간, 발견된 문제.
+2. 결과는 `docs/ref/dev-profile-validation.md`에 표로 남깁니다: 사람에게 물은 횟수, 판정 결과(Verify, Review), 걸린 시간, 발견된 문제.
 3. 3건 모두 Verify와 Review를 통과하고 차단 수준의 문제가 남지 않으면 개발 프로파일을 검증된 것으로 봅니다. 그 전에는 설치(9단계)하지 않습니다.
 
 ---

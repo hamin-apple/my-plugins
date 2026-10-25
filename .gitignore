@@ -1,3 +1,11 @@
 .DS_Store
 __pycache__/
 *.pyc
+.superpowers/
+
+# my-agent
+plugins/my-agent/.superpowers/
+# my-agent monitor test fixtures (generated)
+plugins/my-agent/monitor/tests/fixtures/projects/
+plugins/my-agent/monitor/tests/fixtures/claude-projects/
+plugins/my-agent/monitor/tests/fixtures/projects.txt

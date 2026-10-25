@@ -1,6 +1,0 @@
-.DS_Store
-__pycache__/
-.superpowers/
-monitor/tests/fixtures/projects/
-monitor/tests/fixtures/claude-projects/
-monitor/tests/fixtures/projects.txt

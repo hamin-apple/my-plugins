@@ -408,12 +408,12 @@ flowchart TD
 
 | 파일 | 출처 | 다루는 내용 |
 |---|---|---|
-| `docs/multiagent-orchestration.md` | [공식](https://platform.claude.com/docs/en/managed-agents/multiagent-orchestration) | subagents, workflows, advisor 설정 |
-| `docs/workflow-runs.md` | [공식](https://platform.claude.com/docs/en/managed-agents/workflow-runs) | run 상태와 이벤트, 완료 판정, 중단, 제한값 |
-| `docs/session-threads.md` | [공식](https://platform.claude.com/docs/en/managed-agents/session-threads) | 스레드 관리, 승인 요청이 메인 스트림으로 오는 방식 |
-| `docs/budgets.md` | [공식](https://platform.claude.com/docs/en/managed-agents/budgets) | 세션 예산 |
-| `docs/scheduled-deployments.md` | [공식](https://platform.claude.com/docs/en/managed-agents/scheduled-deployments) | cron 기반 무인 실행 |
-| `docs/gemini-multi-agent-architecture-guide.md` | Gemini 조사 | 4단계 역할 모델, HITL 3지점 |
-| `docs/gemini-human-in-the-loop.md` | Gemini 조사 | 도입 판단 기준, 패턴, HITL 프레임워크 사례 |
+| `docs/ref/multiagent-orchestration.md` | [공식](https://platform.claude.com/docs/en/managed-agents/multiagent-orchestration) | subagents, workflows, advisor 설정 |
+| `docs/ref/workflow-runs.md` | [공식](https://platform.claude.com/docs/en/managed-agents/workflow-runs) | run 상태와 이벤트, 완료 판정, 중단, 제한값 |
+| `docs/ref/session-threads.md` | [공식](https://platform.claude.com/docs/en/managed-agents/session-threads) | 스레드 관리, 승인 요청이 메인 스트림으로 오는 방식 |
+| `docs/ref/budgets.md` | [공식](https://platform.claude.com/docs/en/managed-agents/budgets) | 세션 예산 |
+| `docs/ref/scheduled-deployments.md` | [공식](https://platform.claude.com/docs/en/managed-agents/scheduled-deployments) | cron 기반 무인 실행 |
+| `docs/ref/gemini-multi-agent-architecture-guide.md` | Gemini 조사 | 4단계 역할 모델, HITL 3지점 |
+| `docs/ref/gemini-human-in-the-loop.md` | Gemini 조사 | 도입 판단 기준, 패턴, HITL 프레임워크 사례 |
 
 아직 확보하지 않은 공식 문서: `permission-policies`, `events-and-streaming`, `webhooks`, `define-outcomes`. 3.5절과 3.10절을 확정하기 전에 저장해 두는 것을 권장합니다.

@@ -270,7 +270,7 @@
 Needs the user at the keyboard; popups cannot be answered in `-p`.
 
 - [ ] Run the three scenarios in `~/dev/my-agent-sandbox` with `claude --plugin-dir ~/dev/my-agent`; after each, `check-run.py <task_dir>` → all pass. Fix and re-run on failure (each fix test-first).
-- [ ] Dev profile validation (§6 "개발 프로파일 검증"): 3 dev tasks (small, multi-file, parallel slices), table in `docs/dev-profile-validation.md` (popups asked, verdicts, time, problems).
+- [ ] Dev profile validation (§6 "개발 프로파일 검증"): 3 dev tasks (small, multi-file, parallel slices), table in `docs/ref/dev-profile-validation.md` (popups asked, verdicts, time, problems).
 - [ ] Probes 6, 7, 9 and step 8 notifications by the procedures in `probe/results.md`; write the answers there, as F-rows in the design, and in §4.8/§4.8.2/§4.9.
 - [ ] Update design status and §6 marks, `maintenance-notes.md`.
 

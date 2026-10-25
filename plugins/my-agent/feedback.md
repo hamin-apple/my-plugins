@@ -17,5 +17,9 @@
 - [open] L2 2026-10-25 261025-upper-rev-tools: dev 프로파일 architect가 추적 중인 pyc의 M 상태를 이유로 병렬 그룹을 막았음. pyc 같은 부산물 변경과 실제 미커밋 작업 변경을 구분하거나, 계획 전에 git status 정리 여부를 L1이 확인해 넘길 것
 - [open] L4 2026-10-25 261025-upper-rev-tools: SendMessage로 이어 부른 architect(abc16c02f783e90be)의 두 번째, 세 번째 실행은 run-log에 start만 있고 stop 줄(토큰, 결과)이 남지 않음. 재개된 서브에이전트의 stop도 기록할 것
 - [open] L1 2026-10-25 261025-textstats-module: run-log이 매 줄 MISMATCH를 냄: 세션 설정은 opus인데 실제 모델은 claude-sonnet-5-5로 기록됨. 세션 모델 설정과 skill의 모델 기대값을 맞추거나 MISMATCH를 한 번만 알리도록 정리 필요
+- [open] L1 2026-10-25 261025-multi-account: L1이 사용자가 승인한 NIT 수정을 리뷰 지적만 보고 묻지 않고 되돌림 - verifier가 FAIL로 잡음. 사용자 결정을 바꾸는 수정은 L1 작은 수정이라도 먼저 팝업으로 물을 것
+- [open] L3 2026-10-25 261025-multi-account: coder가 work/ 보고서 파일을 쓰지 못하거나 쓴다고 보고하고 실제로 없음(S1, S2). L1이 최종 보고를 저장하도록 위임문을 바꿈 - coder 정의나 scope-guard에서 work/ 쓰기 허용 여부를 정리할 것
+- [open] L4 2026-10-25 261025-multi-account: G1b 전 hook이 읽기 전용 셸 루프와 mkdir work/를 막고, G1b 후에도 sed로 plan.md Status를 고치는 명령을 verdict hook이 G3 검사로 오인해 막음(Edit 도구로 우회)
+- [open] L2 2026-10-25 261025-multi-account: verifier와 reviewer가 ~/.claude* 와 임시 HOME 디렉터리를 읽지 못해 실기 확인과 계정 둘 HOME 검사를 L1 기록에 의존함
 
 ## Done

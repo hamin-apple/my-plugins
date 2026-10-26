@@ -367,13 +367,13 @@ L2 5개, L3 4개, 모두 9개입니다. 모든 에이전트에서 `Agent` 도구
 | L2 | `my-agent:plan-reviewer` | sonnet | high | Read, Grep, Glob, Write(자기 판정 파일만) | | 계획 판정 |
 | L2 | `my-agent:verifier` | opus | high | Read, Grep, Glob, Bash(읽기·확인만), WebFetch, Write(자기 판정 파일만) | | 기준 대비 판정, 인용 확인 |
 | L2 | `my-agent:reviewer` | sonnet | high | Read, Grep, Glob, Bash(읽기·확인만), Write(자기 판정 파일만) | | 품질 판정 |
-| L2 | `my-agent:gate-analyst` | sonnet | medium | Read(`gate-tally.md`·`gate-report.md`만), Write(`gate-report.md` 하나만) | `maxTurns` 없음(L2) | 회고에서 게이트 결정 집계를 해석해 성향 리포트 작성 |
+| L2 | `my-agent:gate-analyst` | sonnet | high | Read(`gate-tally.md`·`gate-report.md`만), Write(`gate-report.md` 하나만) | `maxTurns` 없음(L2) | 회고에서 게이트 결정 집계를 해석해 성향 리포트 작성 |
 | L3 | `my-agent:explorer` | sonnet | low | Read, Grep, Glob, Bash(읽기) | `maxTurns` 지정 | 위치와 사실 수집 |
 | L3 | `my-agent:researcher` | sonnet | medium | Read(자기 작업 폴더만), WebSearch, WebFetch, Write(`work/` 전용) | `maxTurns` 지정 | 하위 질문 하나 조사 → 출처를 붙인 노트 작성 |
 | L3 | `my-agent:writer` | sonnet | medium | Read, Write, Edit | `maxTurns` 지정 | 문서 초안 작성 |
 | L3 | `my-agent:coder` | sonnet (재시도 시 opus) | medium | Read, Edit, Write, Bash | `maxTurns` 지정. worktree는 정의 파일에 고정하지 않고 호출할 때 정함 | slice 구현 |
 
-- **effort:** 정의 파일 frontmatter의 `effort:`로 고정합니다. 판정과 설계(L2)는 틀리면 되돌리는 비용이 커서 high, 사실 수집(explorer)은 low, 나머지 작업자는 medium입니다. 예외로 gate-analyst(L2)는 작업을 판정하는 것이 아니라 이미 끝난 결정을 해석하는 일이라 medium입니다.
+- **effort:** 정의 파일 frontmatter의 `effort:`로 고정합니다. 판정과 설계(L2)는 틀리면 되돌리는 비용이 커서 high, 사실 수집(explorer)은 low, 나머지 작업자는 medium입니다. gate-analyst(L2)도 high입니다(2026-10-27, 처음에는 결정 해석이라 medium으로 두었다가 올림).
   - 우선순위: 환경 변수 `CLAUDE_CODE_EFFORT_LEVEL` > 호출할 때 준 `effort` 인자(v2.1.292 이상) > 정의 파일 `effort:` > 세션 effort (sub-agents 문서 "Choose an effort level").
   - my-agent는 호출할 때 `effort` 인자를 주지 않습니다. 재시도할 때는 모델만 올립니다(4.8절).
   - L1(my-agent 스킬)은 `effort:`를 두지 않고 세션 effort를 따릅니다.

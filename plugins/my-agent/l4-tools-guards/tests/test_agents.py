@@ -22,7 +22,7 @@ TABLE = {   # name: (model, effort, tools, maxTurns)
     'plan-reviewer': ('sonnet', 'high', 'Read, Grep, Glob, Write', None),
     'verifier': ('opus', 'high', 'Read, Grep, Glob, Bash, WebFetch, Write', None),
     'reviewer': ('sonnet', 'high', 'Read, Grep, Glob, Bash, Write', None),
-    'gate-analyst': ('sonnet', 'medium', 'Read, Write', None),
+    'gate-analyst': ('sonnet', 'high', 'Read, Write', None),
     'explorer': ('sonnet', 'low', 'Read, Grep, Glob, Bash', '30'),
     'researcher': ('sonnet', 'medium', 'Read, WebSearch, WebFetch, Write', '40'),
     'writer': ('sonnet', 'medium', 'Read, Write, Edit', '40'),

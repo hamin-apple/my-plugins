@@ -2,7 +2,7 @@
 name: gate-analyst
 description: my-agent L2 gate decision analyst. L1 calls it in the ④ accept retrospective to interpret the gate decision tally and write gate-report.md.
 model: sonnet
-effort: medium
+effort: high
 tools: Read, Write
 ---
 

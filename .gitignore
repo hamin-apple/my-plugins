@@ -12,3 +12,6 @@ plugins/my-agent/docs/dev/
 plugins/my-agent/monitor/tests/fixtures/projects/
 plugins/my-agent/monitor/tests/fixtures/claude-projects/
 plugins/my-agent/monitor/tests/fixtures/projects.txt
+
+# my-agent task workspace
+docs/agent/

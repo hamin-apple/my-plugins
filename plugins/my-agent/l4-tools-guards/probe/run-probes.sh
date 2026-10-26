@@ -1,8 +1,8 @@
 #!/bin/sh
-# §6 step 0 probe runs (plan Task 9). Run from anywhere; works in ~/dev/my-agent-sandbox.
+# §6 step 0 probe runs (plan Task 9). Run from anywhere; works in ~/dev/labs/my-agent-sandbox.
 # usage: run-probes.sh [r1 r2 ...]   (default: all)
 set -u
-S="$HOME/dev/my-agent-sandbox"
+S="$HOME/dev/labs/my-agent-sandbox"
 PLUGIN="$HOME/dev/my-plugins/plugins/my-agent"
 cd "$S" || exit 1
 mkdir -p .probe

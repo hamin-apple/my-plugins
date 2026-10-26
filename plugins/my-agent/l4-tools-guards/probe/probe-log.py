@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Probe hook (architecture §6 step 0): append the raw hook input to ~/dev/my-agent-sandbox/.probe/<event>.jsonl.
+"""Probe hook (architecture §6 step 0): append the raw hook input to ~/dev/labs/my-agent-sandbox/.probe/<event>.jsonl.
 
 usage: probe-log.py <event-label> [extra args are recorded as given]
-Only writes when the hook's cwd is inside ~/dev/my-agent-sandbox. Always exits 0.
+Only writes when the hook's cwd is inside ~/dev/labs/my-agent-sandbox. Always exits 0.
 """
 import json
 import os
@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-SANDBOX = Path.home() / 'dev' / 'my-agent-sandbox'
+SANDBOX = Path.home() / 'dev' / 'labs' / 'my-agent-sandbox'
 
 
 def main():

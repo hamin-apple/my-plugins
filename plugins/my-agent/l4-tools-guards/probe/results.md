@@ -1,6 +1,6 @@
 # 탐침 결과 (구현 0단계, 2026-10-25)
 
-- 연습 프로젝트: `~/dev/my-agent-sandbox/` (git 저장소, `docs/agent/.active` → `261025-probe-task`)
+- 연습 프로젝트: `~/dev/labs/my-agent-sandbox/` (git 저장소, `docs/agent/.active` → `261025-probe-task`)
 - 실행: `probe/run-probes.sh r1 … r7` — `claude -p --plugin-dir ~/dev/my-agent --model haiku --permission-mode default`, stream-json 출력은 `.probe/run-<r>.json`
 - 기록: `probe-log.py`가 hook 입력을 `.probe/<label>.jsonl`에 남김. 진짜 hook(`hooks/hooks.json`)도 같이 켜 두어 run-log 줄로 함께 확인함
 - 에이전트: `probe/agents/probe-worker.md` (haiku, effort low, Bash·Read, maxTurns 3)
@@ -39,7 +39,7 @@
 
 ### 7. G1·G3 팝업 알림
 
-1. `~/dev/my-agent-sandbox/`에서 `claude --plugin-dir ~/dev/my-agent`로 대화형 세션을 시작함 (`claude-sessions` 앱이 떠 있는 상태)
+1. `~/dev/labs/my-agent-sandbox/`에서 `claude --plugin-dir ~/dev/my-agent`로 대화형 세션을 시작함 (`claude-sessions` 앱이 떠 있는 상태)
 2. "AskUserQuestion으로 아무 질문 하나를 보여 줘"라고 요청함
 3. 팝업이 뜬 채 10초, 70초를 기다리며 `claude-sessions` 알림이 오는지, `Notification` hook이 어떤 `notification_type`으로 실행되는지 봄 (`.probe/Notification.jsonl`, probe-hooks.json에 `Notification` 줄을 더해서)
 4. 결과를 이 표의 7번 줄과 4.9절에 적음. 알림이 없어도 결정은 바꾸지 않음(4.9절)

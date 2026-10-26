@@ -134,7 +134,7 @@
 - [ ] **Step 2:** Run. Expected: FAIL.
 - [ ] **Step 3:** Implement; update hooks.json and its test.
 - [ ] **Step 4:** Suite OK; validate (both) pass.
-- [ ] **Step 5:** Write `~/dev/my-agent-sandbox/.claude/settings.json` = `permissions.json` contents plus `"worktree": {"baseRef": "head"}` (§4.13: ask/deny are tried in the sandbox project before install; under `~/dev`, so no approval needed). Check: `python3 -c "import json;json.load(open('…/settings.json'))"` exits 0.
+- [ ] **Step 5:** Write `~/dev/labs/my-agent-sandbox/.claude/settings.json` = `permissions.json` contents plus `"worktree": {"baseRef": "head"}` (§4.13: ask/deny are tried in the sandbox project before install; under `~/dev`, so no approval needed). Check: `python3 -c "import json;json.load(open('…/settings.json'))"` exits 0.
 
 ### Task 4: verdict freshness (`verdict-fresh-check.py`)
 
@@ -269,7 +269,7 @@
 
 Needs the user at the keyboard; popups cannot be answered in `-p`.
 
-- [ ] Run the three scenarios in `~/dev/my-agent-sandbox` with `claude --plugin-dir ~/dev/my-agent`; after each, `check-run.py <task_dir>` → all pass. Fix and re-run on failure (each fix test-first).
+- [ ] Run the three scenarios in `~/dev/labs/my-agent-sandbox` with `claude --plugin-dir ~/dev/my-agent`; after each, `check-run.py <task_dir>` → all pass. Fix and re-run on failure (each fix test-first).
 - [ ] Dev profile validation (§6 "개발 프로파일 검증"): 3 dev tasks (small, multi-file, parallel slices), table in `docs/ref/dev-profile-validation.md` (popups asked, verdicts, time, problems).
 - [ ] Probes 6, 7, 9 and step 8 notifications by the procedures in `probe/results.md`; write the answers there, as F-rows in the design, and in §4.8/§4.8.2/§4.9.
 - [ ] Update design status and §6 marks, `maintenance-notes.md`.

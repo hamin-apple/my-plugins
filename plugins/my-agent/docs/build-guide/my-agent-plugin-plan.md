@@ -4,7 +4,7 @@
 
 **Goal:** Turn `~/dev/my-agent` into a loadable Claude Code plugin with the monitor inside, the run-log writers and record hooks, a SKILL.md skeleton with the general profile, and the probe results that steps 2–8 depend on.
 
-**Architecture:** The repository is the plugin and a one-plugin local marketplace (§4.5.1). The record hooks (`subagent-log`, `permission-log`, `session-notice`) and the Recorder CLI (`run-log.py`) share one small library for finding `.active` and writing run-log lines. The monitor's existing parser (`monitor/monitor/runlog.py`, `events.py`) is the test oracle for every line they write. A temporary probe (raw-input logger hook, probe agent, probe skill) runs in headless sessions in `~/dev/my-agent-sandbox/` and settles the unverified items before the SKILL.md skeleton is written.
+**Architecture:** The repository is the plugin and a one-plugin local marketplace (§4.5.1). The record hooks (`subagent-log`, `permission-log`, `session-notice`) and the Recorder CLI (`run-log.py`) share one small library for finding `.active` and writing run-log lines. The monitor's existing parser (`monitor/monitor/runlog.py`, `events.py`) is the test oracle for every line they write. A temporary probe (raw-input logger hook, probe agent, probe skill) runs in headless sessions in `~/dev/labs/my-agent-sandbox/` and settles the unverified items before the SKILL.md skeleton is written.
 
 **Tech Stack:** Python 3.13 standard library only (`json`, `shlex`, `unittest`, `pathlib`, `subprocess`, `http.client`), Markdown, Claude Code 2.1.310 (`claude plugin validate`, `claude -p --plugin-dir`).
 
@@ -22,7 +22,7 @@
 - `claude plugin validate --strict ~/dev/my-agent` passes at the end of every task that touches `.claude-plugin/`, `hooks.json`, a `SKILL.md` or an agent file.
 - Nothing outside `~/dev/` is written. Plugin install, `~/.claude/settings.json`, and my-dev's frontmatter are Task 12 and need the user's approval in chat first.
 - `~/dev/my-agent-monitor/` is left untouched (copy, not move).
-- Probe sessions: headless `claude -p` only, in `~/dev/my-agent-sandbox/`, `--model haiku`, items 1–6, 8, 11 plus the G2 `agent_id` question. Items 7 and 9 get a written procedure only; 10 (workflow) is deferred to step 6 (user decision).
+- Probe sessions: headless `claude -p` only, in `~/dev/labs/my-agent-sandbox/`, `--model haiku`, items 1–6, 8, 11 plus the G2 `agent_id` question. Items 7 and 9 get a written procedure only; 10 (workflow) is deferred to step 6 (user decision).
 
 ## Review Focus
 
@@ -279,12 +279,12 @@ Ruling to ledger: `end=partial` (maxTurns) is not detectable from documented Sub
 ### Task 9: Probe (§6 step 0)
 
 **Files:**
-- Create: `l4-tools-guards/probe/probe-log.py`, `probe/probe-hooks.json`, `probe/agents/probe-worker.md`, `probe/skill/SKILL.md`, `probe/run-probes.sh`, `probe/results.md`; sandbox `~/dev/my-agent-sandbox/` (git repo, one commit, `docs/agent/.active` + task folder for `261025-probe-task`)
+- Create: `l4-tools-guards/probe/probe-log.py`, `probe/probe-hooks.json`, `probe/agents/probe-worker.md`, `probe/skill/SKILL.md`, `probe/run-probes.sh`, `probe/results.md`; sandbox `~/dev/labs/my-agent-sandbox/` (git repo, one commit, `docs/agent/.active` + task folder for `261025-probe-task`)
 - Modify (temporary, reverted in Step 7): `.claude-plugin/plugin.json` (`hooks` becomes an array adding `./l4-tools-guards/probe/probe-hooks.json`; `agents: ["./l4-tools-guards/probe/agents/probe-worker.md"]`; `skills: ["./", "./l4-tools-guards/probe/"]`)
 - Modify: `my-agent-architecture.md` §2 (F19…), the [미확인] lines that a probe settled, §4.13 list
 
 **Interfaces:**
-- `probe-log.py <event>`: if `cwd` is under `~/dev/my-agent-sandbox`, appends `{"event", "time", "input": <stdin JSON>, "env": {CLAUDE_PLUGIN_ROOT, CLAUDE_CODE_EFFORT_LEVEL}}` to `~/dev/my-agent-sandbox/.probe/<event>.jsonl`; always exit 0.
+- `probe-log.py <event>`: if `cwd` is under `~/dev/labs/my-agent-sandbox`, appends `{"event", "time", "input": <stdin JSON>, "env": {CLAUDE_PLUGIN_ROOT, CLAUDE_CODE_EFFORT_LEVEL}}` to `~/dev/labs/my-agent-sandbox/.probe/<event>.jsonl`; always exit 0.
 - `probe-hooks.json`: probe-log on PreToolUse (all), PostToolUse (all), PermissionRequest, SubagentStart, SubagentStop, SessionStart.
 - `probe-worker.md`: `name: probe-worker`, `model: haiku`, `effort: low`, `tools: Bash, Read`, `maxTurns: 3`, body "Run the command you are given, print its output, then reply DONE."
 - `probe/skill/SKILL.md`: `name: probe-skill`, `disable-model-invocation: true`, frontmatter `PreToolUse` hook `python3 "${CLAUDE_PLUGIN_ROOT}"/l4-tools-guards/probe/probe-log.py skill-pretool`, body "Ask my-agent:probe-worker to run `pwd`, then stop."

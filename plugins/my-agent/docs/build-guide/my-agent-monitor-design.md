@@ -42,7 +42,7 @@ my-agent는 phase 4개, 단계 8개, 게이트 5개(G1a, G1b, G2, G3, E)를 거�
 - macOS, 브라우저는 Chrome 기준
 - 서버는 `127.0.0.1`에만 열고, Python 3 표준 라이브러리만 씁니다. 설치할 의존성이 없어야 합니다.
 - 프런트엔드는 HTML 파일 하나(+ 필요하면 JS/CSS 파일)로, 빌드 단계가 없습니다. 웹 폰트(IBM Plex)는 Google Fonts에서 읽고, 오프라인이면 시스템 글꼴로 대체합니다.
-- `~/dev/claude-sessions`는 읽기 전용입니다. 모니터는 그 코드를 가져다 쓰지 않습니다(가격표는 자체 파일).
+- `~/dev/tools/claude-sessions`는 읽기 전용입니다. 모니터는 그 코드를 가져다 쓰지 않습니다(가격표는 자체 파일).
 - 서버는 파일을 쓰지 않습니다. 실행 스크립트 `monitor-up.py`만 `~/dev/agent-tasks/monitor.json`과 `monitor.log`를 씁니다(6.1절).
 
 ## 4. 화면 (목업 v22로 확정)

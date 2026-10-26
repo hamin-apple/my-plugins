@@ -3,7 +3,7 @@
 **준비 (사람이 한 번):** 샌드박스에 작은 코드와 테스트를 만들고 커밋합니다. 커밋은 사용자 승인으로 합니다.
 
 ```bash
-cd ~/dev/my-agent-sandbox && mkdir -p tools tests
+cd ~/dev/labs/my-agent-sandbox && mkdir -p tools tests
 cat > tools/wc.py <<'PY'
 import sys
 

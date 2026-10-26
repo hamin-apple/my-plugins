@@ -192,7 +192,7 @@ run-log는 작업 폴더의 `run-log.md`이고, 줄은 `run-log.py`만 씁니다
 
 ## 바깥으로 나가기 전 점검
 
-결과물이 작업 폴더 밖으로 나가기 직전에 비밀값 패턴을 검사합니다: prototype artifact 게시, G3 뒤 결과물 복사, 커밋(개발 프로파일, 또는 `docs/agent/`를 커밋하기로 한 프로젝트).
+결과물이 작업 폴더 밖으로 나가기 직전에 비밀값 패턴을 검사합니다: prototype artifact 게시, G3 뒤 결과물 복사, 회고의 `gate-report.md` 복사, 커밋(개발 프로파일, 또는 `docs/agent/`를 커밋하기로 한 프로젝트).
 
 1. `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/secret-scan.py" <나갈 파일이나 폴더>`. 출력이 없으면(exit 0) 진행합니다. exit 2(`no such path`)는 경로가 틀린 것이므로 경로를 고쳐 다시 검사합니다.
 2. 걸리면 위치(`<파일>:<줄>: <종류>`)를 보여 주고 팝업: `해당 부분 지우고 진행 (Recommended)` / `그대로 진행` / `중단`. 팝업 전후로 `ask gate=Q … rec="해당 부분 지우고 진행"`/`answer gate=Q` 줄을 남깁니다.

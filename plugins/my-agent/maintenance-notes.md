@@ -9,7 +9,7 @@
 - `SKILL.md`: 핵심 규칙(질문 규칙, 게이트, 레벨, `.active`, 데이터와 지시, phase 파일), 인자, Intake, status, continue, 중단, Recorder 규칙, 실패 처리, 작업 중 수정.
 - `phases/define.md` · `plan.md` · `build.md`(workflow 규칙 포함) · `accept.md`(개발 프로파일의 G3 포함), `profiles/general.md` · `research.md` · `dev.md`. Router가 요청을 보고 프로파일을 정한다(묻지 않음).
 - frontmatter hook 2개: `plan-approved-check.py`(G1b), `verdict-fresh-check.py`(커밋·결과물 복사 전 판정 최신성). `/my-agent`가 실제로 실행된 뒤에만 걸린다(F28).
-- 바깥으로 나가기 전 점검(`secret-scan.py`)과 회고(`feedback.py`)를 SKILL.md와 phase 파일이 부른다.
+- 바깥으로 나가기 전 점검(`secret-scan.py`)과 회고를 SKILL.md와 phase 파일이 부른다. 회고(`accept.md`)는 집계(`gate-report.py tally` → `gate-tally.md`), `my-agent:gate-analyst`의 해석(→ `gate-report.md`), 복사(`gate-report.py copy`), 개선점 올리기(`feedback.py`) 순서다(2026-10-26).
 
 **외부 동작 의존**
 
@@ -25,7 +25,7 @@
 
 ## L2 설계 · 판정 (`l2-design-judge/agents/`)
 
-**현재 상태 (2026-10-25):** `architect`, `plan-reviewer`, `verifier`, `reviewer`, `gate-analyst`(2026-10-26 추가, 회고에서 결정 집계를 해석). 모델·effort·도구는 4.5절 표 그대로(`test_agents`가 확인). 프로파일별 점검 목록(general / research / dev)을 본문에 직접 씀.
+**현재 상태 (2026-10-25):** `architect`, `plan-reviewer`, `verifier`, `reviewer`, `gate-analyst`(2026-10-26 추가, 회고에서 결정 집계를 해석. 2026-10-27 effort를 medium에서 high로 올림). 모델·effort·도구는 4.5절 표 그대로(`test_agents`가 확인). 프로파일별 점검 목록(general / research / dev)을 본문에 직접 씀.
 
 **정해 둔 것**
 
@@ -48,16 +48,16 @@
 
 **현재 상태 (2026-10-25)**
 
-- 플러그인 hook(`hooks/hooks.json`): `scope-guard.py`(모든 도구, `my-agent:` 에이전트의 읽기·쓰기 범위, `onFailure: block`), `subagent-log.py`(call/start/stop), `permission-log.py`(G2 ask/answer), `session-notice.py`(SessionStart). 기록 hook은 항상 exit 0, `onFailure` 없음.
-- 스킬 hook: `plan-approved-check.py`, `verdict-fresh-check.py`. `plan-approved-check`은 승인 뒤에도 작업 위치·agent-tasks·선언된 결과물 위치 밖 쓰기에 `ask`를 돌린다(auto 모드가 묻지 않으므로, 2026-10-25). 막는 hook 셋은 오류가 나면 exit 2로 막는다.
+- 플러그인 hook(`hooks/hooks.json`): `scope-guard.py`(모든 도구, `my-agent:` 에이전트의 읽기·쓰기 범위, `onFailure: block`. gate-analyst는 읽기 `gate-tally.md`·`gate-report.md`, 쓰기 `gate-report.md`만, 2026-10-26), `subagent-log.py`(call/start/stop), `permission-log.py`(G2 ask/answer), `session-notice.py`(SessionStart). 기록 hook은 항상 exit 0, `onFailure` 없음.
+- 스킬 hook: `plan-approved-check.py`, `verdict-fresh-check.py`. `plan-approved-check`은 승인 뒤에도 작업 위치·agent-tasks·선언된 결과물 위치 밖 쓰기에 `ask`를 돌린다(auto 모드가 묻지 않으므로, 2026-10-25). 회고 복사 폴더(`ma_gate_report.report_dir()`, `$MA_GATE_REPORT_DIR`)도 묻지 않고 통과한다(2026-10-26). 막는 hook 셋은 오류가 나면 exit 2로 막는다.
 - `lib/ma_bash`: Bash 명령의 쓰기 대상·읽는 경로·복사 원본·git 변경 판정. 못 잡는 쓰기(`python -c` 등)는 남는 위험(4.4절). 셸 예약어, `bash -c`/`eval`, `cd`는 따라가고, 따라가지 못하는 형태(명령 치환, 열린 heredoc, 변수 경로, 변수 `cd`, symlink+쓰기)는 None(막음). git은 읽기 하위 명령 허용 목록.
 - `ma_bash.http_sends`: curl·wget이 데이터를 보내는지(짧은 옵션 묶음 `-sd`, `-XPOST`, `--data=…` 포함). scope-guard는 verifier에게만 적용한다(사용자 결정 2026-10-25). curl 옵션이 늘면 `CURL_SEND_*`를 고친다.
 - `lib/ma_path`: 경로 비교(`under`, `same`)는 대소문자를 접어서 한다. hook의 경로 비교는 모두 이것을 쓴다(macOS 볼륨에서 `Docs/agent`로 우회하던 빈틈, 최종 리뷰 C3).
 - `lib/ma_plan`: plan.md의 승인 줄·`Prototype: requested` 읽기. scope-guard는 architect가 이 두 줄을 새로 넣는 쓰기를 막는다(C2).
 - `permissions/permissions.json`: G2 ask/deny. 2026-10-25 설치 때 사용자 설정(`~/.claude/settings.json`)에 병합했다(백업 `settings.json.backup-20261025-141535`). 샌드박스 `.claude/settings.json`에도 같은 사본이 있다. 규칙을 바꾸면 두 곳과 `test_permissions`를 함께 고친다. "작업 디렉터리 밖에 쓰기"는 규칙 문자열이 없어 Claude Code의 기본 확인에 맡긴다. git 옵션이 하위 명령 앞에 오는 꼴(`git -C … commit`)은 `Bash(git * commit*)`처럼 가운데 `*` 규칙으로 잡는다. 접두어 규칙만으로는 지나갔음(2026-10-25, 대화형으로 ask·deny 둘 다 확인).
 - `scripts/run-log.py`: L1 기록. 쓰기 전에 sweep을 돌려 maxTurns로 끝난 작업자를 닫고 `PARTIAL:`/`MISMATCH:`를 출력한다. `step:` 줄의 메인 모델은 `<projects>/*/<session>.jsonl`의 마지막 메인 assistant 항목에서 읽고(`ma_subagent.main_model`, 끝 4MB만), 없을 때만 `--model`을 쓴다.
-- `lib/`: `ma_active`(`.active` 찾기, worktree면 메인 트리로. 색인은 저장소 안에서 그 루트 줄만 본다, C1), `ma_logline`(줄 형식), `ma_subagent`(transcript 합계, `stop:` 줄, sweep). `SendMessage`로 이어 부른 에이전트는 같은 id로 다시 시작하므로 `stop:`은 `start:` 수만큼 쓰고, 이어 부른 실행은 마지막 `start:` 시각 −2초부터 센다(`run_since`, F33). sweep은 첫 실행만 닫는다(meta가 첫 실행의 finished를 그대로 두므로). 실행 중에도 user 항목이 들어오므로 user 항목으로 실행을 나누지 않는다.
-- `scripts/`: `run-log.py`, `feedback.py`, `secret-scan.py`, `check-run.py`(시나리오 통과 조건).
+- `lib/`: `ma_active`(`.active` 찾기, worktree면 메인 트리로. 색인은 저장소 안에서 그 루트 줄만 본다, C1), `ma_logline`(줄 형식), `ma_subagent`(transcript 합계, `stop:` 줄, sweep). `SendMessage`로 이어 부른 에이전트는 같은 id로 다시 시작하므로 `stop:`은 `start:` 수만큼 쓰고, 이어 부른 실행은 마지막 `start:` 시각 −2초부터 센다(`run_since`, F33). sweep은 첫 실행만 닫는다(meta가 첫 실행의 finished를 그대로 두므로). 실행 중에도 user 항목이 들어오므로 user 항목으로 실행을 나누지 않는다. `ma_gate_report`(run-log 결정 집계와 `cost:` 구간별 비용·토큰, 복사 폴더 `report_dir()`, 2026-10-26).
+- `scripts/`: `run-log.py`, `feedback.py`, `secret-scan.py`, `check-run.py`(시나리오 통과 조건), `gate-report.py`(회고 집계 `tally`·복사 `copy`, 종료 코드 0/1/2/3, 2026-10-26). 종료 코드 3(`gate-tally.md`나 복사본을 쓰지 못함)은 261026 계획 사양(0/1/2)에 없던 보완이고, ARCH 4.11과 `accept.md`에는 적혀 있다.
 - 테스트: `python3 -m unittest discover -s l4-tools-guards/tests` (174개). 시나리오는 `tests/scenarios/`.
 
 **외부 동작 의존 (탐침 결과, `probe/results.md`)**

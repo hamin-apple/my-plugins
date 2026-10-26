@@ -17,7 +17,8 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.task = make_task(self.proj, task=TASK)
         self.tasks_dir = self.root / 'agent-tasks'
         self.tasks_dir.mkdir()
-        self.env = {'MA_TASKS_DIR': str(self.tasks_dir)}
+        self.reports = self.root / 'my-surrogate' / 'gate-report'
+        self.env = {'MA_TASKS_DIR': str(self.tasks_dir), 'MA_GATE_REPORT_DIR': str(self.reports)}
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -110,6 +111,27 @@ class PlanApprovedCheckTest(unittest.TestCase):
                 o = json.loads(r.stdout)['hookSpecificOutput']
                 self.assertEqual(o['permissionDecision'], 'ask')
                 self.assertIn('작업 위치 밖', o['permissionDecisionReason'])
+
+    def test_approved_report_folder_passes_unasked(self):
+        """The gate-report copy folder is a place of its own; a sibling folder still asks."""
+        self.plan('# Plan\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')
+        dest = self.reports / 'x.md'
+        self.assertPassed(self.hook('Write', {'file_path': str(dest), 'content': 'x'}))
+        self.assertPassed(self.hook('Bash', {'command': f'mkdir -p {self.reports}'}))
+        self.assertPassed(self.hook('Bash', {'command': f'cp a.md {dest}'}))
+        script = Path(__file__).resolve().parents[1] / 'scripts' / 'gate-report.py'
+        self.assertPassed(self.hook('Bash', {'command': f'python3 "{script}" copy'}))
+        sibling = self.reports.parent / 'data' / 'x.md'
+        r = self.hook('Write', {'file_path': str(sibling), 'content': 'x'})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        o = json.loads(r.stdout)['hookSpecificOutput']
+        self.assertEqual(o['permissionDecision'], 'ask')
+        self.assertIn('작업 위치 밖', o['permissionDecisionReason'])
+        self.assertIn(str(sibling), o['permissionDecisionReason'])
+
+    def test_report_folder_before_approval_still_denied(self):
+        self.assertDenied(self.hook('Write', {'file_path': str(self.reports / 'x.md'), 'content': 'x'}))
+        self.assertDenied(self.hook('Bash', {'command': f'cp a.md {self.reports}/x.md'}))
 
     def test_approved_line_elsewhere_does_not_count(self):
         self.plan('# Plan\n\n- Approved 2026-10-25 10:00 G1b\n\n## Approval\n\n## Notes\n')

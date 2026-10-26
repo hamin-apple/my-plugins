@@ -6,7 +6,7 @@
 
 1. 기록: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=5 name=Execute --model <메인 세션 모델 ID>`
 2. 개발 프로파일이면 기준점을 남깁니다: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" base commit=<git rev-parse HEAD> dirty="<git status --porcelain 요약>"`
-   - 메인 트리에 커밋하지 않은 변경이 있으면(`docs/agent/` 밖) 팝업: `사용자가 먼저 정리 (Recommended)` / `그대로 두고 진행` / `중단`. 앞뒤로 `ask gate=Q`/`answer gate=Q` 줄을 남깁니다. `사용자가 먼저 정리`면 정리가 끝났다는 답을 받은 뒤 이 2번을 다시 합니다. `그대로 두고 진행`이면 이번 작업은 worktree를 쓰지 않습니다(dev 프로파일 5단계).
+   - 메인 트리에 커밋하지 않은 변경이 있으면(`docs/agent/` 밖) 팝업: `사용자가 먼저 정리 (Recommended)` / `그대로 두고 진행` / `중단`. 앞뒤로 `ask gate=Q … rec="사용자가 먼저 정리"`/`answer gate=Q` 줄을 남깁니다. `사용자가 먼저 정리`면 정리가 끝났다는 답을 받은 뒤 이 2번을 다시 합니다. `그대로 두고 진행`이면 이번 작업은 worktree를 쓰지 않습니다(dev 프로파일 5단계).
 3. 작업 단위를 병렬 그룹 순서대로 맡깁니다.
    - 맡기기 직전에 그 단위의 `Status:`를 `running`으로, 결과 파일을 확인한 뒤 `done`으로 바꿉니다. 상태는 L1만 바꿉니다.
    - 넘기는 것: `plan.md` 경로와 작업 단위 이름, 읽을 파일, 결과 경로(`docs/agent/<task-id>/work/…`), 완료 기준 번호. 다른 단위의 결과는 넘기지 않습니다.

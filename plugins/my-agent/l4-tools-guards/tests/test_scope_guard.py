@@ -69,6 +69,21 @@ class ScopeGuardTest(unittest.TestCase):
         self.assertFalse(self.denied('my-agent:plan-reviewer', 'Write', {'file_path': str(self.T / 'plan-review.md')}))
         self.assertTrue(self.denied('my-agent:explorer', 'Write', {'file_path': str(self.T / 'explore.md')}))
 
+    def test_gate_analyst_scope(self):
+        a = 'my-agent:gate-analyst'
+        (self.T / 'gate-tally.md').write_text('t')
+        for name in ('gate-tally.md', 'gate-report.md'):
+            self.assertFalse(self.denied(a, 'Read', {'file_path': str(self.T / name)}), name)
+        self.assertFalse(self.denied(a, 'Write', {'file_path': str(self.T / 'gate-report.md')}))
+        for name in ('plan.md', 'run-log.md', 'intake.md', 'work/x.md'):
+            self.assertTrue(self.denied(a, 'Read', {'file_path': str(self.T / name)}), name)
+        self.assertTrue(self.denied(a, 'Read', {'file_path': str(self.L / 'src/a.py')}))
+        self.assertTrue(self.denied(a, 'Write', {'file_path': str(self.T / 'gate-tally.md')}))
+        self.assertTrue(self.denied(a, 'Write', {'file_path': str(self.T / 'work/x.md')}))
+        self.assertTrue(self.denied(a, 'Write', {'file_path': str(self.root / 'outside' / 'x.md')}))
+        self.assertTrue(self.denied(a, 'Bash', {'command': 'echo x > gate-report.md'}))
+        self.assertTrue(self.denied(a, 'WebFetch', {'url': 'https://e.com', 'prompt': 'x'}))
+
     def test_judge_bash_is_read_only(self):
         self.assertTrue(self.denied('my-agent:reviewer', 'Bash', {'command': "sed -i '' s/a/b/ src/x"}))
         self.assertTrue(self.denied('my-agent:verifier', 'Bash', {'command': 'git stash'}))

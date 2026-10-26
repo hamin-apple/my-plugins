@@ -25,10 +25,11 @@
 
 ## L2 설계 · 판정 (`l2-design-judge/agents/`)
 
-**현재 상태 (2026-10-25):** `architect`, `plan-reviewer`, `verifier`, `reviewer`. 모델·effort·도구는 4.5절 표 그대로(`test_agents`가 확인). 프로파일별 점검 목록(general / research / dev)을 본문에 직접 씀.
+**현재 상태 (2026-10-25):** `architect`, `plan-reviewer`, `verifier`, `reviewer`, `gate-analyst`(2026-10-26 추가, 회고에서 결정 집계를 해석). 모델·effort·도구는 4.5절 표 그대로(`test_agents`가 확인). 프로파일별 점검 목록(general / research / dev)을 본문에 직접 씀.
 
 **정해 둔 것**
 
+- 모니터 `web/index.html`의 L2 에이전트 목록에 gate-analyst가 없음(2026-10-26 결정으로 그대로 둠).
 - 판정자 점검: `tests/judge-fixtures/run-judge-check.sh`(유료, 노트마다 verifier 1회). verifier나 reviewer를 고치면 돌린다. 2026-10-25 4/4 일치.
 - 결과 첫 줄: plan-reviewer `READY FOR APPROVAL` | `REVISE`, verifier `Verdict: ALL PASS` | `Verdict: FAIL`(아래에 `- <번호>. PASS|FAIL <근거>`), reviewer `BLOCKER <개수>`.
 - 마지막 메시지 첫 줄이 run-log `result=`가 되고 모니터가 `startswith('FAIL')`로 본다. 첫 줄에 판정어가 없으면 판정이 화면에 안 나온다(F26).
@@ -102,7 +103,7 @@
 
 - (처음 설치 기록) `claude plugin marketplace add ~/dev/my-agent` (이름 `my-agent-dev`, 사용자 설정의 `extraKnownMarketplaces`에 directory 소스로 들어감), `claude plugin install my-agent@my-agent-dev` (사용자 범위, 0.1.0).
 - `claude plugin list`가 `Read from: /Users/jahoonjin/dev/my-agent`를 보였음(옮긴 뒤 경로는 아래 절). 디렉터리 소스라 고친 내용은 새 세션(또는 `/reload-plugins`)에서 바로 반영된다(F17). `--plugin-dir`는 더 쓰지 않는다.
-- 새 세션에서 `my-agent:` 에이전트 8개와 `my-agent:my-agent` 스킬이 보임. `/my-agent:monitor`는 `disable-model-invocation`이라 모델 목록에는 없고 사람이 부를 때만 뜬다.
+- 새 세션에서 `my-agent:` 에이전트 8개와 `my-agent:my-agent` 스킬이 보임. (2026-10-26 gate-analyst 추가로 9개.) `/my-agent:monitor`는 `disable-model-invocation`이라 모델 목록에는 없고 사람이 부를 때만 뜬다.
 - 전역 설정 `"model": "sonnet"`이라 L1은 세션 모델(Sonnet)로 돈다(F13). 설계대로 opus로 하려면 세션을 opus로 연다.
 
 ## my-plugins로 옮김 (2026-10-25)

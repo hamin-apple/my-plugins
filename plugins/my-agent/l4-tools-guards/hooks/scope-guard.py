@@ -6,8 +6,10 @@ Runs in every session with the plugin on (F18), so anything whose input has no `
 the JSON is even parsed. For a my-agent agent: secrets are denied for everyone, reads must stay in the agent's read
 roots, writes in its write roots, judges' and explorer's Bash must not write, and only researcher and verifier may
 use the web. The architect may not add the `Approved` or `Prototype: requested` line L1 writes into plan.md (4.4 G1b),
-and the coder may not write `.git/` or `.claude/` (hooks and settings run in L1's context). Paths compare without
-case (ma_path). Any error → exit 2, so the call is blocked (`onFailure: block` covers a crash or timeout).
+and the coder may not write `.git/` or `.claude/` (hooks and settings run in L1's context).
+The gate-analyst reads only gate-tally.md and gate-report.md and writes only gate-report.md.
+Paths compare without case (ma_path). Any error → exit 2, so the call is blocked
+(`onFailure: block` covers a crash or timeout).
 """
 import fnmatch
 import json
@@ -91,6 +93,8 @@ def rules(role: str, active, cwd: Path) -> Optional[Rules]:
     L, T = active.location, active.task_dir
     if role in JUDGE_FILE:
         return Rules([L], [T / JUDGE_FILE[role]], [], role not in READ_ONLY_BASH, role in WEB)
+    if role == 'gate-analyst':
+        return Rules([T / 'gate-tally.md', T / 'gate-report.md'], [T / 'gate-report.md'], [], False, False)
     if role == 'explorer':
         return Rules([L], [], [], False, False)
     if role == 'researcher':

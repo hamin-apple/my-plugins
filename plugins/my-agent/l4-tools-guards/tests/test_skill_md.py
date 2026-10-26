@@ -130,6 +130,72 @@ class SkillMdTest(unittest.TestCase):
             if args.startswith('answer') and re.search(r'gate=(G1a|G1b|G3|E|Q)\b', args):
                 self.assertIn('choice=', args, f'{name}: {args}')
 
+    def test_every_ask_carries_rec(self):
+        """Criterion 4: each `ask gate=` in SKILL.md and the L1 files (template or backticked prose) records rec=."""
+        seen = 0
+        for path in [SKILL] + L1_FILES:
+            for m in re.finditer(r'ask gate=[^`\n]*', path.read_text(encoding='utf-8')):
+                seen += 1
+                self.assertIn('rec=', m.group(0), f'{path.name}: {m.group(0)}')
+        self.assertGreaterEqual(seen, 8)
+
+    def test_other_marker_rule(self):
+        self.assertIn('직접 입력(Other)이면 끝에 `other=1`', self.text)
+        self.assertIn('rec=-', self.text)
+
+    def test_rec_template_runs_as_written(self):
+        found = [a for n, a in self.templates() if a.startswith('ask') and 'rec=' in a]
+        self.assertGreaterEqual(len(found), 5)
+        with tempfile.TemporaryDirectory() as tmp:
+            proj = Path(tmp).resolve() / 'proj'
+            make_task(proj)
+            argv = ['ask', 'gate=G3', 'q=x', 'rec=x']
+            r = subprocess.run([sys.executable, str(L4 / 'scripts' / 'run-log.py'), *argv, '--cwd', str(proj)],
+                               capture_output=True, text=True, env={'MA_TASKS_DIR': tmp, 'PATH': '/usr/bin:/bin'})
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_revision_edits_use_headings_and_edit_tool(self):
+        """Criterion 1: sections are found by a line-start heading and edited with Edit, never cut by offset or overwritten."""
+        section = self.text[self.text.index('## 작업 중 수정'):]
+        self.assertIn('줄 맨 앞에서 시작하는 제목(`## Revisions`, `## Approval`)', section)
+        self.assertIn('Edit 도구로 그 절만 고칩니다', section)
+        self.assertIn('Write로 파일 전체를 덮어쓰지 않습니다', section)
+
+    def test_defer_manual_check_scope_change(self):
+        """Criterion 2."""
+        self.assertIn('Scope change: 기준 <n> 직접 확인은 사용자가 나중에 함', self.text)
+
+    def test_continue_cleans_active_when_done(self):
+        """Criteria 3 and 7: a retrospective cut short leaves Status: done; continue only clears .active."""
+        section = self.text[self.text.index('## continue'):self.text.index('## 중단')]
+        self.assertIn('Status: done', section)
+        self.assertIn('`.active`만 정리함', section)
+        self.assertIn('`active-index.json`', section)
+
+    def test_l2_row_lists_manifest_agents(self):
+        import json
+        manifest = json.loads((REPO / '.claude-plugin' / 'plugin.json').read_text(encoding='utf-8'))
+        names = [Path(a).stem for a in manifest['agents'] if '/l2-design-judge/' in a]
+        row = next(l for l in self.text.splitlines() if l.startswith('| L2 |'))
+        for name in names:
+            self.assertIn(name, row)
+
+    def test_retrospective_order(self):
+        """Criterion 7: tally -> gate-analyst -> copy -> chat -> feedback add L1; before the .active cleanup on both accept paths."""
+        accept = (L1 / 'phases' / 'accept.md').read_text(encoding='utf-8')
+        retro = accept[accept.index('## 회고'):]
+        marks = ['gate-report.py" tally', 'my-agent:gate-analyst', 'gate-report.py" copy', '경로 두 개', 'feedback.py" add L1']
+        pos = [retro.index(m) for m in marks]
+        self.assertEqual(pos, sorted(pos))
+        self.assertIn('요약', retro[pos[3]:pos[4]])
+        self.assertIn('Profile:', retro)
+        self.assertIn('PARTIAL', retro)
+        general = accept[accept.index('6. **수용:**'):accept.index('7. **재작업:**')]
+        dev = accept[accept.index('4. **커밋:**'):accept.index('5. **재작업**')]
+        for part in (general, dev):
+            self.assertLess(part.index('Status: done'), part.index('"회고"'))
+            self.assertLess(part.index('"회고"'), part.index('`.active`와'))
+
     def test_plugin_version_scoped_to_plugin_folder(self):
         # the plugin lives in a multi-plugin repo (~/dev/my-plugins): another plugin's commit must not look like a rules change
         self.assertNotIn('"${CLAUDE_PLUGIN_ROOT}" rev-parse', self.text)

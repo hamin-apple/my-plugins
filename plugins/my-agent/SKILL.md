@@ -51,7 +51,7 @@ hooks:
 | 레벨 | 누구 | 하는 일 | 하지 않는 것 |
 |---|---|---|---|
 | L1 | 메인 세션 (이 스킬) | phase 진행, 위임, 병합, 모든 질문, 기록 | 결과물(코드, 노트, 초안, 계획)을 직접 만들지 않음. 판정에서 지적된 작은 수정(파일 2개 이하, 약 10줄)만 예외 |
-| L2 | architect · plan-reviewer · verifier · reviewer | 계획, 판정 | 결과물 수정, 하위 위임 |
+| L2 | architect · plan-reviewer · verifier · reviewer · gate-analyst | 계획, 판정, 결정 해석 | 결과물 수정, 하위 위임 |
 | L3 | explorer · researcher · writer · coder | 맡은 작업 단위 하나 | 범위 밖 파일, 하위 위임 |
 | L4 | hook · 권한 규칙 · 스크립트 | 기록, 차단 | 판단 |
 
@@ -60,7 +60,7 @@ hooks:
 ### `.active` 규칙
 
 - 작업 위치의 `docs/agent/.active`가 진행 중인 작업의 표시입니다. 네 줄입니다: `task:`, `phase:`(1~4), `session:`, `started:`.
-- Intake에서 작업 위치를 정한 뒤 씁니다. phase가 바뀔 때마다 `phase:`를 고칩니다. G3 수용, 중단, 다른 작업으로 바꿀 때 지웁니다.
+- Intake에서 작업 위치를 정한 뒤 씁니다. phase가 바뀔 때마다 `phase:`를 고칩니다. G3 수용 뒤 회고가 끝날 때, 중단, 다른 작업으로 바꿀 때 지웁니다.
 - 이미 있으면 팝업을 거친 뒤에만 덮어씁니다. `session:`은 `$CLAUDE_CODE_SESSION_ID` 값입니다.
 
 ### 데이터와 지시
@@ -132,7 +132,7 @@ hooks:
 
 ## continue
 
-1. `.active`를 찾고(status 1번 순서), 그 작업의 `intake.md`가 `Status: active`인지 봅니다. 아니면 그렇다고 알리고 끝냅니다.
+1. `.active`를 찾고(status 1번 순서), 그 작업의 `intake.md`가 `Status: active`인지 봅니다. 아니면 그렇다고 알리고 끝냅니다. 단 `Status: done`이면 회고 중에 끊긴 것이므로 `.active`와 `active-index.json`의 그 작업 줄만 지우고 "작업 `<id>`는 이미 수용됨. 회고가 끝나지 않았을 수 있어 `.active`만 정리함" 한 줄을 알린 뒤 끝냅니다. 작업 폴더와 run-log는 건드리지 않고 회고를 다시 하지 않습니다. `Status: aborted`는 알리고 끝냅니다.
 2. `intake.md`의 `my-agent:` 값이 지금 값(Intake 9번과 같은 명령)과 다르면 `git -C "${CLAUDE_PLUGIN_ROOT}" diff --stat <옛 값> -- .`을 보여 주고 팝업: `그대로 진행 (Recommended)` / `중단`. 진행하면 그 줄을 고치고 `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" rules-changed from=<옛 값> to=<새 값>`.
 3. `.active`의 `session:`이 `$CLAUDE_CODE_SESSION_ID`와 다르면 팝업: `이어받기 (Recommended)` / `취소`. 이어받으면 `session:`을 고칩니다.
 4. 그 phase 파일과 프로파일 파일을 다시 읽습니다. 모니터 명령(Intake 8번)을 다시 실행합니다.
@@ -158,8 +158,8 @@ run-log는 작업 폴더의 `run-log.md`이고, 줄은 `run-log.py`만 씁니다
 | 언제 | 명령 |
 |---|---|
 | 단계(1~8)에 들어갈 때마다 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=<1-8> name=<단계 이름> --model <메인 세션 모델 ID>` |
-| 팝업 직전 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=<G1a/G1b/G3/E/Q> q="<질문 요약>"` (게이트가 아닌 팝업은 `Q`) |
-| 답을 받은 뒤 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<같은 값> choice="<고른 선택지>"` |
+| 팝업 직전 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=<G1a/G1b/G3/E/Q> q="<질문 요약>" rec="<권장 선택지>"` (게이트가 아닌 팝업은 `Q`. 권장안이 없으면 `rec=-`) |
+| 답을 받은 뒤 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<같은 값> choice="<고른 선택지>"` (직접 입력(Other)이면 끝에 `other=1`. choice에는 `(Recommended)`를 붙이지 않음. 붙어 있어도 집계는 떼고 비교) |
 | phase가 바뀔 때 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" cost session=<세션 ID> usd=<cost_usd>` (아래 금액 참고) |
 | 작업 중 수정 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<N> why="<바뀐 내용>" archive=<보관 폴더> invalidated=<지운 판정 파일, 쉼표로> keep="<유지한 것>"` |
 | 수정 때 백그라운드 결과가 옛 버전이 됨 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" stale id=<agent_id> rev=<N>` |
@@ -195,7 +195,7 @@ run-log는 작업 폴더의 `run-log.md`이고, 줄은 `run-log.py`만 씁니다
 결과물이 작업 폴더 밖으로 나가기 직전에 비밀값 패턴을 검사합니다: prototype artifact 게시, G3 뒤 결과물 복사, 커밋(개발 프로파일, 또는 `docs/agent/`를 커밋하기로 한 프로젝트).
 
 1. `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/secret-scan.py" <나갈 파일이나 폴더>`. 출력이 없으면(exit 0) 진행합니다. exit 2(`no such path`)는 경로가 틀린 것이므로 경로를 고쳐 다시 검사합니다.
-2. 걸리면 위치(`<파일>:<줄>: <종류>`)를 보여 주고 팝업: `해당 부분 지우고 진행 (Recommended)` / `그대로 진행` / `중단`. 팝업 전후로 `ask gate=Q`/`answer gate=Q` 줄을 남깁니다.
+2. 걸리면 위치(`<파일>:<줄>: <종류>`)를 보여 주고 팝업: `해당 부분 지우고 진행 (Recommended)` / `그대로 진행` / `중단`. 팝업 전후로 `ask gate=Q … rec="해당 부분 지우고 진행"`/`answer gate=Q` 줄을 남깁니다.
 3. 지우고 진행이면 L1이 그 줄만 고치고(`fix` 줄) 1번을 다시 합니다.
 
 ## 작업 중 수정 (G3 수용 전)
@@ -203,12 +203,14 @@ run-log는 작업 폴더의 `run-log.md`이고, 줄은 `run-log.py`만 씁니다
 수정처럼 보이는 메시지를 받으면 먼저 팝업으로 종류를 묻습니다: `같은 작업 수정` / `승인 범위 안 조정` / `새 작업으로 분리` / `취소` (상황에 맞는 것을 맨 앞에 `(Recommended)`). G1b 승인 전의 수정 요청은 이 절차 없이 architect에게 다시 맡깁니다.
 
 - **승인 범위 안 조정:** `plan.md` `## Approval` 아래에 `Scope change: <내용>` 줄을 남기고 계속합니다.
+  - 사람이 직접 확인을 나중에 하겠다고 하면 그 자리에서 `plan.md` `## Approval` 아래에 `Scope change: 기준 <n> 직접 확인은 사용자가 나중에 함`을 Edit로 더합니다.
 - **같은 작업 수정:**
   1. 새 위임을 멈춥니다(중단 1번과 같음). 끝난 백그라운드 결과는 `stale`로 남기고 `plan.md`의 그 단위를 `stale`로 바꿉니다.
   2. 되돌아갈 phase를 정합니다. WHAT/WHY가 바뀌면 ① 정의(일반 프로파일은 ② 계획), HOW만 바뀌면 ② 계획. 사람에게 한 줄로 알립니다.
   3. 작업 폴더 전체(`archive/` 제외)를 `archive/<date +%y%m%d-%H%M%S>-rev<N>/`에 `cp -pR`로 복사하고 `cmp`로 모두 대조합니다. 다르면 멈추고 알립니다.
   4. 되돌아간 phase의 파일 끝 `## Revisions`에 `- rev<N> <YYYY-MM-DD HH:MM> <바뀐 내용>; archive <경로>; back to <phase>; invalidated: pending`을 쓰고 `revision` 줄을 남깁니다.
   5. `plan-review.md`, `verify.md`, `review.md`를 지우고 `## Approval`(과 `Scope change:`)을 비웁니다. `.active`의 `phase:`를 고칩니다. 끝나면 수정 줄을 `invalidated: done`으로 바꿉니다.
+  - 4·5번의 절은 줄 맨 앞에서 시작하는 제목(`## Revisions`, `## Approval`)으로 찾고 Edit 도구로 그 절만 고칩니다. 문자열 위치로 자르거나 Write로 파일 전체를 덮어쓰지 않습니다.
   6. 그 phase부터 모든 게이트를 다시 거칩니다. 이미 만든 결과물은 architect가 `## Existing work` 표에서 유지 / 수정 / 폐기를 정합니다. 승인 전에는 아무것도 지우거나 되돌리지 않습니다.
   7. 같은 작업의 4번째 수정이면 들어가기 전에 팝업: `수정 계속 (Recommended)` / `새 작업으로 다시 시작` / `중단`.
 - **G3 수용 뒤의 요청**은 새 작업입니다(`Follows:`).

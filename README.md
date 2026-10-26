@@ -22,7 +22,7 @@ claude plugin install my-agent@my-plugins
 | 레벨 | 구성 |
 |---|---|
 | L1 | 메인 세션 (`/my-agent` 스킬): 단계 진행, 위임, 질문, 기록 |
-| L2 | `architect` · `plan-reviewer` · `verifier` · `reviewer`: 계획과 판정 |
+| L2 | `architect` · `plan-reviewer` · `verifier` · `reviewer` · `gate-analyst`: 계획, 판정, 결정 해석 |
 | L3 | `explorer` · `researcher` · `writer` · `coder`: 맡은 작업 하나 |
 | L4 | hook · 권한 규칙 · 스크립트: 기록과 차단 |
 

@@ -11,6 +11,7 @@ warning. Any error → exit 2, so the tool call is blocked (and `onFailure: bloc
 After approval, a write outside the location, the agent-tasks folder and the result path that plan.md / scope.md
 declare (`- 결과물 위치: `…`` or `- 저장 경로: `…``) gets `ask`: auto mode lets such a write through without a
 prompt (probe 2026-10-25). A Bash write whose target cannot be told passes, as before (git commit asks via G2).
+The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
 """
 import json
 import os
@@ -21,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
+import ma_gate_report  # noqa: E402
 import ma_plan  # noqa: E402
 from ma_path import same, under  # noqa: E402
 
@@ -63,7 +65,7 @@ def outside_ask(inp: dict, active, tasks_dir: Path):
     """Ask reason for an approved task's write outside its places, or None."""
     cwd = Path(inp.get('cwd') or os.getcwd())
     paths = write_paths(inp.get('tool_name'), inp.get('tool_input') or {}, cwd) or []
-    places = [active.location, tasks_dir] + result_paths(active)
+    places = [active.location, tasks_dir, ma_gate_report.report_dir().resolve()] + result_paths(active)
     outside = [str(p) for p in paths if not any(under(p, q) for q in places)]
     return ASK.format(task=active.task, paths=', '.join(outside)) if outside else None
 

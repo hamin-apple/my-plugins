@@ -1,7 +1,7 @@
 # my-agent 아키텍처: HITL을 결합한 멀티 에이전트 오케스트레이션
 
 - 작성일: 2026-10-23
-- 상태: 설계 초안 v0.26 (저장소를 `~/dev/my-plugins` 마켓플레이스 안으로 옮김, 플러그인 버전을 플러그인 폴더 기준으로 셈). v0.25: 대화형 검증 반영(F30~F34, G2 git 옵션 빈틈, 메인 모델 검사, 이어 부른 서브에이전트 기록). 구현 0~9단계를 끝냄(2026-10-25, 설치는 사용자 승인으로 처음 `my-agent@my-agent-dev`, 옮긴 뒤 `my-agent@my-plugins`, 사용자 범위): 탐침 전부, 플러그인 뼈대, 기록 hook, G1b·판정 최신성·scope-guard hook, ask/deny 목록, 에이전트 8개, 세 프로파일과 시나리오 3건, workflow 규칙(F29), 개발 프로파일 검증 3건(`docs/ref/dev-profile-validation.md`), 알림 확인(F34). 설치 뒤 확인까지 끝냄(작업 디렉터리 밖 쓰기: hook `ask`). v0.2 4레벨 구조, v0.3 G1b mock-up·prototype과 Q1~Q6 결정, v0.4 검토 반영(하드 게이트 범위, 설치 범위, 모순 정리, 팝업 규칙), v0.5 스킬 구성, 병합 충돌 처리, my-dev 은퇴 절차, v0.6 서브에이전트 호출 자동 기록(4.7.2절), v0.7 작업 중 수정 요청 절차(4.8.1절)와 작업 ID 규칙(4.7.3절), v0.8 재개·동시 작업·중단·작업 위치(4.8.2절)와 병렬 coder 규칙, v0.9 일관성 정리, hook 실패 시 차단, 권한 모드, 예상 규모, 환경 오류, v0.10 보안(4.12절)과 시험 방법(4.13절), v0.11 에이전트를 레벨 폴더에 둔 채 플러그인으로 불러옴(4.5.1절, Q12), v0.12 승인 전 허용 목록의 입력값, 자기 수정 시 잠김 방지, 새 세션 알림 범위, 작업 중 my-agent 변경 감지, v0.13 run-log의 모델 기대값(호출 인자 기록), `status` 표시 범위, 금액은 status line 스냅샷을 참고로만, v0.14 workflow 크기 medium과 workflow 에이전트 보호 조건, vault 저장 규칙, v0.15 일관성 정리(모델 우선순위, MISMATCH 범위, feedback 위치 등), v0.16 vault 저장을 없애고 결과물은 범위 문서에서 정한 위치로, v0.17 E 조건에서 예상 규모(토큰) 초과를 뺌. 예상 규모는 참고로만 보여 줌, v0.18 에이전트별 effort 고정(4.5절)과 run-log 기록, v0.19 모니터(`my-agent-monitor-design.md`)용 기록: run-log 줄 형식, `step:` 줄, 팝업 `ask:`/`answer:` 분리, G2 기록 hook, 작업자 중단 표시, 판정 파일 형식, 프로젝트 목록 등록, v0.20 모니터를 플러그인의 `monitor/`에 넣고 Router가 작업을 시작할 때 띄움, 수동 실행용 `/my-agent:monitor` 스킬(4.7.4절), v0.21 탐침 결과(F19~F27): worktree 에이전트의 `.active` 찾기, maxTurns 종료를 meta 파일로 찾아 `end=partial`로 기록, `stop:` 줄의 `mode=`·`effort=`, 스킬 frontmatter hook 경로를 `${CLAUDE_PLUGIN_ROOT}`로, v0.22 용어를 phase로 통일, my-dev를 건드리는 작업 항목(frontmatter 변경, 은퇴 절차)을 구현 순서에서 뺌. my-agent는 my-dev 없이 이 설계대로만 동작, v0.23 구현 2~7단계: F28(거부된 Skill은 hook도 없음)·F29(workflow `agentType`), git 밖 작업 위치의 `.active` 찾기, `NotebookEdit`도 G1b가 막음, manifest `version` 유지
+- 상태: 설계 초안 v0.26 (저장소를 `~/dev/my-plugins` 마켓플레이스 안으로 옮김, 플러그인 버전을 플러그인 폴더 기준으로 셈). v0.25: 대화형 검증 반영(F30~F34, G2 git 옵션 빈틈, 메인 모델 검사, 이어 부른 서브에이전트 기록). 구현 0~9단계를 끝냄(2026-10-25, 설치는 사용자 승인으로 처음 `my-agent@my-agent-dev`, 옮긴 뒤 `my-agent@my-plugins`, 사용자 범위): 탐침 전부, 플러그인 뼈대, 기록 hook, G1b·판정 최신성·scope-guard hook, ask/deny 목록, 에이전트 9개(gate-analyst는 2026-10-26에 더함), 세 프로파일과 시나리오 3건, workflow 규칙(F29), 개발 프로파일 검증 3건(`docs/ref/dev-profile-validation.md`), 알림 확인(F34). 설치 뒤 확인까지 끝냄(작업 디렉터리 밖 쓰기: hook `ask`). v0.2 4레벨 구조, v0.3 G1b mock-up·prototype과 Q1~Q6 결정, v0.4 검토 반영(하드 게이트 범위, 설치 범위, 모순 정리, 팝업 규칙), v0.5 스킬 구성, 병합 충돌 처리, my-dev 은퇴 절차, v0.6 서브에이전트 호출 자동 기록(4.7.2절), v0.7 작업 중 수정 요청 절차(4.8.1절)와 작업 ID 규칙(4.7.3절), v0.8 재개·동시 작업·중단·작업 위치(4.8.2절)와 병렬 coder 규칙, v0.9 일관성 정리, hook 실패 시 차단, 권한 모드, 예상 규모, 환경 오류, v0.10 보안(4.12절)과 시험 방법(4.13절), v0.11 에이전트를 레벨 폴더에 둔 채 플러그인으로 불러옴(4.5.1절, Q12), v0.12 승인 전 허용 목록의 입력값, 자기 수정 시 잠김 방지, 새 세션 알림 범위, 작업 중 my-agent 변경 감지, v0.13 run-log의 모델 기대값(호출 인자 기록), `status` 표시 범위, 금액은 status line 스냅샷을 참고로만, v0.14 workflow 크기 medium과 workflow 에이전트 보호 조건, vault 저장 규칙, v0.15 일관성 정리(모델 우선순위, MISMATCH 범위, feedback 위치 등), v0.16 vault 저장을 없애고 결과물은 범위 문서에서 정한 위치로, v0.17 E 조건에서 예상 규모(토큰) 초과를 뺌. 예상 규모는 참고로만 보여 줌, v0.18 에이전트별 effort 고정(4.5절)과 run-log 기록, v0.19 모니터(`my-agent-monitor-design.md`)용 기록: run-log 줄 형식, `step:` 줄, 팝업 `ask:`/`answer:` 분리, G2 기록 hook, 작업자 중단 표시, 판정 파일 형식, 프로젝트 목록 등록, v0.20 모니터를 플러그인의 `monitor/`에 넣고 Router가 작업을 시작할 때 띄움, 수동 실행용 `/my-agent:monitor` 스킬(4.7.4절), v0.21 탐침 결과(F19~F27): worktree 에이전트의 `.active` 찾기, maxTurns 종료를 meta 파일로 찾아 `end=partial`로 기록, `stop:` 줄의 `mode=`·`effort=`, 스킬 frontmatter hook 경로를 `${CLAUDE_PLUGIN_ROOT}`로, v0.22 용어를 phase로 통일, my-dev를 건드리는 작업 항목(frontmatter 변경, 은퇴 절차)을 구현 순서에서 뺌. my-agent는 my-dev 없이 이 설계대로만 동작, v0.23 구현 2~7단계: F28(거부된 Skill은 hook도 없음)·F29(workflow `agentType`), git 밖 작업 위치의 `.active` 찾기, `NotebookEdit`도 G1b가 막음, manifest `version` 유지
 - 실행 환경: 로컬 Claude Code (CLI, 스킬, 서브에이전트, hooks)
 - 이전 문서와의 관계: `hitl-orchestration-guide.md`는 Managed Agents API를 기준으로 쓴 문서입니다. 개념만 참고하고, 구현은 이 문서를 따릅니다.
 
@@ -167,6 +167,7 @@ flowchart TD
         PR["plan-reviewer"]
         VF["verifier"]
         RV["reviewer"]
+        GA["gate-analyst<br/>결정 해석 (회고)"]
     end
 
     subgraph L3["L3 작업 (맡은 범위만 봄)"]
@@ -180,7 +181,7 @@ flowchart TD
         T["내장 도구 · MCP"]
         HK["hooks<br/>(G1 하드 게이트 · 판정 최신성 · 범위 제한 · 호출 기록)"]
         PM["권한 규칙<br/>(G2 ask · deny)"]
-        SC["scripts<br/>(run-log · feedback)"]
+        SC["scripts<br/>(run-log · feedback · gate-report)"]
     end
 
     U <-->|"G1 · G3 · E 팝업 / 유지보수 개입"| G
@@ -195,9 +196,12 @@ flowchart TD
 | 레벨 | 실행 위치 | 구성 요소 (4개) | 보는 정보 | 결과물 | 쓸 수 없는 것 |
 |---|---|---|---|---|---|
 | **L1 오케스트레이션** | 메인 세션 (my-agent 스킬) | Router, Orchestrator, Gatekeeper, Recorder | 사람의 요청, 각 phase의 결과 파일 | 진행 기록: 범위 문서, 승인 기록, 최종 보고, run-log | 결과물(코드, 조사 노트, 초안, 계획서)을 직접 만들지 않음. 예외: 판정에서 지적된 작은 수정(파일 2개 이하, 약 10줄)은 my-dev 규칙대로 L1이 고칠 수 있음 |
-| **L2 설계·판정** | 서브에이전트 | architect, plan-reviewer, verifier, reviewer | 범위 문서, 계획, diff나 산출물, 확인 명령 | 계획, 판정 파일 | 작업 결과물 수정, 하위 에이전트 생성(`Agent` 없음) |
+| **L2 설계·판정** | 서브에이전트 | architect, plan-reviewer, verifier, reviewer, gate-analyst | 범위 문서, 계획, diff나 산출물, 확인 명령. gate-analyst는 게이트 결정 집계 파일만 | 계획, 판정 파일, 결정 리포트(`gate-report.md`) | 작업 결과물 수정, 하위 에이전트 생성(`Agent` 없음) |
 | **L3 작업** | 서브에이전트 (coder는 첫 병렬 그룹만 worktree) | explorer, researcher, writer, coder | 맡은 작업 단위 하나와 그 범위의 파일 | 코드, 조사 노트, 초안 | 범위 밖 파일, 하위 에이전트 생성(`Agent` 없음) |
 | **L4 도구·가드** | Claude Code 런타임 | 도구·MCP, hooks, 권한 규칙, scripts | 정해진 형식의 입력 | 실행 결과, 허용/거부 판정 | (판단하지 않음) |
+
+- **L2의 5번째 에이전트 (2026-10-26):** 레벨마다 4개라는 구성 요소 단위(4.1.1절)에서 L2만 5개입니다. `gate-analyst`는 ④ 수용의 회고에서만 불리는 보조 역할이라 phase 흐름의 판정자(architect, plan-reviewer, verifier, reviewer)와 따로 셉니다. 사람이 한 번에 보는 항목(게이트, 팝업 선택지)은 늘지 않습니다.
+- **L4는 집계만, L2는 해석, L1은 복사:** 게이트 결정을 세는 `scripts/gate-report.py`(L4)는 판단하지 않고, 성향을 해석해 `gate-report.md`를 쓰는 것은 gate-analyst(L2)이며, 리포트를 작업 위치 밖으로 복사하는 것은 L1입니다(4.11절).
 
 **Gemini 4-Level과 다른 점: 위임 경로** [제안]
 
@@ -257,12 +261,13 @@ flowchart TD
 - **진행 중인 작업 표시 (`docs/agent/.active`):**
   - 스킬 hook은 스킬을 한 번 호출하면 세션이 끝날 때까지 계속 실행됩니다(hooks 문서). 그래서 hook이 언제 막아야 하는지 알 수 있게, L1이 작업을 시작할 때 `.active`에 작업 ID와 현재 phase를 적습니다.
   - hook은 4.8.2절의 찾는 순서(실행한 폴더의 저장소 → `active-index.json`)로 `.active`를 찾습니다.
-  - 작업이 끝나거나(G3 수용), 중단하거나, 다른 작업으로 바꿀 때 L1이 이 파일을 지웁니다.
+  - 작업의 회고가 끝나거나(G3 수용 뒤, 4.11절), 중단하거나, 다른 작업으로 바꿀 때 L1이 이 파일을 지웁니다. 회고에 `.active`가 필요하므로 G3 수용 직후가 아니라 회고 뒤에 지웁니다.
   - `.active`가 없거나, 가리키는 작업의 `plan.md`에 승인 줄이 있으면 hook은 **그냥 통과**시킵니다. 그래서 같은 세션에서 하는 다른 일은 막지 않습니다.
   - 수정 요청으로 phase를 되돌리면 L1이 `## Approval`을 비우고 `.active`의 phase를 고칩니다. 그래서 고친 계획을 승인받기 전까지 다시 막힙니다.
   - `.active`가 가리키는 작업 폴더가 없으면 hook은 통과시키고 경고 한 줄을 남깁니다(작업 폴더를 지운 경우).
 - **예외:**
   - 작업 위치의 `docs/agent/` 아래 결과 파일과 `~/dev/agent-tasks/active-index.json`을 쓰는 것은 허용합니다.
+  - 승인 전 쓰기 차단(`decide`)은 회고 리포트 복사 폴더에도 그대로 적용됩니다. 복사 폴더 예외는 아래 G2의 "작업 디렉터리 밖에 쓰기"에만 있습니다.
   - `plan.md`에 `Prototype: requested` 줄이 있으면 `my-agent:writer` 위임과 `docs/agent/<task-id>/prototype/` 쓰기를 허용합니다.
   - 승인 줄과 `Prototype: requested` 줄은 L1만 씁니다. architect가 `plan.md`를 쓸 때 이 두 줄을 새로 넣으면 scope-guard가 막습니다(v0.24, 최종 리뷰 C2). 프롬프트 지시만으로는 인젝션된 탐색 결과가 승인 줄을 넣는 것을 막지 못하기 때문입니다.
 - **구현 방식:** my-dev의 `verdict-fresh-check.py`와 같습니다(`permissionDecision: deny`와 사유).
@@ -315,6 +320,9 @@ flowchart TD
   - git 옵션이 하위 명령 앞에 오는 꼴(`git -C <repo> commit`, `git -c k=v push`)도 묻습니다: `Bash(git * commit*)`, `Bash(git * push*)`. 접두어 규칙 `Bash(git commit:*)`만으로는 `git -C … commit`이 묻지 않고 지나갔습니다(개발 검증 2, v0.25). 커밋이 아닌 명령이 걸리는 오탐(`git log --grep commit`)은 권한 창 한 번이 비용입니다.
   - 외부로 보내는 MCP 도구(Slack 전송, GitHub PR·파일 작성, Vercel 배포)
   - 작업 디렉터리 밖에 쓰기. auto 모드는 이것을 묻지 않고 classifier가 통과시킵니다(탐침 2026-10-25). 그래서 G1b 승인 뒤에는 `plan-approved-check.py`가 작업 위치, `~/dev/agent-tasks`, 범위 문서의 `- 결과물 위치: `…``·`- 저장 경로: `…`` 줄 밖에 쓰는 Write·Edit·Bash에 `ask`를 돌려 권한 창을 띄웁니다(사용자 결정, 대화형으로 확인). 쓰는 곳을 알 수 없는 Bash는 묻지 않습니다(남는 위험).
+  - **회고 리포트 복사 폴더 예외 (2026-10-26):** `~/dev/skills/my-surrogate/gate-report/` 아래에 쓰는 것(Write, `mkdir -p`·`cp`, `gate-report.py copy`)은 묻지 않고 통과시킵니다. 회고 때마다 권한 창이 뜨지 않게 하려는 것입니다. 그 밖의 작업 위치 밖 쓰기는 지금처럼 `ask`이고, 예를 들어 형제 폴더 `~/dev/skills/my-surrogate/data/`는 계속 묻습니다. G1b 승인 전 차단은 바꾸지 않습니다.
+  - **폴더 바꾸기:** 환경 변수 `$MA_GATE_REPORT_DIR`가 있으면 묻지 않고 쓰는 곳이 그 폴더로 바뀝니다(`$MA_TASKS_DIR`와 같은 방식). 복사 폴더는 `ma_gate_report.report_dir()`가 정합니다.
+  - **보장 범위:** 이 예외는 plan-approved-check와 verdict-fresh-check hook이 묻지 않는다는 뜻입니다. Claude Code 자체 권한 창(G2)이 `python3 …/gate-report.py` 명령에 뜨는지는 사용자 권한 설정에 달려 있고, 이 설계가 보장하지 않습니다.
 - **`deny` 규칙:** 비밀값 파일 읽기(경로 고정 규칙, 4.12절), `--no-verify`, `git push --force`(`git -C … push --force` 꼴 포함)
 - **허용 범위:** 위험한 행동은 "세션 동안 허용"을 쓰지 않고 한 번만 허용합니다. (F3)
 - **G3 뒤의 커밋:** 개발 프로파일에서 G3로 커밋을 승인한 뒤에도 `git commit`의 `ask` 규칙 때문에 권한 창이 한 번 더 뜹니다. 일부러 두 번 확인하는 것입니다. `ask`는 어떤 모드에서도 자동 승인되지 않습니다(F7).
@@ -351,7 +359,7 @@ Obsidian vault에는 저장하지 않습니다(2026-10-24 결정, Q13). 개발 �
 
 ### 4.5 에이전트 정의 (레벨 폴더의 `agents/`) [제안]
 
-L2 4개, L3 4개, 모두 8개입니다. 모든 에이전트에서 `Agent` 도구를 뺍니다. 정의 파일은 L2는 `l2-design-judge/agents/`, L3는 `l3-workers/agents/`에 두고, 플러그인으로 불러와 그 자리에서 호출합니다(4.5.1절). 표의 이름은 호출할 때 쓰는 이름입니다.
+L2 5개, L3 4개, 모두 9개입니다. 모든 에이전트에서 `Agent` 도구를 뺍니다. 정의 파일은 L2는 `l2-design-judge/agents/`, L3는 `l3-workers/agents/`에 두고, 플러그인으로 불러와 그 자리에서 호출합니다(4.5.1절). 표의 이름은 호출할 때 쓰는 이름입니다.
 
 | 레벨 | 에이전트 | 모델 | effort | tools | 기타 | 역할 |
 |---|---|---|---|---|---|---|
@@ -359,12 +367,13 @@ L2 4개, L3 4개, 모두 8개입니다. 모든 에이전트에서 `Agent` 도구
 | L2 | `my-agent:plan-reviewer` | sonnet | high | Read, Grep, Glob, Write(자기 판정 파일만) | | 계획 판정 |
 | L2 | `my-agent:verifier` | opus | high | Read, Grep, Glob, Bash(읽기·확인만), WebFetch, Write(자기 판정 파일만) | | 기준 대비 판정, 인용 확인 |
 | L2 | `my-agent:reviewer` | sonnet | high | Read, Grep, Glob, Bash(읽기·확인만), Write(자기 판정 파일만) | | 품질 판정 |
+| L2 | `my-agent:gate-analyst` | sonnet | medium | Read(`gate-tally.md`·`gate-report.md`만), Write(`gate-report.md` 하나만) | `maxTurns` 없음(L2) | 회고에서 게이트 결정 집계를 해석해 성향 리포트 작성 |
 | L3 | `my-agent:explorer` | sonnet | low | Read, Grep, Glob, Bash(읽기) | `maxTurns` 지정 | 위치와 사실 수집 |
 | L3 | `my-agent:researcher` | sonnet | medium | Read(자기 작업 폴더만), WebSearch, WebFetch, Write(`work/` 전용) | `maxTurns` 지정 | 하위 질문 하나 조사 → 출처를 붙인 노트 작성 |
 | L3 | `my-agent:writer` | sonnet | medium | Read, Write, Edit | `maxTurns` 지정 | 문서 초안 작성 |
 | L3 | `my-agent:coder` | sonnet (재시도 시 opus) | medium | Read, Edit, Write, Bash | `maxTurns` 지정. worktree는 정의 파일에 고정하지 않고 호출할 때 정함 | slice 구현 |
 
-- **effort:** 정의 파일 frontmatter의 `effort:`로 고정합니다. 판정과 설계(L2)는 틀리면 되돌리는 비용이 커서 high, 사실 수집(explorer)은 low, 나머지 작업자는 medium입니다.
+- **effort:** 정의 파일 frontmatter의 `effort:`로 고정합니다. 판정과 설계(L2)는 틀리면 되돌리는 비용이 커서 high, 사실 수집(explorer)은 low, 나머지 작업자는 medium입니다. 예외로 gate-analyst(L2)는 작업을 판정하는 것이 아니라 이미 끝난 결정을 해석하는 일이라 medium입니다.
   - 우선순위: 환경 변수 `CLAUDE_CODE_EFFORT_LEVEL` > 호출할 때 준 `effort` 인자(v2.1.292 이상) > 정의 파일 `effort:` > 세션 effort (sub-agents 문서 "Choose an effort level").
   - my-agent는 호출할 때 `effort` 인자를 주지 않습니다. 재시도할 때는 모델만 올립니다(4.8절).
   - L1(my-agent 스킬)은 `effort:`를 두지 않고 세션 effort를 따릅니다.
@@ -373,12 +382,13 @@ L2 4개, L3 4개, 모두 8개입니다. 모든 에이전트에서 `Agent` 도구
 - **coder의 worktree:** 정의 파일에 `isolation: worktree`를 고정하면 Q9의 "이후는 메인 트리에서 순서대로"를 할 수 없습니다. 그래서 L1이 첫 병렬 그룹을 위임할 때만 Agent 호출에 `isolation: "worktree"`를 넘깁니다. worktrees 문서는 정의 파일에 고정하는 방법 말고도 "에이전트에 worktree를 쓰라고 요청하는" 방법을 적고 있고, Agent 도구에는 호출마다 주는 `isolation` 인자가 있습니다. 커스텀 에이전트에도 호출 인자 `isolation`이 그대로 적용됩니다(F19).
 - **읽기·쓰기 경로 제한:** `tools`만으로는 읽고 쓸 수 있는 경로를 제한할 수 없습니다. 그래서 `agent_type` 기준 PreToolUse hook(`scope-guard.py`)을 플러그인 hook으로 두고 레벨별로 읽기와 쓰기 경로를 막습니다. 읽기 범위는 4.12절에 있습니다. (F9)
   - **적용 범위:** 플러그인 hook은 플러그인을 켠 모든 세션과 프로젝트에서 실행됩니다(F18). 그래서 guard는 `agent_type`이 `my-agent:`로 시작할 때만 검사하고, 나머지는 바로 통과시킵니다. 다른 세션과 다른 스킬에는 영향을 주지 않습니다.
+  - **gate-analyst의 범위 (2026-10-26):** 판정자용 읽기 범위(작업 위치 전체)를 쓰지 않고 따로 등록합니다. 읽기는 작업 폴더의 `gate-tally.md`와 `gate-report.md` 둘뿐입니다(Write 도구가 다시 쓰기 전에 Read를 요구하므로 리포트 파일도 넣음). 쓰기는 `gate-report.md` 하나입니다. Bash 쓰기와 웹은 없습니다. 그래서 run-log나 `plan.md` 같은 원본은 읽지 못하고 L4 집계만 받습니다. 승인 전 허용 목록(4.4절)에는 넣지 않습니다(회고는 승인 뒤에만 있음).
   - **L2 판정자의 Bash:** guard가 읽기·확인 명령(테스트, lint, `git diff`, `git status`, `grep` 등)만 허용합니다. 파일을 바꾸는 명령은 막습니다. git은 읽기 하위 명령 목록에 있는 것만 통과합니다(v0.24).
   - **coder가 쓰지 못하는 곳 (v0.24):** `docs/agent/`, `.git/`, `.claude/`(자기 worktree 안은 제외). `.git/hooks`, `.git/config`, `.claude/settings.json`은 L1의 `git commit`·`git status`나 다음 세션에서 실행되기 때문입니다(최종 리뷰 I2).
   - **실패하면 막음:** guard에도 `"onFailure": "block"`을 둡니다. `agent_type`이 `my-agent:`로 시작하지 않으면 맨 먼저 exit 0으로 끝내서, guard 버그가 다른 세션을 막지 않게 합니다.
 - **불러오는 방법:** 4.5.1절. `~/.claude/agents/`에는 아무것도 설치하지 않습니다.
 - **architect의 계획 수정:** 사람이 G1b에서 수정을 요청하면, L1이 요청 내용을 받아 architect를 다시 호출합니다. 수정 요청이 확정된 범위(WHAT/WHY)를 바꾸거나 승인 뒤에 들어오면 작업 중 수정 절차(4.8.1절)를 탑니다.
-- **이름 규칙:** 정의 파일 이름과 frontmatter `name`은 `architect`처럼 역할만 씁니다. 플러그인 이름이 앞에 붙어 `my-agent:architect`로 불리므로 `my-` 접두어 규칙(CLAUDE.md)을 만족합니다. frontmatter `name`에는 `:`를 넣지 않습니다.
+- **이름 규칙:** 정의 파일 이름과 frontmatter `name`은 `architect`, `gate-analyst`처럼 역할만 씁니다. 플러그인 이름이 앞에 붙어 `my-agent:architect`로 불리므로 `my-` 접두어 규칙(CLAUDE.md)을 만족합니다. 새 에이전트 `gate-analyst`에도 `my-`를 따로 붙이지 않습니다(기존 8개와 같고, 이름과 파일 이름이 같아야 한다는 테스트가 있음). frontmatter `name`에는 `:`를 넣지 않습니다.
 
 ### 4.5.1 플러그인으로 불러오기 (Q12 결정) [제안]
 
@@ -403,6 +413,7 @@ L2 4개, L3 4개, 모두 8개입니다. 모든 에이전트에서 `Agent` 도구
     "./l2-design-judge/agents/plan-reviewer.md",
     "./l2-design-judge/agents/verifier.md",
     "./l2-design-judge/agents/reviewer.md",
+    "./l2-design-judge/agents/gate-analyst.md",
     "./l3-workers/agents/explorer.md",
     "./l3-workers/agents/researcher.md",
     "./l3-workers/agents/writer.md",
@@ -512,18 +523,19 @@ claude plugin install my-agent@my-plugins
 
 ```text
 ~/dev/my-plugins/plugins/my-agent/   # 플러그인 폴더 (마켓플레이스 ~/dev/my-plugins 안, 4.5.1절)
-├── .claude-plugin/                 # plugin.json (skills · 에이전트 8개 경로 · hooks 경로)
+├── .claude-plugin/                 # plugin.json (skills · 에이전트 9개 경로 · hooks 경로)
 ├── SKILL.md                        # 진입점: 4phase, 4게이트, 레벨 표, 질문 규칙
 ├── skills/monitor/SKILL.md         # /my-agent:monitor: 모니터 수동 실행 · status · stop (4.7.4절)
 ├── l1-orchestration/               # L1: 메인 세션 규칙
 │   ├── phases/                     #   phase별 규칙 4개: define · plan · build · accept
 │   └── profiles/                   #   프로파일 3개: general · research · dev
-├── l2-design-judge/agents/         # L2: architect · plan-reviewer · verifier · reviewer
+├── l2-design-judge/agents/         # L2: architect · plan-reviewer · verifier · reviewer · gate-analyst
 ├── l3-workers/agents/              # L3: explorer · researcher · writer · coder
 ├── l4-tools-guards/
 │   ├── hooks/                      #   hooks.json (플러그인 hook) · plan-approved-check · verdict-fresh-check · scope-guard · subagent-log · permission-log · session-notice
 │   ├── permissions/                #   ~/.claude/settings.json에 넣을 ask/deny 목록
-│   ├── scripts/                    #   run-log · feedback
+│   ├── lib/                        #   hook·script 공용 함수: ma_logline · ma_active · ma_gate_report(집계, 복사 폴더) 외
+│   ├── scripts/                    #   run-log · feedback · gate-report (tally · copy)
 │   ├── probe/                      #   구현 0단계 탐침용 임시 hook (4.13절)
 │   └── tests/                      #   hook 단위 테스트, scenarios/, judge-fixtures/
 ├── monitor/                        # 모니터 (읽기 전용, 레벨 밖): server.py · monitor-up.py · monitor/ · web/ · prices.json · tools/ · tests/ (4.7.4절)
@@ -539,9 +551,14 @@ claude plugin install my-agent@my-plugins
     ├── work/                       # 작업자 결과 (조사 노트, 초안)
     ├── prototype/                  # (선택) G1b용 단일 HTML prototype
     ├── verify.md  review.md  run-log.md
+    ├── gate-tally.md  gate-report.md  # 회고: L4 집계(gate-report.py tally)와 gate-analyst의 결정 리포트 (4.11절)
     ├── deliverable/                # (선택) 범위 문서가 저장 위치를 정하지 않았을 때의 최종 결과물 (4.4절)
     └── archive/                    # 수정 직전 사본 <YYMMDD-hhmmss>-rev<N>/ (4.8.1절)
+
+~/dev/skills/my-surrogate/gate-report/   # 작업 위치 밖: 회고 리포트 복사본 <task-id>.md (같은 이름이 있으면 -2, -3). $MA_GATE_REPORT_DIR로 바꿈 (4.4절)
 ```
+
+- `gate-tally.md`와 `gate-report.md`는 `work/`가 아니라 작업 폴더 바로 아래에 둡니다. 판정 최신성 hook이 `work/`를 "판정 뒤에 바뀐 파일"로 세기 때문입니다.
 
 **모니터가 읽는 파일 형식 (v0.19)**
 
@@ -620,7 +637,7 @@ hooks:
 
 | 기록 | 남기는 쪽 | 방법 |
 |---|---|---|
-| phase 진입, 단계 진입(`step:`), 팝업 질문(`ask:`)과 선택(`answer:`), 병합 충돌 처리, 작은 수정 | L1 Recorder | 지시문: `run-log.py` 실행 (메인 세션 모델 MISMATCH 검사 포함, P9). `ask:`는 팝업을 띄우기 직전에, `answer:`는 답을 받은 뒤에 씁니다. |
+| phase 진입, 단계 진입(`step:`), 팝업 질문(`ask:`)과 선택(`answer:`), 병합 충돌 처리, 작은 수정 | L1 Recorder | 지시문: `run-log.py` 실행 (메인 세션 모델 MISMATCH 검사 포함, P9). `ask:`는 팝업을 띄우기 직전에, `answer:`는 답을 받은 뒤에 씁니다. 권장안과 직접 입력 표지는 아래 "팝업 기록". |
 | G2 권한 요청과 허용 | L4 hook | `PermissionRequest` → `permission-log.py ask`, `PostToolUse` → `permission-log.py answer` (아래 "G2 기록") |
 | 서브에이전트 호출 인자 | L4 hook | 메인 세션의 `PreToolUse`(`Agent`) → `subagent-log.py call` |
 | 서브에이전트 시작 | L4 hook | `SubagentStart` → `subagent-log.py start` |
@@ -643,6 +660,22 @@ hooks:
   ```
 
 - 기존 줄(`cost:`, `revision:`, `stale:`, `base:`, `abort`, `deliver`, `resume`, `rules-changed`, `log-error`)도 같은 형식을 씁니다.
+
+**팝업 기록: 권장안 `rec=`와 직접 입력 `other=1` (2026-10-26)**
+
+- L1이 띄우는 모든 팝업(G1a, G1b, G3, E, Q)의 `ask:` 줄 끝에 권장 선택지를 `rec=<라벨>`로 남깁니다. `(Recommended)` 접미어는 빼고 `choice=`와 같은 방식으로 적습니다. 권장안이 없는 팝업은 `rec=-`로 적습니다. 집계(`gate-report.py`)의 권장안 선택 판정은 `choice`와 `rec` 양쪽 끝의 ` (Recommended)`(괄호 안 대소문자 무시)를 뗀 값끼리 비교하고, 결정 표에도 뗀 값을 보입니다. 옛 run-log에 접미어가 붙어 있어도 같게 셉니다.
+- 사람이 선택지가 아니라 Other로 직접 입력했으면 `answer:` 줄 끝에 `other=1`을 덧붙입니다. 선택지 목록 전체를 `ask:`에 적는 방법은 라벨에 `/`나 따옴표가 들어가면 깨지기 쉽고, 직접 입력인지는 L1이 답을 받는 순간 알 수 있어서 `answer:`에 둡니다.
+
+  ```text
+  2026-10-27 00:41:10 ask: gate=G3 q="커밋 승인: 261026-gate-report-feedback" rec=커밋
+  2026-10-27 00:41:52 answer: gate=G3 choice=커밋
+  2026-10-26 23:10:03 ask: gate=Q q="작업 위치를 어디로 할지" rec=-
+  2026-10-26 23:10:40 answer: gate=Q choice="plugins/my-agent만" other=1
+  ```
+
+- **옛 줄:** `rec=`가 없는 옛 `ask:` 줄은 그대로 읽히고, 집계에서 권장안 선택을 `알 수 없음`(권장안 열은 `(기록 없음)`)으로 셉니다. 줄 형식은 바꾸지 않고 필드만 더했으므로 모니터와 기존 스크립트는 `rec`, `other`를 모르는 key=value로 지나갑니다.
+- **권장안 선택 판정(집계):** `other=1`이면 `직접 입력`, `rec`가 없거나 `-`이면 `알 수 없음`(권장안 열은 `없음`), `choice`가 `rec`와 같으면 `예`, 다르면 `아니오`. `ask:`와 `answer:`는 게이트별로 시간 순서대로 짝을 짓고, 짝이 없으면 비고에 `답 없음`·`답만 있음`·`답 두 번`을 적고 계속합니다. G2 줄은 결정 표에 넣지 않습니다.
+- 새 run-log 종류(kind)는 만들지 않습니다.
 
 **G2 기록 (v0.19)**
 
@@ -818,11 +851,12 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 | 선택지 | 뜻 | 다음 |
 |---|---|---|
 | 같은 작업 수정 | 완료 기준, 비목표, 제약, 예외 경우가 바뀌거나, 승인된 계획의 방법·작업 단위·파일이 바뀜 | 아래 2~8번 |
-| 승인 범위 안 조정 | 승인된 요청을 지키는 데 파일 하나, 동작 하나, 의존성 하나가 더 필요함 | `plan.md`의 `## Approval` 아래에 `Scope change:` 줄로 남기고 계속 진행합니다. Verify와 Review는 이 줄도 기준으로 판정합니다. |
+| 승인 범위 안 조정 | 승인된 요청을 지키는 데 파일 하나, 동작 하나, 의존성 하나가 더 필요함 | `plan.md`의 `## Approval` 아래에 `Scope change:` 줄로 남기고(Edit로 그 절만 고침) 계속 진행합니다. Verify와 Review는 이 줄도 기준으로 판정합니다. |
 | 새 작업으로 분리 | 지금 작업과 독립된 요청 | 지금 작업을 끝내거나 중단한 뒤, 새 작업 ID로 시작합니다(4.7.3절). |
 | 취소 | 수정하지 않음 | 하던 단계를 계속합니다. |
 
 - 권장안은 상황에 맞게 L1이 골라 맨 앞에 `(Recommended)`로 둡니다.
+- **직접 확인을 미룸 (2026-10-26):** 사람이 실기 확인처럼 직접 해야 하는 확인을 나중으로 미루면, L1이 그 자리에서 `plan.md` `## Approval` 아래에 `Scope change: 기준 <n> 직접 확인은 사용자가 나중에 함` 줄을 남깁니다. Verify는 이 줄을 받아 그 기준을 그 범위로 판정하므로, 미룬 확인 때문에 Verify가 FAIL로 끝나지 않습니다.
 - G1b 승인 전의 "수정 요청"은 이 절차를 타지 않습니다. 아직 승인한 계획이 없으므로 architect에게 다시 맡기기만 합니다(4.4절 G1b 진행 순서). 단, 그 요청이 확정된 범위(`scope.md`)를 바꾸면 이 절차를 탑니다.
 
 **2. 멈춤**
@@ -853,6 +887,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 **5. 기록**
 
 - 되돌아간 phase의 파일(`scope.md` 또는 `plan.md`) 끝 `## Revisions`에 한 줄을 남깁니다. 다른 것을 바꾸기 전에 먼저 씁니다.
+- **절을 고치는 방법 (2026-10-26):** `## Revisions`와 `## Approval`(6번)은 줄 맨 앞에서 시작하는 제목으로 절을 찾아 Edit 도구로 그 절만 고칩니다. 문자열 위치로 파일을 자르거나 Write로 파일 전체를 덮어쓰지 않습니다. 본문에 같은 글자가 인용되어 있으면 위치로 자를 때 본문이 중복되거나 사라지기 때문입니다(my-dev 피드백).
 
   ```text
   - rev<N> <YYYY-MM-DD HH:MM> <바뀐 내용, 사용자 요청>; archive <경로>; back to <phase>; invalidated: pending
@@ -892,7 +927,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 |---|---|---|
 | G3 팝업에서 `재작업` | 기준은 그대로이고 결과가 부족함 | 수정 절차 없이 ③ 구축으로 되돌립니다. 부족한 점을 실패한 기준처럼 넘깁니다. |
 | G3 팝업에서 기준을 바꾸는 요청 | 기준이 바뀜 | 이 절차(같은 작업 수정)를 탑니다. |
-| G3 수용 뒤 | 결과물이 이미 저장되고 `.active`가 지워짐 | **새 작업**입니다. 새 작업 ID를 만들고 `intake.md`에 `Follows: <이전 작업 ID>`를 적습니다. 이전 작업 폴더는 건드리지 않습니다. |
+| G3 수용 뒤 | 결과물이 이미 저장되고 회고가 끝나 `.active`가 지워짐 | **새 작업**입니다. 새 작업 ID를 만들고 `intake.md`에 `Follows: <이전 작업 ID>`를 적습니다. 이전 작업 폴더는 건드리지 않습니다. |
 
 - 최종 결과물(조사 노트, 문서, 커밋)은 G3 뒤에만 저장합니다. 그래서 G3 전 수정에서는 프로젝트 밖에 정리할 결과물이 없습니다.
 - 예외는 개발 프로파일에서 메인 작업 트리에 이미 병합된 코드입니다. 7번의 `## Existing work`에서 다룹니다.
@@ -916,7 +951,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 
 **작업 상태 (`intake.md`)**
 
-- `intake.md` 맨 위에 `Status: active | done | aborted` 한 줄을 둡니다. L1이 Intake에서 `active`로 쓰고, G3 수용 때 `done`, 중단 때 `aborted`로 바꿉니다.
+- `intake.md` 맨 위에 `Status: active | done | aborted` 한 줄을 둡니다. L1이 Intake에서 `active`로 쓰고, G3 수용 때 `done`(회고 앞, 4.11절), 중단 때 `aborted`로 바꿉니다.
 - 그 아래에 `my-agent: <커밋 해시>` 한 줄을 둡니다. Intake 때 플러그인 폴더만 본 값입니다: `git -C <플러그인 폴더> log -1 --format=%h -- .`, 그 폴더에 커밋하지 않은 변경(`status --porcelain -- .`)이 있으면 `-dirty`. 저장소에 다른 플러그인이 함께 있으므로 그쪽 커밋은 my-agent 규칙 변경으로 보지 않습니다.
 - `/my-agent status`는 작업 위치의 `docs/agent/` 아래 작업 폴더마다 이 줄을 모아 표로 보여줍니다. `.active`가 가리키는 작업에는 phase와 게이트 상태를 덧붙입니다.
   - **표시 범위:** 진행 중인 작업과, 작업 ID 날짜가 최근인 작업 4개만 보여줍니다(4개 단위 원칙). `status all`은 전체를 보여줍니다.
@@ -938,6 +973,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 **재개 (`/my-agent continue`)**
 
 1. `.active`를 읽고, 그 작업의 `intake.md`가 `Status: active`인지 확인합니다.
+   - **`Status: done`이면 (회고 중에 세션이 끊긴 경우, 2026-10-26):** `.active`와 `active-index.json`의 그 작업 줄만 지우고 "작업 `<id>`는 이미 수용됨. 회고가 끝나지 않았을 수 있어 `.active`만 정리함" 한 줄을 알리고 끝냅니다. 작업 폴더와 run-log는 건드리지 않고 회고를 다시 하지 않습니다(회고에는 `.active`가 필요하기 때문). `Status: aborted`는 중단 절차가 이미 `.active`를 지우므로 지금처럼 알리고 끝냅니다.
    - `intake.md`의 `my-agent:` 커밋이 지금 저장소 커밋과 다르면, 그 사이 바뀐 파일 목록(`git diff --stat`)을 보여주고 팝업으로 묻습니다: `그대로 진행 (Recommended)` / `중단`. 플러그인은 저장소를 제자리에서 읽으므로(F17) 작업 도중 my-agent를 고치면 다음 세션부터 새 규칙이 적용되기 때문입니다. 진행하면 `my-agent:` 줄을 새 커밋으로 바꾸고 run-log에 `rules-changed` 줄을 남깁니다.
 2. `.active`의 `session:`이 지금 세션과 다르면 팝업으로 묻습니다: `이어받기 (Recommended)` / `취소`. 이어받으면 `session:`을 지금 세션으로 바꿉니다.
 3. phase 파일과 프로파일 파일을 다시 읽습니다.
@@ -953,6 +989,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
   - `clear`, `compact`: `/clear`나 압축 뒤에는 진행 중인 작업을 잊을 수 있으므로 같은 알림을 다시 넣습니다.
   - `fork`: `/fork`, `/branch`, 백그라운드로 보내기로 복제된 세션입니다. `.active`의 `session:`이 원래 세션이므로 "원래 세션이 이 작업을 진행 중. 이 세션에서 이어받으려면 `/my-agent continue`"라고 알립니다. 이어받기는 `continue`의 세션 확인 팝업을 거칩니다.
   - 실행한 폴더에서 `.active`를 찾으면(아래 "작업 위치"의 찾는 순서) 다음 문구를 컨텍스트에 넣습니다: "미완료 my-agent 작업 `<task>`, phase `<phase>`. 다른 일을 하기 전에 `/my-agent continue`를 실행할 것. `plan.md`에 승인 줄이 없으면 위임과 쓰기를 하지 말 것."
+  - `.active`가 `Status: done`인 작업을 가리키면(회고 중에 끊긴 경우) 알림은 그대로 나가고, 사용자가 `continue`를 실행하면 위 재개 1번의 규칙으로 `.active`만 정리됩니다. session-notice hook은 `Status`를 읽지 않으므로 코드는 바꾸지 않습니다.
   - `.active`가 없으면 아무것도 넣지 않습니다. 모든 세션에서 실행되므로 파일 하나만 읽고 끝냅니다. 실패해도 세션은 그대로 시작합니다(`onFailure`를 두지 않음).
 - **남는 위험 (원칙 2의 예외로 받아들임):**
   - 이 알림은 지시문입니다. Claude가 따르지 않으면 막지 못합니다.
@@ -1048,6 +1085,26 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 - **`maintenance-notes.md`:** 레벨별 4개 절(L1~L4)로 나눠, 각 절에 "현재 상태 · 외부 동작 의존 · 주의할 점"을 적습니다.
 - **개입 시점:**
   - 작업이 끝날 때마다 ④ 수용 phase에서 회고합니다. 회고에서 나온 개선점은 레벨을 붙여 저장소의 `feedback.md`에 기록합니다(my-dev retro 방식). `scripts/feedback.py`가 항목을 더하고, 레벨별 열린 항목 수를 셉니다.
+  - **회고 순서 (2026-10-26, 일반 수용과 개발 G3 공통):**
+    1. `Delivered`와 `deliver` 줄을 남기고 `intake.md`를 `Status: done`으로 바꿉니다.
+    2. 회고를 합니다. (a) `gate-report.py tally`로 결정 표·지표를 집계해 `gate-tally.md`에 저장 (b) `my-agent:gate-analyst`에게 `gate-tally.md` 경로, 결과 경로 `gate-report.md`, 프롬프트에 적은 프로파일을 넘겨 리포트를 맡김 (c) 4.12절 "바깥으로 나가기 전 점검" 뒤 `gate-report.py copy`로 복사 (d) 경로 두 개(작업 폴더, 복사본)와 요약 3줄을 채팅에 보여 줌 (e) 개선 제안 중 `뚜렷함` 표시가 있는 것을 `feedback.py add L1`로 올림. gate-analyst는 뚜렷한 경향마다 팝업 쪽 조치를 제안합니다: 같은 종류 팝업에서 늘 권장안을 고르면 그 팝업의 질문 생략이나 기본값 유지, 늘 다른 선택지를 고르면 권장안(기본값) 조정 (f) 기존 feedback 열린 항목 수, 누락 점검, mode 점검.
+    3. 마지막에 `.active`와 `active-index.json`의 이 작업 줄을 지웁니다.
+  - **순서의 이유:** 집계는 진행 중인 작업(`.active`)을 찾아야 하고, scope-guard는 `.active`가 없으면 my-agent 에이전트를 막습니다. 그래서 회고는 `.active`를 지우기 앞에 둡니다. `Status: done`을 회고 앞에 두는 것은 회고 중에 세션이 끊겨도 `continue`가 G3를 다시 하지 않게 하려는 것입니다.
+  - **프로파일을 L1이 넘기는 이유:** 집계는 run-log만 읽어 프로파일(`intake.md`의 `Profile:`)을 담지 못하고, gate-analyst는 `intake.md`를 읽을 수 없습니다. 프로파일마다 나오는 게이트가 달라(개발은 G3가 커밋 승인) 해석에 필요합니다.
+  - **집계·해석·복사의 분리:** L4(`gate-report.py tally`)는 숫자와 표만 만들고 해석하지 않습니다. 해석(성향 3~5개, 개선 제안)은 L2 gate-analyst가 하고 `gate-report.md`(요약 3줄, 결정 표, 성향, 개선 제안)를 씁니다. L1은 리포트를 직접 쓰지 않고 복사만 합니다. 복사를 `cp`가 아니라 `gate-report.py copy`로 하는 이유: 작업 폴더에서 읽어 `docs/agent/` 밖에 쓰는 `cp`는 판정 최신성 hook이 걸고, 일반 프로파일에서는 방금 저장한 결과물이 `review.md`보다 새로워 막히기 때문입니다.
+  - **종료 코드:** `tally`는 0 출력(결정 없음도 포함), 1 진행 중인 작업 없음, 2 인자 오류, 3 `gate-tally.md` 쓰기 실패. `copy`는 0 복사, 1 작업 없음 또는 `gate-report.md` 없음, 2 인자 오류, 3 복사본 쓰기 실패. 3은 원인을 출력합니다.
+  - **집계 지표:** Verify 횟수, Plan Review 횟수, 서브에이전트 수, 모델 불일치 수(주 세션은 `step` 줄 기준, 서브에이전트는 `stop` 줄 `mismatch=1`), L1 작은 수정 수(`fix` 줄), opus로 올린 호출 수(`call` 줄 `model=`, 재시도와 명시 호출을 구별하지 않음), 단계별 비용(`cost` 줄 누적값의 구간 차이)·서브에이전트 토큰. `cost` 줄이 없으면 `기록 없음`입니다. 각 세션의 첫 `cost` 줄은 기준값만 정하고, 그 앞 구간 비용은 늘 `기록 없음`입니다(세션이 작업보다 먼저 시작했을 수 있어 누적값을 이 작업의 비용으로 보지 않음). 단계별 비용은 status line 스냅샷에서 온 근사치입니다(4.8절).
+  - **복사 위치:** `~/dev/skills/my-surrogate/gate-report/<task-id>.md`. 폴더가 없으면 만들고, 같은 이름이 있으면 덮어쓰지 않고 `-2`, `-3`을 붙입니다.
+  - **예외:**
+    - 결정 줄이 없거나 run-log가 없으면 "결정 없음"으로 집계하고(exit 0) 리포트도 "결정 없음"으로 씁니다. 회고는 계속합니다.
+    - 진행 중인 작업이 없어 `tally`가 exit 1이면 리포트를 건너뛰고 알립니다.
+    - `tally`가 `gate-tally.md`를 쓰지 못하면 exit 3으로 끝나고 원인을 출력합니다. 원인을 한 줄로 알리고 리포트를 건너뜁니다. 수용·커밋은 되돌리지 않고 (e)로 갑니다.
+    - gate-analyst가 PARTIAL이거나 오류로 끝나면 이미 한 수용·커밋을 되돌리지 않습니다. 알리고 복사를 건너뜁니다.
+    - `copy`가 exit 1(리포트 없음) 또는 exit 3(복사본을 쓰지 못함)으로 끝나면 수용·커밋을 되돌리지 않고 원인을 한 줄로 알린 뒤 (e)로 갑니다.
+    - 리포트가 없거나(`tally` exit 1·3) gate-analyst가 PARTIAL·오류였으면 (e)의 `뚜렷함` 올리기는 건너뜁니다. 다른 개선점은 그대로 올립니다.
+    - 같은 이름의 복사본이 있으면 `-2`를 붙입니다.
+    - 작업을 중단했으면 회고를 하지 않으므로 리포트도 없습니다.
+    - 회고 중에 세션이 끊기면 다음 `continue`가 `.active`만 정리합니다(4.8.2절). 회고는 다시 하지 않습니다.
   - 레벨 하나에 열린 개선점이 4개 이상 쌓이면 Recorder가 사람에게 알립니다. 그 레벨을 정리할 때라는 신호입니다.
 - **시스템을 고치는 방법:** my-agent를 고칠 때는 my-agent 자신의 개발 프로파일로 고칩니다. 그래서 G1(계획 승인)과 G3(커밋 승인)을 거칩니다.
   - 개발 프로파일이 검증되기 전(6장 7단계를 마치기 전)에는 일반 세션에서 직접 고치고, 바꾼 내용을 `maintenance-notes.md`의 해당 레벨 절에 남깁니다. 이때도 커밋과 push는 G2 `ask`를 거칩니다.
@@ -1079,7 +1136,8 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
   |---|---|
   | researcher | 자기 작업 폴더(`docs/agent/<task-id>/`)만. 웹은 `WebFetch`, `WebSearch`로 읽음 |
   | writer | 자기 작업 폴더 + 계획에 적힌 참고 파일 |
-  | explorer, coder, L2 판정자 | 작업 위치(프로젝트) + 자기 작업 폴더 |
+  | explorer, coder, L2 판정자(gate-analyst 제외) | 작업 위치(프로젝트) + 자기 작업 폴더 |
+  | gate-analyst | 작업 폴더의 `gate-tally.md`, `gate-report.md` 둘뿐 (run-log와 다른 파일은 못 읽음) |
   | 모든 my-agent 에이전트 | 아래 비밀값 경로는 금지 |
 
 - 이렇게 하면 웹을 읽는 researcher가 비밀값 파일을 읽을 수 없어서, 인젝션으로 비밀값을 URL에 실어 보내는 경로가 막힙니다.
@@ -1105,9 +1163,17 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 |---|---|---|
 | **탐침 (구현 0단계)** | 입력을 파일에 남기기만 하는 임시 hook으로 [미확인] 항목을 실제로 확인합니다. 확인한 결과는 2장에 F19부터 사실로 추가하고, 그다음에 진짜 hook을 만듭니다. | `l4-tools-guards/probe/` |
 | **hook 단위 테스트** | hook마다 입력 JSON 사례를 두고 허용/거부/통과를 확인합니다. 탐침에서 모은 실제 입력을 사례로 씁니다. 먼저 `claude plugin validate --strict`로 manifest, 에이전트 frontmatter, `hooks.json`이 모두 읽히는지 확인합니다(4.5.1절). | `l4-tools-guards/tests/` |
-| **연습 프로젝트** | 플러그인은 설치하지 않고 연습용 프로젝트에서 `claude --plugin-dir ~/dev/my-plugins/plugins/my-agent`로 시작한 세션에만 불러 시험합니다. ask/deny 목록은 연습용 프로젝트의 `.claude/settings.json`에서 시험합니다. 시나리오가 통과한 뒤에 플러그인을 설치하고 ask/deny를 `~/.claude/settings.json`으로 옮깁니다(사용자 승인). `onFailure: block`인 hook의 버그가 다른 작업을 막지 않게 하려는 것입니다. | `~/dev/my-agent-sandbox/` |
+| **연습 프로젝트** | 플러그인은 설치하지 않고 연습용 프로젝트에서 `claude --plugin-dir ~/dev/my-plugins/plugins/my-agent`로 시작한 세션에만 불러 시험합니다. ask/deny 목록은 연습용 프로젝트의 `.claude/settings.json`에서 시험합니다. 시나리오가 통과한 뒤에 플러그인을 설치하고 ask/deny를 `~/.claude/settings.json`으로 옮깁니다(사용자 승인). `onFailure: block`인 hook의 버그가 다른 작업을 막지 않게 하려는 것입니다. | `~/dev/labs/my-agent-sandbox/` |
 | **시나리오** | 프로파일마다 작은 예시 작업 1건씩, 모두 3건을 처음부터 끝까지 돌립니다. L1·L2 파일(SKILL.md, phase 규칙, 에이전트 정의)을 고칠 때마다 다시 돌리고, 결과를 `maintenance-notes.md`에 남깁니다. | `l4-tools-guards/tests/scenarios/` |
 | **판정자 점검** | 일부러 틀리게 만든 결과물 2~3개(기준 하나를 어긴 노트, 인용이 깨진 노트, 지시문이 섞인 노트)를 둡니다. verifier나 reviewer를 고칠 때마다 이걸 잡아내는지 확인합니다. | `l4-tools-guards/tests/judge-fixtures/` |
+
+**gate-report 회고 기능의 테스트 (2026-10-26)** (`l4-tools-guards/tests/`)
+
+- `test_gate_report.py`: 결정 표(`예`·`아니오`·`알 수 없음`·`직접 입력`, 짝 없는 줄, G2 줄 제외), 지표 개수, 주 세션 불일치(step 줄 기준), 구간 비용·토큰, `기록 없음`, 결정 없음(exit 0), `.active` 없음(exit 1), `gate-tally.md` 저장, 다른 작업 run-log를 읽지 않음, `copy`(폴더 만들기, `-2`·`-3`, 리포트 없음 exit 1), 옛 run-log fixture. 모든 테스트는 `MA_GATE_REPORT_DIR`·`MA_TASKS_DIR`를 임시 폴더로 둡니다.
+- `test_plan_approved_check.py`: 승인된 작업에서 `report_dir()` 아래 Write·`mkdir -p`·`cp`·`gate-report.py copy`는 묻지 않음, 형제 폴더는 `ask`, 승인 전 작업은 그대로 deny.
+- `test_scope_guard.py`: gate-analyst가 `gate-tally.md`·`gate-report.md`만 읽고 `gate-report.md`만 쓰며, 그 밖의 읽기·쓰기, Bash 쓰기, WebFetch는 deny.
+- `test_agents.py`: 매니페스트가 에이전트 9개(L2 5개, L3 4개)와 정의 파일이 같고, gate-analyst의 모델·effort·tools·첫 줄이 표와 같음. 이 문서 4.5의 개수와 이름이 매니페스트와 같은지도 봅니다.
+- `test_skill_md.py`: 모든 `ask gate=` 표기에 `rec=`가 있음, `other=1` 규칙, 작업 중 수정 규칙 문구, 회고 순서(`tally` → `gate-analyst` → `copy` → 경로·요약 → `feedback.py add L1`)가 `.active` 지우기보다 앞섬, `continue`의 `Status: done` 정리 규칙.
 
 **탐침으로 확인할 [미확인] 항목** (결과: `l4-tools-guards/probe/results.md`. 남은 것: 6·7·9는 대화형 수동 절차)
 
@@ -1139,7 +1205,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 
 my-agent는 **새 스킬로 처음부터 만듭니다.** 만드는 동안 my-dev 스킬은 실행하지 않습니다. my-dev의 파일은 읽고 참고만 하고, 필요한 규칙은 3장 판정에 따라 my-agent에 새로 씁니다.
 
-0. **탐침:** (완료 2026-10-25, 결과 `l4-tools-guards/probe/results.md`, F19~F27. 남은 항목 3·6·7·9·10) 입력을 기록만 하는 임시 hook으로 4.13절의 [미확인] 11건을 확인합니다. 연습용 프로젝트(`~/dev/my-agent-sandbox/`)에서 `claude --plugin-dir ~/dev/my-agent`로 불러서 하고, 결과는 2장에 F19부터 추가합니다. 결과에 따라 아래 단계의 설계를 고칩니다.
+0. **탐침:** (완료 2026-10-25, 결과 `l4-tools-guards/probe/results.md`, F19~F27. 남은 항목 3·6·7·9·10) 입력을 기록만 하는 임시 hook으로 4.13절의 [미확인] 11건을 확인합니다. 연습용 프로젝트(`~/dev/labs/my-agent-sandbox/`)에서 `claude --plugin-dir ~/dev/my-agent`로 불러서 하고, 결과는 2장에 F19부터 추가합니다. 결과에 따라 아래 단계의 설계를 고칩니다.
 1. **뼈대:** (만듦 2026-10-25. 플러그인 테스트 `python3 -m unittest discover -s l4-tools-guards/tests`, 모니터 테스트, `claude plugin validate --strict` 통과. 남은 것: `~/dev/my-agent-monitor/` 정리 여부(사용자에게 물음). 설치는 7단계 뒤로 옮김. 유지보수 노트는 `maintenance-notes.md`)
    - SKILL.md(frontmatter, 공통 골격, 질문 규칙), 일반 프로파일, run-log를 새로 씁니다.
    - `.claude-plugin/plugin.json`, `marketplace.json`, `hooks.json` 뼈대를 만들고 `claude plugin validate`로 확인합니다(4.5.1절).
@@ -1150,12 +1216,12 @@ my-agent는 **새 스킬로 처음부터 만듭니다.** 만드는 동안 my-dev
    - **모니터 (v0.20):** `~/dev/my-agent-monitor/`의 코드를 `monitor/`로 옮기고 `monitor-up.py`, `/api/health`, `~/dev/agent-tasks/prices.json` 덮어쓰기, `skills/monitor/SKILL.md`를 더합니다(4.7.4절). 모니터 테스트(`python3 -m unittest`)를 `monitor/`에서 통과시킵니다. 옮긴 뒤 `~/dev/my-agent-monitor/`를 지울지는 사용자에게 묻습니다.
 2. **G1b 하드 게이트:** (만듦 2026-10-25, 실제 세션에서 막는 것 확인) `plan-approved-check.py`(`.active` 확인, Bash 쓰기 패턴 포함)와 테스트를 만듭니다. 테스트에는 ① phase, 허용 목록(`tool_input.subagent_type`이 `my-agent:explorer`인 `Agent` 호출은 통과, `my-agent:coder`는 막음), 승인 뒤 수정으로 승인 줄을 비운 경우, `.active`가 없는 경우, `active-index.json`으로 찾는 경우, 스크립트 오류(`onFailure: block`)를 넣습니다.
 3. **G2:** (만듦 2026-10-25. ask/deny는 샌드박스 프로젝트 설정에만, 사용자 설정은 9단계) ask/deny 목록과 `scope-guard.py`를 만듭니다. scope-guard는 플러그인 hook으로 등록하고, ask/deny를 `~/.claude/settings.json`에 넣을 때는 사용자 승인을 받습니다.
-4. **에이전트 정의 8개 (L2 4개, L3 4개):** (만듦 2026-10-25, 8개 모두 불러와짐) 레벨 폴더에 만들고 모델과 도구를 고정합니다. `plugin.json`의 `agents`에 나열하고, `claude plugin validate --strict`를 통과한 뒤 `/reload-plugins`로 불러 `my-agent:<name>`으로 호출되는지 확인합니다.
+4. **에이전트 정의 9개 (L2 5개, L3 4개):** (만듦 2026-10-25, 8개 모두 불러와짐. `gate-analyst`는 2026-10-26에 더해 9개) 레벨 폴더에 만들고 모델과 도구를 고정합니다. `plugin.json`의 `agents`에 나열하고, `claude plugin validate --strict`를 통과한 뒤 `/reload-plugins`로 불러 `my-agent:<name>`으로 호출되는지 확인합니다.
 5. **조사·문서 프로파일:** (만듦 2026-10-25, 판정자 점검 4/4) 병렬 researcher, verifier의 인용 확인, G3 뒤 결과물 저장(4.4절)을 만듭니다.
 6. **workflow:** (탐침 10 완료 2026-10-25, F29) 먼저 탐침 10번 결과로 `agent()`에 `my-agent:` 에이전트를 지정할 수 있는지 확인합니다. 그 결과에 따라 조사 Execute 단계에 쓸지 정하고(4.6절), 실행 규모를 계획서와 대조합니다.
 7. **개발 프로파일:** (만듦·검증 2026-10-25, 3건 모두 Verify ALL PASS·Review BLOCKER 0, `docs/ref/dev-profile-validation.md`) my-dev의 references, hooks, scripts, tests를 참고해 3장 판정대로 새로 씁니다. `worktree.baseRef: "head"`를 settings에 넣고(사용자 승인), 첫 병렬 그룹만 worktree를 쓰는 규칙을 시험합니다(Q9). 그다음 아래 "개발 프로파일 검증"을 합니다.
 8. **알림 확인:** (확인 2026-10-25, F34) G1·G3 팝업이 `claude-sessions` 알림으로 오는지 확인합니다(알림 구현은 하지 않음, Q3).
-9. **설치:** (설치 2026-10-25. 백업 `~/.claude/settings.json.backup-20261025-141535`, ask 16·deny 17·`worktree.baseRef: head` 병합, `marketplace add`, `install my-agent@my-agent-dev`. 새 세션에서 `--plugin-dir` 없이 에이전트 8개와 `/my-agent` 확인. 디렉터리 소스라 `~/dev/my-agent`를 제자리에서 읽음. v0.26에 `~/dev/my-plugins/plugins/my-agent`로 옮기고 `my-agent@my-plugins`로 다시 설치) 2~7단계와 4.13절 시나리오를 통과한 뒤, `~/.claude/settings.json`을 백업하고 로컬 마켓플레이스로 플러그인을 설치합니다(사용자 승인). `~/.claude/skills/`와 `~/.claude/agents/`에는 심링크를 만들지 않습니다. 설치한 뒤에는 `--plugin-dir`를 쓰지 않습니다.
+9. **설치:** (설치 2026-10-25. 백업 `~/.claude/settings.json.backup-20261025-141535`, ask 16·deny 17·`worktree.baseRef: head` 병합, `marketplace add`, `install my-agent@my-agent-dev`. 새 세션에서 `--plugin-dir` 없이 에이전트 8개(2026-10-26 gate-analyst 추가로 9개)와 `/my-agent` 확인. 디렉터리 소스라 `~/dev/my-agent`를 제자리에서 읽음. v0.26에 `~/dev/my-plugins/plugins/my-agent`로 옮기고 `my-agent@my-plugins`로 다시 설치) 2~7단계와 4.13절 시나리오를 통과한 뒤, `~/.claude/settings.json`을 백업하고 로컬 마켓플레이스로 플러그인을 설치합니다(사용자 승인). `~/.claude/skills/`와 `~/.claude/agents/`에는 심링크를 만들지 않습니다. 설치한 뒤에는 `--plugin-dir`를 쓰지 않습니다.
 
 **개발 프로파일 검증**
 
@@ -1165,7 +1231,7 @@ my-agent는 **새 스킬로 처음부터 만듭니다.** 만드는 동안 my-dev
 
 ---
 
-## 7. 결정 기록 (2026-10-23 ~ 10-25, 모두 결정됨)
+## 7. 결정 기록 (2026-10-23 ~ 10-26, 모두 결정됨)
 
 | # | 질문 | 선택지 | 영향 |
 |---|---|---|---|
@@ -1183,6 +1249,10 @@ my-agent는 **새 스킬로 처음부터 만듭니다.** 만드는 동안 my-dev
 | Q12 | 에이전트 정의를 불러오는 방법 | **결정: 로컬 마켓플레이스로 설치한 플러그인** (`plugin.json`이 레벨 폴더의 정의 파일을 가리킴. `~/.claude/agents/`·`~/.claude/skills/` 심링크 없음. settings hook도 플러그인 hook으로 옮김) (2026-10-24) | 2장 F16~F18, 4.5절, 4.5.1절, 4.7.2절, 4.13절, 6장 |
 | Q13 | 조사·문서 결과물의 저장 위치 | **결정: vault에 저장하지 않음** (2026-10-24). 범위 문서에서 정한 위치, 정하지 않으면 작업 폴더의 `deliverable/` | 4.3절, 4.4절, 4.10절, 4.12절 |
 | Q14 | 모니터를 어디에 두고 언제 띄울지 | **결정: 플러그인 안 `monitor/`, Router가 작업을 시작할 때 띄움 + 수동 `/my-agent:monitor`** (2026-10-25) | 2장 F18, 4.5.1절, 4.7절, 4.7.4절, 4.8.2절, 4.13절, 6장 |
+| Q15 | 회고에서 게이트 결정을 어떻게 집계·해석할지 | **결정 (2026-10-26): 새 L2 에이전트 `gate-analyst` 도입.** L4 `gate-report.py tally`가 집계, gate-analyst가 해석해 `gate-report.md`를 씀, L1이 복사. 이름은 역할 명사로 하고 `my-` 접두사는 붙이지 않음: 전역 규칙은 새 에이전트에 `my-`를 요구하지만, 이 플러그인의 에이전트는 `my-agent:` 네임스페이스로 구분하고 기존 8개도 접두사가 없으며 테스트가 이름과 파일 이름의 일치를 요구함. 호출 이름 `my-agent:gate-analyst`가 규칙의 뜻을 지킴 | 4.2절, 4.5절, 4.7절, 4.11절 |
+| Q16 | 권장안과 직접 입력을 어떻게 남길지 | **결정 (2026-10-26): `ask:`에 `rec=<라벨>`(없으면 `rec=-`), `answer:`에 직접 입력이면 `other=1`.** 선택지 목록을 `ask:`에 다 적는 방법은 라벨에 `/`나 따옴표가 있으면 깨지기 쉬워 쓰지 않음. 옛 줄은 `알 수 없음` | 4.7.2절 |
+| Q17 | 회고와 `.active` 정리의 순서 | **결정 (2026-10-26): `Status: done` → 회고 → `.active` 정리.** 회고(집계)와 scope-guard가 `.active`를 필요로 하고, `Status: done`을 앞에 두면 끊겨도 G3를 다시 하지 않음. 회고 중에 끊기면 `continue`가 `Status: done`을 보고 `.active`와 색인 줄만 지우고 알림(사용자 결정) | 4.4절, 4.8.2절, 4.11절 |
+| Q18 | 회고 리포트 복사 | **결정 (2026-10-26): 복사 폴더 `~/dev/skills/my-surrogate/gate-report/` 아래 쓰기는 승인 창 없이, 그 밖의 작업 위치 밖 쓰기는 `ask` 그대로.** `$MA_GATE_REPORT_DIR`로 폴더를 바꿈. 복사는 `cp`가 아니라 `gate-report.py copy`: `cp`는 판정 최신성 hook에 걸려 일반 프로파일에서 막히고 이 hook은 범위상 바꾸지 않음. G2 권한 창은 사용자 설정에 달려 보장하지 않음 | 4.4절, 4.11절 |
 
 ---
 

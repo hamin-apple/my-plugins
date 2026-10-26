@@ -29,7 +29,7 @@
    - 만들면 `plan.md`에 `Prototype: requested` 줄을 쓰고 `my-agent:writer`에게 `docs/agent/<task-id>/prototype/index.html`을 맡깁니다(`artifact-design` 기준).
    - L1이 그 파일을 읽어 확인하고 SKILL.md "바깥으로 나가기 전 점검"을 한 뒤 비공개 artifact로 게시하고, 링크와 로컬 경로를 보여 줍니다.
 3. 승인 팝업 전후로 기록합니다.
-   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1b q="계획 승인: <task-id>"`
+   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1b q="계획 승인: <task-id>" rec="승인"`
    - 팝업: `승인 (Recommended)` / `수정 요청` / `중단`
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1b choice="<고른 선택지>"`
 4. **승인:** `## Approval` 아래에 `- Approved <YYYY-MM-DD HH:MM> G1b`를 씁니다. 시각은 `date '+%Y-%m-%d %H:%M'`로 먼저 얻고, 그 값을 Edit 도구로 명령 치환 없이 적습니다(`$(…)`가 든 Bash 쓰기는 G1b hook이 어디에 쓰는지 알 수 없는 명령으로 막습니다). `.active`의 `phase:`를 `3`으로 바꾸고 `build.md`를 읽습니다.

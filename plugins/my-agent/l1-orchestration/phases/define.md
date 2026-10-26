@@ -17,7 +17,7 @@
 4. **범위 확정:**
    - 일반 프로파일: G1a를 따로 묻지 않습니다. 정한 범위 요약(목적, 번호 붙인 완료 기준, 비목표, 결과물 위치)을 ② 계획에서 architect에게 넘기고, `plan.md` 맨 위에 붙여 G1b에서 함께 승인받습니다.
    - G1a가 있는 프로파일: `scope.md`를 쓰고(`## 완료 기준`은 `1.`, `2.` 번호 목록), 팝업 전후로 기록합니다.
-     - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1a q="범위 확정: <task-id>"`
+     - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1a q="범위 확정: <task-id>" rec="확정"`
      - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1a choice="<확정/수정/중단>"`
      - 확정이면 `scope.md`의 `## Confirmation`에 `Confirmed <YYYY-MM-DD HH:MM>`을 씁니다.
 5. `.active`의 `phase:`를 `2`로 바꾸고 `plan.md`(phase 파일)를 읽습니다.

@@ -159,7 +159,7 @@ my-agent는 phase 4개, 단계 8개, 게이트 5개(G1a, G1b, G2, G3, E)를 거�
 
 - `step:` 줄의 session ID로 `~/.claude/projects/*/<session>.jsonl`을 찾습니다.
 - 그 단계 구간(이 `step:` 줄 시각 ~ 다음 `step:` 줄 시각)의 assistant 응답 사용량(입력, 출력, 캐시 쓰기, 캐시 읽기)을 모델별로 더합니다. 같은 응답이 여러 줄로 나뉘어 있으면 응답 ID로 한 번만 셉니다.
-- 같은 세션에서 my-agent와 상관없는 일을 했다면 그 몫도 들어갑니다. 화면에 "(main session, approx.)"로 표시합니다.
+- 같은 세션에서 my-agent와 상관없는 일을 했다면 그 몫도 들어갑니다. 화면의 Models 표에는 메인 세션 행을 "opus · main"으로 표시합니다.
 - transcript를 찾지 못하면 메인 세션 행을 `–`로 둡니다.
 
 ### 5.4 가격표

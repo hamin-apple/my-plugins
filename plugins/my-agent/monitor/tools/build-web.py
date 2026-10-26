@@ -1,9 +1,11 @@
-"""webapp-v22.html → my-agent-monitor/web/index.html (plan Task 7 edits)."""
+"""webapp-v22.html → my-agent-monitor/web/index.html (plan Task 7 edits).
+Usage: build-web.py [SRC [DST]]
+"""
 import re, sys
 from pathlib import Path
 
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.home() / 'dev/my-plugins/plugins/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html'
-DST = Path(__file__).resolve().parent.parent / 'web' / 'index.html'
+DST = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).resolve().parent.parent / 'web' / 'index.html'
 s = SRC.read_text(encoding='utf-8')
 
 def rep(old, new, count=1):
@@ -112,6 +114,9 @@ rep("  if (b.dataset.task) { st.task = b.dataset.task; st.ri = 0; st.rev = null;
 rep("$('task-select').addEventListener('change', e => { st.task = e.target.value; renderAll(); });",
     "$('task-select').addEventListener('change', e => selectTask(e.target.value));")
 
+# Auto-play/Pause buttons: no trailing key hint
+rep("L('Pause ␣', '멈춤 ␣') : L('Auto-play ␣', '자동 재생 ␣')", "L('Pause', '멈춤') : L('Auto-play', '자동 재생')")
+
 # the fake live block → polling
 cut('/* ---------- fake live updates for the running task ---------- */', '</script>', r'''/* ---------- live data: poll the local server every 2 s ---------- */
 const POLL_MS = 2000;
@@ -146,6 +151,8 @@ async function selectTask(key) {
   lastSig = JSON.stringify([TASKS, FULL[key], st.offline]);
   entering(); vt(() => renderAll()); setTimeout(() => scramble(document.querySelector('#task-head h2')), 30);
 }
+const hashTask = /^#task=(.+)$/.exec(location.hash);   // monitor-up.py --task: open on that task
+if (hashTask) try { st.task = decodeURIComponent(hashTask[1]); } catch (err) {}
 poll(); setInterval(poll, POLL_MS);
 ''')
 

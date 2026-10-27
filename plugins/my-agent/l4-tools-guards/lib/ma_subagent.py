@@ -66,7 +66,7 @@ def _entries(path, since=None):
 
 
 def unit_of(path) -> str:
-    """The work unit (`u1`) named on a `작업 단위:` line of the run's first prompt, or None (4.8.2)."""
+    """The work unit (`u1`) named on a `Work unit:` line of the run's first prompt, or None (4.8.2)."""
     for e in _entries(path):
         msg = e.get('message') if e.get('type') == 'user' else None
         if not isinstance(msg, dict):

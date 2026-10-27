@@ -1,4 +1,4 @@
-"""plan-approved-check.py: the G1b hard gate (architecture 4.4 "G1b 하드 게이트")."""
+"""plan-approved-check.py: the G1b hard gate (architecture 4.4 "G1b hard gate")."""
 import json
 import tempfile
 import unittest
@@ -71,7 +71,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'}))
         self.assertDenied(self.hook('Agent', {'subagent_type': 'general-purpose', 'prompt': 'x'}))
         self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:writer', 'prompt': 'x'}))
-        self.plan('# Plan\n\nPrototype: requested\n\n## Prototype\n\n필요\n\n## Approval\n')   # A5: outside the section
+        self.plan('# Plan\n\nPrototype: requested\n\n## Prototype\n\nneeded\n\n## Approval\n')   # A5: outside the section
         self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:writer', 'prompt': 'x'}))
         self.plan('# Plan\n\n## Prototype\n\nPrototype: requested\n\n## Approval\n')
         self.assertPassed(self.hook('Agent', {'subagent_type': 'my-agent:writer', 'prompt': 'x'}))
@@ -105,8 +105,8 @@ class PlanApprovedCheckTest(unittest.TestCase):
         after G1b the hook asks for writes outside the location, agent-tasks and the declared result path."""
         out = self.root / 'outside'
         notes = self.root / 'notes'
-        self.plan('# Plan\n\n## 범위 요약\n- 결과물 위치: `%s/out.md`\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n' % notes)
-        (self.task / 'scope.md').write_text('## 결과물 형식\n- 저장 경로: `%s/sub/`\n' % (self.root / 'res'), encoding='utf-8')
+        self.plan('# Plan\n\n## Scope summary\n- Deliverable location: `%s/out.md`\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n' % notes)
+        (self.task / 'scope.md').write_text('## Deliverable format\n- Save path: `%s/sub/`\n' % (self.root / 'res'), encoding='utf-8')
         self.assertPassed(self.hook('Write', {'file_path': str(self.proj / 'src/a.py'), 'content': 'x'}))
         self.assertPassed(self.hook('Write', {'file_path': str(self.tasks_dir / 'projects.txt'), 'content': 'x'}))
         self.assertPassed(self.hook('Write', {'file_path': str(notes / 'out.md'), 'content': 'x'}))
@@ -119,7 +119,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
                 self.assertEqual(r.returncode, 0, r.stderr)
                 o = json.loads(r.stdout)['hookSpecificOutput']
                 self.assertEqual(o['permissionDecision'], 'ask')
-                self.assertIn('작업 위치 밖', o['permissionDecisionReason'])
+                self.assertIn('outside the task location', o['permissionDecisionReason'])
 
     def test_approved_report_folder_passes_unasked(self):
         """The gate-report copy folder is a place of its own; a sibling folder still asks."""
@@ -135,7 +135,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         o = json.loads(r.stdout)['hookSpecificOutput']
         self.assertEqual(o['permissionDecision'], 'ask')
-        self.assertIn('작업 위치 밖', o['permissionDecisionReason'])
+        self.assertIn('outside the task location', o['permissionDecisionReason'])
         self.assertIn(str(sibling), o['permissionDecisionReason'])
 
     def test_report_folder_before_approval_still_denied(self):

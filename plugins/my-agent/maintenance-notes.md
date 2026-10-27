@@ -1,140 +1,141 @@
-# my-agent 유지보수 노트
+# my-agent maintenance notes
 
-레벨마다 "현재 상태 · 외부 동작 의존 · 주의할 점"을 적습니다(설계 문서 4.11절). 고친 내용은 해당 레벨 절에 날짜와 함께 더합니다.
+For each level, record "current state · dependence on external behavior · points to watch" (design doc section 4.11). Add each fix to the section of its level, with the date.
 
-## L1 오케스트레이션 (`SKILL.md`, `l1-orchestration/`)
+## L1 orchestration (`SKILL.md`, `l1-orchestration/`)
 
-**현재 상태 (2026-10-25)**
+**Current state (2026-10-25)**
 
-- `SKILL.md`: 핵심 규칙(질문 규칙, 게이트, 레벨, `.active`, 데이터와 지시, phase 파일), 인자, Intake, status, continue, 중단, Recorder 규칙, 실패 처리, 작업 중 수정.
-- `phases/define.md` · `plan.md` · `build.md`(workflow 규칙 포함) · `accept.md`(개발 프로파일의 G3 포함), `profiles/general.md` · `research.md` · `dev.md`. Router가 요청을 보고 프로파일을 정한다(묻지 않음).
-- frontmatter hook 2개: `plan-approved-check.py`(G1b), `verdict-fresh-check.py`(커밋·결과물 복사 전 판정 최신성). `/my-agent`가 실제로 실행된 뒤에만 걸린다(F28).
-- 바깥으로 나가기 전 점검(`secret-scan.py`)과 회고를 SKILL.md와 phase 파일이 부른다. 회고(`accept.md`)는 집계(`gate-report.py tally` → `gate-tally.md`), `my-agent:gate-analyst`의 해석(→ `gate-report.md`), 복사(`gate-report.py copy`), 개선점 올리기(`feedback.py`) 순서다(2026-10-26).
+- `SKILL.md`: core rules (question rules, gates, levels, `.active`, data and instructions, phase files), arguments, Intake, status, continue, abort, Recorder rules, failure handling, in-flight revision.
+- `phases/define.md` · `plan.md` · `build.md` (with workflow rules) · `accept.md` (with G3 in the dev profile), `profiles/general.md` · `research.md` · `dev.md`. The Router reads the request and picks the profile (does not ask).
+- 2 frontmatter hooks: `plan-approved-check.py` (G1b), `verdict-fresh-check.py` (verdict freshness before a commit or a deliverable copy). They apply only after `/my-agent` has actually run (F28).
+- SKILL.md and the phase files call the check before anything leaves (`secret-scan.py`) and the retrospective. The retrospective (`accept.md`) runs in this order: tally (`gate-report.py tally` → `gate-tally.md`), interpretation by `my-agent:gate-analyst` (→ `gate-report.md`), copy (`gate-report.py copy`), raising improvements (`feedback.py`) (2026-10-26).
 
-**외부 동작 의존**
+**Dependence on external behavior**
 
-- 압축 뒤에는 스킬 앞부분 5,000토큰만 다시 붙는다. 핵심 규칙은 SKILL.md 앞 6,000자 안에 둔다(`test_skill_md`가 확인).
-- 스킬 본문의 `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_SKILL_DIR}`는 바뀌지만, Read로 읽는 phase 파일 안의 변수는 바뀌지 않는다. SKILL.md가 바꿔 쓰라고 지시한다.
-- `$CLAUDE_CODE_SESSION_ID`가 메인 세션 Bash에 들어온다(F27). `.active`의 `session:`과 `step:` 줄이 이 값을 쓴다.
+- After compaction, only the first 5,000 tokens of the skill are attached again. Keep the core rules within the first 16,000 characters of SKILL.md (about 4,000 tokens of English) (`test_skill_md` checks this).
+- `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_SKILL_DIR}` in the skill body are replaced, but variables inside phase files read with Read are not. SKILL.md tells L1 to replace them.
+- `$CLAUDE_CODE_SESSION_ID` is available in the main session's Bash (F27). The `session:` in `.active` and the `step:` lines use this value.
 
-**주의할 점**
+**Points to watch**
 
-- run-log 명령은 `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" <kind> key=value…` 전체 형태로 쓴다. `test_skill_md`가 모든 명령을 실제로 돌려 본다.
-- 대화형 검증에서 고친 L1 규칙(2026-10-25): phase·프로파일 파일의 팝업은 선택지를 그대로 쓴다(Sonnet L1이 dev NIT 팝업 순서를 바꿨음). `git`이 든 명령에 `$(`·백틱을 넣지 않는다(verdict hook이 커밋인지 판단 못 함). L1은 세션 모델로 돈다(F13). `step:`의 `model=`은 `run-log.py`가 transcript에서 읽는다.
-- 파일 표시는 모니터 파서와 맞춘다: `## Approval`의 `- Approved <YYYY-MM-DD HH:MM> G1b`, `## Confirmation`의 `Confirmed <…>`, `## 완료 기준` 번호 목록, `intake.md`의 `Status:`/`Location:`/`Profile:`/`Request:`.
-- 검토 반영 (2026-10-28, `docs/handoff/my-agent-review-2026-10-27.md`, ARCH v0.27): 사용자가 my-agent 개발 프로파일 대신 일반 세션에서 직접 고치기로 정함(ARCH 4.11 "시스템을 고치는 방법").
-  - 핵심 규칙에 "수정 요청" 절을 더함(B6). 앞 6,000자 안에 있어야 한다.
-  - 작업 중 수정: run-log `revision` 줄이 기준. 같은 작업 수정은 `state=pending` 줄로 시작해 `revision rev=<N> state=done`으로 끝내고, `## Revisions`는 항상 `plan.md` 맨 끝(꼬리 `invalidated:`는 없앰). 승인 전 다시 쓰기(G1b `수정 요청`, Plan Review `REVISE`)는 `-rev<N>-draft` 보관과 `revision rev=<지금 rev> before=G1b` 줄. `continue`는 `state=done`이 없는 rev를 먼저 마친다.
-  - `Scope change:`는 `fix what="Scope change: …" files=plan.md` 줄도 남긴다(집계가 따로 셈).
-  - `accept.md` "Execute로 되돌리기": Verify FAIL·Review BLOCKER·G3 재작업 때 판정을 `archive/<시각>-run<n>/`에 복사, 걸린 단위만 `pending`, `.active phase: 3`, `step n=5 … back= archive=`. Review만 다시 받은 작은 수정은 L1이 `## Applied after review`를 쓴다(A3).
-  - 작업 단위는 `### u<n> <이름>`, 위임 프롬프트 첫 줄 `작업 단위: u<n> <이름>`(hook이 `unit=`으로 남김). `Prototype: requested`는 `## Prototype` 절 안에만. plan-review 생략 줄은 `SKIPPED <이유>`. dev 결과물 표기 `Delivered: commit:<sha>`.
-  - general 프로파일에서 문서 단위가 둘 이상이면 마지막 writer 단위가 `work/final.md`로 합친다. 그 단위는 research와 같이 6 Merge에서 맡긴다(L1은 점검만).
-  - 독립 리뷰 반영(같은 날): 보관 `mkdir`·`cp`는 `cd` 없이 절대 경로(승인 전에는 G1b hook이 `cd` 뒤 상대 경로를 막음, 직접 확인). Verify 연속 FAIL은 `Run:`이 아니라 마지막 ALL PASS·수정 뒤의 `Verdict: FAIL` 수(모니터와 같음). 되돌린 Execute는 `base`·변경 팝업을 다시 하지 않고 worktree를 쓰지 않음. 합치기 단위는 앞 단위가 `pending`이면 함께 `pending`. 다시 쓴 계획에서 유지하는 단위는 architect가 `done`으로 적음. `revision … state=pending`에 `to=<phase>`(끊긴 수정을 `continue`가 마칠 때 씀). 승인 전 다시 쓰기는 Plan Review 지적 반영·prototype `계획 수정`도 포함.
+- Write run-log commands in the full form `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" <kind> key=value…`. `test_skill_md` actually runs every command.
+- L1 rules fixed during interactive validation (2026-10-25): popups in phase and profile files use the choices as written (a Sonnet L1 changed the order of the dev NIT popup). Do not put `$(` or backticks in commands that contain `git` (the verdict hook cannot tell whether it is a commit). L1 runs on the session model (F13). `run-log.py` reads `model=` in `step:` from the transcript.
+- Keep file markers in line with the monitor parser: `- Approved <YYYY-MM-DD HH:MM> G1b` under `## Approval`, `Confirmed <…>` under `## Confirmation`, the numbered list under `## Completion criteria`, `Status:`/`Location:`/`Profile:`/`Request:` in `intake.md`.
+- Translated to English (2026-10-28, ARCH v0.28): every file under `plugins/` is English except the monitor's EN/Korean UI strings (`monitor/web/index.html`, `monitor/tools/build-web.py`). File-format headings changed (`## Completion criteria`, `## Work units`, `Work unit: u<n>`, `## Reference files`, `- Deliverable location:`, `- Save path:`), so task folders from before this change do not parse. SKILL.md Question rules: speak the language of the request; every agent definition writes prose in that language. The core-rules budget in `test_skill_md` is now 16,000 characters (English density).
+- Review applied (2026-10-28, `docs/handoff/my-agent-review-2026-10-27.md`, ARCH v0.27): the user decided to fix things directly in a normal session instead of the my-agent dev profile (ARCH 4.11 "how to fix the system").
+  - Added a "Change requests" section to the core rules (B6). It must stay within the first 6,000 characters.
+  - In-flight revision: the run-log `revision` line is the reference. A revision of the same task starts with a `state=pending` line and ends with `revision rev=<N> state=done`, and `## Revisions` is always at the very end of `plan.md` (the trailing `invalidated:` is gone). A rewrite before approval (G1b `Request changes`, Plan Review `REVISE`) keeps a `-rev<N>-draft` archive and writes a `revision rev=<current rev> before=G1b` line. `continue` first finishes any rev without `state=done`.
+  - `Scope change:` also writes a `fix what="Scope change: …" files=plan.md` line (the tally counts it separately).
+  - `accept.md` "Back to Execute": on Verify FAIL, Review BLOCKER or G3 rework, copy the verdicts to `archive/<time>-run<n>/`, set only the affected units to `pending`, `.active phase: 3`, `step n=5 … back= archive=`. For a small fix that only got Review again, L1 writes `## Applied after review` (A3).
+  - Work units are `### u<n> <name>`, and the first line of a delegation prompt is `Work unit: u<n> <name>` (the hook records it as `unit=`). `Prototype: requested` only inside the `## Prototype` section. The plan-review skip line is `SKIPPED <reason>`. The dev deliverable is written `Delivered: commit:<sha>`.
+  - In the general profile, if there are two or more document units, the last writer unit merges them into `work/final.md`. That unit is handed off at 6 Merge, as in research (L1 only checks).
+  - Independent review applied (same day): archive `mkdir` and `cp` use absolute paths without `cd` (before approval the G1b hook blocks relative paths after `cd`; checked by hand). Consecutive Verify FAILs are the number of `Verdict: FAIL` since the last ALL PASS or revision, not `Run:` (same as the monitor). An Execute that was sent back does not redo the `base` and change popups and does not use worktrees. A merge unit becomes `pending` along with any earlier unit that is `pending`. In a rewritten plan, architect marks the kept units `done`. `revision … state=pending` gets `to=<phase>` (used when `continue` finishes an interrupted revision). Rewrite before approval also covers applying Plan Review findings and the prototype `Plan change`.
 
-## L2 설계 · 판정 (`l2-design-judge/agents/`)
+## L2 design · judging (`l2-design-judge/agents/`)
 
-**현재 상태 (2026-10-25):** `architect`, `plan-reviewer`, `verifier`, `reviewer`, `gate-analyst`(2026-10-26 추가, 회고에서 결정 집계를 해석. 2026-10-27 effort를 medium에서 high로 올림). 모델·effort·도구는 4.5절 표 그대로(`test_agents`가 확인). 프로파일별 점검 목록(general / research / dev)을 본문에 직접 씀.
+**Current state (2026-10-25):** `architect`, `plan-reviewer`, `verifier`, `reviewer`, `gate-analyst` (added 2026-10-26, interprets the decision tally in the retrospective; effort raised from medium to high on 2026-10-27). Model, effort and tools follow the table in section 4.5 (`test_agents` checks this). The check lists per profile (general / research / dev) are written directly in the body.
 
-**정해 둔 것**
+**Settled**
 
-- 모니터 `web/index.html`의 L2 에이전트 목록에 gate-analyst가 없음(2026-10-26 결정으로 그대로 둠).
-- 판정자 점검: `tests/judge-fixtures/run-judge-check.sh`(유료, 노트마다 verifier 1회). verifier나 reviewer를 고치면 돌린다. 2026-10-25 4/4 일치.
-- 결과 첫 줄: plan-reviewer `READY FOR APPROVAL` | `REVISE`, verifier `Verdict: ALL PASS` | `Verdict: FAIL`(아래에 `- <번호>. PASS|FAIL <근거>`), reviewer `BLOCKER <개수>`.
-- 마지막 메시지 첫 줄이 run-log `result=`가 되고 모니터가 `ma_schema.verify_failed`(`Verdict: FAIL`로 시작)로 본다. 첫 줄에 판정어가 없으면 판정이 화면에 안 나온다(F26). 2026-10-28 전에는 모니터가 `startswith('FAIL')`로 봐서 연속 FAIL이 늘 0이었다(검토 A1).
-- 2026-10-28: 모든 정의 파일에 frontmatter `level: L2|L3`(Claude Code는 쓰지 않음, validate 통과, `test_agents`가 폴더·`ma_schema.AGENTS`와 대조). architect: `## Revisions`를 그대로 옮김(scope-guard가 막음), `### u<n>` 단위와 ID 규칙, `## Mock-up` 첫 줄 `Kind:`, `## Existing work`(`| 대상 | 결정 | 이유 |`)는 `## Estimate` 뒤 `## Approval` 앞. verifier: 완료 기준 파일은 `scope.md`, 없으면 `plan.md`. gate-analyst: `gate-tally.md` 세 절 형식을 정의에 적음. 판정어는 `ma_schema` 상수와 같아야 한다(`test_schema`).
+- The L2 agent list in the monitor `web/index.html` has no gate-analyst (left as is by the 2026-10-26 decision).
+- Judge checks: `tests/judge-fixtures/run-judge-check.sh` (paid, one verifier run per note). Run it after changing verifier or reviewer. 2026-10-25: 4/4 matched.
+- Result first lines: plan-reviewer `READY FOR APPROVAL` | `REVISE`, verifier `Verdict: ALL PASS` | `Verdict: FAIL` (followed by `- <n>. PASS|FAIL <evidence>`), reviewer `BLOCKER <count>`.
+- The first line of the last message becomes the run-log `result=`, and the monitor reads it with `ma_schema.verify_failed` (starts with `Verdict: FAIL`). Without a verdict word on the first line, the verdict does not show on screen (F26). Before 2026-10-28 the monitor checked `startswith('FAIL')`, so consecutive FAILs were always 0 (review A1).
+- 2026-10-28: every definition file has frontmatter `level: L2|L3` (Claude Code does not use it; validate passes; `test_agents` checks it against the folder and `ma_schema.AGENTS`). architect: carries `## Revisions` over as is (scope-guard blocks otherwise), `### u<n>` units and the ID rules, `Kind:` as the first line of `## Mock-up`, `## Existing work` (`| Target | Decision | Reason |`) after `## Estimate` and before `## Approval`. verifier: the completion criteria file is `scope.md`, or `plan.md` if there is none. gate-analyst: the three-section format of `gate-tally.md` is written in the definition. Verdict words must match the `ma_schema` constants (`test_schema`).
 
-## L3 작업 (`l3-workers/agents/`)
+## L3 workers (`l3-workers/agents/`)
 
-**현재 상태 (2026-10-25):** `explorer`(maxTurns 30, 파일을 쓰지 않음 → L1이 보고를 `explore.md`에 저장), `researcher`(40), `writer`(40), `coder`(60, 커밋하지 않음).
+**Current state (2026-10-25):** `explorer` (maxTurns 30, writes no files → L1 saves the report to `explore.md`), `researcher` (40), `writer` (40), `coder` (60, does not commit).
 
-**정해 둔 것**
+**Settled**
 
-- 모든 작업자에 `maxTurns`를 둔다. 걸리면 SubagentStop이 오지 않고 sweep이 `end=partial`로 남긴다(F22).
-- researcher 노트 항목은 `- <주장> · <출처 URL> · "<인용>"` 또는 `- 찾지 못함: …`만. verifier·writer가 같은 형식을 쓴다.
-- workflow 안에서도 `agentType: 'my-agent:<name>'`이면 정의 파일과 hook이 그대로 적용된다(F29).
-- 2026-10-28: researcher·writer·coder는 위임 프롬프트 첫 줄 `작업 단위: u<n> <이름>`을 받는다(정의 파일 "받는 것"). 작업자가 스스로 쓰는 `PARTIAL <이유>`와 maxTurns의 `end=partial`은 다른 것이다(ARCH 4.7.2).
+- Every worker has `maxTurns`. When it is hit, no SubagentStop comes and sweep records `end=partial` (F22).
+- researcher note items are only `- <claim> · <source URL> · "<quote>"` or `- Not found: …`. verifier and writer use the same format.
+- Inside a workflow too, with `agentType: 'my-agent:<name>'` the definition file and hooks apply as is (F29).
+- 2026-10-28: researcher, writer and coder get `Work unit: u<n> <name>` as the first line of the delegation prompt ("Input" in the definition file). The `PARTIAL <reason>` a worker writes itself and the maxTurns `end=partial` are different things (ARCH 4.7.2).
 
-## L4 도구 · 가드 (`l4-tools-guards/`)
+## L4 tools · guards (`l4-tools-guards/`)
 
-**현재 상태 (2026-10-25)**
+**Current state (2026-10-25)**
 
-- 플러그인 hook(`hooks/hooks.json`): `scope-guard.py`(모든 도구, `my-agent:` 에이전트의 읽기·쓰기 범위, `onFailure: block`. gate-analyst는 읽기 `gate-tally.md`·`gate-report.md`, 쓰기 `gate-report.md`만, 2026-10-26), `subagent-log.py`(call/start/stop), `permission-log.py`(G2 ask/answer), `session-notice.py`(SessionStart). 기록 hook은 항상 exit 0, `onFailure` 없음.
-- 스킬 hook: `plan-approved-check.py`, `verdict-fresh-check.py`. `plan-approved-check`은 승인 뒤에도 작업 위치·agent-tasks·선언된 결과물 위치 밖 쓰기에 `ask`를 돌린다(auto 모드가 묻지 않으므로, 2026-10-25). 회고 복사 폴더(`ma_gate_report.report_dir()`, `$MA_GATE_REPORT_DIR`)도 묻지 않고 통과한다(2026-10-26). 막는 hook 셋은 오류가 나면 exit 2로 막는다.
-- `lib/ma_bash`: Bash 명령의 쓰기 대상·읽는 경로·복사 원본·git 변경 판정. 못 잡는 쓰기(`python -c` 등)는 남는 위험(4.4절). 셸 예약어, `bash -c`/`eval`, `cd`는 따라가고, 따라가지 못하는 형태(명령 치환, 열린 heredoc, 변수 경로, 변수 `cd`, symlink+쓰기)는 None(막음). git은 읽기 하위 명령 허용 목록.
-- `ma_bash.http_sends`: curl·wget이 데이터를 보내는지(짧은 옵션 묶음 `-sd`, `-XPOST`, `--data=…` 포함). scope-guard는 verifier에게만 적용한다(사용자 결정 2026-10-25). curl 옵션이 늘면 `CURL_SEND_*`를 고친다.
-- `lib/ma_path`: 경로 비교(`under`, `same`)는 대소문자를 접어서 한다. hook의 경로 비교는 모두 이것을 쓴다(macOS 볼륨에서 `Docs/agent`로 우회하던 빈틈, 최종 리뷰 C3).
-- `lib/ma_plan`: plan.md의 승인 줄·`Prototype: requested`(`## Prototype` 절 안만)·작업 단위 읽기. `ma_schema`에 맡긴다. scope-guard는 architect가 이 두 줄을 새로 넣거나 `## Revisions` 줄을 지우거나 바꾸는 쓰기를 막는다(C2, 2026-10-28 A2).
-- `permissions/permissions.json`: G2 ask/deny. 2026-10-25 설치 때 사용자 설정(`~/.claude/settings.json`)에 병합했다(백업 `settings.json.backup-20261025-141535`). 샌드박스 `.claude/settings.json`에도 같은 사본이 있다. 규칙을 바꾸면 두 곳과 `test_permissions`를 함께 고친다. "작업 디렉터리 밖에 쓰기"는 규칙 문자열이 없어 Claude Code의 기본 확인에 맡긴다. git 옵션이 하위 명령 앞에 오는 꼴(`git -C … commit`)은 `Bash(git * commit*)`처럼 가운데 `*` 규칙으로 잡는다. 접두어 규칙만으로는 지나갔음(2026-10-25, 대화형으로 ask·deny 둘 다 확인).
-- `scripts/run-log.py`: L1 기록. 쓰기 전에 sweep을 돌려 maxTurns로 끝난 작업자를 닫고 `PARTIAL:`/`MISMATCH:`를 출력한다. `step:` 줄의 메인 모델은 `<projects>/*/<session>.jsonl`의 마지막 메인 assistant 항목에서 읽고(`ma_subagent.main_model`, 끝 4MB만), 없을 때만 `--model`을 쓴다.
-- `lib/`: `ma_active`(`.active` 찾기, worktree면 메인 트리로. 색인은 저장소 안에서 그 루트 줄만 본다, C1), `ma_logline`(줄 형식), `ma_subagent`(transcript 합계, `stop:` 줄, sweep). `SendMessage`로 이어 부른 에이전트는 같은 id로 다시 시작하므로 `stop:`은 `start:` 수만큼 쓰고, 이어 부른 실행은 마지막 `start:` 시각 −2초부터 센다(`run_since`, F33). sweep은 첫 실행만 닫는다(meta가 첫 실행의 finished를 그대로 두므로). 실행 중에도 user 항목이 들어오므로 user 항목으로 실행을 나누지 않는다. `ma_gate_report`(run-log 결정 집계와 `cost:` 구간별 비용·토큰, 복사 폴더 `report_dir()`, 2026-10-26).
-- `scripts/`: `run-log.py`, `feedback.py`, `secret-scan.py`, `check-run.py`(시나리오 통과 조건), `gate-report.py`(회고 집계 `tally`·복사 `copy`, 종료 코드 0/1/2/3, 2026-10-26). 종료 코드 3(`gate-tally.md`나 복사본을 쓰지 못함)은 261026 계획 사양(0/1/2)에 없던 보완이고, ARCH 4.11과 `accept.md`에는 적혀 있다.
-- 테스트: `python3 -m unittest discover -s l4-tools-guards/tests` (227개, 2026-10-28). 시나리오는 `tests/scenarios/`.
-- 형식의 단일 소스 (2026-10-28, 검토 C): `lib/ma_schema.py`가 에이전트·레벨, 판정어, 상태 값, 게이트, 모델 family, run-log 줄 읽기, `## 절` 찾기, plan.md 표시 줄을 가진다. `ma_logline`·`ma_plan`·`ma_subagent`·`ma_gate_report`, hook 셋, `run-log.py`·`check-run.py`·`feedback.py`, 모니터가 이것을 쓴다. 낱말을 바꾸면 정의 파일·L1 파일과 함께 바꾸고 `test_schema`를 돌린다.
-- 2026-10-28: scope-guard를 레벨 기본 규칙 + 역할 규칙으로 다시 짰다(D2). `subagent-log`가 `call:`(프롬프트)·`stop:`(transcript 첫 user 항목)에 `unit=`을 남기고 sweep도 같다. `run-log.py`의 `PARTIAL:`에 `unit=`. 읽히지 않는 run-log 줄은 `run-log.py` stderr 경고와 `check-run` 실패(`log-format`), `.active`에 `task:`가 없으면 G1b·판정 hook은 경고(systemMessage)하고 scope-guard는 막는다(C9). `check-run`은 `units`(모든 단위 done|stale)·`revisions`(rev마다 `state=done`)도 본다. `feedback.py`에 `list`·`done <n> "<고친 내용>"`. `gate-tally.md` 지표에 승인 범위 안 조정·승인 전 다시 쓰기·작업 중 수정 수.
-- `permissions.json`은 플러그인이 실을 수 없어 사람이 `~/.claude/settings.json`에 병합한다. README 두 개의 설치 절에 적었다(2026-10-28).
+- Plugin hooks (`hooks/hooks.json`): `scope-guard.py` (all tools, read and write scope of `my-agent:` agents, `onFailure: block`; gate-analyst reads only `gate-tally.md` and `gate-report.md` and writes only `gate-report.md`, 2026-10-26), `subagent-log.py` (call/start/stop), `permission-log.py` (G2 ask/answer), `session-notice.py` (SessionStart). Recording hooks always exit 0 and have no `onFailure`.
+- Skill hooks: `plan-approved-check.py`, `verdict-fresh-check.py`. Even after approval, `plan-approved-check` returns `ask` for writes outside the task location, agent-tasks and the declared deliverable location (because auto mode does not ask, 2026-10-25). The retrospective copy folder (`ma_gate_report.report_dir()`, `$MA_GATE_REPORT_DIR`) also passes without asking (2026-10-26). The three blocking hooks block with exit 2 on error.
+- `lib/ma_bash`: for a Bash command, the write targets, read paths, copy sources, and whether it changes git. Writes it cannot catch (`python -c` etc.) are remaining risk (section 4.4). It follows shell keywords, `bash -c`/`eval` and `cd`; forms it cannot follow (command substitution, open heredoc, variable paths, variable `cd`, symlink + write) give None (blocked). git uses an allow list of read subcommands.
+- `ma_bash.http_sends`: whether curl or wget sends data (including short option bundles `-sd`, `-XPOST`, `--data=…`). scope-guard applies it only to verifier (user decision 2026-10-25). If curl options grow, fix `CURL_SEND_*`.
+- `lib/ma_path`: path comparison (`under`, `same`) is case-folded. Every path comparison in the hooks uses it (closes the gap of bypassing with `Docs/agent` on macOS volumes, final review C3).
+- `lib/ma_plan`: reads the approval line in plan.md, `Prototype: requested` (only inside the `## Prototype` section) and the work units. It delegates to `ma_schema`. scope-guard blocks architect writes that add these two lines anew or delete or change `## Revisions` lines (C2, 2026-10-28 A2).
+- `permissions/permissions.json`: G2 ask/deny. Merged into the user settings (`~/.claude/settings.json`) at install on 2026-10-25 (backup `settings.json.backup-20261025-141535`). The sandbox `.claude/settings.json` has the same copy. When rules change, fix both places and `test_permissions` together. "Write outside the working directory" has no rule string and is left to Claude Code's default confirmation. The form where a git option comes before the subcommand (`git -C … commit`) is caught by rules with `*` in the middle, like `Bash(git * commit*)`. Prefix rules alone let it pass (2026-10-25, both ask and deny checked interactively).
+- `scripts/run-log.py`: L1 records. Before writing it runs sweep to close workers ended by maxTurns and prints `PARTIAL:`/`MISMATCH:`. The main model in `step:` lines is read from the last main assistant entry of `<projects>/*/<session>.jsonl` (`ma_subagent.main_model`, last 4MB only); `--model` is used only when that is missing.
+- `lib/`: `ma_active` (finds `.active`; for a worktree, goes to the main tree; inside a repository the index looks only at its root line, C1), `ma_logline` (line format), `ma_subagent` (transcript totals, `stop:` lines, sweep). An agent called again with `SendMessage` restarts with the same id, so `stop:` is written as many times as `start:`, and a run called again counts from the last `start:` time −2 seconds (`run_since`, F33). sweep closes only the first run (the meta file keeps the first run's finished as is). user entries come in during a run too, so runs are not split by user entries. `ma_gate_report` (run-log decision tally, cost and tokens per `cost:` stretch, copy folder `report_dir()`, 2026-10-26).
+- `scripts/`: `run-log.py`, `feedback.py`, `secret-scan.py`, `check-run.py` (scenario pass condition), `gate-report.py` (retrospective tally `tally` and copy `copy`, exit codes 0/1/2/3, 2026-10-26). Exit code 3 (could not write `gate-tally.md` or the copy) is an addition not in the 261026 plan spec (0/1/2), and is written in ARCH 4.11 and `accept.md`.
+- Tests: `python3 -m unittest discover -s l4-tools-guards/tests` (226 tests, 2026-10-28). Scenarios are in `tests/scenarios/`.
+- Single source of formats (2026-10-28, review C): `lib/ma_schema.py` holds the agents and levels, verdict words, status values, gates, model families, run-log line reading, finding a `## section`, and plan.md marker lines. `ma_logline`, `ma_plan`, `ma_subagent`, `ma_gate_report`, the three hooks, `run-log.py`, `check-run.py`, `feedback.py` and the monitor use it. When a word changes, change it together with the definition files and L1 files, and run `test_schema`.
+- 2026-10-28: rebuilt scope-guard as level default rules + role rules (D2). `subagent-log` records `unit=` in `call:` (prompt) and `stop:` (first user entry of the transcript), and sweep does the same. `unit=` in the `PARTIAL:` of `run-log.py`. An unreadable run-log line gives a `run-log.py` stderr warning and a `check-run` failure (`log-format`); if `.active` has no `task:`, the G1b and verdict hooks warn (systemMessage) and scope-guard blocks (C9). `check-run` also checks `units` (every unit done|stale) and `revisions` (`state=done` for each rev). `feedback.py` gets `list` and `done <n> "<what was fixed>"`. The `gate-tally.md` metrics get the counts of in-scope adjustments, rewrites before approval and in-flight revisions.
+- The plugin cannot ship `permissions.json`, so the person merges it into `~/.claude/settings.json`. This is written in the install section of both READMEs (2026-10-28).
 
-**외부 동작 의존 (탐침 결과, `probe/results.md`)**
+**Dependence on external behavior (probe results, `probe/results.md`)**
 
-- maxTurns로 끝난 서브에이전트에는 SubagentStop이 없다. sweep은 `~/.claude/projects/<프로젝트>/<세션>/subagents/agent-<id>.meta.json`의 `"finished": true`와 transcript 마지막 assistant 항목의 `stop_reason`(≠ `end_turn`)을 본다. 이 파일 형식이 바뀌면 `end=partial`이 사라진다. `MA_CLAUDE_PROJECTS`로 경로를 바꿀 수 있다.
-- **sweep의 한계:** `end_turn`이 아닌 모든 종료를 partial로 센다. maxTurns가 아닌 다른 이유로 끊긴 경우도 E의 "작업 단위 두 번 중단"에 들어간다.
-- worktree 에이전트의 `cwd`는 `.claude/worktrees/agent-<id>`이고 `.git`은 `gitdir:` 파일이다. `ma_active.main_worktree`가 이것을 따라간다.
-- `SubagentStart`에는 `permission_mode`가 없다. 권한 모드는 `stop:`의 `mode=`에 남는다.
-- `PermissionRequest` 입력에 `agent_id`가 들어온다. 거부는 이벤트가 없어 기록되지 않는다.
+- A subagent ended by maxTurns gets no SubagentStop. sweep looks at `"finished": true` in `~/.claude/projects/<project>/<session>/subagents/agent-<id>.meta.json` and the `stop_reason` (≠ `end_turn`) of the last assistant entry in the transcript. If this file format changes, `end=partial` disappears. `MA_CLAUDE_PROJECTS` can change the path.
+- **Limit of sweep:** it counts every end other than `end_turn` as partial. Cuts for reasons other than maxTurns also count toward E's "a work unit stopped twice".
+- A worktree agent's `cwd` is `.claude/worktrees/agent-<id>`, and `.git` is a `gitdir:` file. `ma_active.main_worktree` follows it.
+- `SubagentStart` has no `permission_mode`. The permission mode is recorded in `mode=` of `stop:`.
+- `PermissionRequest` input has `agent_id`. A denial has no event, so it is not recorded.
 
-**아직 열린 탐침 항목**
+**Probe items still open**
 
-- 6: 세션이 끝날 때 백그라운드 에이전트가 같이 끝나는지 — 대화형 절차(`probe/results.md`).
-- 7: G1·G3 팝업의 `claude-sessions` 알림 — 대화형 절차.
-- 9: status line 금액에 서브에이전트 비용이 들어가는지 — 대화형 절차.
+- 6: whether background agents end when the session ends — interactive procedure (`probe/results.md`).
+- 7: `claude-sessions` notifications for G1·G3 popups — interactive procedure.
+- 9: whether the status line amount includes subagent cost — interactive procedure.
 
-**남는 위험 (Q8)**
+**Remaining risk (Q8)**
 
-- G1b 하드 게이트는 스킬 hook이라 `/my-agent`를 부르기 전의 새 세션에는 없다. `SessionStart` 알림은 지시문일 뿐이다. 승인 없이 진행된 일이 회고에 나오면 플러그인 hook으로 옮기는 것을 다시 검토한다.
-- `-p`나 권한 창에서 `Skill` 호출이 거부되면 스킬 hook도 등록되지 않는다(F28). 그 세션에서는 G1b가 `SessionStart` 알림으로만 지켜진다.
+- The G1b hard gate is a skill hook, so it is absent in a new session before `/my-agent` is invoked. The `SessionStart` notice is only an instruction. If work done without approval shows up in a retrospective, reconsider moving it to a plugin hook.
+- If a `Skill` call is denied in `-p` or in a permission prompt, the skill hooks are not registered either (F28). In that session G1b is guarded only by the `SessionStart` notice.
 
-**진단 위치**
+**Where to diagnose**
 
-- 불러오기 오류는 `/hooks`가 아니라 `/plugin`의 **Errors** 탭에 나온다.
-- manifest, 에이전트 frontmatter, `hooks.json`을 고칠 때마다 `claude plugin validate --strict .`(플러그인 폴더)과 `claude plugin validate --strict ~/dev/my-plugins`(마켓플레이스)를 돌린다.
-- 기록이 빠졌으면 run-log의 `log-error` 줄, hook 출력, `claude --debug` 로그를 본다.
+- Load errors show in the **Errors** tab of `/plugin`, not in `/hooks`.
+- Every time the manifest, agent frontmatter or `hooks.json` changes, run `claude plugin validate --strict .` (plugin folder) and `claude plugin validate --strict ~/dev/my-plugins` (marketplace).
+- If records are missing, look at `log-error` lines in the run-log, hook output and the `claude --debug` log.
 
-**설치와 되돌리기 (Task 12, 사용자 승인 뒤)**
+**Install and rollback (Task 12, after user approval)**
 
-- 설치 전에 `~/.claude/settings.json`을 `~/.claude/settings.json.bak-<YYMMDD-hhmmss>`로 복사한다.
-- 설치: `claude plugin marketplace add ~/dev/my-plugins`, `claude plugin install my-agent@my-plugins`. 설치한 뒤에는 `--plugin-dir`를 같이 쓰지 않는다(같은 이름이 두 번 불림).
-- 되돌리기: `claude plugin disable my-agent@my-plugins`(hook이 모두 빠짐) → 필요하면 `claude plugin uninstall my-agent@my-plugins`와 `claude plugin marketplace remove my-plugins` → 백업한 `settings.json`을 되돌린다.
-- 자기 수정으로 hook이 깨졌을 때: 일반 터미널에서 `claude plugin disable my-agent@my-plugins` → `git checkout -- <파일>` → `claude plugin enable my-agent@my-plugins`.
+- Before install, copy `~/.claude/settings.json` to `~/.claude/settings.json.bak-<YYMMDD-hhmmss>`.
+- Install: `claude plugin marketplace add ~/dev/my-plugins`, `claude plugin install my-agent@my-plugins`. After install, do not also use `--plugin-dir` (the same name gets loaded twice).
+- Rollback: `claude plugin disable my-agent@my-plugins` (all hooks go away) → if needed, `claude plugin uninstall my-agent@my-plugins` and `claude plugin marketplace remove my-plugins` → restore the backed-up `settings.json`.
+- When a self-edit breaks a hook: in a normal terminal, `claude plugin disable my-agent@my-plugins` → `git checkout -- <file>` → `claude plugin enable my-agent@my-plugins`.
 
-## 모니터 (`monitor/`, 레벨 밖)
+## Monitor (`monitor/`, outside the levels)
 
-- `monitor-up.py`가 8765–8775 중 첫 빈 포트에 띄운다. 상태는 `~/dev/agent-tasks/monitor.json`, 출력은 `monitor.log`. 끄기는 `/my-agent:monitor stop`.
-- 여는 방식은 `~/dev/agent-tasks/monitor-config.json`(`window`/`tab`). 메뉴바 앱은 `monitor/menubar/`이고, 로그인 항목 해제는 `login-item.sh uninstall`.
-- 가격표는 `~/dev/agent-tasks/prices.json`이 있으면 그것을 쓴다.
-- 미니 창 (2026-10-27): 메뉴바 아이콘 왼쪽 클릭은 List/Detail 미니 창, 오른쪽·Ctrl 클릭은 기존 메뉴. 화면 설정(`mode`, `pinned`, `frame.list`, `frame.detail`)만 UserDefaults suite `my-agent.monitor-menubar`에 저장한다(지우기: `defaults delete my-agent.monitor-menubar`). `/api/tasks` 요약에 읽기 전용 `elapsed` 필드가 늘었다.
-- 미니 창의 Detail은 `web/index.html`의 전역 `selectTask`와 처음 load 때의 `#task=` hash 읽기에 기댄다. 둘 중 하나의 이름이나 형식을 바꾸면 Detail 선택이 깨진다. `tests/test_web_contract.py`가 이를 잡는다.
-- List 깜빡임(진행 중·답 대기 줄의 기호와 막대 현재 칸)은 웹 `.dot.run`의 `pulse`(1.4초, 불투명도 .3)에 맞춘 값이다. 웹 쪽 값을 바꾸면 `menubar/Sources/Views.swift`도 함께 맞춘다. Reduce Motion이면 멈춘다.
-- List 높이·상태 색 (2026-10-27): 상태 색은 `web/index.html`의 `--st-*`와 `menubar/Sources/ListModel.swift`의 `statusPalette` 두 곳에 있다. `tests/test_menubar.py`의 `test_palette_matches_web`이 둘이 같은지 본다. 한쪽을 바꾸면 다른 쪽도 바꾼다.
-- `--ok`/`--run`/`--gate`/`--l1-soft`는 상태 밖(게이트 결과, L1 표시 등)에서도 쓰므로 상태 색을 바꿀 때 건드리지 않는다.
-- 웹에는 상태 없는 작업의 tone이 없다. 서버가 상태를 항상 셋 중 하나로 보내기 때문이다(`monitor/taskview.py:173`).
-- List 높이는 `ListMetrics` 상수로 계산하고, 뷰가 같은 상수로 높이를 고정한다. 줄 모양을 바꾸면 상수도 맞춘다.
-- List 높이 애니메이션은 제약 풀기 → 애니메이션 → completion에서 높이 고정·저장 순서다. 순서를 바꾸면 애니메이션이 사라지거나 중간 frame이 저장된다.
-- 미니 창 List 줄은 단계 이름을 그리지 않는다. `stepLabel`은 `--print-list`(`renderList`)가 쓰므로 남아 있다.
-- 첫 클릭 (2026-10-28): 다른 앱이 앞에 있을 때 미니 창의 첫 클릭이 필터·List/Detail·핀·줄에 바로 적용된다. `FirstClickHostingView`가 first mouse를 받고, List 줄은 SwiftUI 스크롤 컨테이너가 받지 않으므로 `FirstClickWindow`가 제자리에서 놓인 클릭만 창이 key가 된 뒤 다시 보낸다(4pt 넘게 움직인 끌기는 다시 보내지 않음). GUI 테스트는 없다.
-- 아이콘 왼쪽 클릭 토글 (2026-10-28): 창이 앞에 있으면(위에 겹치는 다른 창이 없거나 핀) 숨기고, 아니면 연다/앞으로 가져온다. 앞에 있는지는 `NSApp.isActive`가 아니라 `CGWindowListCopyWindowInfo(.optionOnScreenAboveWindow)`로 본다(상태 아이템 클릭이 앱을 항상 활성화하지는 않음). Dock(레벨 20)과 메뉴 막대는 화면 전체를 덮는 투명 창이 있어 Dock 레벨 미만만 센다. 숨길 때 `NSApp.hide`는 비활성 앱에서 무시되므로 `orderOut`을 쓰고, 활성일 때만 `hide`로 포커스를 돌려준다. `show()`는 `NSApp.activate(ignoringOtherApps:)`가 자주 거부되어(그러면 메뉴 막대 클릭 때 활성 앱 창이 다시 위로 올라와 매번 다시 열기만 함) `NSApp.activate()`를 쓰고, 그래도 앞에 오도록 `orderFrontRegardless`를 더 부른다. 왼쪽 클릭은 mouse-down에서 판단한다(`sendAction(on: [.leftMouseDown, .rightMouseUp])`). 확인은 CGEvent down/up 합성 클릭으로 Terminal이 앞일 때 앞으로→숨김→열기 3회. 이어서 (2026-10-28): 창을 선택한 뒤(앱 활성) 아이콘을 누르면 클릭이 도착하기 전에 앱이 비활성이 되고 Terminal 창이 다시 위로 올라와 첫 클릭이 무시됐다. 그래서 `willResignActive` 때 창이 앞이었는지(1초 안), 포인터가 아이콘에 들어올 때(`NSTrackingArea` mouseEntered, 10초 안) 앞이었는지를 기록해 둘 중 하나면 숨긴다. `FirstClickWindow`도 `NSApp.activate()`로 바꿨다. 확인: Terminal이 가린 경우 8회, 창 선택 후 5회, 연속 클릭 8회 모두 맞음(합성 클릭은 포인터를 아이콘으로 옮긴 뒤 down/up).
-- 2026-10-28: 모니터가 `l4-tools-guards/lib`를 `sys.path`에 넣고(`monitor/__init__.py`) `ma_schema`로 run-log 줄·절·판정어를 읽는다. 플러그인 폴더 구조를 바꾸면 이 경로도 고친다. Verify 연속 FAIL은 `Verdict: FAIL`로 세고 ALL PASS나 rev가 바뀌면 처음부터, 작업자 중단은 (rev, unit)마다(`unit=` 없는 stop은 id마다 따로). `step:`의 `back=`은 "back to Execute" 로그 항목, 보관 폴더 이름의 `-b` 같은 꼬리도 mock-up 이력에 들어간다. `revision` 줄의 `before=`는 "승인 전 계획 다시 쓰기"로, 같은 rev의 `state=done`은 한 수정으로 합쳐 보인다. `fix what="Scope change: …"`도 보인다. mock-up은 `Kind:` 첫 줄, prototype은 `## Prototype` 절, `Delivered: commit:<sha>`는 커밋으로 표시. 쓰이지 않던 `mdfiles.read_active`를 지웠고, 테스트 fixture를 실제 산출물 형식으로 다시 만들었다(`tests/build_fixtures.py`).
-- 알려진 표시 문제: `call:`만 있고 `start:`가 없는 호출(거부되었거나 시작하지 못한 에이전트)은 계속 "running"으로 보인다. 내용 없는 partial의 `result=-`가 결과 칸에 `-`로 보인다.
+- `monitor-up.py` starts it on the first free port in 8765–8775. State is in `~/dev/agent-tasks/monitor.json`, output in `monitor.log`. Stop it with `/my-agent:monitor stop`.
+- How it opens is set by `~/dev/agent-tasks/monitor-config.json` (`window`/`tab`). The menu bar app is `monitor/menubar/`; remove the login item with `login-item.sh uninstall`.
+- If `~/dev/agent-tasks/prices.json` exists, it is used as the price table.
+- Mini window (2026-10-27): a left click on the menu bar icon opens the List/Detail mini window; a right or Ctrl click opens the existing menu. Only the view settings (`mode`, `pinned`, `frame.list`, `frame.detail`) are saved in the UserDefaults suite `my-agent.monitor-menubar` (clear with `defaults delete my-agent.monitor-menubar`). The `/api/tasks` summary gained a read-only `elapsed` field.
+- The mini window's Detail relies on the global `selectTask` in `web/index.html` and on reading the `#task=` hash at first load. Changing the name or format of either breaks Detail selection. `tests/test_web_contract.py` catches this.
+- The List blinking (the symbol and current bar cell of running and waiting-for-answer rows) matches the web `.dot.run` `pulse` (1.4 seconds, opacity .3). If the web value changes, change `menubar/Sources/Views.swift` to match. It stops under Reduce Motion.
+- List height and status colors (2026-10-27): the status colors live in two places, `--st-*` in `web/index.html` and `statusPalette` in `menubar/Sources/ListModel.swift`. `test_palette_matches_web` in `tests/test_menubar.py` checks that they match. Change one, change the other.
+- `--ok`/`--run`/`--gate`/`--l1-soft` are also used outside status (gate results, L1 markers, etc.), so leave them alone when changing status colors.
+- The web has no tone for a task without status. The server always sends one of the three statuses (`monitor/taskview.py:173`).
+- The List height is computed from the `ListMetrics` constants, and the view fixes its height with the same constants. If the row shape changes, adjust the constants too.
+- The List height animation goes: release constraints → animate → in completion, fix and save the height. Changing the order loses the animation or saves an intermediate frame.
+- Mini window List rows do not draw the step name. `stepLabel` remains because `--print-list` (`renderList`) uses it.
+- First click (2026-10-28): when another app is in front, the first click on the mini window applies directly to filters, List/Detail, pin and rows. `FirstClickHostingView` accepts first mouse; List rows are not handled by the SwiftUI scroll container, so `FirstClickWindow` resends only clicks released in place after the window becomes key (drags that moved more than 4pt are not resent). There is no GUI test.
+- Icon left-click toggle (2026-10-28): if the window is in front (no other window overlapping it, or pinned), hide it; otherwise open it or bring it to the front. Whether it is in front is checked with `CGWindowListCopyWindowInfo(.optionOnScreenAboveWindow)`, not `NSApp.isActive` (a status item click does not always activate the app). The Dock (level 20) and the menu bar have transparent full-screen windows, so only windows below Dock level count. When hiding, `NSApp.hide` is ignored for an inactive app, so `orderOut` is used, and `hide` only when active, to give focus back. `show()` uses `NSApp.activate()` because `NSApp.activate(ignoringOtherApps:)` is often refused (then on a menu bar click the active app's window comes back on top and every click only reopens), and also calls `orderFrontRegardless` so it still comes to the front. The left click is decided on mouse-down (`sendAction(on: [.leftMouseDown, .rightMouseUp])`). Checked with synthesized CGEvent down/up clicks while Terminal was in front: to front → hide → open, 3 times. Follow-up (2026-10-28): after selecting the window (app active), clicking the icon made the app inactive before the click arrived, the Terminal window came back on top, and the first click was ignored. So it records whether the window was in front at `willResignActive` (within 1 second) and when the pointer entered the icon (`NSTrackingArea` mouseEntered, within 10 seconds), and hides if either is true. `FirstClickWindow` also switched to `NSApp.activate()`. Checked: covered by Terminal 8 times, after selecting the window 5 times, consecutive clicks 8 times, all correct (the synthesized clicks move the pointer to the icon first, then down/up).
+- 2026-10-28: the monitor adds `l4-tools-guards/lib` to `sys.path` (`monitor/__init__.py`) and reads run-log lines, sections and verdict words with `ma_schema`. If the plugin folder layout changes, fix this path too. Consecutive Verify FAILs are counted by `Verdict: FAIL` and restart on ALL PASS or a rev change; worker stops are per (rev, unit) (a stop without `unit=` is separate per id). `back=` in `step:` becomes a "back to Execute" log item, and suffixes like `-b` in archive folder names also go into the mock-up history. `before=` in a `revision` line shows as "plan rewrite before approval", and `state=done` of the same rev shows merged into one revision. `fix what="Scope change: …"` also shows. A mock-up is shown by its `Kind:` first line, a prototype by the `## Prototype` section, and `Delivered: commit:<sha>` as a commit. Removed the unused `mdfiles.read_active`, and rebuilt the test fixtures in the real output formats (`tests/build_fixtures.py`).
+- Known display issues: a call with only `call:` and no `start:` (an agent that was denied or failed to start) keeps showing as "running". The `result=-` of an empty partial shows as `-` in the result column.
 
-## 설치 (2026-10-25)
+## Install (2026-10-25)
 
-- (처음 설치 기록) `claude plugin marketplace add ~/dev/my-agent` (이름 `my-agent-dev`, 사용자 설정의 `extraKnownMarketplaces`에 directory 소스로 들어감), `claude plugin install my-agent@my-agent-dev` (사용자 범위, 0.1.0).
-- `claude plugin list`가 `Read from: /Users/jahoonjin/dev/my-agent`를 보였음(옮긴 뒤 경로는 아래 절). 디렉터리 소스라 고친 내용은 새 세션(또는 `/reload-plugins`)에서 바로 반영된다(F17). `--plugin-dir`는 더 쓰지 않는다.
-- 새 세션에서 `my-agent:` 에이전트 8개와 `my-agent:my-agent` 스킬이 보임. (2026-10-26 gate-analyst 추가로 9개.) `/my-agent:monitor`는 `disable-model-invocation`이라 모델 목록에는 없고 사람이 부를 때만 뜬다.
-- 전역 설정 `"model": "sonnet"`이라 L1은 세션 모델(Sonnet)로 돈다(F13). 설계대로 opus로 하려면 세션을 opus로 연다.
+- (First install record) `claude plugin marketplace add ~/dev/my-agent` (name `my-agent-dev`, added to `extraKnownMarketplaces` in the user settings as a directory source), `claude plugin install my-agent@my-agent-dev` (user scope, 0.1.0).
+- `claude plugin list` showed `Read from: /Users/jahoonjin/dev/my-agent` (for the path after the move, see the next section). It is a directory source, so fixes apply right away in a new session (or after `/reload-plugins`) (F17). `--plugin-dir` is no longer used.
+- In a new session, 8 `my-agent:` agents and the `my-agent:my-agent` skill show. (9 after gate-analyst was added on 2026-10-26.) `/my-agent:monitor` has `disable-model-invocation`, so it is not in the model's list and shows only when the person invokes it.
+- The global setting is `"model": "sonnet"`, so L1 runs on the session model (Sonnet) (F13). To use opus as designed, open the session with opus.
 
-## my-plugins로 옮김 (2026-10-25)
+## Moved to my-plugins (2026-10-25)
 
-- 플러그인 폴더를 `~/dev/my-agent`에서 `~/dev/my-plugins/plugins/my-agent`로 옮겼다. `~/dev/my-plugins`가 마켓플레이스(`my-plugins`)이고 git 저장소다. 다른 플러그인은 `plugins/<이름>`에 두고 `.claude-plugin/marketplace.json`에 항목을 더한다.
-- 마켓플레이스 상대 경로는 그 폴더 안만 가리킨다(`..` 불가, 바깥 심볼릭 링크는 읽지 않음). 바깥 폴더를 가리키려면 `command` 소스뿐이라 옮기는 쪽을 골랐다.
-- 다시 설치: `marketplace remove my-agent-dev` → `marketplace add ~/dev/my-plugins` → `install my-agent@my-plugins`. `claude plugin list`는 `Read from: /Users/jahoonjin/dev/my-plugins/plugins/my-agent`.
-- 플러그인 버전(`intake.md`의 `my-agent:`)은 플러그인 폴더만 본다: `git -C "${CLAUDE_PLUGIN_ROOT}" log -1 --format=%h -- .`(`test_plugin_version_scoped_to_plugin_folder`). 다른 플러그인의 커밋은 `continue`의 규칙 변경 팝업을 띄우지 않는다.
-- 옛 경로가 남은 곳: 날짜가 적힌 계획서·탐침 결과·검증 기록(그때의 기록이라 고치지 않음), `~/dev/my-agent-monitor/`(손대지 않는 폴더).
+- Moved the plugin folder from `~/dev/my-agent` to `~/dev/my-plugins/plugins/my-agent`. `~/dev/my-plugins` is the marketplace (`my-plugins`) and a git repository. Other plugins go in `plugins/<name>`, with an entry added to `.claude-plugin/marketplace.json`.
+- Marketplace relative paths point only inside that folder (no `..`, symlinks to outside are not read). Pointing to an outside folder takes a `command` source, so moving was chosen.
+- Reinstall: `marketplace remove my-agent-dev` → `marketplace add ~/dev/my-plugins` → `install my-agent@my-plugins`. `claude plugin list` shows `Read from: /Users/jahoonjin/dev/my-plugins/plugins/my-agent`.
+- The plugin version (`my-agent:` in `intake.md`) looks only at the plugin folder: `git -C "${CLAUDE_PLUGIN_ROOT}" log -1 --format=%h -- .` (`test_plugin_version_scoped_to_plugin_folder`). Commits to other plugins do not trigger the rule-change popup in `continue`.
+- Places where the old path remains: dated plans, probe results and validation records (records of that time, not changed), `~/dev/my-agent-monitor/` (a folder left untouched).

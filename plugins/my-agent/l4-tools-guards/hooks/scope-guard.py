@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Plugin hook (PreToolUse, every tool): read/write scope of my-agent:* agents
-(architecture 4.5 "읽기·쓰기 경로 제한", 4.12 "읽기 경로도 제한하기").
+(architecture 4.5 "read and write path limits", 4.12 "limiting read paths too").
 
 Runs in every session with the plugin on (F18), so anything whose input has no `my-agent:` agent_type exits 0 before
 the JSON is even parsed. For a my-agent agent: secrets are denied for everyone, reads must stay in the agent's read
@@ -65,9 +65,9 @@ def resolve(raw: str, cwd: Path) -> Path:
 
 
 def reference_files(plan_md: Path, location: Path) -> List[Path]:
-    """Paths listed under `## 참고 파일` in plan.md (one per `-` line, backticks optional)."""
+    """Paths listed under `## Reference files` in plan.md (one per `-` line, backticks optional)."""
     out = []
-    for line in ma_schema.section_lines(ma_plan.read(plan_md), '참고 파일') or []:
+    for line in ma_schema.section_lines(ma_plan.read(plan_md), 'Reference files') or []:
         item = re.match(r'\s*[-*]\s+(.+)', line)
         if item:
             tick = re.search(r'`([^`]+)`', item.group(1))
@@ -149,29 +149,29 @@ def check(inp: dict, role: str, active) -> Optional[str]:
     cwd = Path(inp.get('cwd') or os.getcwd()).resolve()
     r = rules(role, active, cwd)
     if r is None:
-        return f'정의되지 않은 my-agent 에이전트입니다: {role}'
+        return f'Not a defined my-agent agent: {role}'
     if tool in ('WebFetch', 'WebSearch'):
-        return None if r.web else f'{role}는 웹을 쓰지 않습니다.'
+        return None if r.web else f'{role} does not use the web.'
     reads, writes = paths_of(tool, ti, cwd)
     if reads is None:
-        return '어디를 읽는지 알 수 없는 명령입니다 (변수로 만든 경로, 명령 치환, 변수로 간 cd 등).'
+        return 'Cannot tell what this command reads (a path built from a variable, command substitution, cd to a variable, etc.).'
     if tool == 'Grep' and secret_glob(ti.get('glob') or ''):
-        return f'비밀값 파일을 고르는 glob입니다: {ti.get("glob")}'
+        return f'This glob selects secret files: {ti.get("glob")}'
     for p in reads + (writes or []):
         if secret(p):
-            return f'비밀값 경로는 읽거나 쓰지 않습니다: {p}'
+            return f'Secret paths are not read or written: {p}'
     for p in reads:
         if not any(under(p, root) for root in r.read):
-            return f'{role}의 읽기 범위 밖입니다: {p}'
+            return f'Outside the read scope of {role}: {p}'
     if tool == 'Bash' and role == 'verifier' and ma_bash.http_sends(ti['command']) is not False:
-        return 'verifier의 curl·wget은 받기(GET)만 합니다 (데이터를 보내는 옵션).'
+        return 'The verifier\'s curl and wget only fetch (GET) (this option sends data).'
     if tool == 'Bash' and not r.bash_writes and writes != []:
-        return f'{role}의 Bash는 읽기·확인만 합니다 (파일이나 git 상태를 바꾸는 명령).'
+        return f'Bash for {role} only reads and checks (this command changes files or git state).'
     if writes is None:
-        return '어디에 쓰는지 알 수 없는 명령입니다 (git 변경, 변수 경로 등).'
+        return 'Cannot tell where this command writes (a git change, a variable path, etc.).'
     for p in writes:
         if not any(under(p, root) for root in r.write) or any(under(p, d) for d in r.deny_write):
-            return f'{role}의 쓰기 범위 밖입니다: {p}'
+            return f'Outside the write scope of {role}: {p}'
     if role == 'architect' and tool in WRITE_TOOLS:
         return plan_write_problem(ti, writes[0])
     return None
@@ -186,12 +186,12 @@ def plan_write_problem(ti: dict, path: Path) -> Optional[str]:
     else:
         old, new = ti.get('old_string', ''), ti.get('new_string', '')
         after = before.replace(old, new) if ti.get('replace_all') else before.replace(old, new, 1)
-    for has, what in ((ma_plan.approved_text, '승인 줄'), (ma_plan.prototype_text, '`Prototype: requested` 줄')):
+    for has, what in ((ma_plan.approved_text, 'approval line'), (ma_plan.prototype_text, '`Prototype: requested` line')):
         if has(after) and not has(before):
-            return f'plan.md의 {what}은 L1만 씁니다 (G1b).'
+            return f'Only L1 writes the {what} of plan.md (G1b).'
     kept = {line.rstrip() for line in ma_schema.section_lines(after, 'Revisions') or []}
     if any(line.strip() and line.rstrip() not in kept for line in ma_schema.section_lines(before, 'Revisions') or []):
-        return 'plan.md의 `## Revisions` 줄을 지우거나 바꾸지 않습니다. 다시 쓸 때 그 절을 그대로 옮기세요 (4.8.1).'
+        return 'Do not delete or change the `## Revisions` lines of plan.md. Copy that section as is when you rewrite (4.8.1).'
     return None
 
 
@@ -207,8 +207,8 @@ def main() -> int:
         role = agent.split(':', 1)[1]
         broken = []
         active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
-        missing = (f'{broken[0]}에 `task:` 줄이 없습니다.' if broken else
-                   '진행 중인 my-agent 작업이 없습니다 (.active 없음).')
+        missing = (f'{broken[0]} has no `task:` line.' if broken else
+                   'No active my-agent task (no .active).')
         why = missing if active is None else check(inp, role, active)
         if why:
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',

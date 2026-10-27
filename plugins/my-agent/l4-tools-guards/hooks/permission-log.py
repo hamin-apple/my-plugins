@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plugin hook: record G2 permission prompts in the active task's run-log (architecture 4.7.2 "G2 기록").
+"""Plugin hook: record G2 permission prompts in the active task's run-log (architecture 4.7.2 "G2 records").
 
 usage: permission-log.py ask|answer   (hook input JSON on stdin)
 

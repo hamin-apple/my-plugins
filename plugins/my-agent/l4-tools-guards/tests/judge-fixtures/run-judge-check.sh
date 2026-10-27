@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Judge check (architecture 4.13 "판정자 점검"): run my-agent:verifier on each fixture note and compare the first
+# Judge check (architecture 4.13 "judge checks"): run my-agent:verifier on each fixture note and compare the first
 # line of the verify.md it writes with expected.json. Paid (one verifier run per note, capped by --max-budget-usd);
 # run it by hand after changing verifier.md or reviewer.md. Each note gets its own throwaway git project with a
 # docs/agent/.active, so scope-guard applies exactly as in a real task.
@@ -19,17 +19,17 @@ for note in "${NOTES[@]}"; do
   mkdir -p "$T/work"
   git init -q "$proj"
   printf 'task: %s\nphase: 4\nsession: judge\nstarted: 2026-10-25 00:00\n' "$TASK" > "$proj/docs/agent/.active"
-  printf 'Status: active\nProfile: research\nTask: %s\nRequest: shlex 요약 노트\n' "$TASK" > "$T/intake.md"
+  printf 'Status: active\nProfile: research\nTask: %s\nRequest: shlex summary note\n' "$TASK" > "$T/intake.md"
   cp "$HERE/scope.md" "$T/scope.md"
   printf '# Plan\n\n## Approval\n\n- Approved 2026-10-25 09:30 G1b\n' > "$T/plan.md"   # Verify runs after G1b
   cp "$HERE/$note" "$T/work/final.md"
   prompt="Call the agent my-agent:verifier exactly once with exactly this prompt, wait for it, then print the first line of $T/verify.md and stop. This is a judge test: do not invoke any skill (no /my-agent continue).
 
-완료 기준 파일: $T/scope.md
-Scope change: 없음
-결과물: $T/work/final.md
+Completion criteria file: $T/scope.md
+Scope change: none
+Deliverable: $T/work/final.md
 intake: $T/intake.md
-결과 경로: $T/verify.md"
+Result path: $T/verify.md"
   (cd "$proj" && printf '%s\n' "$prompt" | claude -p --plugin-dir "$PLUGIN" --model haiku --max-budget-usd 2 \
       --permission-mode acceptEdits --allowedTools Agent Read Grep Glob Write WebFetch \
       > "$proj/run.out" 2> "$proj/run.err")

@@ -1,4 +1,4 @@
-"""scripts/secret-scan.py: the check before a result leaves the task folder (architecture 4.12 "바깥으로 나가기 전 점검")."""
+"""scripts/secret-scan.py: the check before a result leaves the task folder (architecture 4.12 "check before anything leaves")."""
 import tempfile
 import unittest
 from pathlib import Path

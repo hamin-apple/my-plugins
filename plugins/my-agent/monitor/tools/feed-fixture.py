@@ -28,8 +28,8 @@ def batches():
          + agent('verifier', 'ag-v1', 'opus', 'high'), None),
         ([stop('ag-v1', 'claude-opus-5-5', 33000, 180, '"ALL PASS"'), 'step: n=8 name="Review → Deliver" rev=0 session=s-cli']
          + agent('reviewer', 'ag-rv1', 'sonnet', 'high') + [stop('ag-rv1', 'claude-sonnet-5-5', 24000, 120, '"BLOCKER 0"'),
-                                                            'ask: gate=G3 q="이 변경을 커밋할까요?"'],
-         'Verdict: ALL PASS\n- 1. PASS 표 대신 JSON 배열\n- 2. PASS 오류도 JSON\n'),
+                                                            'ask: gate=G3 q="Commit this change?"'],
+         'Verdict: ALL PASS\n- 1. PASS JSON array instead of a table\n- 2. PASS errors as JSON too\n'),
     ]
 
 

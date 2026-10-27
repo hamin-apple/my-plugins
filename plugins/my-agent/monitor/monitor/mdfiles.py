@@ -42,7 +42,7 @@ def read_intake(p: Path):
 
 def read_criteria(p: Path) -> int:
     text = _text(p)
-    sec = _section(text, '완료 기준') if text else None
+    sec = _section(text, 'Completion criteria') if text else None
     return sum(1 for l in sec or [] if re.match(r'\s*\d+\.\s', l))
 
 
@@ -64,7 +64,7 @@ def read_plan(p: Path) -> dict:
     if not text:
         return d
     for line in _section(text, 'Estimate') or []:
-        if re.search(r'token|토큰', line, re.I):
+        if re.search(r'token', line, re.I):
             m = re.search(r'(\d+)\s*k\b', line)
             if m:
                 d['estimate_k'] = int(m.group(1))

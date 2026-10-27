@@ -1,4 +1,4 @@
-"""run-log.md line parser (my-agent-architecture.md 4.7.2 "줄 형식"), the same `ma_schema.split_line` the hooks use.
+"""run-log.md line parser (my-agent-architecture.md 4.7.2 "line format"), the same `ma_schema.split_line` the hooks use.
 
 A line is `<YYYY-MM-DD HH:MM:SS> <kind>: <key=value ...>`; values with spaces
 are double-quoted. Anything else (headings, old-style lines) is ignored.

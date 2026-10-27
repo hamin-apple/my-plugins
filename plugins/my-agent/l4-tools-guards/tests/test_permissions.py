@@ -1,4 +1,4 @@
-"""permissions/permissions.json: the G2 ask/deny list (architecture 4.4 "G2에서 묻는 행동", 4.12 비밀값 차단).
+"""permissions/permissions.json: the G2 ask/deny list (architecture 4.4 "actions G2 asks about", 4.12 secret blocking).
 
 Live run: `git -C <repo> commit` did not match `Bash(git commit:*)` and committed without the G2 ask."""
 import json

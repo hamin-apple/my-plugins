@@ -1,4 +1,4 @@
-"""permission-log.py ask/answer: G2 records (architecture 4.7.2 "G2 기록")."""
+"""permission-log.py ask/answer: G2 records (architecture 4.7.2 "G2 records")."""
 import tempfile
 import unittest
 from pathlib import Path

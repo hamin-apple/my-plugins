@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by jahoonjin.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.2.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.3.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 
 ## Requirements
 

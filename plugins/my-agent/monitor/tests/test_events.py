@@ -44,8 +44,8 @@ class EventsTest(unittest.TestCase):
         e = synth('2026-10-24 16:00:00 step: n=5 name=Execute rev=0 session=s',
                   '2026-10-24 16:01:15 ask: gate=G2 agent=my-agent:coder id=a1 tool=Bash q="npm i x"',
                   '2026-10-24 16:01:31 answer: gate=G2 id=a1 result=allowed',
-                  '2026-10-24 16:10:00 ask: gate=G3 q="수용할까요?"')
-        self.assertEqual(e.waiting, {'gate': 'G3', 'q': '수용할까요?'})
+                  '2026-10-24 16:10:00 ask: gate=G3 q="Accept it?"')
+        self.assertEqual(e.waiting, {'gate': 'G3', 'q': 'Accept it?'})
         self.assertEqual(e.gates['G3'], 'wait')
         self.assertEqual(e.gates['G2'], 'ok')
         g2 = [x for x in e.log if x['k'] == 'popup' and x['a'] == 'perms'][0]
@@ -113,7 +113,7 @@ class EventsTest(unittest.TestCase):
     def test_draft_and_done_revisions(self):
         """B1/B4: a plan rewritten before G1b is no new rev; `state=done` updates its revision, not a second one."""
         e = synth('2026-10-24 16:00:00 step: n=3 name=Plan rev=0 session=s',
-                  '2026-10-24 16:01:00 revision: rev=0 before=G1b why="수정 요청" archive=archive/a-rev0/',
+                  '2026-10-24 16:01:00 revision: rev=0 before=G1b why="Request changes" archive=archive/a-rev0/',
                   '2026-10-24 16:02:00 step: n=3 name=Plan rev=0 session=s',
                   '2026-10-24 16:10:00 revision: rev=1 why=x archive=archive/b-rev1/ state=pending',
                   '2026-10-24 16:10:30 revision: rev=1 state=done',

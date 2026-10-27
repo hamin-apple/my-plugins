@@ -15,7 +15,7 @@
 - Repo root `~/dev/my-agent/`. `git init` in Task 1; **no commits** until the user asks (user decision 2026-10-25). Every "Commit" step below is "leave uncommitted".
 - Python standard library only. Scripts start with `#!/usr/bin/env python3`. File names English, hyphens; a module that must be imported uses underscores (CLAUDE.md fallback).
 - Hook commands are shell form: `python3 "${CLAUDE_PLUGIN_ROOT}"/l4-tools-guards/hooks/<script>.py <mode>`.
-- Record hooks always exit 0, never set `onFailure`, write nothing and print nothing when no `.active` is found (§4.7.2 "실패해도 막지 않음", §4.5.1 "바로 끝냅니다").
+- Record hooks always exit 0, never set `onFailure`, write nothing and print nothing when no `.active` is found (§4.7.2 "never blocks on failure", §4.5.1 "ends at once").
 - run-log line: `<YYYY-MM-DD HH:MM:SS> <kind>: <key=value ...>`; quoting per §4.7.2 (double quotes; `\"` and `\\` inside; newline → one space). A line the monitor's `parse_line` cannot read is a bug.
 - `.active` is four `key: value` lines: `task`, `phase`, `session`, `started` (§4.7.3). Lookup order: git root of `cwd` → `~/dev/agent-tasks/active-index.json` (§4.8.2).
 - Monitor tests: `cd ~/dev/my-agent/monitor && python3 -m unittest`. Plugin tests: `cd ~/dev/my-agent && python3 -m unittest discover -s l4-tools-guards/tests`.
@@ -76,7 +76,7 @@
   Expected: `Validation passed` for both. If a warning remains, fix it and ledger the fix.
 - [ ] **Step 4:** Leave uncommitted.
 
-Rulings to ledger: `version`/`author` added against §4.5.1 "version은 두지 않습니다" — `--strict` fails on a missing version, and plugins-reference says `version` does not pin a plugin loaded in place from a local-path marketplace. Frontmatter `hooks:` left out until step 2 — `plan-approved-check.py` does not exist yet, and an `onFailure: block` hook pointing at a missing script would block every tool. `agents` omitted — validate fails on paths that do not exist; the 8 agents arrive in step 4.
+Rulings to ledger: `version`/`author` added against §4.5.1 "no version field" — `--strict` fails on a missing version, and plugins-reference says `version` does not pin a plugin loaded in place from a local-path marketplace. Frontmatter `hooks:` left out until step 2 — `plan-approved-check.py` does not exist yet, and an `onFailure: block` hook pointing at a missing script would block every tool. `agents` omitted — validate fails on paths that do not exist; the 8 agents arrive in step 4.
 
 ### Task 2: Monitor inside the plugin, `/api/health`, prices override
 
@@ -172,7 +172,7 @@ Ruling to ledger: `'` also forces quotes — the spec names only spaces and `"`,
 
 - [ ] **Step 1: Failing tests** (all go through the monitor oracle `helpers.parse` or `build_events`):
   - `test_step_fills_rev_and_session`: with a `revision: rev=1` line and `CLAUDE_CODE_SESSION_ID=s-9`, `run-log.py step n=3 name=Plan` → the last line parses to `n=3 name=Plan rev=1 session=s-9`; `build_events` has `step_enter[-1][1] == 3`.
-  - `test_ask_answer_pair`: `ask gate=G1b q="계획을 승인할까요?"`, then `answer gate=G1b choice=승인` → `build_events(...).answered['G1b'] == '승인'`, `gates` has no `G1b: wait`.
+  - `test_ask_answer_pair`: `ask gate=G1b q="Approve the plan?"`, then `answer gate=G1b choice=Approve` → `build_events(...).answered['G1b'] == 'Approve'`, `gates` has no `G1b: wait`.
   - `test_unknown_kind`: exit 2, nothing written.
   - `test_main_mismatch`: `--model claude-sonnet-5-5` → stdout has `MISMATCH: main session configured opus, actual claude-sonnet-5-5`.
   - `test_reports_subagent_mismatch_once`: a hook-written `stop: … mismatch=1` line after the last L1 line → the next call prints it, and the call after that does not.
@@ -233,8 +233,8 @@ Ruling to ledger: `end=partial` (maxTurns) is not detectable from documented Sub
   - `summary`: Bash → `command`; Edit/Write/Read → `file_path`; otherwise compact JSON of `tool_input`. Cut to 200 characters.
 - `permission-log.py answer` (PostToolUse) writes `answer: gate=G2 id=<i> result=allowed`. It does this only when the newest G2 `ask:` with no later G2 `answer:` for its id has the same `tool` and `q` as this call; otherwise nothing.
 - `session-notice.py` (SessionStart) prints `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": <msg>}}` when `.active` is found, and nothing otherwise.
-  - `msg` is §4.8.2 verbatim: "미완료 my-agent 작업 `<task>`, phase `<phase>`. 다른 일을 하기 전에 `/my-agent continue`를 실행할 것. `plan.md`에 승인 줄이 없으면 위임과 쓰기를 하지 말 것."
-  - When `source == "fork"` and `.active` `session` ≠ the input `session_id`, `msg` = "원래 세션이 이 작업을 진행 중. 이 세션에서 이어받으려면 `/my-agent continue`".
+  - `msg` is §4.8.2 verbatim: "Unfinished my-agent task `<task>`, phase `<phase>`. Run `/my-agent continue` before doing anything else. If `plan.md` has no approval line, do not delegate or write."
+  - When `source == "fork"` and `.active` `session` ≠ the input `session_id`, `msg` = "The original session is running this task. To take it over in this session, run `/my-agent continue`".
 
 - [ ] **Step 1: Failing tests**
   - `test_ask_bash_with_quotes`: Bash `command` `echo "a\b" > x` → line parses with `q == 'echo "a\\b" > x'`; `build_events(...).waiting == {'gate': 'G2', 'q': …}`.
@@ -281,7 +281,7 @@ Ruling to ledger: `end=partial` (maxTurns) is not detectable from documented Sub
 **Files:**
 - Create: `l4-tools-guards/probe/probe-log.py`, `probe/probe-hooks.json`, `probe/agents/probe-worker.md`, `probe/skill/SKILL.md`, `probe/run-probes.sh`, `probe/results.md`; sandbox `~/dev/labs/my-agent-sandbox/` (git repo, one commit, `docs/agent/.active` + task folder for `261025-probe-task`)
 - Modify (temporary, reverted in Step 7): `.claude-plugin/plugin.json` (`hooks` becomes an array adding `./l4-tools-guards/probe/probe-hooks.json`; `agents: ["./l4-tools-guards/probe/agents/probe-worker.md"]`; `skills: ["./", "./l4-tools-guards/probe/"]`)
-- Modify: `my-agent-architecture.md` §2 (F19…), the [미확인] lines that a probe settled, §4.13 list
+- Modify: `my-agent-architecture.md` §2 (F19…), the [unverified] lines that a probe settled, §4.13 list
 
 **Interfaces:**
 - `probe-log.py <event>`: if `cwd` is under `~/dev/labs/my-agent-sandbox`, appends `{"event", "time", "input": <stdin JSON>, "env": {CLAUDE_PLUGIN_ROOT, CLAUDE_CODE_EFFORT_LEVEL}}` to `~/dev/labs/my-agent-sandbox/.probe/<event>.jsonl`; always exit 0.
@@ -305,7 +305,7 @@ Ruling to ledger: `end=partial` (maxTurns) is not detectable from documented Sub
   Expected: each run file ends with a `result` event; every `.probe/*.jsonl` has at least the lines its row needs (r4 and r7 may legitimately show the absence).
 - [ ] **Step 3:** Check the real hooks' output from r1/r2: `run-log.md` of the sandbox task parses with the monitor and `build_events` shows the agent with `live == False`. Expected: yes for r1; record what r2 shows.
 - [ ] **Step 4:** Write `probe/results.md`: one row per probe — question, run, evidence (file + field), answer. Items 7 and 9 get the manual procedure (from §4.13) instead; item 10 "deferred to step 6".
-- [ ] **Step 5:** Update `my-agent-architecture.md`: add F19… for each confirmed fact with source `probe r<n>`; replace each settled `[미확인]` with the answer; adjust §4.13's list to what remains open.
+- [ ] **Step 5:** Update `my-agent-architecture.md`: add F19… for each confirmed fact with source `probe r<n>`; replace each settled `[unverified]` with the answer; adjust §4.13's list to what remains open.
 - [ ] **Step 6:** Any probe answer that contradicts Tasks 4–8 (for example a worktree `cwd`, or `agent_id` present in PermissionRequest) gets a ledgered ruling and a RED→GREEN fix in the owning task's test file now.
 - [ ] **Step 7:** Revert `plugin.json` to the Task 1–8 state (probe files stay in `probe/` as §4.7 says). `claude plugin validate --strict`. Expected: passed.
 - [ ] **Step 8:** Leave uncommitted.
@@ -347,7 +347,7 @@ Ruling to ledger: `end=partial` (maxTurns) is not detectable from documented Sub
 - [ ] **Step 1: Failing tests** `test_skill_md`:
   - frontmatter parses, `name == 'my-agent'`, no `hooks` key;
   - `SKILL.md` under 500 lines;
-  - the first 20,000 characters contain the headings `질문 규칙`, `게이트`, `레벨`, `.active`;
+  - the first 20,000 characters contain the headings `Question rules`, `Gates`, `Levels`, `.active`;
   - every `${CLAUDE_SKILL_DIR}/…` and `${CLAUDE_PLUGIN_ROOT}/…` path in SKILL.md and the phase files exists;
   - every `run-log.py <kind>` mentioned uses a kind `run-log.py` accepts.
 - [ ] **Step 2:** Run. Expected: FAIL.

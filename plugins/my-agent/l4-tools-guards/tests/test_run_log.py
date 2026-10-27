@@ -1,4 +1,4 @@
-"""run-log.py: the L1 Recorder's CLI (architecture 4.7.2 "누가 무엇을 기록하나", P9)."""
+"""run-log.py: the L1 Recorder's CLI (architecture 4.7.2 "who records what", P9)."""
 import json
 import tempfile
 import unittest
@@ -44,12 +44,12 @@ class RunLogTest(unittest.TestCase):
         self.assertEqual(log_lines(self.task), [])
 
     def test_ask_answer_pair(self):
-        self.assertEqual(self.run_log('ask', 'gate=G1b', 'q=계획을 승인할까요?').returncode, 0)
+        self.assertEqual(self.run_log('ask', 'gate=G1b', 'q=Approve the plan?').returncode, 0)
         ev = events(self.task)
         self.assertEqual(ev.gates.get('G1b'), 'wait')
-        self.assertEqual(self.run_log('answer', 'gate=G1b', 'choice=승인').returncode, 0)
+        self.assertEqual(self.run_log('answer', 'gate=G1b', 'choice=Approve').returncode, 0)
         ev = events(self.task)
-        self.assertEqual(ev.answered['G1b'], '승인')
+        self.assertEqual(ev.answered['G1b'], 'Approve')
         self.assertNotEqual(ev.gates.get('G1b'), 'wait')
 
     def test_value_with_quotes(self):

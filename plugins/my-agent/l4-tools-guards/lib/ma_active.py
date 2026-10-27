@@ -1,4 +1,4 @@
-"""Find the active my-agent task for a folder (architecture 4.8.2 "hook이 .active를 찾는 순서").
+"""Find the active my-agent task for a folder (architecture 4.8.2 "the order in which hooks find .active").
 
 1. the git root of `cwd` (nearest ancestor with a `.git` entry, file or folder) → `<root>/docs/agent/.active`;
    when that root is a linked worktree (`.git` file, e.g. an isolation:worktree agent in
@@ -27,8 +27,8 @@ class Active(NamedTuple):
     log: Path
 
 
-BROKEN = ('my-agent: {path}에 `task:` 줄이 없어 진행 중인 작업으로 읽지 못했습니다. 이대로면 G1b와 판정 최신성 '
-          'hook이 걸리지 않습니다. `.active`를 고치거나 지우세요.')
+BROKEN = ('my-agent: {path} has no `task:` line, so it cannot be read as the active task. As it is, the G1b and '
+          'verdict-freshness hooks do not apply. Fix or delete `.active`.')
 
 
 def default_tasks_dir() -> Path:

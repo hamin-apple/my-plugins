@@ -23,10 +23,10 @@ import ma_bash  # noqa: E402
 import ma_schema  # noqa: E402
 from ma_path import under  # noqa: E402
 
-REASON = '작업 {task}: {why} G3 전에 Verify ALL PASS와 Review BLOCKER 0을 최신 결과로 다시 받으세요.'
-UNPARSED = ('작업 {task}: 명령에 `$(`나 백틱 같은 치환이 있어 git commit인지 판단할 수 없습니다. '
-            '커밋이 아니면 치환 없이 명령을 나눠 다시 실행하세요. 커밋이면 G3 전에 Verify ALL PASS와 '
-            'Review BLOCKER 0을 최신 결과로 받으세요.')
+REASON = 'Task {task}: {why} Before G3, get Verify ALL PASS and Review BLOCKER 0 again as the latest results.'
+UNPARSED = ('Task {task}: the command has a substitution such as `$(` or backticks, so it cannot tell whether this is a git commit. '
+            'If it is not a commit, split the command and run it again without substitution. If it is a commit, get Verify ALL PASS and '
+            'Review BLOCKER 0 as the latest results before G3.')
 
 
 def first_line(path: Path) -> str:
@@ -68,19 +68,19 @@ def changed_files(active, with_deliverable: bool = True) -> list:
 def stale_reason(active, changed: list):
     verify, review = active.task_dir / 'verify.md', active.task_dir / 'review.md'
     if first_line(verify) != ma_schema.VERIFY_PASS:
-        return f'verify.md 첫 줄이 `{ma_schema.VERIFY_PASS}`가 아닙니다.'
+        return f'The first line of verify.md is not `{ma_schema.VERIFY_PASS}`.'
     if first_line(review) != ma_schema.REVIEW_PASS:
-        return f'review.md 첫 줄이 `{ma_schema.REVIEW_PASS}`이 아닙니다.'
+        return f'The first line of review.md is not `{ma_schema.REVIEW_PASS}`.'
     newest = max((p.stat().st_mtime for p in changed), default=0)
     if review.stat().st_mtime < newest:
-        return 'review.md보다 나중에 바뀐 파일이 있습니다.'
+        return 'A file changed after review.md.'
     if verify.stat().st_mtime < newest:
         try:
             applied = ma_schema.has_section(review.read_text(encoding='utf-8'), ma_schema.APPLIED_AFTER_REVIEW)
         except (OSError, UnicodeDecodeError):
             applied = False
         if not applied:
-            return f'verify.md보다 나중에 바뀐 파일이 있습니다 (review.md에 `## {ma_schema.APPLIED_AFTER_REVIEW}` 없음).'
+            return f'A file changed after verify.md (review.md has no `## {ma_schema.APPLIED_AFTER_REVIEW}`).'
     return None
 
 

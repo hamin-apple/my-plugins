@@ -1,4 +1,4 @@
-"""subagent-log.py call/start/stop (architecture 4.7.2 "hook 설계")."""
+"""subagent-log.py call/start/stop (architecture 4.7.2 "hook design")."""
 import json
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -56,8 +56,8 @@ class SubagentLogTest(unittest.TestCase):
         self.assertTrue(line.endswith(' call: agent=my-agent:probe-worker model=opus effort=- isolation=worktree background=true'), line)
 
     def test_unit_on_call_and_stop(self):
-        """D3: the `작업 단위: u<n>` line L1 puts in a worker's prompt lands on call: and stop: as unit=."""
-        prompt = '작업 단위: u2 CLI 옵션\nplan.md: docs/agent/x/plan.md'
+        """D3: the `Work unit: u<n>` line L1 puts in a worker's prompt lands on call: and stop: as unit=."""
+        prompt = 'Work unit: u2 CLI option\nplan.md: docs/agent/x/plan.md'
         self.hook('call', dict(CALL, tool_input=dict(CALL['tool_input'], prompt=prompt)))
         self.assertEqual(self.last()['unit'], 'u2')
         self.start()

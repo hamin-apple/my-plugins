@@ -1,4 +1,4 @@
-"""lib/ma_bash: which paths a Bash command writes, reads, or copies from (architecture 4.4 "막는 대상")."""
+"""lib/ma_bash: which paths a Bash command writes, reads, or copies from (architecture 4.4 "what is blocked")."""
 import unittest
 from pathlib import Path
 

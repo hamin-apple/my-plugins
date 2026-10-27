@@ -1,4 +1,4 @@
-"""session-notice.py: SessionStart reminder of an unfinished task (architecture 4.8.2 "새 세션 알림")."""
+"""session-notice.py: SessionStart reminder of an unfinished task (architecture 4.8.2 "new-session notice")."""
 import json
 import tempfile
 import unittest
@@ -6,9 +6,9 @@ from pathlib import Path
 
 from helpers import make_task, run_hook
 
-NOTICE = ('미완료 my-agent 작업 `261025-probe-task`, phase `2`. 다른 일을 하기 전에 `/my-agent continue`를 실행할 것. '
-          '`plan.md`에 승인 줄이 없으면 위임과 쓰기를 하지 말 것.')
-FORK = '원래 세션이 이 작업을 진행 중. 이 세션에서 이어받으려면 `/my-agent continue`'
+NOTICE = ('Unfinished my-agent task `261025-probe-task`, phase `2`. Run `/my-agent continue` before doing anything else. '
+          'If `plan.md` has no approval line, do not delegate or write.')
+FORK = 'The original session is running this task. To take it over in this session, run `/my-agent continue`'
 
 
 class SessionNoticeTest(unittest.TestCase):

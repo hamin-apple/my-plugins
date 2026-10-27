@@ -367,7 +367,7 @@ class MenubarTest(unittest.TestCase):
         self.assertEqual(self.detail('loaded=none', 'port=off', 'applied=0', 'seq=0'), 'off')
 
     def test_detail_percent_encoding(self):
-        for key in ('a/b c', 'x-y._~z', 'über/태스크', 'q?#&=%', 'plain'):
+        for key in ('a/b c', 'x-y._~z', 'über/naïve', 'q?#&=%', 'plain'):
             with self.subTest(key=key):
                 out = self.detail('loaded=none', 'port=1', 'applied=0', 'seq=1', 'key=' + key)
                 self.assertEqual(out, 'load http://127.0.0.1:1/#task=' + urllib.parse.quote(key, safe=''))

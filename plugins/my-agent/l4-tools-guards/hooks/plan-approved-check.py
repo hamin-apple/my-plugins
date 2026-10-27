@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Skill hook (PreToolUse: Agent|Workflow|Edit|Write|NotebookEdit|Bash): the G1b hard gate
-(architecture 4.4 "G1b 하드 게이트").
+(architecture 4.4 "G1b hard gate").
 
 While a task is active and its `plan.md` has no `Approved` line under `## Approval`, deny delegation and writes,
 whatever the phase. Allowed before approval: my-agent:explorer / architect / plan-reviewer (and writer once
@@ -9,7 +9,7 @@ whatever the phase. Allowed before approval: my-agent:explorer / architect / pla
 warning. Any error → exit 2, so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
 
 After approval, a write outside the location, the agent-tasks folder and the result path that plan.md / scope.md
-declare (`- 결과물 위치: `…`` or `- 저장 경로: `…``) gets `ask`: auto mode lets such a write through without a
+declare (`- Deliverable location: `…`` or `- Save path: `…``) gets `ask`: auto mode lets such a write through without a
 prompt (probe 2026-10-25). A Bash write whose target cannot be told passes, as before (git commit asks via G2).
 The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
 """
@@ -28,9 +28,9 @@ import ma_schema  # noqa: E402
 from ma_path import same, under  # noqa: E402
 
 BEFORE_APPROVAL = {f'my-agent:{name}' for name in ma_schema.BEFORE_APPROVAL}
-REASON = '작업 {task}: plan.md에 승인 줄이 없어 위임과 쓰기를 막았습니다 (G1b). {what}'
-ASK = '작업 {task}: 작업 위치 밖 쓰기입니다 ({paths}). 범위 문서의 결과물 위치가 아니므로 확인합니다.'
-RESULT_LINE = re.compile(r'(?m)^\s*-\s*(?:결과물 위치|저장 경로)\s*:\s*`([^`]+)`')
+REASON = 'Task {task}: plan.md has no approval line, so delegation and writes are blocked (G1b). {what}'
+ASK = 'Task {task}: a write outside the task location ({paths}). It is not the deliverable location in the scope document, so confirm it.'
+RESULT_LINE = re.compile(r'(?m)^\s*-\s*(?:Deliverable location|Save path)\s*:\s*`([^`]+)`')
 
 
 def allowed_write(p: Path, active, tasks_dir: Path) -> bool:
@@ -83,20 +83,20 @@ def decide(inp: dict, active, tasks_dir: Path):
         agent = ti.get('subagent_type') or ''
         if agent in BEFORE_APPROVAL or (agent == 'my-agent:writer' and ma_plan.prototype_requested(plan_md)):
             return None
-        return reason(f'승인 전에는 explorer, architect, plan-reviewer만 맡깁니다 (요청: {agent or "-"}).')
+        return reason(f'Before approval only explorer, architect and plan-reviewer get work (requested: {agent or "-"}).')
     if tool == 'Workflow':
-        return reason('승인 전에는 workflow를 실행하지 않습니다.')
+        return reason('No workflow runs before approval.')
     if tool in ('Edit', 'Write', 'NotebookEdit'):
         raw = ti.get('file_path') or ti.get('notebook_path') or ''
         p = Path(os.path.expanduser(raw))
         p = (p if p.is_absolute() else cwd / p).resolve()
-        return None if allowed_write(p, active, tasks_dir) else reason(f'작업 폴더 밖 쓰기: {p}')
+        return None if allowed_write(p, active, tasks_dir) else reason(f'Write outside the task folder: {p}')
     if tool == 'Bash':
         targets = ma_bash.write_targets(ti.get('command') or '', cwd)
         if targets is None:
-            return reason('어디에 쓰는지 알 수 없는 명령입니다 (git 변경, 변수 경로 등).')
+            return reason('Cannot tell where this command writes (a git change, a variable path, etc.).')
         outside = [str(t) for t in targets if not allowed_write(t, active, tasks_dir)]
-        return reason(f'작업 폴더 밖 쓰기: {", ".join(outside)}') if outside else None
+        return reason(f'Write outside the task folder: {", ".join(outside)}') if outside else None
     return None
 
 
@@ -113,7 +113,7 @@ def main() -> int:
                 print(json.dumps({'systemMessage': ma_active.BROKEN.format(path=broken[0])}, ensure_ascii=False))
             return 0
         if not active.task_dir.is_dir():
-            print(json.dumps({'systemMessage': f'my-agent: .active가 가리키는 작업 폴더 {active.task_dir}가 없습니다'},
+            print(json.dumps({'systemMessage': f'my-agent: the task folder {active.task_dir} that .active points to does not exist'},
                              ensure_ascii=False))
             return 0
         why, decision = decide(inp, active, tasks_dir), 'deny'

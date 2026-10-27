@@ -18,8 +18,16 @@ class RegistryTest(unittest.TestCase):
     def test_lists_all_fixture_tasks(self):
         tasks = reg(PROJECTS_TXT).list_tasks()
         self.assertEqual(len(tasks), 5)
-        self.assertEqual(set(tasks[0]), {'id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting'})
+        self.assertEqual(set(tasks[0]), {'id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed'})
         self.assertEqual(tasks[0]['id'], '261024-cli-json-output')   # newest first
+
+    def test_summary_elapsed_matches_detail_for_running(self):
+        r = reg(PROJECTS_TXT)
+        running = [t for t in r.list_tasks() if t['status'] == 'running']
+        self.assertTrue(running)
+        for t in running:
+            self.assertIsNotNone(t['elapsed'])
+            self.assertEqual(t['elapsed'], r.get_task(t['key'])['elapsed'])
 
     def test_registry_skips_missing_and_expands_home(self):
         with tempfile.TemporaryDirectory() as d:

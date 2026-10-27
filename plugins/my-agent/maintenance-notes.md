@@ -97,6 +97,9 @@
 - `monitor-up.py`가 8765–8775 중 첫 빈 포트에 띄운다. 상태는 `~/dev/agent-tasks/monitor.json`, 출력은 `monitor.log`. 끄기는 `/my-agent:monitor stop`.
 - 여는 방식은 `~/dev/agent-tasks/monitor-config.json`(`window`/`tab`). 메뉴바 앱은 `monitor/menubar/`이고, 로그인 항목 해제는 `login-item.sh uninstall`.
 - 가격표는 `~/dev/agent-tasks/prices.json`이 있으면 그것을 쓴다.
+- 미니 창 (2026-10-27): 메뉴바 아이콘 왼쪽 클릭은 List/Detail 미니 창, 오른쪽·Ctrl 클릭은 기존 메뉴. 화면 설정(`mode`, `pinned`, `frame.list`, `frame.detail`)만 UserDefaults suite `my-agent.monitor-menubar`에 저장한다(지우기: `defaults delete my-agent.monitor-menubar`). `/api/tasks` 요약에 읽기 전용 `elapsed` 필드가 늘었다.
+- 미니 창의 Detail은 `web/index.html`의 전역 `selectTask`와 처음 load 때의 `#task=` hash 읽기에 기댄다. 둘 중 하나의 이름이나 형식을 바꾸면 Detail 선택이 깨진다. `tests/test_web_contract.py`가 이를 잡는다.
+- List 깜빡임(진행 중·답 대기 줄의 기호와 막대 현재 칸)은 웹 `.dot.run`의 `pulse`(1.4초, 불투명도 .3)에 맞춘 값이다. 웹 쪽 값을 바꾸면 `menubar/Sources/Views.swift`도 함께 맞춘다. Reduce Motion이면 멈춘다.
 - 알려진 표시 문제: `call:`만 있고 `start:`가 없는 호출(거부되었거나 시작하지 못한 에이전트)은 계속 "running"으로 보인다. 내용 없는 partial의 `result=-`가 결과 칸에 `-`로 보인다.
 
 ## 설치 (2026-10-25)

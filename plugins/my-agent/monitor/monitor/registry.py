@@ -10,7 +10,7 @@ from .taskview import build_task, task_key
 from .transcript import TranscriptCache
 
 ROOT = Path(__file__).resolve().parent.parent
-SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting')
+SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed')
 
 
 def default_projects_file() -> Path:

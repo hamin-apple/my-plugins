@@ -182,12 +182,18 @@ func parsePorts(_ text: String) -> ClosedRange<Int>? {
     return a...b
 }
 
-func queryState(ports: ClosedRange<Int>, env: [String: String]) -> MenuState {
+/// The first monitor (monitor.json port, then the range) whose /api/tasks parses.
+func queryTasks(ports: ClosedRange<Int>, env: [String: String]) -> (port: Int, data: Data)? {
     var candidates: [Int] = []
     if let p = statePort(env: env) { candidates.append(p) }
     candidates += ports.filter { !candidates.contains($0) }
     for port in candidates where isMonitor(port) {
-        if let data = fetch(port, "/api/tasks"), let tasks = parseRunning(data) { return .on(tasks) }
+        if let data = fetch(port, "/api/tasks"), parseRunning(data) != nil { return (port, data) }
     }
-    return .off
+    return nil
+}
+
+func queryState(ports: ClosedRange<Int>, env: [String: String]) -> MenuState {
+    guard let found = queryTasks(ports: ports, env: env), let tasks = parseRunning(found.data) else { return .off }
+    return .on(tasks)
 }

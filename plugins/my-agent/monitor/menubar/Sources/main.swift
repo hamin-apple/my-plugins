@@ -23,6 +23,65 @@ if args.contains("--print-menu") {
     exit(0)
 }
 
+func usageExit(_ message: String) -> Never {
+    FileHandle.standardError.write(Data((message + "\n").utf8))
+    exit(2)
+}
+
+func parseRect(_ text: String) -> CGRect? {
+    let v = text.split(separator: ",", omittingEmptySubsequences: false).map { Double($0) }
+    guard v.count == 4, !v.contains(where: { $0 == nil || !$0!.isFinite }) else { return nil }
+    guard v[2]! > 0, v[3]! > 0 else { return nil }
+    return CGRect(x: v[0]!, y: v[1]!, width: v[2]!, height: v[3]!)
+}
+
+if args.contains("--print-list") {
+    var filter = ListFilter.all
+    if let i = args.firstIndex(of: "--filter") {
+        guard i + 1 < args.count, let f = ListFilter(rawValue: args[i + 1]) else {
+            usageExit("--filter needs all, running, done or stopped")
+        }
+        filter = f
+    }
+    var state = ListState.off
+    if let found = queryTasks(ports: portRange, env: env), let rows = parseTasks(found.data) { state = .on(rows) }
+    print(renderList(state, filter: filter))
+    exit(0)
+}
+
+if let i = args.firstIndex(of: "--fit-frame") {
+    let rects = args[(i + 1)...].map(parseRect)
+    guard rects.count >= 2, !rects.contains(where: { $0 == nil }) else {
+        usageExit("--fit-frame needs <x,y,w,h> <x,y,w,h>...: the saved frame, then one or more screens")
+    }
+    let r = fitFrame(rects[0]!, screens: rects.dropFirst().map { $0! })
+    print([r.minX, r.minY, r.width, r.height].map { String(Int($0.rounded())) }.joined(separator: ","))
+    exit(0)
+}
+
+if let i = args.firstIndex(of: "--print-detail") {
+    var kv: [String: String] = [:]
+    for a in args[(i + 1)...] {
+        guard let eq = a.firstIndex(of: "=") else { usageExit("--print-detail: bad argument \(a)") }
+        kv[String(a[..<eq])] = String(a[a.index(after: eq)...])
+    }
+    var loaded: Int?
+    var port: Int?
+    guard let l = kv["loaded"], l == "none" || Int(l) != nil, let p = kv["port"], p == "off" || Int(p) != nil,
+          let applied = kv["applied"].flatMap({ Int($0) }), let seq = kv["seq"].flatMap({ Int($0) }) else {
+        usageExit("--print-detail loaded=<port|none> port=<port|off> applied=<n> seq=<n> [key=<key>]")
+    }
+    loaded = Int(l)
+    port = Int(p)
+    switch detailAction(loadedPort: loaded, port: port, appliedSeq: applied, seq: seq, key: kv["key"]) {
+    case .off: print("off")
+    case .load(let url): print("load " + url)
+    case .select(let js): print("select " + js)
+    case .none: print("none")
+    }
+    exit(0)
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     var timer: Timer?
@@ -30,10 +89,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var shown: [MenuItem]?
     var menuOpen = false
     var pending: MenuState?
+    var menu: NSMenu?   // kept here, hung on the item only for a right/Ctrl click
+    let store = Store()
+    lazy var windows = WindowController(store: store)
 
     func applicationDidFinishLaunching(_ note: Notification) {
         item.button?.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: "my-agent monitor")
         item.button?.imagePosition = .imageLeft
+        item.button?.target = self
+        item.button?.action = #selector(clicked(_:))
+        item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         render(.off)
         launch(command(.start, python: pythonPath, root: monitorRoot))   // server only, no window
         poll()
@@ -42,8 +107,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func poll() {
         queue.async {
-            let state = queryState(ports: portRange, env: env)
-            DispatchQueue.main.async { self.render(state) }
+            // one lookup per poll feeds both the menu and the list
+            let found = queryTasks(ports: portRange, env: env)
+            var state = MenuState.off
+            var list = ListState.off
+            if let f = found {
+                if let running = parseRunning(f.data) { state = .on(running) }
+                if let rows = parseTasks(f.data) { list = .on(rows) }
+            }
+            DispatchQueue.main.async {
+                self.render(state)
+                self.store.update(port: found?.port, list: list)
+            }
         }
     }
 
@@ -84,13 +159,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 menu.addItem(mi)
             }
         }
-        item.menu = menu
+        self.menu = menu
+    }
+
+    @objc func clicked(_ sender: Any?) {
+        let e = NSApp.currentEvent
+        let menuClick = e?.type == .rightMouseUp || (e?.modifierFlags.contains(.control) ?? false)
+        if menuClick, let m = menu {
+            item.menu = m
+            item.button?.performClick(nil)   // shows the menu
+        } else if !menuClick {
+            windows.show()
+        }
     }
 
     func menuWillOpen(_ menu: NSMenu) { menuOpen = true }
 
     func menuDidClose(_ menu: NSMenu) {
         menuOpen = false
+        DispatchQueue.main.async { self.item.menu = nil }   // later, so the chosen item still runs
         if let s = pending { pending = nil; render(s) }
     }
 

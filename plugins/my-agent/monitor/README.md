@@ -16,6 +16,8 @@ python3 server.py --port 9000
 my-agent starts it for you with `monitor-up.py` (Router at Intake, or `/my-agent:monitor`).
 `GET /api/health` answers `{"app": "my-agent-monitor", "root": "<this folder>"}` so `monitor-up.py` can tell its own server from anything else on the port.
 
+`GET /api/tasks` returns one summary per task; each summary has `elapsed` (minutes, read-only, recomputed on every request for a running task, `null` if the task could not be read). The menu bar app's List uses it.
+
 ### Opening the monitor
 
 `monitor-up.py` opens a new window by default (about 1200x800), or a tab.

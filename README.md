@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by jahoonjin.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.3.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.3.1 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 
 ## Requirements
 
@@ -48,6 +48,12 @@ The main session (L1) takes a request, runs plan → execute → verify → revi
 | `/my-agent:monitor` | Opens a local, read-only web page of task records. Also `status`, `stop`. |
 
 Task records are kept in `docs/agent/<task ID>/` in the task location.
+Finished tasks pile up there and in the monitor's list. To move tasks finished 30 days ago or more to `docs/agent/.archived/` (out of the list; move a folder back to bring it back):
+
+```bash
+python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py --dry-run   # list only
+python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py [--days N]
+```
 
 ## Update and remove
 

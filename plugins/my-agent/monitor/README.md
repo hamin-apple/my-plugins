@@ -16,7 +16,7 @@ python3 server.py --port 9000
 my-agent starts it for you with `monitor-up.py` (Router at Intake, or `/my-agent:monitor`).
 `GET /api/health` answers `{"app": "my-agent-monitor", "root": "<this folder>"}` so `monitor-up.py` can tell its own server from anything else on the port.
 
-`GET /api/tasks` returns one summary per task; each summary has `elapsed` (minutes, read-only, recomputed on every request for a running task, `null` if the task could not be read). The menu bar app's List uses it.
+`GET /api/tasks` returns `{"tasks": [...], "now": "HH:MM"}` with one summary per task in `tasks`; each summary has `elapsed` (minutes, read-only, recomputed on every request for a running task, `null` if the task could not be read). The menu bar app's List uses it.
 
 ### Opening the monitor
 
@@ -37,6 +37,9 @@ The server binds `127.0.0.1` only. The page polls every 2 s.
 | Project list (one path per line; my-agent writes absolute paths, a hand-added `~/…` line also works) | `~/dev/agent-tasks/projects.txt` | `MA_PROJECTS_FILE` |
 | Main-session transcripts | `~/.claude/projects/*/<session>.jsonl` | `MA_CLAUDE_PROJECTS` |
 | Prices | `~/dev/agent-tasks/prices.json` if it exists, else `prices.json` in this folder | `MA_TASKS_DIR` (folder) |
+
+Main session tokens of a finished task are read from `main-usage.json` in its task folder when it exists (my-agent writes it at the end of a task with `usage-snapshot.py`), because Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days). Without it, they come from the transcript, and turn into `–` once the transcript is gone.
+Only `docs/agent/*/` is listed. Finished tasks moved to `docs/agent/.archived/` by `l4-tools-guards/scripts/archive-tasks.py` leave the list (architecture 4.8.2 "Task records over time").
 
 Real data needs my-agent v0.19 (run-log `step:` lines, `ask:`/`answer:` lines, G2 hook, token split on `stop:`).
 Older task folders still show, with steps as `–`.

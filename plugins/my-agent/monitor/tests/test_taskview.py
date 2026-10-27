@@ -136,3 +136,58 @@ class TaskViewTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+def write_transcript(claude, task_dir, ma_usage):
+    """A main transcript with one response 30 s after each step line (and one after the task, not counted)."""
+    lines = ma_usage.read_log(task_dir / 'run-log.md')
+    enter = ma_usage.step_enter(lines)
+    rows = []
+    for i, (ts, n, rev, sess) in enumerate(enter + [(lines[-1][0], 0, 0, enter[-1][3])]):
+        stamp = (ts.replace(microsecond=0) + __import__('datetime').timedelta(seconds=30)).astimezone().isoformat()
+        rows.append(json.dumps({'type': 'assistant', 'timestamp': stamp, 'message': {
+            'id': f'm{i}', 'model': 'claude-opus-5-5', 'usage': {'input_tokens': 1000 * (i + 1), 'output_tokens': 10}}}))
+    path = claude / '-x-obsidian' / f'{enter[0][3]}.jsonl'
+    path.parent.mkdir(parents=True)
+    path.write_text('\n'.join(rows) + '\n', encoding='utf-8')
+
+
+class SnapshotTest(unittest.TestCase):
+    """A finished task reads main-usage.json (ma_usage) instead of a transcript that may be deleted."""
+
+    def setUp(self):
+        import ma_usage
+        self.ma_usage = ma_usage
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        for name in ('obsidian-notes', 'claude-sessions'):
+            shutil.copytree(PROJECTS / name, self.root / name)
+        self.none = self.root / 'no-transcripts'
+        self.claude = self.root / 'claude'
+        write_transcript(self.claude, self.root / 'obsidian-notes/docs/agent/261023-hooks-notify-note', ma_usage)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def build(self, project, task, claude):
+        return build_task(self.root / project, self.root / project / 'docs/agent' / task, PRICES,
+                          TranscriptCache(claude), NOW)
+
+    def test_finished_task_same_numbers_from_snapshot(self):
+        before = self.build('obsidian-notes', '261023-hooks-notify-note', self.claude)
+        self.assertIsNotNone(before['main'])
+        task_dir = self.root / 'obsidian-notes/docs/agent/261023-hooks-notify-note'
+        self.assertEqual(self.ma_usage.write_snapshot(task_dir, self.claude, NOW)[0], 0)
+        after = self.build('obsidian-notes', '261023-hooks-notify-note', self.none)
+        self.assertEqual(after['main'], before['main'])
+        self.assertEqual(after['tokens'], before['tokens'])
+
+    def test_finished_task_without_snapshot_or_transcript(self):
+        self.assertIsNone(self.build('obsidian-notes', '261023-hooks-notify-note', self.none)['main'])
+
+    def test_running_task_ignores_snapshot(self):
+        task_dir = self.root / 'claude-sessions/docs/agent/261024-cli-json-output'
+        (task_dir / self.ma_usage.SNAPSHOT).write_text(
+            '{"windows": [{"rev": 0, "step": 1, "model": "claude-opus-5-5", "usage": {"input_tokens": 99}}]}',
+            encoding='utf-8')
+        self.assertIsNone(self.build('claude-sessions', '261024-cli-json-output', self.none)['main'])

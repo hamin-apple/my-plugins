@@ -58,6 +58,31 @@ class RegistryTest(unittest.TestCase):
             self.assertEqual(spy.call_count, 1)
         self.assertIsNone(r.get_task('deadbeef/nope'))
 
+    def test_moved_task_leaves_caches(self):
+        import shutil
+        import ma_usage
+        with tempfile.TemporaryDirectory() as d:
+            proj = Path(d) / 'obsidian-notes'
+            shutil.copytree(PROJECTS / 'obsidian-notes', proj)
+            p = Path(d) / 'projects.txt'
+            p.write_text(f'{proj}\n', encoding='utf-8')
+            task_dir = proj / 'docs/agent/261023-hooks-notify-note'
+            from tests.test_taskview import write_transcript
+            claude = Path(d) / 'claude'
+            write_transcript(claude, task_dir, ma_usage)
+            r = Registry(p, claude_root=claude)
+            [t] = r.list_tasks()
+            self.assertTrue(r._cache[t['key']]['sessions'])
+            self.assertTrue(r.tcache.files)
+            ma_usage.write_snapshot(task_dir, claude, __import__('datetime').datetime(2026, 10, 24))
+            r.list_tasks()   # finished with a snapshot: the transcript is no longer watched
+            self.assertEqual(r._cache[t['key']]['sessions'], ())
+            self.assertEqual(r.tcache.files, {})
+            (task_dir.parent / '.archived').mkdir()
+            task_dir.rename(task_dir.parent / '.archived' / task_dir.name)
+            self.assertEqual(r.list_tasks(), [])
+            self.assertEqual(r._cache, {})
+
 
 if __name__ == '__main__':
     unittest.main()

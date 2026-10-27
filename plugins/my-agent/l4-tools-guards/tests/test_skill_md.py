@@ -196,6 +196,16 @@ class SkillMdTest(unittest.TestCase):
             self.assertLess(part.index('Status: done'), part.index('"Retrospective"'))
             self.assertLess(part.index('"Retrospective"'), part.index('`.active` and'))
 
+    def test_usage_snapshot_before_active_cleanup(self):
+        """4.8.2 "Task records over time": the snapshot runs while `.active` still names the task, on accept and abort."""
+        cmd = 'l4-tools-guards/scripts/usage-snapshot.py"'
+        accept = (L1 / 'phases' / 'accept.md').read_text(encoding='utf-8')
+        retro = accept[accept.index('## Retrospective'):]
+        self.assertGreater(retro.index(cmd), retro.index('mode='))
+        abort = self.text[self.text.index('## Abort'):self.text.index('## Recorder rules')]
+        self.assertLess(abort.index('run-log.py" abort'), abort.index(cmd))
+        self.assertLess(abort.index(cmd), abort.index('Delete `.active`'))
+
     def test_plugin_version_scoped_to_plugin_folder(self):
         # the plugin lives in a multi-plugin repo (~/dev/my-plugins): another plugin's commit must not look like a rules change
         self.assertNotIn('"${CLAUDE_PLUGIN_ROOT}" rev-parse', self.text)

@@ -161,7 +161,8 @@ The monitor's parser interprets only the lines below and ignores lines it does n
 - Find `~/.claude/projects/*/<session>.jsonl` from the session ID in the `step:` line.
 - Sum the usage of the assistant responses (input, output, cache write, cache read) in that step's span (this `step:` line's time ~ the next `step:` line's time) per model. If one response is split over several lines, count it once by response ID.
 - If the same session did work unrelated to my-agent, that share is included too. The Models table on screen shows the main session row as "opus · main".
-- If the transcript is not found, the main session row stays `–`.
+- A finished (done or stopped) task with `main-usage.json` in its task folder is read from that file instead (the same sums, saved by L1 at the end of the task with `usage-snapshot.py`; architecture 4.8.2 "Task records over time"). Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days), so without the file the numbers would turn into `–` later. The window and line rules live in L4 `lib/ma_usage.py`, which the monitor and the snapshot share.
+- If neither the file nor the transcript is found, the main session row stays `–`.
 
 ### 5.4 Price table
 

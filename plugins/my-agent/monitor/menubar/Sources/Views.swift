@@ -189,6 +189,7 @@ struct Header: View {
                         .foregroundColor(store.pinned ? .accentColor : .secondary)
                 }
                 .buttonStyle(.plain)
+                .focusable(false)   // with keyboard navigation on, the only button would show a focus ring on every activation
                 .frame(width: 16, height: 16)
                 .help(store.pinned ? "Unpin" : "Keep on top")
             }

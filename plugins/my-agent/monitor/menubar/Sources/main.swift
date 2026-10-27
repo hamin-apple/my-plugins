@@ -116,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.button?.imagePosition = .imageLeft
         item.button?.target = self
         item.button?.action = #selector(clicked(_:))
-        item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        item.button?.sendAction(on: [.leftMouseDown, .rightMouseUp])   // left on down: the window order is read before the click changes it
         render(.off)
         launch(command(.start, python: pythonPath, root: monitorRoot))   // server only, no window
         poll()
@@ -187,7 +187,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.menu = m
             item.button?.performClick(nil)   // shows the menu
         } else if !menuClick {
-            windows.show()
+            windows.toggle()
         }
     }
 

@@ -84,12 +84,44 @@ final class WindowController: NSObject, NSWindowDelegate {
         super.init()
     }
 
+    /// Left click on the icon: hides the window when it is in front, else opens it or brings it to the front.
+    func toggle() {
+        if let win = window, win.isVisible, !win.isMiniaturized, win.isOnActiveSpace, isInFront(win) {
+            win.orderOut(nil)
+            if NSApp.isActive { NSApp.hide(nil) }   // gives the focus back to the app that had it (ignored when inactive)
+        } else {
+            show()
+        }
+    }
+
+    /// In front: pinned (always above), or no other window above it overlaps it (below the Dock level:
+    /// the Dock and the menu bar keep transparent full-screen windows).
+    /// Not NSApp.isActive: a status item click does not always make the app active.
+    private func isInFront(_ win: NSWindow) -> Bool {
+        if store.pinned { return true }
+        guard let above = CGWindowListCopyWindowInfo([.optionOnScreenAboveWindow, .excludeDesktopElements],
+                                                     CGWindowID(win.windowNumber)) as? [[String: Any]] else { return true }
+        // CG bounds have the origin at the top left of the main screen
+        let top = NSScreen.screens.first?.frame.maxY ?? 0
+        let mine = CGRect(x: win.frame.minX, y: top - win.frame.maxY, width: win.frame.width, height: win.frame.height)
+        return !above.contains { info in
+            let layer = info[kCGWindowLayer as String] as? Int ?? 0
+            let alpha = info[kCGWindowAlpha as String] as? Double ?? 1
+            guard layer >= 0, layer < Int(CGWindowLevelForKey(.dockWindow)), alpha > 0,
+                  let b = info[kCGWindowBounds as String] as? NSDictionary,
+                  let r = CGRect(dictionaryRepresentation: b) else { return false }
+            return r.intersects(mine)
+        }
+    }
+
     /// Opens the window or brings it to the front, also when another app is active.
     func show() {
         let win = window ?? makeWindow()
+        if NSApp.isHidden { NSApp.unhide(nil) }
         if win.isMiniaturized { win.deminiaturize(nil) }
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()   // activate(ignoringOtherApps:) was often refused for a status item click
         win.makeKeyAndOrderFront(nil)
+        win.orderFrontRegardless()   // above the active app's windows also when macOS does not let this app activate
     }
 
     private func makeWindow() -> FirstClickWindow {

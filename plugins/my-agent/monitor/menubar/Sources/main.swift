@@ -45,7 +45,7 @@ if args.contains("--print-list") {
     }
     var state = ListState.off
     if let found = queryTasks(ports: portRange, env: env), let rows = parseTasks(found.data) { state = .on(rows) }
-    print(renderList(state, filter: filter))
+    print(renderList(state, filter: filter, tones: args.contains("--tones")))
     exit(0)
 }
 
@@ -56,6 +56,24 @@ if let i = args.firstIndex(of: "--fit-frame") {
     }
     let r = fitFrame(rects[0]!, screens: rects.dropFirst().map { $0! })
     print([r.minX, r.minY, r.width, r.height].map { String(Int($0.rounded())) }.joined(separator: ","))
+    exit(0)
+}
+
+if let i = args.firstIndex(of: "--list-frame") {
+    let rest = Array(args[(i + 1)...])
+    guard rest.count >= 3, let anchor = parseRect(rest[0]), let rows = Int(rest[1]), rows >= 0 else {
+        usageExit("--list-frame needs <x,y,w,h> <rows> <x,y,w,h>...: the frame, the row count (0 or more), then one or more screens")
+    }
+    let screens = rest.dropFirst(2).map(parseRect)
+    guard !screens.contains(where: { $0 == nil }) else { usageExit("--list-frame: bad screen rectangle") }
+    let r = listFrame(anchor: anchor, rows: rows, screens: screens.map { $0! })
+    let f = r.frame
+    print([f.minX, f.minY, f.width, f.height].map { String(Int($0.rounded())) }.joined(separator: ",") + (r.scrolls ? " scroll" : " fit"))
+    exit(0)
+}
+
+if args.contains("--print-palette") {
+    for p in statusPalette { print("\(p.tone.rawValue)\t\(p.light)\t\(p.dark)") }
     exit(0)
 }
 

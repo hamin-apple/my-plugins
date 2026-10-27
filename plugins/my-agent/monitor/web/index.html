@@ -14,6 +14,7 @@
   --l1: #2552c9; --l1-soft: #e3eafb; --l2: #a86a10; --l2-soft: #f8edda;
   --l3: #17806a; --l3-soft: #dcf1ea; --l4: #5d6775; --l4-soft: #e7eaee;
   --gate: #c43d12; --gate-soft: #fbe5dc; --ok: #1d7a3e; --ok-soft: #dff2e5; --run: #2552c9;
+  --st-run: #c25e00; --st-wait: #d1242f; --st-done: #2552c9; --st-stop: #4b5563; --st-past: #1d7a3e;
   --term-bg: #121a23; --term-ink: #d8e1ea; --term-dim: #7f8d9c;
   --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -23,6 +24,7 @@
   --accent: #7ea3ff; --l1: #7ea3ff; --l1-soft: #1c2a47; --l2: #e2aa4f; --l2-soft: #3a2c14;
   --l3: #4cc5a3; --l3-soft: #133a31; --l4: #a3adba; --l4-soft: #262f3a;
   --gate: #ff8a5c; --gate-soft: #3e2016; --ok: #5fd08a; --ok-soft: #143222; --run: #7ea3ff;
+  --st-run: #ffa94d; --st-wait: #ff6b6b; --st-done: #7ea3ff; --st-stop: #c9d1d9; --st-past: #5fd08a;
   --term-bg: #0a0f14; color-scheme: dark; } }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -37,7 +39,8 @@ h2, h3 { margin: 0; line-height: 1.3; }
 .top .brand { font-family: var(--mono); font-weight: 600; font-size: 16px; }
 .top .live { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; }
-.dot.run { background: var(--run); animation: pulse 1.4s infinite; }
+.dot.run { background: var(--st-run); animation: pulse 1.4s infinite; }
+.dot.run.wait { background: var(--st-wait); }
 @keyframes pulse { 50% { opacity: .3; } }
 .top .spacer { flex: 1; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -59,14 +62,16 @@ aside.tasks h3 { font-size: 12px; letter-spacing: .06em; color: var(--muted); pa
 .titem .meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
 .titem .mini-rail { display: flex; gap: 2px; margin-top: 5px; }
 .titem .mini-rail i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
-.titem .mini-rail i.done { background: var(--ok); }
-.titem .mini-rail i.cur { background: var(--run); }
-.titem .mini-rail i.stop { background: var(--gate); }
+.titem .mini-rail i.done { background: var(--st-past); }
+.titem .mini-rail i.cur { background: var(--st-run); }
+.titem .mini-rail i.stop { background: var(--st-stop); }
+.titem .mini-rail.t-wait i.cur { background: var(--st-wait); }
+.titem .mini-rail.t-done i { background: var(--st-done); }
 .badge { font-size: 11px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-.badge.run { color: var(--run); border-color: var(--run); }
-.badge.wait { color: var(--gate); border-color: var(--gate); background: var(--gate-soft); }
-.badge.done { color: var(--ok); border-color: var(--ok); }
-.badge.stop { color: var(--gate); border-color: var(--gate); }
+.badge.run { color: var(--st-run); border-color: var(--st-run); }
+.badge.wait { color: var(--st-wait); border-color: var(--st-wait); background: color-mix(in srgb, var(--st-wait) 14%, transparent); }
+.badge.done { color: var(--st-done); border-color: var(--st-done); }
+.badge.stop { color: var(--st-stop); border-color: var(--st-stop); }
 
 main { padding: 16px 20px 60px; min-width: 0; }
 .task-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin-bottom: 12px; }
@@ -166,6 +171,7 @@ body.entering .lvw, .lvw.fresh { animation: rise .35s backwards; }
 .kpi .kl { font-size: 11.5px; color: var(--muted); letter-spacing: .04em; }
 .kpi .kv2 { font: 600 18px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpi .kv2.ok { color: var(--ok); } .kpi .kv2.warn { color: var(--l2); } .kpi .kv2.bad { color: var(--gate); }
+.kpi .kv2.st-done { color: var(--st-done); } .kpi .kv2.st-stop { color: var(--st-stop); } .kpi .kv2.st-wait { color: var(--st-wait); }
 .kpi .ks { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpi .bar { margin: 2px 0 0; }
 .dash { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -196,10 +202,10 @@ body.entering .lvw, .lvw.fresh { animation: rise .35s backwards; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 /* running step: pulse ring + shimmer */
 .vs.cur .no { animation: ring 1.6s ease-out infinite; }
-@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--run) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
-.vs.cur { background: linear-gradient(90deg, var(--surface) 30%, var(--l1-soft) 50%, var(--surface) 70%); background-size: 250% 100%; animation: shimmer 2.6s linear infinite; }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tc, var(--st-run)) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+.vs.cur { background: linear-gradient(90deg, var(--surface) 30%, color-mix(in srgb, var(--tc, var(--st-run)) 14%, var(--surface)) 50%, var(--surface) 70%); background-size: 250% 100%; animation: shimmer 2.6s linear infinite; }
 .dots3 { display: inline-flex; gap: 3px; vertical-align: middle; }
-.dots3 i { width: 5px; height: 5px; border-radius: 50%; background: var(--run); animation: bounce 1s ease-in-out infinite; }
+.dots3 i { width: 5px; height: 5px; border-radius: 50%; background: var(--st-run); animation: bounce 1s ease-in-out infinite; }
 .dots3 i:nth-child(2) { animation-delay: .15s; } .dots3 i:nth-child(3) { animation-delay: .3s; }
 @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-4px); opacity: 1; } }
 /* entrance */
@@ -264,7 +270,7 @@ body.entering .tl-bar.live { animation: grow .8s backwards, stripes .7s linear i
 .frow:hover { background: var(--surface-2); }
 .frow.sel { background: var(--l1-soft); }
 .frow.todo { color: var(--muted); opacity: .6; }
-.frow.live .fn::after { content: " ●"; color: var(--run); animation: pulse 1.4s infinite; }
+.frow.live .fn::after { content: " ●"; color: var(--st-run); animation: pulse 1.4s infinite; }
 .frow .fm { color: var(--muted); font-size: 11.5px; }
 .fgroup { font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 10px 0 4px; letter-spacing: .04em; }
 .preview { margin-top: 10px; background: var(--term-bg); color: var(--term-ink); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 var(--mono); white-space: pre-wrap; max-height: 260px; overflow: auto; }
@@ -289,7 +295,7 @@ body.entering .tl-bar.live { animation: grow .8s backwards, stripes .7s linear i
 .ev.new { animation: flash 2s; }
 @keyframes flash { from { background: var(--l1-soft); } }
 .res { font-family: var(--mono); font-size: 11px; padding: 0 5px; border-radius: 4px; border: 1px solid var(--ok); color: var(--ok); }
-.res.run { border-color: var(--run); color: var(--run); }
+.res.run { border-color: var(--st-run); color: var(--st-run); }
 
 .utab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .utab th, .utab td { white-space: nowrap; }
@@ -337,7 +343,7 @@ body.entering .tl-bar.live { animation: grow .8s backwards, stripes .7s linear i
 .detail-col .now-box { min-height: 200px; }
 .detail-col .ev { grid-template-columns: 44px 18px minmax(0, 1fr); } .detail-col .ev .rt { grid-column: 3; text-align: left; }
 .vs .st2 { font-family: var(--mono); font-size: 10.5px; color: var(--muted); display: block; font-weight: 400; }
-.vs.inh { opacity: .7; border-style: dashed; } .vs.inh .no { border-style: dashed; color: var(--ok); }
+.vs.inh { opacity: .7; border-style: dashed; } .vs.inh .no { border-style: dashed; color: var(--st-past); }
 .vs.cut { border-color: var(--gate); } .vs.cut .no { border-color: var(--gate); color: var(--gate); background: var(--gate-soft); }
 .revs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
 .revs button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 6px; padding: 2px 8px; font: 12px var(--mono); color: var(--muted); }
@@ -356,9 +362,15 @@ body.entering .tl-bar.live { animation: grow .8s backwards, stripes .7s linear i
 .vs { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
 .vs .vh { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; }
 .vs .no { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 600 12px var(--mono); border: 1px solid var(--line); color: var(--muted); }
-.vs.done .no { border-color: var(--ok); color: var(--ok); background: var(--ok-soft); }
-.vs.cur { border-color: var(--run); box-shadow: 0 0 0 2px var(--l1-soft); }
-.vs.cur .no { background: var(--run); color: var(--surface); border-color: var(--run); }
+.vs.done .no { border-color: var(--st-past); color: var(--st-past); background: color-mix(in srgb, var(--st-past) 14%, transparent); }
+.vs.cur { border-color: var(--tc, var(--st-run)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc, var(--st-run)) 25%, transparent); }
+.vs.cur .no { background: var(--tc, var(--st-run)); color: var(--surface); border-color: var(--tc, var(--st-run)); }
+.t-wait .vs.cur { --tc: var(--st-wait); }
+.t-stop .vs.cur { --tc: var(--st-stop); }
+.t-done .vs.cur { --tc: var(--st-done); }
+.t-done .vs.done { --tc: var(--st-done); }
+.t-done .vs.done .no { border-color: var(--st-done); color: var(--st-done); background: color-mix(in srgb, var(--st-done) 14%, transparent); }
+.t-done .vs.inh .no { border-color: var(--st-done); color: var(--st-done); }
 .vs.todo { opacity: .55; }
 .vs.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
 .vs { scroll-margin-top: 70px; }
@@ -406,7 +418,7 @@ body.side-min .side-head { justify-content: center; padding: 0 0 10px; }
 .tmin { display: grid; place-items: center; width: 44px; height: 34px; margin: 0 auto 4px; border: 1px solid transparent; border-radius: 8px; background: transparent; font: 700 14px/1 var(--mono); }
 .tmin:hover { background: var(--surface-2); }
 .tmin[aria-current="true"] { background: var(--l1-soft); border-color: var(--l1); }
-.tmin.run { color: var(--run); } .tmin.wait, .tmin.stop { color: var(--gate); } .tmin.done { color: var(--ok); }
+.tmin.run { color: var(--st-run); } .tmin.wait { color: var(--st-wait); } .tmin.stop { color: var(--st-stop); } .tmin.done { color: var(--st-done); }
 </style>
 </head>
 <body class="lay-a">
@@ -536,6 +548,7 @@ const st = { task: null, tab: 'status', filter: 'all', comp: 'coder', file: 'pla
 const cur = () => FULL[st.task];
 const statusTxt = t => t.status === 'running' ? (t.waiting ? L('Awaiting answer', '답 기다림') : L('Running', '진행 중')) : t.status === 'done' ? L('Done', '완료') : L('Stopped', '중단');
 const statusBadge = t => `<span class="badge ${t.status === 'running' ? (t.waiting ? 'wait' : 'run') : t.status === 'done' ? 'done' : 'stop'}">${statusTxt(t)}</span>`;
+const taskTone = t => t.status === 'running' ? (t.waiting ? 't-wait' : 't-run') : t.status === 'done' ? 't-done' : 't-stop';
 const stepState = (t, n) => t.status === 'done' ? 'done' : n < t.step ? 'done' : n === t.step ? (t.status === 'stopped' ? 'stop' : 'cur') : 'todo';
 
 /* sidebar width and collapsed state are per-viewer conveniences */
@@ -565,9 +578,9 @@ function renderList() {
   } else
   $('task-list').innerHTML = list.map(t => `
     <button class="titem" data-task="${t.key}" aria-current="${t.key === st.task}">
-      <span class="id">${t.status === 'running' ? '<i class="dot run"></i>' : ''}${esc(t.id)}</span>
+      <span class="id">${t.status === 'running' ? `<i class="dot run${t.waiting ? ' wait' : ''}"></i>` : ''}${esc(t.id)}</span>
       <span class="meta">${statusBadge(t)}<span>${esc(prof(t))}</span><span>${esc(t.project)}</span></span>
-      <span class="mini-rail">${[1,2,3,4,5,6,7,8].map(n => `<i class="${stepState(t,n)}"></i>`).join('')}</span>
+      <span class="mini-rail ${taskTone(t)}">${[1,2,3,4,5,6,7,8].map(n => `<i class="${stepState(t,n)}"></i>`).join('')}</span>
     </button>`).join('');
   $('task-select').innerHTML = TASKS.map(t => `<option value="${t.key}" ${t.key === st.task ? 'selected' : ''}>${t.id} · ${statusTxt(t)}</option>`).join('');
 }
@@ -674,12 +687,12 @@ function vsteps(t, S, o) {
       const ss = o.state(n), sd = S.steps[n];
       h += `<div class="vs ${ss} ${o.compact ? 'compact' : ''} ${n === o.sel ? 'sel' : ''}" data-${o.key}="${n}">
         <div class="vh"><span class="no">${ss === 'done' ? '✓' : n}</span>
-          <span class="nm">${esc(STEP_NAME[n])}${ss === 'cur' && t.status === 'running' ? ' <i class="dot run"></i>' : ''}</span>
+          <span class="nm">${esc(STEP_NAME[n])}${ss === 'cur' && t.status === 'running' ? ` <i class="dot run${t.waiting ? ' wait' : ''}"></i>` : ''}</span>
           <span class="st">${ss === 'inh' ? L(`from rev${o.R - 1}`, `rev${o.R - 1} 이어받음`) : ss === 'cut' ? `<span style="color:var(--gate)">→ rev${o.R + 1}</span>` : sd.start ? `${t.revs && o.R > 0 && n === t.revs[o.R].back ? '<span style="color:var(--gate)">↺ rev' + o.R + '</span> ' : ''}${fmtMin(sd.min)}${o.stats ? ` · ${sd.tok}k · ${money(sd.cost)}` : ''}` : ''}</span></div></div>`;
       if (GATE_AFTER[n]) h += `<div class="vgate">${esc(GATE_AFTER[n])} ${gl(GATE_ID[n])}</div>`;
     });
   });
-  return `<div class="vlist">${h}</div>`;
+  return `<div class="vlist ${o.tone || ''}">${h}</div>`;
 }
 function revChips(t, R, key) {
   if (!t.revs) return '';
@@ -702,13 +715,13 @@ function renderStatus() {
     ${(t.unpriced || []).length ? `<p class="note">${L('Not in prices.json: ', 'prices.json에 없는 모델: ')}${t.unpriced.map(esc).join(', ')}</p>` : ''}
     ${t.log.filter(isMM).map(e => `<p class="note" style="color:var(--gate)">⚠ MISMATCH ${e.t} ${esc(e.tx)}: ${L('configured', '설정')} ${esc(e.model)} → ${L('actual', '실제')} ${esc(e.actual)}</p>`).join('')}`;
   const sel = t.status !== 'done' && R === latestRev(t) ? t.step : 0;
-  const vl = revChips(t, R, 'rev') + vsteps(t, SR, { key: 'step', sel, R, stats: true, compact: true, state: n => rstate(t, R, n) });
+  const vl = revChips(t, R, 'rev') + vsteps(t, SR, { key: 'step', sel, R, stats: true, compact: true, tone: taskTone(t), state: n => rstate(t, R, n) });
   const c = t.crit, cPass = c.res.filter(x => x === 'p').length;
   const ratio = t.est ? t.tokens / t.est : 0, eLvl = (t.vfail >= 3 || t.sstop >= 2) ? 'bad' : (t.vfail >= 2 || t.sstop >= 1) ? 'warn' : 'ok';
   const run = t.running[0];
-  const nowTile = t.status === 'done' ? `<div class="kv2 ok">✓ ${L('Done', '완료')}</div><div class="ks">${L('accepted at G3 · deliverable saved', 'G3 수용 · 결과물 저장됨')}</div>`
-    : t.status === 'stopped' ? `<div class="kv2 bad">■ ${L('Stopped', '중단')}</div><div class="ks">${(t.step ? L(`at ${t.step}. ${STEP_NAME[t.step]}`, `${t.step}. ${STEP_NAME[t.step]}에서`) : '–')}</div>`
-    : t.waiting ? `<div class="kv2 bad">? ${esc(t.waiting.gate)} ${L('awaiting', '대기')}</div><div class="ks">${L('answer the popup in the terminal', '터미널 팝업에 답하세요')} · ${esc(t.waiting.q)}</div>`
+  const nowTile = t.status === 'done' ? `<div class="kv2 st-done">✓ ${L('Done', '완료')}</div><div class="ks">${L('accepted at G3 · deliverable saved', 'G3 수용 · 결과물 저장됨')}</div>`
+    : t.status === 'stopped' ? `<div class="kv2 st-stop">■ ${L('Stopped', '중단')}</div><div class="ks">${(t.step ? L(`at ${t.step}. ${STEP_NAME[t.step]}`, `${t.step}. ${STEP_NAME[t.step]}에서`) : '–')}</div>`
+    : t.waiting ? `<div class="kv2 st-wait">? ${esc(t.waiting.gate)} ${L('awaiting', '대기')}</div><div class="ks">${L('answer the popup in the terminal', '터미널 팝업에 답하세요')} · ${esc(t.waiting.q)}</div>`
     : `<div class="kv2">${t.step ? t.step + '. ' + esc(STEP_NAME[t.step]) : '–'} <span class="dots3"><i></i><i></i><i></i></span></div><div class="ks">${run ? `${mtag(run.model)}${etag(run.a, run.effort)} ${esc(run.id)} · ${esc(run.sub)} · ${L(`${dm(run.since, t.now)}m so far`, `${dm(run.since, t.now)}분째`)}` : L('L1 working', 'L1 처리 중')}</div>`;
   const cells = Array.from({ length: c.total }, (_, i) => { const r = c.res[i]; return `<i class="${r === 'p' ? 'pass' : r === 'f' ? 'fail' : r === 'r' ? 'run' : ''}" title="${L('criterion', '기준')} ${i + 1}"></i>`; }).join('');
   const tiles = `<div class="kpis">
@@ -833,7 +846,7 @@ function replay(t) {
       <button data-rp="play">${st.playing ? L('Pause', '멈춤') : L('Auto-play', '자동 재생')}</button>
       <span class="seg">${[0.5, 1, 2, 4].map(v => `<button data-speed="${v}" aria-pressed="${(st.speed || 1) === v}">${v}×</button>`).join('')}</span><input type="range" min="0" max="${n - 1}" value="${i}" id="rp-range" aria-label="${L('Replay position', '재생 위치')}"><span class="count">${i + 1} / ${n}</span><span class="note" style="margin:0">${L('← → move · Space play', '← → 이동 · Space 재생')}</span></div>
     <div class="rp-grid">
-      <div>${t.revs ? `<span class="badge rev">rev${rOf(e)}</span>` : ''}${vsteps(t, stats(t, rOf(e)), { key: 'rpstep', compact: true, sel: curStep, R: rOf(e), state: n => (t.revs && rOf(e) > 0 && n < t.revs[rOf(e)].back) ? 'inh' : e.k === 'rev' && n === curStep ? 'cut' : n < curStep ? 'done' : n === curStep ? 'cur' : 'todo' })}</div>
+      <div>${t.revs ? `<span class="badge rev">rev${rOf(e)}</span>` : ''}${vsteps(t, stats(t, rOf(e)), { key: 'rpstep', compact: true, tone: taskTone(t), sel: curStep, R: rOf(e), state: n => (t.revs && rOf(e) > 0 && n < t.revs[rOf(e)].back) ? 'inh' : e.k === 'rev' && n === curStep ? 'cut' : n < curStep ? 'done' : n === curStep ? 'cur' : 'todo' })}</div>
       <div><div class="console" id="rp-console">${con}</div>
         <div class="rp-card"><b>${esc(e.t)} · ${curStep ?? '–'}. ${esc(STEP_NAME[curStep])}</b> · <span class="lvbadge ${lv.cls}">${lv.id} ${esc(compName(lv, e.a))}</span><br>
           ${esc(e.tx)}${e.sub ? `<br><span class="note">${esc(e.sub)}</span>` : ''}

@@ -71,7 +71,8 @@ aside.tasks h3 { font-size: 12px; letter-spacing: .06em; color: var(--muted); pa
 main { padding: 16px 20px 60px; min-width: 0; }
 .task-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; margin-bottom: 12px; }
 .task-head h2 { font-family: var(--mono); font-size: 19px; }
-.task-head .t { color: var(--muted); }
+.task-head h2[title], .task-head .info { cursor: help; }
+.task-head .info { color: var(--muted); font-size: 14px; }
 .task-head .where { font-size: 12px; color: var(--muted); width: 100%; }
 nav.tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 nav.tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 7px 12px; color: var(--muted); font-weight: 500; }
@@ -452,7 +453,8 @@ body.side-min .side-head { justify-content: center; padding: 0 0 10px; }
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => (s == null ? '–' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const fmt = s => esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+const escA = s => esc(s).replace(/"/g,'&quot;').replace(/\n/g,'&#10;');
+const fmt = s =>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 
 /* ---------- language: UI labels only; text read from task files stays as written ---------- */
 let LANG = 'en';
@@ -572,8 +574,10 @@ function renderList() {
 
 function renderHead() {
   const t = cur();
-  $('task-head').innerHTML = `<h2>${esc(t.id)}</h2>${statusBadge(t)}<span class="t">${esc(t.title)}</span>
-    <span class="where">${L('profile', '프로파일')} ${esc(prof(t))} · ${L('folder', '작업 위치')} <code>${esc(t.project)}/docs/agent/${esc(t.id)}/</code> · ${L('started', '시작')} ${esc(t.started)} · ${L('elapsed', '경과')} ${fmtMin(t.elapsed)}</span>`;
+  // prompt and task folder live in a tooltip so a long request does not take over the head
+  const tip = escA(`${L('Request', '요청')}: ${t.title}\n${L('Folder', '작업 위치')}: ${t.project}/docs/agent/${t.id}/`);
+  $('task-head').innerHTML = `<h2 title="${tip}">${esc(t.id)}</h2>${statusBadge(t)}<span class="info" title="${tip}" aria-label="${tip}">ⓘ</span>
+    <span class="where">${L('profile', '프로파일')} ${esc(prof(t))} · ${L('started', '시작')} ${esc(t.started)} · ${L('elapsed', '경과')} ${fmtMin(t.elapsed)}</span>`;
 }
 
 const num = s => parseFloat(String(s || '0')) || 0;

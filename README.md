@@ -4,7 +4,7 @@ jahoonjin의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| `my-agent` | 0.1.0 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent` | 0.1.3 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
 
 ## 설치
 
@@ -45,6 +45,7 @@ claude plugin uninstall my-agent@my-plugins
 
 ## 저장소 구조
 
+- `CLAUDE.md`: 개발용 안내(폴더 역할, 테스트 명령, 버전 규칙)
 - `.claude-plugin/marketplace.json`: 플러그인 목록
 - `plugins/<이름>/`: 플러그인. 설치하면 이 폴더만 복사됩니다.
 - `docs/agent/`: 이 저장소에서 돌린 my-agent 작업 기록. git에서 제외됩니다.

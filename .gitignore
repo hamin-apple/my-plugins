@@ -15,3 +15,6 @@ plugins/my-agent/monitor/tests/fixtures/projects.txt
 
 # my-agent task workspace
 docs/agent/
+
+# handoff notes
+docs/handoff/

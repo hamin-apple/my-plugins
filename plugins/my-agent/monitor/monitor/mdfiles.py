@@ -1,6 +1,8 @@
-"""Readers for the Markdown files my-agent keeps in a task folder (spec 5)."""
+"""Readers for the Markdown files my-agent keeps in a task folder (spec 5). Section and marker shapes: ma_schema."""
 import re
 from pathlib import Path
+
+import ma_schema
 
 
 def _text(p: Path):
@@ -11,17 +13,8 @@ def _text(p: Path):
 
 
 def _section(text: str, *names):
-    """Lines under the first `## <name>` heading, up to the next `## `."""
-    out, inside = [], False
-    for line in text.splitlines():
-        if line.startswith('## '):
-            if inside:
-                break
-            inside = line[3:].strip().split(' (')[0] in names
-            continue
-        if inside:
-            out.append(line)
-    return out if inside or out else None
+    """Lines under the first `## <name>` heading, up to the next `## `, or None."""
+    return ma_schema.section_lines(text, *names)
 
 
 def read_intake(p: Path):
@@ -40,28 +33,16 @@ def read_intake(p: Path):
             d['profile'] = val
         elif key == 'Location':
             d['location'] = val
-        elif key in ('요청', 'Request') and d['title'] is None:
+        elif key == 'Request' and d['title'] is None:
             d['title'] = val
         elif key == 'Delivered' and val:
             d['delivered'].append(val)
     return d
 
 
-def read_active(docs_agent: Path):
-    text = _text(Path(docs_agent) / '.active')
-    if text is None:
-        return None
-    d = {'task': None, 'phase': None, 'session': None, 'started': None}
-    for line in text.splitlines():
-        key, sep, val = line.partition(':')
-        if sep and key.strip().lower() in d:
-            d[key.strip().lower()] = val.strip()
-    return d
-
-
 def read_criteria(p: Path) -> int:
     text = _text(p)
-    sec = _section(text, '완료 기준', 'Criteria') if text else None
+    sec = _section(text, '완료 기준') if text else None
     return sum(1 for l in sec or [] if re.match(r'\s*\d+\.\s', l))
 
 
@@ -78,7 +59,7 @@ def read_verify(p: Path) -> list:
 
 
 def read_plan(p: Path) -> dict:
-    d = {'estimate_k': None, 'approved_at': None, 'mockup': None, 'revisions': []}
+    d = {'estimate_k': None, 'approved_at': None, 'mockup': None, 'prototype': None, 'revisions': []}
     text = _text(p)
     if not text:
         return d
@@ -88,15 +69,13 @@ def read_plan(p: Path) -> dict:
             if m:
                 d['estimate_k'] = int(m.group(1))
                 break
-    for line in _section(text, 'Approval') or []:
-        m = re.search(r'Approved\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2})', line)
-        if m:
-            d['approved_at'] = m.group(1)
-            break
+    d['approved_at'] = ma_schema.approved_at(text)
     mock = _section(text, 'Mock-up')
     if mock:
         body = '\n'.join(mock).strip('\n')
         d['mockup'] = body or None
+    if ma_schema.prototype_requested_text(text):
+        d['prototype'] = 'prototype'
     d['revisions'] = [l[2:].strip() for l in _section(text, 'Revisions') or [] if l.startswith('- ')]
     return d
 

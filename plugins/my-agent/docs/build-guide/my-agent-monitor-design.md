@@ -1,7 +1,7 @@
 # my-agent monitor 설계
 
-- 상태: 설계 v0.2 (2026-10-25). v0.1 승인 뒤 구현함(`~/dev/my-agent-monitor/`). v0.2는 플러그인에 넣는 결정(6.1절, 아키텍처 v0.20 Q14)을 더함. 같은 날 탐침 결과(아키텍처 v0.21)로 `start:`에 `session=`, `stop:`에 `mode=`·`effort=`가 붙음. 모니터는 이 필드를 읽지 않아도 됨.
-- 코드 위치: 지금은 `~/dev/my-agent-monitor/`. my-agent 플러그인을 만들 때 `~/dev/my-agent/monitor/`로 옮깁니다(6.1절).
+- 상태: 설계 v0.3 (2026-10-28, 아키텍처 v0.27에 맞춤: 코드 위치 정정, 5.2 줄 형식에 `unit=`·`revision` 상태·`Scope change`·되돌리기 `back=`/`archive=`, 모니터가 L4 `lib/ma_schema.py`로 읽음). v0.2 (2026-10-25). v0.1 승인 뒤 구현함(`~/dev/my-agent-monitor/`). v0.2는 플러그인에 넣는 결정(6.1절, 아키텍처 v0.20 Q14)을 더함. 같은 날 탐침 결과(아키텍처 v0.21)로 `start:`에 `session=`, `stop:`에 `mode=`·`effort=`가 붙음. 모니터는 이 필드를 읽지 않아도 됨.
+- 코드 위치: 플러그인 안 `monitor/`(`~/dev/my-plugins/plugins/my-agent/monitor/`, 6.1절). 처음 구현은 `~/dev/my-agent-monitor/`에 있었습니다.
 - 화면 기준: 목업 v22 `~/dev/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html`
 - 관련 문서: `my-agent-architecture.md` v0.19. 7절의 "my-agent 쪽 변경"은 v0.19에 반영했습니다.
 
@@ -131,27 +131,28 @@ my-agent는 phase 4개, 단계 8개, 게이트 5개(G1a, G1b, G2, G3, E)를 거�
 
 ### 5.2 run-log 줄 (모니터가 읽는 계약)
 
-모니터의 파서는 아래 줄만 해석하고, 모르는 줄은 무시합니다. 이 형식은 아키텍처 문서 4.7.2절에도 같은 내용으로 넣고(7절), `run-log.py`, `subagent-log.py`, 모니터가 같은 예시 파일(fixture)로 시험합니다.
+모니터의 파서는 아래 줄만 해석하고, 모르는 줄은 무시합니다. 줄 읽기는 L4 `lib/ma_schema.py`의 `split_line`을 그대로 씁니다(아키텍처 4.7절 "형식의 단일 소스"). 이 형식은 아키텍처 문서 4.7.2절에도 같은 내용으로 넣고(7절), `run-log.py`, `subagent-log.py`, 모니터가 같은 예시 파일(fixture)로 시험합니다.
 
 **줄 형식:** 한 줄에 기록 하나. `<YYYY-MM-DD HH:MM:SS> <종류>: <key=value ...>`. 값에 공백이 있으면 큰따옴표로 감쌉니다. 값 안의 `"`는 `\"`, `\`는 `\\`로 쓰고 줄바꿈은 공백으로 바꿉니다(아키텍처 4.7.2절). rev가 없는 줄은 가장 최근 `revision:` 줄의 rev를 따릅니다(없으면 rev0).
 
 ```text
 2026-10-24 15:56:02 step: n=5 name=Execute rev=0 session=4f2a…
-2026-10-24 15:56:10 call: agent=my-agent:coder model=- effort=- isolation=worktree background=true
+2026-10-24 15:56:10 call: agent=my-agent:coder model=- effort=- isolation=worktree background=true unit=u1
 2026-10-24 15:56:11 start: agent=my-agent:coder id=a81c… configured=sonnet effort=medium session=4f2a…
-2026-10-24 16:04:40 stop: id=a81c… actual=claude-sonnet-5-5 tokens=84213 in=61020 out=9870 cw=8113 cr=5210 secs=509 result=DONE end=ok mode=auto effort=medium
-2026-10-24 16:01:15 ask: gate=G2 q="my-agent:coder가 Bash를 실행하려 합니다"
-2026-10-24 16:01:31 answer: gate=G2 choice="이번만 허용"
+2026-10-24 16:04:40 stop: id=a81c… unit=u1 actual=claude-sonnet-5-5 tokens=84213 in=61020 out=9870 cw=8113 cr=5210 secs=509 result=DONE end=ok mode=auto effort=medium
+2026-10-24 16:01:15 ask: gate=G2 agent=my-agent:coder id=a81c… tool=Bash q="npm i fast-json-stable-stringify"
+2026-10-24 16:01:31 answer: gate=G2 id=a81c… result=allowed
 ```
 
 | 줄 | 쓰는 쪽 | 모니터가 쓰는 필드 |
 |---|---|---|
-| `step:` **(새로)** | run-log.py, 단계에 들어갈 때마다 | 시각, 단계 번호(1~8), rev, session ID |
+| `step:` **(새로)** | run-log.py, 단계에 들어갈 때마다 | 시각, 단계 번호(1~8), rev, session ID. Execute로 되돌린 줄에는 `back=`(이유)·`archive=`(보관한 판정) |
 | phase 진입 | run-log.py | 시각, phase |
 | `ask:` / `answer:` **(나눔)** | run-log.py | 게이트(G1a/G1b/G3/E), 질문, 선택. `ask:` 뒤에 `answer:`가 아직 없으면 "답 기다림" |
 | `ask: gate=G2` / `answer: gate=G2` **(새로)** | 플러그인 hook `PermissionRequest` / `PostToolUse` | 요청한 에이전트, 도구, 입력 요약, `result=allowed`. 그 에이전트가 끝날 때까지 `answer:`가 없으면 "not run (denied?)"로 표시 |
-| `call:` / `start:` / `stop:` | subagent-log.py | agent_type, agent_id, 모델(기대·실제), effort, isolation, 토큰, 시간, 결과 첫 줄, MISMATCH, 끝난 방식(`end=ok|partial|error`) |
-| `revision:` | run-log.py | rev 번호, 바뀐 내용 |
+| `call:` / `start:` / `stop:` | subagent-log.py | agent_type, agent_id, 작업 단위(`unit=`), 모델(기대·실제), effort, isolation, 토큰, 시간, 결과 첫 줄, MISMATCH, 끝난 방식(`end=ok|partial|error`). 연속 FAIL은 verifier `result=`가 `Verdict: FAIL`로 시작하는 줄로 세고 rev가 바뀌면 처음부터, 작업자 중단은 (rev, `unit=`)마다 셈 |
+| `revision:` | run-log.py | rev 번호, 바뀐 내용, 보관 폴더. `before=G1b`면 승인 전 계획 다시 쓰기(rev는 그대로). `state=pending` 줄과 같은 rev의 `state=done` 줄을 한 수정으로 합침 |
+| `fix:` | run-log.py | 고친 것. `what="Scope change: …"`이면 승인 범위 안 조정으로 표시 |
 | `cost:` | run-log.py | `session=`, `usd=` (cost_usd) |
 | `stale:`, `abort`, `deliver`, `resume`, `base:`, `log-error` | 아키텍처 문서 | 표시용 |
 
@@ -170,12 +171,15 @@ my-agent는 phase 4개, 단계 8개, 게이트 5개(G1a, G1b, G2, G3, E)를 거�
 ## 6. 구조
 
 ```text
-~/dev/my-agent-monitor/
+~/dev/my-plugins/plugins/my-agent/monitor/
 ├── server.py          # http.server, 127.0.0.1, 읽기 전용 JSON API + 정적 파일
-├── reader/            # 프로젝트 목록, intake, run-log, transcript, 파일 트리를 읽어 작업 모델로
+├── monitor-up.py      # 이미 떠 있는지 보고 띄우기 · 창 열기 (6.1절)
+├── monitor/           # 프로젝트 목록, intake, run-log, transcript, 파일 트리를 읽어 작업 모델로 (runlog · events · mdfiles · taskview 등. L4 lib/ma_schema를 import)
 ├── web/index.html     # 목업 v22에서 출발한 화면
 ├── prices.json
-├── tests/fixtures/    # 목업의 가짜 작업 5개를 실제 폴더 모양으로 만든 것
+├── menubar/           # 메뉴바 앱 (선택)
+├── tools/             # 화면 생성기 (다시 돌리면 web/index.html의 직접 수정이 사라짐)
+├── tests/fixtures/    # 실제 산출물 형식대로 만든 가짜 작업 (build_fixtures.py)
 └── README.md          # 실행 방법
 ```
 
@@ -187,7 +191,7 @@ my-agent는 phase 4개, 단계 8개, 게이트 5개(G1a, G1b, G2, G3, E)를 거�
 
 자세한 동작은 아키텍처 문서 4.7.4절에 있습니다. 모니터 쪽에서 바뀌는 것만 적습니다.
 
-- **위치:** 코드를 `~/dev/my-agent/monitor/`로 옮깁니다. 폴더 안 구조와 테스트는 그대로입니다.
+- **위치:** 코드를 플러그인 안 `monitor/`로 옮겼습니다(지금 `~/dev/my-plugins/plugins/my-agent/monitor/`). 읽는 코드는 `reader/`에서 `monitor/` 패키지로 이름이 바뀌었습니다.
 - **`GET /api/health`:** `{"app": "my-agent-monitor", "root": <monitor 폴더 절대 경로>}`를 돌려줍니다. 실행 스크립트가 이미 떠 있는 서버를 알아보는 데 씁니다.
 - **`monitor-up.py`:** 이미 떠 있으면 URL만 출력하고, 없으면 빈 포트에 서버를 띄웁니다. `--open`, `--no-open`, `--window`, `--tab`, `--task <key>`, `status`, `stop`을 받습니다. 여는 방식(`window`/`tab`)은 옵션, `~/dev/agent-tasks/monitor-config.json`, 기본값 `window` 순서로 정합니다. 브라우저(`default`/`safari`/`chrome`)는 `--browser` 옵션, 설정 파일의 `browser`, 기본값 `default`(기본 브라우저를 알아냄) 순서로 정하고, `monitor-up.py set-browser <값>`이 설정 파일의 `browser`만 바꿔 씁니다. 고른 브라우저가 열리지 않으면 기본 브라우저 탭으로 대체합니다. 어떤 경우에도 exit 0입니다.
 - **작업 링크:** `/#task=<key>`(key는 `<sha1 8자>/<task-id>`, URL 인코딩)로 열면 그 작업이 골라집니다. 키가 틀리거나 끝난 작업이면 기존 선택 규칙을 따릅니다.
@@ -203,7 +207,7 @@ my-agent는 phase 4개, 단계 8개, 게이트 5개(G1a, G1b, G2, G3, E)를 거�
 3. **팝업 기록을 둘로 나눔:** 팝업을 띄우기 직전에 `ask:`, 답을 받은 뒤 `answer:`. 지금은 질문과 선택을 한 줄로 남기므로, 답을 기다리는 동안은 기록이 없습니다 (4.7.2절 표의 L1 Recorder 행)
 4. **줄 형식:** 5.2의 형식을 4.7.2절에 넣음
 5. **G2 기록 hook:** 플러그인 hook에 `PermissionRequest`(→ `ask: gate=G2`)와 `PostToolUse`(앞의 G2 `ask:`와 같은 도구·입력일 때만 → `answer: gate=G2 result=allowed`)를 더함. matcher와 `.active` 찾기는 subagent-log와 같고, 실패해도 막지 않음(exit 0). 거부는 직접 알 수 없어 기록하지 않음 (4.4절 G2, 4.7.2절)
-6. **작업자 중단 기록:** E의 "slice 두 번 중단"을 셀 수 있도록, `stop:` 줄에 `end=ok|partial|error`를 적음 (maxTurns에 걸리면 partial. 이때는 SubagentStop이 없어 sweep이 meta 파일로 씀, 아키텍처 F22) (4.7.2절, 4.8절)
+6. **작업자 중단 기록:** E의 "같은 작업 단위 두 번 중단"을 셀 수 있도록(v0.3부터 `unit=`으로 단위를 구분), `stop:` 줄에 `end=ok|partial|error`를 적음 (maxTurns에 걸리면 partial. 이때는 SubagentStop이 없어 sweep이 meta 파일로 씀, 아키텍처 F22) (4.7.2절, 4.8절)
 7. **판정 파일 형식:** `verify.md`에 기준 번호마다 `PASS`/`FAIL` 한 줄, `scope.md` 완료 기준은 번호 목록 (4.3절 또는 4.4절)
 
 ## 8. 사용자가 정한 것

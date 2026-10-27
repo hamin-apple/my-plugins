@@ -3,6 +3,7 @@ name: writer
 description: my-agent L3 writer. L1 calls it in step 5 Execute for a document draft, in step 6 Merge to assemble research notes, and at G1b for a prototype page.
 model: sonnet
 effort: medium
+level: L3
 tools: Read, Write, Edit
 maxTurns: 40
 ---
@@ -21,7 +22,7 @@ maxTurns: 40
 
 ## 받는 것
 
-`plan.md` 경로와 작업 단위 이름, 읽을 파일, 결과 경로, 완료 기준 번호.
+`plan.md` 경로와 작업 단위 이름, 읽을 파일, 결과 경로, 완료 기준 번호. 작업 단위를 맡길 때 프롬프트 첫 줄은 `작업 단위: u<번호> <이름>`입니다(L1이 run-log에 단위를 남기려고 붙임).
 
 ## 할 일별 규칙
 

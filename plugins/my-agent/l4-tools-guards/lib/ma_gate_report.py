@@ -9,11 +9,12 @@ import re
 from pathlib import Path
 
 import ma_logline
+import ma_schema
 
 DEFAULT_REPORT_DIR = Path.home() / 'dev/skills/my-surrogate/gate-report'
 NO_REC = '(기록 없음)'
+SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustment (B3), not a fix
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
-FAMILY = re.compile(r'(opus|sonnet|haiku|fable)')
 
 
 def report_dir() -> Path:
@@ -79,11 +80,6 @@ def decisions(lines) -> list:
     return rows
 
 
-def _model_family(model):
-    m = FAMILY.search(model or '')
-    return m.group(1) if m else None
-
-
 def _int(value) -> int:
     try:
         return int(value)
@@ -134,15 +130,22 @@ def tally_text(lines) -> str:
     kinds = [(k, f) for _, k, f in lines]
     count = lambda kind, **want: sum(1 for k, f in kinds if k == kind and all(f.get(a) == b for a, b in want.items()))  # noqa: E731
     main = sum(1 for k, f in kinds if k == 'step' and f.get('model') not in (None, '-')
-               and _model_family(f.get('model')) != 'opus')
+               and ma_schema.family(f.get('model')) != 'opus')
     sub = count('stop', mismatch='1')
     opus = sum(1 for k, f in kinds if k == 'call' and 'opus' in (f.get('model') or ''))
+    scope = sum(1 for k, f in kinds if k == 'fix' and (f.get('what') or '').startswith(SCOPE_CHANGE))
+    fixes = count('fix') - scope
+    drafts = sum(1 for k, f in kinds if k == 'revision' and f.get('before'))
+    revs = len({f.get('rev') for k, f in kinds if k == 'revision' and not f.get('before') and f.get('rev')})
     out += ['', '## 지표', '| 항목 | 값 |', '|---|---|',
             f"| Verify 횟수 | {count('step', name='Verify')} |",
             f"| Plan Review 횟수 | {count('step', name='Plan-Review')} |",
             f"| 서브에이전트 수 | {count('start')} |",
             f'| 모델 불일치 수 | {main + sub} (주 세션 {main} · step 줄 기준, 서브에이전트 {sub}) |',
-            f"| L1 작은 수정 수 | {count('fix')} |",
+            f'| L1 작은 수정 수 | {fixes} |',
+            f'| 승인 범위 안 조정 수 | {scope} |',
+            f'| 승인 전 계획 다시 쓰기 수 | {drafts} |',
+            f'| 작업 중 수정 수 | {revs} |',
             f'| opus로 올린 호출 수 | {opus} (재시도와 명시 호출을 구별하지 않음) |',
             '', '## 단계별 비용·토큰']
     segs = _segments(lines)

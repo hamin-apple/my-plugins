@@ -4,10 +4,13 @@
 
 Runs in every session with the plugin on (F18), so anything whose input has no `my-agent:` agent_type exits 0 before
 the JSON is even parsed. For a my-agent agent: secrets are denied for everyone, reads must stay in the agent's read
-roots, writes in its write roots, judges' and explorer's Bash must not write, and only researcher and verifier may
-use the web. The architect may not add the `Approved` or `Prototype: requested` line L1 writes into plan.md (4.4 G1b),
-and the coder may not write `.git/` or `.claude/` (hooks and settings run in L1's context).
-The gate-analyst reads only gate-tally.md and gate-report.md and writes only gate-report.md.
+roots, writes in its write roots. The rules start from the agent's level (ma_schema.AGENTS): an L2 agent reads the
+task location, writes only its own file and its Bash only reads; an L3 agent reads the location and writes nothing.
+Roles then widen or narrow that: the verifier and researcher may use the web, the researcher and writer read the
+task folder and write `work/` (writer also `prototype/` and the plan's reference files), the coder writes the
+location or its worktree but not `docs/agent/`, `.git/` or `.claude/` (hooks and settings run in L1's context), and
+the gate-analyst reads only gate-tally.md and gate-report.md. The architect may not add the `Approved` or
+`Prototype: requested` line L1 writes into plan.md (4.4 G1b) nor drop a `## Revisions` line (4.8.1).
 Paths compare without case (ma_path). Any error → exit 2, so the call is blocked
 (`onFailure: block` covers a crash or timeout).
 """
@@ -23,15 +26,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
 import ma_plan  # noqa: E402
+import ma_schema  # noqa: E402
 from ma_path import same, under  # noqa: E402
 
 HOME = Path.home()
 SECRET_DIRS = [HOME / '.ssh', HOME / '.aws', HOME / '.config' / 'gh']
 SECRET_FILES = [HOME / '.netrc']
-JUDGE_FILE = {'architect': 'plan.md', 'plan-reviewer': 'plan-review.md', 'verifier': 'verify.md',
-              'reviewer': 'review.md'}
-READ_ONLY_BASH = {'verifier', 'reviewer', 'explorer'}
-WEB = {'researcher', 'verifier'}
+OWN_FILE = {'architect': 'plan.md', 'plan-reviewer': 'plan-review.md', 'verifier': 'verify.md',
+            'reviewer': 'review.md', 'gate-analyst': 'gate-report.md'}   # the one file each L2 agent writes
 WRITE_TOOLS = {'Edit', 'Write', 'NotebookEdit'}
 GLOB_CHARS = re.compile(r'[*?\[]')
 SECRET_NAMES = ['.env', '.env.local', 'server.pem', 'id.key']
@@ -64,17 +66,8 @@ def resolve(raw: str, cwd: Path) -> Path:
 
 def reference_files(plan_md: Path, location: Path) -> List[Path]:
     """Paths listed under `## 참고 파일` in plan.md (one per `-` line, backticks optional)."""
-    try:
-        text = plan_md.read_text(encoding='utf-8')
-    except (OSError, UnicodeDecodeError):
-        return []
-    m = re.search(r'(?m)^## 참고 파일\s*$', text)
-    if not m:
-        return []
     out = []
-    for line in text[m.end():].splitlines():
-        if line.startswith('## '):
-            break
+    for line in ma_schema.section_lines(ma_plan.read(plan_md), '참고 파일') or []:
         item = re.match(r'\s*[-*]\s+(.+)', line)
         if item:
             tick = re.search(r'`([^`]+)`', item.group(1))
@@ -89,24 +82,34 @@ def worktree(cwd: Path, location: Path) -> Optional[Path]:
     return None
 
 
-def rules(role: str, active, cwd: Path) -> Optional[Rules]:
+def level_rules(level: str, role: str, active) -> Rules:
     L, T = active.location, active.task_dir
-    if role in JUDGE_FILE:
-        return Rules([L], [T / JUDGE_FILE[role]], [], role not in READ_ONLY_BASH, role in WEB)
+    if level == 'L2':
+        return Rules([L], [T / OWN_FILE[role]], [], False, False)
+    return Rules([L], [], [], False, False)   # L3
+
+
+def rules(role: str, active, cwd: Path) -> Optional[Rules]:
+    level = ma_schema.AGENTS.get(role)
+    if level is None:
+        return None
+    r = level_rules(level, role, active)
+    L, T = active.location, active.task_dir
     if role == 'gate-analyst':
-        return Rules([T / 'gate-tally.md', T / 'gate-report.md'], [T / 'gate-report.md'], [], False, False)
-    if role == 'explorer':
-        return Rules([L], [], [], False, False)
+        return r._replace(read=[T / 'gate-tally.md', T / 'gate-report.md'])
+    if role == 'verifier':
+        return r._replace(web=True)
     if role == 'researcher':
-        return Rules([T], [T / 'work'], [], False, True)
+        return r._replace(read=[T], write=[T / 'work'], web=True)
     if role == 'writer':
-        return Rules([T] + reference_files(T / 'plan.md', L), [T / 'work', T / 'prototype'], [], False, False)
+        return r._replace(read=[T] + reference_files(T / 'plan.md', L), write=[T / 'work', T / 'prototype'])
     if role == 'coder':
         W = worktree(cwd, L)
         own = W or L
-        return Rules([L], [own], [L / 'docs' / 'agent', L / '.git', L / '.claude', own / 'docs' / 'agent',
-                                  own / '.git'] if W is None else [own / 'docs' / 'agent', own / '.git'], True, False)
-    return None
+        return r._replace(write=[own], bash_writes=True,
+                          deny_write=[L / 'docs' / 'agent', L / '.git', L / '.claude', own / 'docs' / 'agent',
+                                      own / '.git'] if W is None else [own / 'docs' / 'agent', own / '.git'])
+    return r
 
 
 def glob_base(pattern: str, base: Path) -> Path:
@@ -170,12 +173,13 @@ def check(inp: dict, role: str, active) -> Optional[str]:
         if not any(under(p, root) for root in r.write) or any(under(p, d) for d in r.deny_write):
             return f'{role}의 쓰기 범위 밖입니다: {p}'
     if role == 'architect' and tool in WRITE_TOOLS:
-        return marker_added(ti, writes[0])
+        return plan_write_problem(ti, writes[0])
     return None
 
 
-def marker_added(ti: dict, path: Path) -> Optional[str]:
-    """Deny reason when the architect's write would add L1's `Approved` or `Prototype: requested` line."""
+def plan_write_problem(ti: dict, path: Path) -> Optional[str]:
+    """Deny reason when the architect's write would add L1's `Approved` or `Prototype: requested` line, or drop or
+    change a `## Revisions` line (the rewrite must carry that section over as it is, 4.8.1)."""
     before = ma_plan.read(path)
     if 'content' in ti:
         after = ti['content']
@@ -185,6 +189,9 @@ def marker_added(ti: dict, path: Path) -> Optional[str]:
     for has, what in ((ma_plan.approved_text, '승인 줄'), (ma_plan.prototype_text, '`Prototype: requested` 줄')):
         if has(after) and not has(before):
             return f'plan.md의 {what}은 L1만 씁니다 (G1b).'
+    kept = {line.rstrip() for line in ma_schema.section_lines(after, 'Revisions') or []}
+    if any(line.strip() and line.rstrip() not in kept for line in ma_schema.section_lines(before, 'Revisions') or []):
+        return 'plan.md의 `## Revisions` 줄을 지우거나 바꾸지 않습니다. 다시 쓸 때 그 절을 그대로 옮기세요 (4.8.1).'
     return None
 
 
@@ -198,8 +205,11 @@ def main() -> int:
         if not isinstance(agent, str) or not agent.startswith('my-agent:'):
             return 0
         role = agent.split(':', 1)[1]
-        active = ma_active.find_active(inp.get('cwd') or os.getcwd())
-        why = '진행 중인 my-agent 작업이 없습니다 (.active 없음).' if active is None else check(inp, role, active)
+        broken = []
+        active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
+        missing = (f'{broken[0]}에 `task:` 줄이 없습니다.' if broken else
+                   '진행 중인 my-agent 작업이 없습니다 (.active 없음).')
+        why = missing if active is None else check(inp, role, active)
         if why:
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
                                                      'permissionDecisionReason': f'scope-guard: {why}'}},

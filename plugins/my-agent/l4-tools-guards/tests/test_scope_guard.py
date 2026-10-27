@@ -155,17 +155,34 @@ class ScopeGuardTest(unittest.TestCase):
 
     def test_architect_cannot_add_approval_or_prototype(self):
         plan = self.T / 'plan.md'
-        plan.write_text('# Plan\n\n## Approval\n')
+        plan.write_text('# Plan\n\n## Prototype\n\n필요\n\n## Approval\n')
         write = lambda content: self.denied('my-agent:architect', 'Write',  # noqa: E731
                                             {'file_path': str(plan), 'content': content})
-        self.assertTrue(write('# Plan v2\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n'))
-        self.assertTrue(write('# Plan v2\n\nPrototype: requested\n\n## Approval\n'))
-        self.assertFalse(write('# Plan v2\n\n## Approval\n'))
-        plan.write_text('# Plan\n\nPrototype: requested\n\n## Approval\n')
-        self.assertFalse(write('# Plan v2\n\nPrototype: requested\n\n## Approval\n'))
+        self.assertTrue(write('# Plan v2\n\n## Prototype\n\n필요\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n'))
+        self.assertTrue(write('# Plan v2\n\n## Prototype\n\n필요\nPrototype: requested\n\n## Approval\n'))
+        self.assertFalse(write('# Plan v2\n\n## Prototype\n\n필요\n\n## Approval\n'))
+        # outside ## Prototype the line opens nothing (A5), so it is not L1's marker either
+        self.assertFalse(write('# Plan v2\n\nPrototype: requested\n\n## Prototype\n\n필요\n\n## Approval\n'))
+        plan.write_text('# Plan\n\n## Prototype\n\nPrototype: requested\n\n## Approval\n')
+        self.assertFalse(write('# Plan v2\n\n## Prototype\n\nPrototype: requested\n\n## Approval\n'))
         self.assertTrue(self.denied('my-agent:architect', 'Edit',
                                     {'file_path': str(plan), 'old_string': '## Approval\n',
                                      'new_string': '## Approval\n- Approved 2026-10-25 10:00 G1b\n'}))
+
+    def test_architect_keeps_revisions(self):
+        """A2: a rewrite after a revision must carry `## Revisions` over unchanged."""
+        plan = self.T / 'plan.md'
+        rev = '- rev1 2026-10-25 10:00 기준 3 추가; archive archive/261025-100000-rev1/; back to ② 계획'
+        plan.write_text(f'# Plan\n\n## Approval\n\n## Revisions\n\n{rev}\n')
+        write = lambda content: self.denied('my-agent:architect', 'Write',  # noqa: E731
+                                            {'file_path': str(plan), 'content': content})
+        self.assertTrue(write('# Plan v2\n\n## Approval\n'))
+        self.assertTrue(write(f'# Plan v2\n\n## Approval\n\n## Revisions\n\n{rev[:-3]}\n'))
+        self.assertFalse(write(f'# Plan v2\n\n## Existing work\n\n| a | 유지 | b |\n\n## Approval\n\n## Revisions\n\n{rev}\n'))
+        self.assertTrue(self.denied('my-agent:architect', 'Edit',
+                                    {'file_path': str(plan), 'old_string': rev, 'new_string': ''}))
+        plan.write_text('# Plan\n\n## Approval\n')
+        self.assertFalse(write('# Plan v2\n\n## Approval\n'))
 
     def test_secret_spellings_denied(self):
         for agent, raw in (('explorer', '.ENV'), ('verifier', 'SERVER.PEM'), ('coder', 'Id.Key')):

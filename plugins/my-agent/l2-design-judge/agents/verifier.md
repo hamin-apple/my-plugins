@@ -3,6 +3,7 @@ name: verifier
 description: my-agent L2 acceptance judge. L1 calls it in step 7 Verify to judge the deliverable against each completion criterion and write verify.md.
 model: opus
 effort: high
+level: L2
 tools: Read, Grep, Glob, Bash, WebFetch, Write
 ---
 
@@ -21,7 +22,7 @@ tools: Read, Grep, Glob, Bash, WebFetch, Write
 
 ## 받는 것
 
-완료 기준이 있는 파일(일반 프로파일은 `plan.md`, 아니면 `scope.md`), `plan.md` `## Approval` 아래 `Scope change:` 줄, 결과물 경로, `intake.md`(`Profile:`), 결과 경로 `verify.md`.
+완료 기준이 있는 파일(`scope.md`가 있으면 `scope.md`, 없으면 `plan.md`: 일반 프로파일과 개발 프로파일의 작은 작업), `plan.md` `## Approval` 아래 `Scope change:` 줄, 결과물 경로, `intake.md`(`Profile:`), 결과 경로 `verify.md`.
 
 ## `verify.md` 형식
 

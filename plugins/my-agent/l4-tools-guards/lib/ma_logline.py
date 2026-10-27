@@ -6,6 +6,8 @@ A value is double-quoted when it is empty or has whitespace, `"`, `'` or `\\`; i
 from datetime import datetime
 from pathlib import Path
 
+import ma_schema
+
 SPECIAL = set('"\'\\')
 
 
@@ -40,22 +42,9 @@ def log_error(active, where: str, exc: BaseException) -> None:
 
 
 def parse_line(text: str):
-    """(kind, fields) of a run-log line, or None; same rules as the monitor's reader."""
-    import re
-    import shlex
-    m = re.match(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) ([a-z][a-z0-9-]*):(?:\s+(.*))?$', text.strip())
-    if not m:
-        return None
-    try:
-        tokens = shlex.split(m.group(3) or '')
-    except ValueError:
-        return None
-    fields = {}
-    for tok in tokens:
-        key, sep, value = tok.partition('=')
-        if sep:
-            fields[key] = value
-    return m.group(2), fields
+    """(kind, fields) of a run-log line, or None; the monitor reads with the same ma_schema.split_line."""
+    parsed = ma_schema.split_line(text)
+    return parsed[1:] if parsed else None
 
 
 def read(log: Path) -> list:
@@ -65,6 +54,14 @@ def read(log: Path) -> list:
     except OSError:
         return []
     return [p for p in map(parse_line, text.splitlines()) if p]
+
+
+def unreadable(log: Path) -> list:
+    """Line numbers that look like records but do not parse (they drop out of read(), 4.7.2)."""
+    try:
+        return ma_schema.unreadable_lines(Path(log).read_text(encoding='utf-8', errors='replace'))
+    except OSError:
+        return []
 
 
 HOOK_KINDS = {'call', 'start', 'stop', 'log-error'}

@@ -26,7 +26,7 @@ EXPECTED = {
         revs=[{'at': '14:10'}, {'at': '14:47', 'from': 5, 'back': 3, 'why': '하위 질문에 "비용 통제" 추가 (사용자)',
                                 'archive': 'archive/261024-144700-rev1/',
                                 'invalid': ['plan-review.md', 'plan.md ## Approval'],
-                                'keep': 'Existing work: work/q1~q3 유지'}]),
+                                'keep': 'Existing work: work/q1~q3 유지', 'state': 'done'}]),
     ('obsidian-notes', '261023-hooks-notify-note'): dict(
         status='done', step=9, profile='research', gates=G('ok', 'ok', 'ok', 'ok'),
         crit={'total': 5, 'res': ['p'] * 5}, vfail=0, sstop=0, revs=None),
@@ -104,6 +104,23 @@ class TaskViewTest(unittest.TestCase):
         self.assertEqual((d['kind'], d['items'][0][:2]), ('file', ['docs/notes/claude-hooks-notify.md', '6.1 KB']))
         self.assertEqual(task('work-notes', '261022-weekly-report')['deliver']['items'][0][1], '–')
         self.assertEqual(task('flight-search', '261021-flight-watch')['deliver']['kind'], 'none')
+
+    def test_commit_deliver_and_prototype(self):
+        """E: a dev task's `Delivered: commit:<sha>` is a commit, not a missing file; A5: `Prototype: requested`
+        under ## Prototype (not in the mock-up) marks the mock-up."""
+        with tempfile.TemporaryDirectory() as d:
+            shutil.copytree(PROJECTS / 'claude-sessions', Path(d) / 'claude-sessions')
+            T = Path(d) / 'claude-sessions/docs/agent/261024-cli-json-output'
+            intake = T / 'intake.md'
+            intake.write_text(intake.read_text(encoding='utf-8').replace('Status: active', 'Status: done')
+                              + 'Delivered: commit:a491e13\n', encoding='utf-8')
+            plan = T / 'plan.md'
+            plan.write_text(plan.read_text(encoding='utf-8').replace(
+                '## Approval', '## Prototype\n필요\nPrototype: requested\n## Approval'), encoding='utf-8')
+            t = task('claude-sessions', '261024-cli-json-output', Path(d))
+            self.assertEqual(t['deliver']['items'], [['commit:a491e13', 'commit', '–']])
+            self.assertEqual((t['mocks'][-1]['kind'], t['mocks'][-1]['proto']), ('CLI 입출력', 'prototype'))
+            self.assertFalse(t['mocks'][-1]['body'].startswith('Kind:'))
 
     def test_broken_task_isolated(self):
         with tempfile.TemporaryDirectory() as d:

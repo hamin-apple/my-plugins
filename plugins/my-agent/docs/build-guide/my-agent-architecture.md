@@ -1,7 +1,7 @@
 # my-agent 아키텍처: HITL을 결합한 멀티 에이전트 오케스트레이션
 
 - 작성일: 2026-10-23
-- 상태: 설계 초안 v0.26 (저장소를 `~/dev/my-plugins` 마켓플레이스 안으로 옮김, 플러그인 버전을 플러그인 폴더 기준으로 셈). v0.25: 대화형 검증 반영(F30~F34, G2 git 옵션 빈틈, 메인 모델 검사, 이어 부른 서브에이전트 기록). 구현 0~9단계를 끝냄(2026-10-25, 설치는 사용자 승인으로 처음 `my-agent@my-agent-dev`, 옮긴 뒤 `my-agent@my-plugins`, 사용자 범위): 탐침 전부, 플러그인 뼈대, 기록 hook, G1b·판정 최신성·scope-guard hook, ask/deny 목록, 에이전트 9개(gate-analyst는 2026-10-26에 더함), 세 프로파일과 시나리오 3건, workflow 규칙(F29), 개발 프로파일 검증 3건(`docs/ref/dev-profile-validation.md`), 알림 확인(F34). 설치 뒤 확인까지 끝냄(작업 디렉터리 밖 쓰기: hook `ask`). v0.2 4레벨 구조, v0.3 G1b mock-up·prototype과 Q1~Q6 결정, v0.4 검토 반영(하드 게이트 범위, 설치 범위, 모순 정리, 팝업 규칙), v0.5 스킬 구성, 병합 충돌 처리, my-dev 은퇴 절차, v0.6 서브에이전트 호출 자동 기록(4.7.2절), v0.7 작업 중 수정 요청 절차(4.8.1절)와 작업 ID 규칙(4.7.3절), v0.8 재개·동시 작업·중단·작업 위치(4.8.2절)와 병렬 coder 규칙, v0.9 일관성 정리, hook 실패 시 차단, 권한 모드, 예상 규모, 환경 오류, v0.10 보안(4.12절)과 시험 방법(4.13절), v0.11 에이전트를 레벨 폴더에 둔 채 플러그인으로 불러옴(4.5.1절, Q12), v0.12 승인 전 허용 목록의 입력값, 자기 수정 시 잠김 방지, 새 세션 알림 범위, 작업 중 my-agent 변경 감지, v0.13 run-log의 모델 기대값(호출 인자 기록), `status` 표시 범위, 금액은 status line 스냅샷을 참고로만, v0.14 workflow 크기 medium과 workflow 에이전트 보호 조건, vault 저장 규칙, v0.15 일관성 정리(모델 우선순위, MISMATCH 범위, feedback 위치 등), v0.16 vault 저장을 없애고 결과물은 범위 문서에서 정한 위치로, v0.17 E 조건에서 예상 규모(토큰) 초과를 뺌. 예상 규모는 참고로만 보여 줌, v0.18 에이전트별 effort 고정(4.5절)과 run-log 기록, v0.19 모니터(`my-agent-monitor-design.md`)용 기록: run-log 줄 형식, `step:` 줄, 팝업 `ask:`/`answer:` 분리, G2 기록 hook, 작업자 중단 표시, 판정 파일 형식, 프로젝트 목록 등록, v0.20 모니터를 플러그인의 `monitor/`에 넣고 Router가 작업을 시작할 때 띄움, 수동 실행용 `/my-agent:monitor` 스킬(4.7.4절), v0.21 탐침 결과(F19~F27): worktree 에이전트의 `.active` 찾기, maxTurns 종료를 meta 파일로 찾아 `end=partial`로 기록, `stop:` 줄의 `mode=`·`effort=`, 스킬 frontmatter hook 경로를 `${CLAUDE_PLUGIN_ROOT}`로, v0.22 용어를 phase로 통일, my-dev를 건드리는 작업 항목(frontmatter 변경, 은퇴 절차)을 구현 순서에서 뺌. my-agent는 my-dev 없이 이 설계대로만 동작, v0.23 구현 2~7단계: F28(거부된 Skill은 hook도 없음)·F29(workflow `agentType`), git 밖 작업 위치의 `.active` 찾기, `NotebookEdit`도 G1b가 막음, manifest `version` 유지
+- 상태: 설계 초안 v0.27 (2026-10-28, 검토 `docs/handoff/my-agent-review-2026-10-27.md`(저장소 루트) 반영: 형식의 단일 소스 `lib/ma_schema.py`(4.7절), 에이전트 frontmatter `level:`(4.5절), 작업 단위 ID `u<n>`와 run-log `unit=`(4.7.2절, 4.8.2절), 수정 기록(승인 전 다시 쓰기, `revision … state=pending|done`, Execute로 되돌릴 때 판정 보관, `Scope change` 기록, 4.8.1절), 읽기 검증 경고, 문서 사이 불일치 정리). v0.26: 저장소를 `~/dev/my-plugins` 마켓플레이스 안으로 옮김, 플러그인 버전을 플러그인 폴더 기준으로 셈). v0.25: 대화형 검증 반영(F30~F34, G2 git 옵션 빈틈, 메인 모델 검사, 이어 부른 서브에이전트 기록). 구현 0~9단계를 끝냄(2026-10-25, 설치는 사용자 승인으로 처음 `my-agent@my-agent-dev`, 옮긴 뒤 `my-agent@my-plugins`, 사용자 범위): 탐침 전부, 플러그인 뼈대, 기록 hook, G1b·판정 최신성·scope-guard hook, ask/deny 목록, 에이전트 9개(gate-analyst는 2026-10-26에 더함), 세 프로파일과 시나리오 3건, workflow 규칙(F29), 개발 프로파일 검증 3건(`docs/ref/dev-profile-validation.md`), 알림 확인(F34). 설치 뒤 확인까지 끝냄(작업 디렉터리 밖 쓰기: hook `ask`). v0.2 4레벨 구조, v0.3 G1b mock-up·prototype과 Q1~Q6 결정, v0.4 검토 반영(하드 게이트 범위, 설치 범위, 모순 정리, 팝업 규칙), v0.5 스킬 구성, 병합 충돌 처리, my-dev 은퇴 절차, v0.6 서브에이전트 호출 자동 기록(4.7.2절), v0.7 작업 중 수정 요청 절차(4.8.1절)와 작업 ID 규칙(4.7.3절), v0.8 재개·동시 작업·중단·작업 위치(4.8.2절)와 병렬 coder 규칙, v0.9 일관성 정리, hook 실패 시 차단, 권한 모드, 예상 규모, 환경 오류, v0.10 보안(4.12절)과 시험 방법(4.13절), v0.11 에이전트를 레벨 폴더에 둔 채 플러그인으로 불러옴(4.5.1절, Q12), v0.12 승인 전 허용 목록의 입력값, 자기 수정 시 잠김 방지, 새 세션 알림 범위, 작업 중 my-agent 변경 감지, v0.13 run-log의 모델 기대값(호출 인자 기록), `status` 표시 범위, 금액은 status line 스냅샷을 참고로만, v0.14 workflow 크기 medium과 workflow 에이전트 보호 조건, vault 저장 규칙, v0.15 일관성 정리(모델 우선순위, MISMATCH 범위, feedback 위치 등), v0.16 vault 저장을 없애고 결과물은 범위 문서에서 정한 위치로, v0.17 E 조건에서 예상 규모(토큰) 초과를 뺌. 예상 규모는 참고로만 보여 줌, v0.18 에이전트별 effort 고정(4.5절)과 run-log 기록, v0.19 모니터(`my-agent-monitor-design.md`)용 기록: run-log 줄 형식, `step:` 줄, 팝업 `ask:`/`answer:` 분리, G2 기록 hook, 작업자 중단 표시, 판정 파일 형식, 프로젝트 목록 등록, v0.20 모니터를 플러그인의 `monitor/`에 넣고 Router가 작업을 시작할 때 띄움, 수동 실행용 `/my-agent:monitor` 스킬(4.7.4절), v0.21 탐침 결과(F19~F27): worktree 에이전트의 `.active` 찾기, maxTurns 종료를 meta 파일로 찾아 `end=partial`로 기록, `stop:` 줄의 `mode=`·`effort=`, 스킬 frontmatter hook 경로를 `${CLAUDE_PLUGIN_ROOT}`로, v0.22 용어를 phase로 통일, my-dev를 건드리는 작업 항목(frontmatter 변경, 은퇴 절차)을 구현 순서에서 뺌. my-agent는 my-dev 없이 이 설계대로만 동작, v0.23 구현 2~7단계: F28(거부된 Skill은 hook도 없음)·F29(workflow `agentType`), git 밖 작업 위치의 `.active` 찾기, `NotebookEdit`도 G1b가 막음, manifest `version` 유지
 - 실행 환경: 로컬 Claude Code (CLI, 스킬, 서브에이전트, hooks)
 - 이전 문서와의 관계: `hitl-orchestration-guide.md`는 Managed Agents API를 기준으로 쓴 문서입니다. 개념만 참고하고, 구현은 이 문서를 따릅니다.
 
@@ -9,7 +9,7 @@
 
 1. **사람에게 묻는 일은 메인 세션이 맡습니다.** my-agent 스킬을 실행하는 메인 세션만 사람에게 질문하고 workflow를 시작합니다. 서브에이전트는 결과를 파일로 남기고 보고만 합니다. 서브에이전트에게는 질문 도구와 workflow 도구가 없기 때문입니다.
 2. **단계 구성:** 공통 단계 골격 하나를 두고, 작업 종류에 따라 프로파일 세 가지(일반 / 조사·문서 / 개발)로 단계를 바꿔 씁니다.
-3. **사람 확인 지점:** 범위·계획 승인(G1), 위험한 행동 승인(G2), 최종 수용(G3), 에스컬레이션(E) 네 곳입니다.
+3. **사람 확인 지점:** 범위·계획 승인(G1), 위험한 행동 승인(G2), 최종 수용(G3), 에스컬레이션(E) 네 곳입니다. G1은 범위 확정(G1a)과 계획 승인(G1b) 두 팝업으로 나뉘므로 4.4절 표는 다섯 줄입니다. 게이트가 아닌 L1 팝업은 run-log에 `gate=Q`로 남깁니다.
    - G1b(계획 승인)와 G2는 hook과 권한 규칙으로 **강제**합니다.
    - G1a(범위 확정), G3, E는 단계 규칙(결과 파일의 확인 기록)으로 지킵니다.
 4. **my-dev에서 참고하는 것:** my-agent는 새 스킬이고 my-dev를 실행하지 않습니다. 파일로 남기는 결과물, 작성자와 분리된 판정자, 팝업 질문, escalation, 기록 방식을 참고해 새로 씁니다. 단, 3장에서 패턴 하나하나를 공식 문서와 대조해 유지·변경·폐기를 정했습니다.
@@ -17,7 +17,7 @@
    - 레벨 4개(L1 오케스트레이션 · L2 설계·판정 · L3 작업 · L4 도구·가드)
    - 레벨마다 구성 요소 4개
    - 진행 phase 4개
-   - 게이트 4개
+   - 게이트 4개 (G1 = G1a·G1b)
    - 팝업 선택지 최대 4개
 
 ### 출처 표시
@@ -145,7 +145,7 @@
 | 계층 | L1 오케스트레이션 · L2 설계·판정 · L3 작업 · L4 도구·가드 |
 | 레벨 안의 구성 요소 | 레벨마다 4개 (4.2절) |
 | 진행 phase | 정의 · 계획 · 구축 · 수용 (8단계를 2개씩 묶음, 4.3절) |
-| 사람 확인 지점 | G1 범위·계획, G2 위험 행동, G3 최종 수용, E 에스컬레이션 (4.4절) |
+| 사람 확인 지점 | G1 범위·계획(G1a·G1b), G2 위험 행동, G3 최종 수용, E 에스컬레이션 (4.4절) |
 | 팝업 선택지 | 최대 4개 (`AskUserQuestion`도 선택지를 2~4개만 받음). 사람에게 묻는 것은 **모두** 팝업으로 함 (P3) |
 | 저장소 최상위 폴더 | 레벨마다 하나: `l1-orchestration/`, `l2-design-judge/`, `l3-workers/`, `l4-tools-guards/` (4.7절) |
 
@@ -201,6 +201,8 @@ flowchart TD
 | **L4 도구·가드** | Claude Code 런타임 | 도구·MCP, hooks, 권한 규칙, scripts | 정해진 형식의 입력 | 실행 결과, 허용/거부 판정 | (판단하지 않음) |
 
 - **L2의 5번째 에이전트 (2026-10-26):** 레벨마다 4개라는 구성 요소 단위(4.1.1절)에서 L2만 5개입니다. `gate-analyst`는 ④ 수용의 회고에서만 불리는 보조 역할이라 phase 흐름의 판정자(architect, plan-reviewer, verifier, reviewer)와 따로 셉니다. 사람이 한 번에 보는 항목(게이트, 팝업 선택지)은 늘지 않습니다.
+- **L4 구성 요소의 이름 (v0.27, 검토 D6):** 도구·MCP · hook · 권한 규칙 · 스크립트 네 가지입니다. SKILL.md 레벨 표와 모니터 설계 문서도 이 이름을 씁니다.
+- **레벨 밖 (v0.27):** 모니터(`monitor/`, 읽기 전용 로컬 웹)와 Claude Code 권한 창(G2를 띄움)은 어느 레벨에도 속하지 않습니다. 모니터는 L4 `lib/`를 import해 같은 형식으로 읽기만 하고(4.7절), 권한 창은 Claude Code 런타임이 띄웁니다.
 - **L4는 집계만, L2는 해석, L1은 복사:** 게이트 결정을 세는 `scripts/gate-report.py`(L4)는 판단하지 않고, 성향을 해석해 `gate-report.md`를 쓰는 것은 gate-analyst(L2)이며, 리포트를 작업 위치 밖으로 복사하는 것은 L1입니다(4.11절).
 
 **Gemini 4-Level과 다른 점: 위임 경로** [제안]
@@ -227,10 +229,10 @@ flowchart TD
 |---|---|---|---|---|---|---|
 | **① 정의** | 1. Intake | L1 Router | 요청을 분류하고 프로파일과 작업 ID를 정함(4.7.3절) | ← | ← | ← |
 | | 2. Explore → Scope **(G1a)** | L3 explorer → L1 | 사실을 수집한 뒤 WHAT/WHY를 인터뷰하고 사람이 확정 | 목적, 완료 기준, 비목표 | 질문, 범위, 출처 기준, 결과물 형식 | my-dev Spec 7개 카테고리 |
-| **② 계획** | 3. Plan | L2 architect | HOW, 작업 분할, 병렬 여부, 예상 규모, **mock-up(필수)**, prototype 필요 여부 | 작업 목록 + mock-up: 결과물 예시 | 하위 질문 → 조사 단위 → 종합 구조 + mock-up: 노트 목차와 샘플 단락 1개 | slice와 병렬 그룹, 흐름도 + mock-up: UI 와이어프레임, CLI 입출력, API 요청·응답 |
+| **② 계획** | 3. Plan | L2 architect | HOW, 작업 분할, 병렬 여부, 예상 규모, **mock-up(필수)**, prototype 필요 여부 | 작업 목록 + mock-up: 결과물 예시 | 하위 질문 → 조사 단위 → 종합 구조 + mock-up: 노트 목차와 샘플 단락 1개 | 작업 단위(`### u<n>`)와 병렬 그룹, 흐름도 + mock-up: UI 와이어프레임, CLI 입출력, API 요청·응답 |
 | | 4. Plan Review → (prototype) **(G1b)** | L2 plan-reviewer → (L3 writer) → L1 | 독립 판정 → 필요하면 prototype → 사람이 승인 | Plan Review 생략 가능 | 범위 누락, 출처 편향 | my-dev Plan Review와 같음 |
 | **③ 구축** | 5. Execute | L3 작업자 | 승인된 작업 단위를 실행 | subagents | **workflow** 또는 병렬 subagents | coder 병렬은 첫 그룹만 worktree, 이후 메인 트리에서 순서대로 (Q9) |
-| | 6. Merge · 자체 점검 | L1 Orchestrator | 결과를 합치고 기본 점검 (충돌 처리는 4.8절) | 결과 모음 | 노트를 종합 구조에 배치 | worktree 병합 → 테스트·lint |
+| | 6. Merge · 자체 점검 | L1 Orchestrator | 결과를 합치고 기본 점검 (충돌 처리는 4.8절). 문서 결과물은 L1이 이 단계에서 맡기는 마지막 writer 작업 단위가 합치고 L1은 점검만 함 | 마지막 writer 단위가 합친 `work/final.md` 점검 | 노트를 종합 구조에 배치 | worktree 병합 → 테스트·lint |
 | **④ 수용** | 7. Verify | L2 verifier | 완료 기준 대비 판정 | 기준별 PASS/FAIL | 주장과 인용을 교차 확인 | my-dev Verify와 같음 |
 | | 8. Review → Deliver **(G3)** | L2 reviewer → L1 | 품질 판정 후 사람이 수용 | 결과 요약 | 문서 품질 → 범위 문서에서 정한 위치에 저장 (4.4절 "G3 뒤의 결과물 저장") | Code Review → Commit 승인 |
 
@@ -250,8 +252,8 @@ flowchart TD
 | **G1a 범위 확정** | Scope가 끝났을 때 | 단계 조건: `scope.md`의 `## Confirmation` | 범위 문서 | 확정 / 수정 / 중단 |
 | **G1b 계획 승인** | Plan Review가 끝났을 때 (prototype을 만들었으면 그다음) | **하드 게이트 hook** (아래 설명) | **채팅에 붙인 mock-up 전문**, 흐름도, 계획 요약, 예상 규모, (선택) prototype 링크 | 승인 / 수정 / 중단 |
 | **G2 위험 행동** | 해당 도구를 호출하기 직전 | `permissions.ask`와 `deny` (F7), 플러그인 hook (F9, F18) | 도구, 인자, 요청한 에이전트 | 이번 한 번 허용 / 거부 |
-| **G3 최종 수용** | Verify에서 ALL PASS, Review에서 BLOCKER 0 | 단계 조건 + 판정 최신성 hook (P11) | 결과 요약, 실패·미처리 목록, diff 또는 산출물, 사용 토큰과 금액(참고, 4.8절) | 수용 / 재작업 / 중단 (재작업은 기준이 그대로면 ③으로, 기준이 바뀌면 4.8.1절) |
-| **E 에스컬레이션** | Verify 3번 연속 FAIL, slice 두 번 중단, workflow가 오류로 끝남 | 단계 규칙 (P7, P8) | 막힌 지점, 시도한 내용 | 방향 제시 / 범위 수정 / 중단 |
+| **G3 최종 수용** | Verify에서 ALL PASS, Review에서 BLOCKER 0 | 단계 조건 + 판정 최신성 hook (P11) | 결과 요약, 실패·미처리 목록, diff 또는 산출물, 사용 토큰과 금액(참고, 4.8절) | 수용 / 재작업 / 중단. 개발 프로파일은 커밋 / 재작업 / 중단 (재작업은 기준이 그대로면 4.8.1절 "Execute로 되돌리기"로 ③에, 기준이 바뀌면 같은 작업 수정) |
+| **E 에스컬레이션** | Verify 3번 연속 FAIL, 같은 작업 단위 두 번 중단(같은 `unit=`), workflow가 오류로 끝남, 병합 충돌이 계획 오류를 드러냄 | 단계 규칙 (P7, P8) | 막힌 지점, 시도한 내용 | 방향 제시 / 범위 수정 / 중단 |
 
 **G1b 하드 게이트** [제안]
 
@@ -268,8 +270,8 @@ flowchart TD
 - **예외:**
   - 작업 위치의 `docs/agent/` 아래 결과 파일과 `~/dev/agent-tasks/active-index.json`을 쓰는 것은 허용합니다.
   - 승인 전 쓰기 차단(`decide`)은 회고 리포트 복사 폴더에도 그대로 적용됩니다. 복사 폴더 예외는 아래 G2의 "작업 디렉터리 밖에 쓰기"에만 있습니다.
-  - `plan.md`에 `Prototype: requested` 줄이 있으면 `my-agent:writer` 위임과 `docs/agent/<task-id>/prototype/` 쓰기를 허용합니다.
-  - 승인 줄과 `Prototype: requested` 줄은 L1만 씁니다. architect가 `plan.md`를 쓸 때 이 두 줄을 새로 넣으면 scope-guard가 막습니다(v0.24, 최종 리뷰 C2). 프롬프트 지시만으로는 인젝션된 탐색 결과가 승인 줄을 넣는 것을 막지 못하기 때문입니다.
+  - `plan.md`의 `## Prototype` 절 안에 `Prototype: requested` 줄이 있으면 `my-agent:writer` 위임과 `docs/agent/<task-id>/prototype/` 쓰기를 허용합니다.
+  - 승인 줄과 `Prototype: requested` 줄은 L1만 씁니다. architect가 `plan.md`를 쓸 때 이 두 줄을 새로 넣으면 scope-guard가 막습니다(v0.24, 최종 리뷰 C2). 프롬프트 지시만으로는 인젝션된 탐색 결과가 승인 줄을 넣는 것을 막지 못하기 때문입니다. `Prototype: requested`는 `## Prototype` 절 안에 있을 때만 셉니다(v0.27, hook·모니터가 같은 `ma_schema` 규칙). 같은 방식으로 `## Revisions` 줄을 지우거나 바꾸는 architect의 쓰기도 막습니다(v0.27, 검토 A2: 다시 쓴 계획이 수정 기록을 지우던 문제).
 - **구현 방식:** my-dev의 `verdict-fresh-check.py`와 같습니다(`permissionDecision: deny`와 사유).
 - **판정 최신성 hook이 보는 것 (v0.24):** `git commit`, 작업 폴더 `deliverable/`에 쓰는 모든 도구(Bash, Write, Edit), 작업 폴더에서 읽거나 복사해 `docs/agent/` 밖에 쓰는 Bash. 그래서 matcher가 `Bash|Edit|Write|NotebookEdit`입니다. `deliverable/`로 옮기는 동안에는 방금 옮긴 파일을 "판정 뒤에 바뀐 파일"로 세지 않습니다(여러 파일을 차례로 옮길 수 있게). `git`이 든 명령을 치환(`$(`, 백틱) 때문에 해석하지 못하면 커밋일 수 있다고 보고 막되, 판정 파일 대신 그 이유와 "치환 없이 나눠 실행"을 알립니다(v0.25).
 - **hook이 실패하면 막음:**
@@ -302,11 +304,11 @@ flowchart TD
 1. Plan Review 판정이 나오면, mock-up과 흐름도를 **채팅에 붙여** 보여줍니다. 판정에 따라 바뀔 부분은 표시합니다.
 2. `## Prototype`이 "필요"이면 팝업으로 묻습니다: `prototype 만들기 (Recommended)` / `mock-up으로 충분` / `계획 수정`.
 3. prototype을 만들기로 하면:
-   - `plan.md`에 `Prototype: requested` 줄을 남깁니다. 이 줄이 하드 게이트의 예외를 엽니다.
+   - `plan.md`의 `## Prototype` 절 안에 `Prototype: requested` 줄을 남깁니다. 이 줄이 하드 게이트의 예외를 엽니다.
    - L3 writer에게 맡깁니다. writer는 `artifact-design` 기준에 맞춰 `docs/agent/<task-id>/prototype/index.html`을 만듭니다.
    - L1이 그 파일을 읽어 확인한 뒤 비공개 artifact로 게시합니다. 게시처럼 바깥으로 나가는 일은 L1만 합니다.
 4. 승인 팝업을 띄웁니다: `승인 (Recommended)` / `수정 요청` / `중단`. 선택지는 4개를 넘기지 않습니다(4.1.1절).
-5. 수정을 요청하면 architect에게 다시 맡기고 1번으로 돌아갑니다. prototype은 mock-up이 바뀐 경우에만 다시 만듭니다.
+5. 수정을 요청하면 L1이 작업 폴더를 보관하고 `revision: … before=G1b` 줄을 남긴 뒤(4.8.1절 "승인 전 다시 쓰기") architect에게 다시 맡기고 1번으로 돌아갑니다. prototype은 mock-up이 바뀐 경우에만 다시 만듭니다.
 
 **prototype의 성격**
 
@@ -325,6 +327,7 @@ flowchart TD
   - **보장 범위:** 이 예외는 plan-approved-check와 verdict-fresh-check hook이 묻지 않는다는 뜻입니다. Claude Code 자체 권한 창(G2)이 `python3 …/gate-report.py` 명령에 뜨는지는 사용자 권한 설정에 달려 있고, 이 설계가 보장하지 않습니다.
 - **`deny` 규칙:** 비밀값 파일 읽기(경로 고정 규칙, 4.12절), `--no-verify`, `git push --force`(`git -C … push --force` 꼴 포함)
 - **허용 범위:** 위험한 행동은 "세션 동안 허용"을 쓰지 않고 한 번만 허용합니다. (F3)
+- **설치 (v0.27, 검토 E):** 플러그인은 `permissions` 규칙을 실을 수 없습니다. `l4-tools-guards/permissions/permissions.json`은 사람이 `~/.claude/settings.json`의 `permissions`에 직접 병합하는 목록이고, plugin.json·hook·지시문은 이 파일을 읽지 않습니다. 병합하지 않으면 G2 `ask`/`deny`가 없습니다(README 설치 절차).
 - **G3 뒤의 커밋:** 개발 프로파일에서 G3로 커밋을 승인한 뒤에도 `git commit`의 `ask` 규칙 때문에 권한 창이 한 번 더 뜹니다. 일부러 두 번 확인하는 것입니다. `ask`는 어떤 모드에서도 자동 승인되지 않습니다(F7).
 
 **G3 뒤의 결과물 저장 (일반, 조사·문서 프로파일)** [제안]
@@ -359,7 +362,7 @@ Obsidian vault에는 저장하지 않습니다(2026-10-24 결정, Q13). 개발 �
 
 ### 4.5 에이전트 정의 (레벨 폴더의 `agents/`) [제안]
 
-L2 5개, L3 4개, 모두 9개입니다. 모든 에이전트에서 `Agent` 도구를 뺍니다. 정의 파일은 L2는 `l2-design-judge/agents/`, L3는 `l3-workers/agents/`에 두고, 플러그인으로 불러와 그 자리에서 호출합니다(4.5.1절). 표의 이름은 호출할 때 쓰는 이름입니다.
+L2 5개, L3 4개, 모두 9개입니다. 모든 에이전트에서 `Agent` 도구를 뺍니다. 정의 파일 frontmatter에 `level: L2` 또는 `level: L3`를 둡니다(v0.27, 검토 D1). Claude Code는 이 필드를 쓰지 않고(`claude plugin validate --strict` 통과), `test_agents.py`가 폴더·`ma_schema.AGENTS`와 같은지 확인합니다. 정의 파일은 L2는 `l2-design-judge/agents/`, L3는 `l3-workers/agents/`에 두고, 플러그인으로 불러와 그 자리에서 호출합니다(4.5.1절). 표의 이름은 호출할 때 쓰는 이름입니다.
 
 | 레벨 | 에이전트 | 모델 | effort | tools | 기타 | 역할 |
 |---|---|---|---|---|---|---|
@@ -371,7 +374,7 @@ L2 5개, L3 4개, 모두 9개입니다. 모든 에이전트에서 `Agent` 도구
 | L3 | `my-agent:explorer` | sonnet | low | Read, Grep, Glob, Bash(읽기) | `maxTurns` 지정 | 위치와 사실 수집 |
 | L3 | `my-agent:researcher` | sonnet | medium | Read(자기 작업 폴더만), WebSearch, WebFetch, Write(`work/` 전용) | `maxTurns` 지정 | 하위 질문 하나 조사 → 출처를 붙인 노트 작성 |
 | L3 | `my-agent:writer` | sonnet | medium | Read, Write, Edit | `maxTurns` 지정 | 문서 초안 작성 |
-| L3 | `my-agent:coder` | sonnet (재시도 시 opus) | medium | Read, Edit, Write, Bash | `maxTurns` 지정. worktree는 정의 파일에 고정하지 않고 호출할 때 정함 | slice 구현 |
+| L3 | `my-agent:coder` | sonnet (재시도 시 opus) | medium | Read, Edit, Write, Bash | `maxTurns` 지정. worktree는 정의 파일에 고정하지 않고 호출할 때 정함 | 작업 단위 하나 구현 |
 
 - **effort:** 정의 파일 frontmatter의 `effort:`로 고정합니다. 판정과 설계(L2)는 틀리면 되돌리는 비용이 커서 high, 사실 수집(explorer)은 low, 나머지 작업자는 medium입니다. gate-analyst(L2)도 high입니다(2026-10-27, 처음에는 결정 해석이라 medium으로 두었다가 올림).
   - 우선순위: 환경 변수 `CLAUDE_CODE_EFFORT_LEVEL` > 호출할 때 준 `effort` 인자(v2.1.292 이상) > 정의 파일 `effort:` > 세션 effort (sub-agents 문서 "Choose an effort level").
@@ -380,14 +383,14 @@ L2 5개, L3 4개, 모두 9개입니다. 모든 에이전트에서 `Agent` 도구
   - 쓸 수 있는 값은 모델마다 다릅니다. 정의 파일의 값이 그 모델에서 안 되면 어떻게 되는지는 구현 때 확인합니다 [미확인].
 - **`maxTurns`:** 모든 L3 작업자에 둡니다. 상한에 걸려 결과가 부분만 오면(partial) "작업자 중단 1회"로 셉니다(4.8절).
 - **coder의 worktree:** 정의 파일에 `isolation: worktree`를 고정하면 Q9의 "이후는 메인 트리에서 순서대로"를 할 수 없습니다. 그래서 L1이 첫 병렬 그룹을 위임할 때만 Agent 호출에 `isolation: "worktree"`를 넘깁니다. worktrees 문서는 정의 파일에 고정하는 방법 말고도 "에이전트에 worktree를 쓰라고 요청하는" 방법을 적고 있고, Agent 도구에는 호출마다 주는 `isolation` 인자가 있습니다. 커스텀 에이전트에도 호출 인자 `isolation`이 그대로 적용됩니다(F19).
-- **읽기·쓰기 경로 제한:** `tools`만으로는 읽고 쓸 수 있는 경로를 제한할 수 없습니다. 그래서 `agent_type` 기준 PreToolUse hook(`scope-guard.py`)을 플러그인 hook으로 두고 레벨별로 읽기와 쓰기 경로를 막습니다. 읽기 범위는 4.12절에 있습니다. (F9)
+- **읽기·쓰기 경로 제한:** `tools`만으로는 읽고 쓸 수 있는 경로를 제한할 수 없습니다. 그래서 `agent_type` 기준 PreToolUse hook(`scope-guard.py`)을 플러그인 hook으로 두고 레벨별로 읽기와 쓰기 경로를 막습니다. 규칙은 레벨 기본값(L2: 작업 위치 읽기, 자기 결과 파일만 쓰기, 읽기·확인 Bash, 웹 없음 / L3: 작업 위치 읽기, 쓰기 없음)에 역할별 규칙(verifier 웹, researcher·writer·coder의 읽기·쓰기 범위, gate-analyst의 좁은 읽기)을 덮어쓰는 순서로 짭니다(v0.27, 검토 D2). 읽기 범위는 4.12절에 있습니다. (F9)
   - **적용 범위:** 플러그인 hook은 플러그인을 켠 모든 세션과 프로젝트에서 실행됩니다(F18). 그래서 guard는 `agent_type`이 `my-agent:`로 시작할 때만 검사하고, 나머지는 바로 통과시킵니다. 다른 세션과 다른 스킬에는 영향을 주지 않습니다.
   - **gate-analyst의 범위 (2026-10-26):** 판정자용 읽기 범위(작업 위치 전체)를 쓰지 않고 따로 등록합니다. 읽기는 작업 폴더의 `gate-tally.md`와 `gate-report.md` 둘뿐입니다(Write 도구가 다시 쓰기 전에 Read를 요구하므로 리포트 파일도 넣음). 쓰기는 `gate-report.md` 하나입니다. Bash 쓰기와 웹은 없습니다. 그래서 run-log나 `plan.md` 같은 원본은 읽지 못하고 L4 집계만 받습니다. 승인 전 허용 목록(4.4절)에는 넣지 않습니다(회고는 승인 뒤에만 있음).
   - **L2 판정자의 Bash:** guard가 읽기·확인 명령(테스트, lint, `git diff`, `git status`, `grep` 등)만 허용합니다. 파일을 바꾸는 명령은 막습니다. git은 읽기 하위 명령 목록에 있는 것만 통과합니다(v0.24).
   - **coder가 쓰지 못하는 곳 (v0.24):** `docs/agent/`, `.git/`, `.claude/`(자기 worktree 안은 제외). `.git/hooks`, `.git/config`, `.claude/settings.json`은 L1의 `git commit`·`git status`나 다음 세션에서 실행되기 때문입니다(최종 리뷰 I2).
   - **실패하면 막음:** guard에도 `"onFailure": "block"`을 둡니다. `agent_type`이 `my-agent:`로 시작하지 않으면 맨 먼저 exit 0으로 끝내서, guard 버그가 다른 세션을 막지 않게 합니다.
 - **불러오는 방법:** 4.5.1절. `~/.claude/agents/`에는 아무것도 설치하지 않습니다.
-- **architect의 계획 수정:** 사람이 G1b에서 수정을 요청하면, L1이 요청 내용을 받아 architect를 다시 호출합니다. 수정 요청이 확정된 범위(WHAT/WHY)를 바꾸거나 승인 뒤에 들어오면 작업 중 수정 절차(4.8.1절)를 탑니다.
+- **architect의 계획 수정:** 사람이 G1b에서 수정을 요청하면, L1이 작업 폴더를 보관하고 `revision: … before=G1b` 줄을 남긴 뒤 요청 내용을 받아 architect를 다시 호출합니다(4.8.1절). 수정 요청이 확정된 범위(WHAT/WHY)를 바꾸거나 승인 뒤에 들어오면 작업 중 수정 절차(4.8.1절)를 탑니다.
 - **이름 규칙:** 정의 파일 이름과 frontmatter `name`은 `architect`, `gate-analyst`처럼 역할만 씁니다. 플러그인 이름이 앞에 붙어 `my-agent:architect`로 불리므로 `my-` 접두어 규칙(CLAUDE.md)을 만족합니다. 새 에이전트 `gate-analyst`에도 `my-`를 따로 붙이지 않습니다(기존 8개와 같고, 이름과 파일 이름이 같아야 한다는 테스트가 있음). frontmatter `name`에는 `:`를 넣지 않습니다.
 
 ### 4.5.1 플러그인으로 불러오기 (Q12 결정) [제안]
@@ -501,8 +504,8 @@ claude plugin install my-agent@my-plugins
 | 작업이 1~4개이고, 결과를 보면서 다음 행동을 정해야 함 | **subagents** | 메인 세션이 매 턴 판단합니다. |
 | 같은 형태의 작업이 5개 이상이고 서로 독립적이며, 교차 검토가 필요함 | **workflow** (Execute 단계 하나 안에서) | 중간 결과가 스크립트 변수에 있어 메인 컨텍스트에 쌓이지 않습니다. 교차 검토 패턴도 넣을 수 있습니다. (F4) |
 | 에이전트끼리 토론하며 서로 반박해야 함 | (agent teams: 보류) | F6 |
-| 코드 slice가 서로 다른 파일을 건드리고, 메인 트리에 커밋하지 않은 변경이 없음 | 병렬 coder + worktree | F12. 겹치면 순서대로 진행합니다. |
-| 앞 그룹을 병합한 뒤 이어지는 slice, 또는 사용자의 커밋하지 않은 변경이 메인 트리에 있음 | 메인 트리에서 coder를 순서대로 (my-dev 방식) | worktree는 커밋 기준으로 만들어져 커밋하지 않은 변경을 보지 못합니다(Q9). |
+| 코드 작업 단위가 서로 다른 파일을 건드리고, 메인 트리에 커밋하지 않은 변경이 없음 | 병렬 coder + worktree | F12. 겹치면 순서대로 진행합니다. |
+| 앞 그룹을 병합한 뒤 이어지는 작업 단위, 또는 사용자의 커밋하지 않은 변경이 메인 트리에 있음 | 메인 트리에서 coder를 순서대로 (my-dev 방식) | worktree는 커밋 기준으로 만들어져 커밋하지 않은 변경을 보지 못합니다(Q9). |
 
 - **병렬 coder 규칙 (Q9 결정):**
   - `~/.claude/settings.json`에 `worktree.baseRef: "head"`를 넣습니다(설치 때 승인). 기본값 `"fresh"`는 원격 기본 브랜치에서 갈라지므로, feature 브랜치나 push하지 않은 커밋 위에서 작업할 수 없습니다. 이 설정은 다른 세션의 worktree에도 적용됩니다.
@@ -519,7 +522,7 @@ claude plugin install my-agent@my-plugins
 
 ### 4.7 파일 구조 [제안]
 
-저장소 최상위는 레벨마다 폴더 하나입니다. 유지보수할 때 "어느 레벨의 문제인가"만 정하면 고칠 파일 위치가 정해집니다. `monitor/`만 예외입니다. 모니터는 작업에 끼지 않고 기록을 읽기만 하므로 레벨에 속하지 않습니다.
+저장소 최상위는 레벨마다 폴더 하나입니다. 유지보수할 때 "어느 레벨의 문제인가"만 정하면 고칠 파일 위치가 정해집니다. `monitor/`만 예외입니다. 모니터는 작업에 끼지 않고 기록을 읽기만 하므로 레벨에 속하지 않습니다. 형식을 같게 읽으려고 L4 `lib/`를 import합니다(아래 "형식의 단일 소스").
 
 ```text
 ~/dev/my-plugins/plugins/my-agent/   # 플러그인 폴더 (마켓플레이스 ~/dev/my-plugins 안, 4.5.1절)
@@ -533,14 +536,14 @@ claude plugin install my-agent@my-plugins
 ├── l3-workers/agents/              # L3: explorer · researcher · writer · coder
 ├── l4-tools-guards/
 │   ├── hooks/                      #   hooks.json (플러그인 hook) · plan-approved-check · verdict-fresh-check · scope-guard · subagent-log · permission-log · session-notice
-│   ├── permissions/                #   ~/.claude/settings.json에 넣을 ask/deny 목록
-│   ├── lib/                        #   hook·script 공용 함수: ma_logline · ma_active · ma_gate_report(집계, 복사 폴더) 외
-│   ├── scripts/                    #   run-log · feedback · gate-report (tally · copy)
+│   ├── permissions/                #   ~/.claude/settings.json에 사람이 직접 병합할 ask/deny 목록 (4.4절)
+│   ├── lib/                        #   hook·script·모니터 공용: ma_schema(형식의 단일 소스) · ma_logline · ma_active · ma_gate_report(집계, 복사 폴더) 외
+│   ├── scripts/                    #   run-log · feedback(add · count · list · done) · gate-report (tally · copy) · check-run · secret-scan
 │   ├── probe/                      #   구현 0단계 탐침용 임시 hook (4.13절)
 │   └── tests/                      #   hook 단위 테스트, scenarios/, judge-fixtures/
 ├── monitor/                        # 모니터 (읽기 전용, 레벨 밖): server.py · monitor-up.py · monitor/ · web/ · prices.json · tools/ · tests/ (4.7.4절)
 ├── maintenance-notes.md            # 레벨별 4개 절로 구성 (4.11절)
-├── feedback.md                     # 회고에서 나온 개선점. 항목마다 레벨(L1~L4)과 상태(open/done) (4.11절)
+├── feedback.md                     # 회고에서 나온 개선점. 항목마다 레벨(L1~L4)과 상태(open/done). 첫 add 때 생김 (4.11절)
 └── docs/ref/                       # 참고 자료, dev-profile-validation.md (개발 프로파일 검증 기록)
 
 <작업 프로젝트>/docs/agent/
@@ -553,17 +556,25 @@ claude plugin install my-agent@my-plugins
     ├── verify.md  review.md  run-log.md
     ├── gate-tally.md  gate-report.md  # 회고: L4 집계(gate-report.py tally)와 gate-analyst의 결정 리포트 (4.11절)
     ├── deliverable/                # (선택) 범위 문서가 저장 위치를 정하지 않았을 때의 최종 결과물 (4.4절)
-    └── archive/                    # 수정 직전 사본 <YYMMDD-hhmmss>-rev<N>/ (4.8.1절)
+    └── archive/                    # 사본: 수정 직전 <YYMMDD-hhmmss>-rev<N>/, 승인 전 다시 쓰기 -rev<N>-draft/, 되돌리기 전 판정 -run<n>/ (4.8.1절)
 
 ~/dev/skills/my-surrogate/gate-report/   # 작업 위치 밖: 회고 리포트 복사본 <task-id>.md (같은 이름이 있으면 -2, -3). $MA_GATE_REPORT_DIR로 바꿈 (4.4절)
 ```
 
 - `gate-tally.md`와 `gate-report.md`는 `work/`가 아니라 작업 폴더 바로 아래에 둡니다. 판정 최신성 hook이 `work/`를 "판정 뒤에 바뀐 파일"로 세기 때문입니다.
 
+**형식의 단일 소스 (v0.27, 검토 C)**
+
+- `l4-tools-guards/lib/ma_schema.py`가 여러 파일이 함께 쓰는 낱말과 모양을 한곳에 둡니다: 에이전트 이름과 레벨(`AGENTS`), 작업 단위를 맡는 에이전트, G1b 승인 전 허용 목록, 판정어(`Verdict: ALL PASS`/`Verdict: FAIL`, `READY FOR APPROVAL`/`REVISE`, `SKIPPED`, `BLOCKER <n>`, `DONE`/`PARTIAL`, `## Applied after review`), 상태 값(`intake.md` Status, 작업 단위 Status, `end=`), 게이트 이름, 모델 family, run-log 줄 읽기, `## 절` 찾기, `Approved`·`Prototype: requested` 줄, 작업 단위 제목, mock-up `Kind:`.
+- hook·script는 이 모듈로 읽고 비교합니다. 모니터는 `monitor/monitor/__init__.py`에서 `l4-tools-guards/lib`를 `sys.path`에 넣어 같은 모듈을 씁니다.
+- 에이전트 정의와 L1 파일은 이 낱말을 글로 씁니다. `tests/test_schema.py`가 정의 파일이 파서가 찾는 낱말을 그대로 쓰는지, plugin.json·`AGENTS`·scope-guard·모니터 작업자 목록이 같은지 확인합니다. 계기는 검토 A1입니다: verifier는 `Verdict: FAIL`을 쓰는데 모니터는 `FAIL`로 시작하는지만 봐서 연속 FAIL과 E 표시가 켜지지 않았습니다.
+- **읽기 검증 (검토 C9):** `.active`가 있는데 `task:` 줄이 없으면 G1b·판정 최신성 hook은 통과시키되 경고(systemMessage)를 내고, scope-guard는 my-agent 에이전트를 막고 이유를 알립니다. run-log에 시각으로 시작하지만 읽히지 않는 줄이 있으면 `run-log.py`가 stderr로 경고하고 `check-run.py`가 실패로 셉니다.
+
 **모니터가 읽는 파일 형식 (v0.19)**
 
 - `scope.md`의 `## 완료 기준`(일반 프로파일은 `plan.md` 맨 위 범위 요약)은 `1.`, `2.`처럼 번호 목록으로 씁니다.
 - `verify.md`는 기준마다 한 줄씩 `- <번호>. PASS|FAIL <근거>`로 씁니다. 맨 위 `Verdict:` 줄은 그대로 둡니다.
+- `plan.md` `## Mock-up`의 첫 줄은 `Kind: <종류>`(예: CLI 출력, 노트 목차)입니다. `## Prototype` 절 안의 `Prototype: requested`는 L1만 씁니다. 개발 프로파일의 결과물은 `intake.md`에 `Delivered: commit:<짧은 sha>`, run-log에 `deliver: path=commit:<짧은 sha>`로 같은 표기를 씁니다(v0.27).
 - 작업 폴더와 run-log는 모니터(플러그인의 `monitor/`, `my-agent-monitor-design.md`)가 읽기만 합니다. 형식을 바꾸면 모니터 문서 5.2절도 함께 고칩니다.
 
 ### 4.7.1 스킬 구성 (`SKILL.md`) [제안]
@@ -619,7 +630,7 @@ hooks:
 | 스킬의 동작 [공식] | 작성 규칙 |
 |---|---|
 | 스킬 내용은 호출할 때 한 번 대화에 들어가고, 이후 턴에서 다시 읽지 않습니다. | 한 번만 하는 절차가 아니라 **계속 지킬 규칙**으로 씁니다. |
-| 압축된 뒤에는 스킬 내용의 **앞부분 5,000토큰만** 다시 붙습니다. | 앞부분에 핵심 규칙을 둡니다: 팝업 규칙, 4게이트, 레벨 표, `.active` 규칙, "phase를 시작할 때 phase 파일을 읽는다". |
+| 압축된 뒤에는 스킬 내용의 **앞부분 5,000토큰만** 다시 붙습니다. | 앞부분에 핵심 규칙을 둡니다: 팝업 규칙, 4게이트, 레벨 표, `.active` 규칙, 수정 요청 한 줄(4.8.1절), "phase를 시작할 때 phase 파일을 읽는다". |
 | SKILL.md는 500줄 아래로 두고, 자세한 내용은 따로 둘 것을 권합니다. | phase 규칙(`l1-orchestration/phases/*.md`)과 프로파일(`profiles/*.md`)은 그 phase가 시작될 때 `${CLAUDE_SKILL_DIR}` 경로로 읽습니다. 압축된 뒤에도 다시 읽습니다. |
 | `model:`은 스킬을 호출한 턴에만 적용됩니다(F13). | 다음 턴부터는 세션 모델로 돌아가므로, run-log의 메인 모델 MISMATCH 검사를 남깁니다(P9). `run-log.py`는 `step:` 줄의 모델을 L1이 주는 `--model`이 아니라 세션 transcript의 마지막 메인 응답에서 읽습니다. L1의 자기 보고는 시나리오 두 번에서 틀렸습니다(Sonnet 세션에서 `claude-opus-5-5`, v0.25). L1을 opus로 두려면 세션을 opus로 엽니다(`claude --model opus` 또는 `/model opus`). **사용자 결정(2026-10-25):** 전역 기본은 sonnet으로 두고 my-agent 세션만 opus로 엽니다. 메인 MISMATCH는 작업당·모델당 한 번만 출력하고, L1이 `/model opus`를 한 줄로 안내한 뒤 계속합니다. |
 | 스킬 hook은 스킬을 호출한 뒤에야 등록됩니다. | 새 세션이나 재개한 세션에서는 `/my-agent continue`를 **먼저** 실행해야 G1b hook이 걸립니다. 플러그인의 `SessionStart` hook이 미완료 작업을 알려 줍니다. 남는 위험은 4.8.2절에 적었습니다(Q8). |
@@ -652,14 +663,23 @@ hooks:
 
   ```text
   2026-10-24 15:56:02 step: n=5 name=Execute rev=0 session=4f2a…
-  2026-10-24 15:56:10 call: agent=my-agent:coder model=- effort=- isolation=worktree background=true
+  2026-10-24 15:56:10 call: agent=my-agent:coder model=- effort=- isolation=worktree background=true unit=u1
   2026-10-24 15:56:11 start: agent=my-agent:coder id=a81c… configured=sonnet effort=medium session=4f2a…
-  2026-10-24 16:04:40 stop: id=a81c… actual=claude-sonnet-5-5 tokens=84213 in=61020 out=9870 cw=8113 cr=5210 secs=509 result=DONE end=ok mode=auto effort=medium
+  2026-10-24 16:04:40 stop: id=a81c… unit=u1 actual=claude-sonnet-5-5 tokens=84213 in=61020 out=9870 cw=8113 cr=5210 secs=509 result=DONE end=ok mode=auto effort=medium
   2026-10-24 16:01:15 ask: gate=G2 agent=my-agent:coder id=a81c… tool=Bash q="npm i fast-json-stable-stringify"
   2026-10-24 16:01:30 answer: gate=G2 id=a81c… result=allowed
   ```
 
-- 기존 줄(`cost:`, `revision:`, `stale:`, `base:`, `abort`, `deliver`, `resume`, `rules-changed`, `log-error`)도 같은 형식을 씁니다.
+- 기존 줄(`cost:`, `revision:`, `stale:`, `base:`, `fix:`, `merge:`, `abort`, `deliver`, `resume`, `rules-changed`, `log-error`)도 같은 형식을 씁니다. 수정과 되돌리기 줄의 예(4.8.1절):
+
+  ```text
+  2026-10-24 15:20:00 revision: rev=0 before=G1b why="u2를 둘로 나눔" archive=archive/261024-152000-rev0-draft
+  2026-10-24 16:50:00 step: n=5 name=Execute rev=0 session=4f2a… back="Verify FAIL 2" archive=archive/261024-165000-run1
+  2026-10-24 17:02:10 fix: what="Scope change: 기준 3 직접 확인은 사용자가 나중에 함" files=plan.md
+  2026-10-24 17:09:50 stale: id=a81c… rev=1
+  2026-10-24 17:10:00 revision: rev=1 why="출력에 --json 추가" archive=archive/261024-171000-rev1 to=2 invalidated=plan-review.md,verify.md,review.md keep="work/ 유지" state=pending
+  2026-10-24 17:11:00 revision: rev=1 state=done
+  ```
 
 **팝업 기록: 권장안 `rec=`와 직접 입력 `other=1` (2026-10-26)**
 
@@ -694,7 +714,7 @@ hooks:
 - **matcher:** `^my-agent:`. my-agent 에이전트만 기록하고, 다른 세션과 스킬의 서브에이전트는 건드리지 않습니다.
   - matcher가 비면 Claude Code 내부 에이전트(프롬프트 제안, `/btw` 등)의 `SubagentStop`에도 걸리므로 비워 두지 않습니다(hooks 문서).
 - **어느 작업의 run-log인가:** 입력의 `cwd`를 기준으로 4.8.2절의 찾는 순서대로 `.active`를 찾아 작업 ID를 읽습니다. worktree 에이전트의 `cwd`는 `.claude/worktrees/agent-<id>`이므로 메인 트리를 따라갑니다(F19). `.active`가 없으면 아무것도 쓰지 않고 통과시킵니다.
-- **`PreToolUse`(`Agent`)가 쓰는 것:** `subagent_type`이 `my-agent:`로 시작하는 호출만, 호출 인자 `subagent_type`, `model`, `effort`, `isolation`, `run_in_background`를 `call:` 줄로 남깁니다.
+- **`PreToolUse`(`Agent`)가 쓰는 것:** `subagent_type`이 `my-agent:`로 시작하는 호출만, 호출 인자 `subagent_type`, `model`, `effort`, `isolation`, `run_in_background`를 `call:` 줄로 남깁니다. 프롬프트에 줄 맨 앞 `작업 단위: u<n> …` 줄이 있으면 `unit=u<n>`도 남깁니다(v0.27, 4.8.2절).
   - 호출할 때 준 `model` 인자는 정의 파일의 `model:`보다 우선합니다(sub-agents 문서 "Choose a model"). 예: coder를 opus로 다시 시키는 경우(4.8절).
   - `isolation` 인자도 남으므로 탐침 5번(호출 인자로 준 worktree가 적용되는지)을 확인하는 자료가 됩니다.
 - **`SubagentStart`가 쓰는 것:** 시작 시각, `agent_type`, `agent_id`, 기대 모델(Configured), 기대 effort, 메인 세션 ID(`session=`, sweep이 meta 파일을 찾는 데 씀). 입력에 `permission_mode`가 없으므로 권한 모드는 `stop:`에 남깁니다(F23).
@@ -704,14 +724,16 @@ hooks:
   - 병렬 호출에서 `call:` 줄과 시작 이벤트를 정확히 짝지을 수는 없습니다. 같은 `agent_type`을 다른 모델로 동시에 부르지 않는다는 규칙(L1)으로 피합니다.
 - **`SubagentStop`이 채우는 것:**
   - `agent_transcript_path`에서 실제 응답한 모델(Actual)과 토큰, 작업 시간을 읽습니다. my-dev `agent-log.py`와 같은 방식입니다.
-  - `last_assistant_message`의 첫 줄을 결과로 남깁니다. 예: `READY FOR APPROVAL`, `ALL PASS`.
+  - `last_assistant_message`의 첫 줄을 결과로 남깁니다. 예: `READY FOR APPROVAL`, `Verdict: ALL PASS`.
+  - `unit=`: transcript의 첫 user 항목(위임 프롬프트)에서 `call:`과 같은 방식으로 읽습니다. sweep이 쓰는 `stop:`도 같습니다(v0.27).
   - 입력의 `permission_mode`와 `effort.level`을 `mode=`, `effort=`로 남깁니다(F23). 같은 `agent_id`의 `stop:` 줄이 `start:` 줄만큼 이미 있으면 쓰지 않습니다(같은 이벤트가 두 번 온 경우).
   - **이어 부른 에이전트 (v0.25, F33):** `SendMessage`로 이어 부르면 같은 id로 `start:`가 다시 생깁니다. 두 번째부터의 `stop:`은 그 id의 마지막 `start:` 시각에서 2초를 뺀 때 이후의 transcript 항목만 읽어 토큰·모델·시간·SubagentHandback 결과를 셉니다.
   - sweep은 `stop:`이 한 번도 없는 id만 봅니다. 이어 부른 실행 동안에도 meta 파일은 첫 실행의 `"finished": true`를 그대로 두기 때문에, sweep이 돌고 있는 작업자를 `partial`로 닫으면 E 계산이 틀어집니다. 남는 위험: 이어 부른 실행이 maxTurns로 끝나면 `stop:`이 생기지 않습니다(누락 점검에서 드러남).
-  - 끝난 방식을 `end=ok|partial|error`로 남깁니다. E의 "slice 두 번 중단"은 같은 작업 단위의 `partial`·`error` 횟수로 셉니다(4.8절).
+  - 끝난 방식을 `end=ok|partial|error`로 남깁니다. E의 "같은 작업 단위 두 번 중단"은 같은 rev, 같은 `unit=`의 작업자(researcher·writer·coder) `partial`·`error` 횟수로 셉니다(4.8절). `unit=`이 없는 줄(prototype writer처럼 작업 단위가 아닌 호출, 옛 줄)은 서로 다른 일이므로 에이전트 id마다 따로 셉니다.
+  - **`PARTIAL`의 두 뜻 (검토 D4):** 작업자가 결과 첫 줄에 스스로 쓰는 `PARTIAL <이유>`(맡은 일을 다 못 함, `result=`에 남음)와, 최종 답 없이 끝난 실행(`end=partial`, maxTurns)입니다. L1은 둘 다 "작업자 중단"으로 처리하고(4.8절), 모니터의 E 표시는 `end=`만 셉니다.
 - **`maxTurns`로 끝난 에이전트 (sweep):** 이때는 `SubagentStop`이 오지 않습니다(F22). `run-log.py`가 L1 줄을 쓸 때와 `SubagentStart`/`SubagentStop` hook이 실행될 때, 아직 `stop:`이 없는 `start:` 줄마다 meta 파일(`<세션>/subagents/agent-<id>.meta.json`)을 봅니다.
   - `"finished": true`이고 transcript 마지막 assistant 항목의 `stop_reason`이 `end_turn`이 아니면 `stop: … end=partial` 줄을 씁니다. 토큰·모델·시간은 transcript에서 읽고, effort는 그 항목의 `effort`입니다.
-  - `run-log.py`는 그때 `PARTIAL: <agent> <id> stopped before its final reply (maxTurns?)`를 한 번 출력합니다. L1은 이 줄을 사람에게 전합니다.
+  - `run-log.py`는 그때 `PARTIAL: <agent> <id> unit=<u…> stopped before its final reply (maxTurns?)`를 한 번 출력합니다(`unit=`은 있을 때만). L1은 이 줄을 사람에게 전합니다.
   - `end_turn`이면 `SubagentStop`이 쓸 것이므로 건드리지 않습니다. `session=`이 없는 옛 `start:` 줄은 모든 세션 폴더에서 찾습니다.
   - Configured와 Actual이 다르면 `MISMATCH`를 적고(모델 별칭은 실제 모델 ID로 바꿔 비교), 다음 L1 기록 때 사람에게 한 줄로 알립니다.
 - **실패해도 막지 않음:** 기록 hook은 항상 exit 0으로 끝내고 `onFailure`를 두지 않습니다. 기록에 실패하면 run-log에 `log-error` 줄을 남기고 작업은 계속합니다.
@@ -796,7 +818,7 @@ hooks:
 API 오류 · rate limit ──► 같은 모델로 1회 재시도 (opus로 올리지 않음), 또 나면 E
 작업자 중단 1회 ──► 같은 입력 + 중단 보고로 opus 재시도 (maxTurns에 걸린 partial 결과 포함)
 작업자 중단 2회 ──► 메인 세션이 직접 처리, 또는 E (계획이 틀렸으면 Plan으로 되돌림)
-Verify FAIL 1~2회 ──► Execute로 되돌림 (실패한 기준 목록 전달)
+Verify FAIL 1~2회 ──► 판정 보관 뒤 Execute로 되돌림 (실패한 기준 목록 전달, 4.8.1절 "Execute로 되돌리기")
 Verify FAIL 3회 연속 ──► E: 계속 수정 / 범위·기준 수정 / 중단
 workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전까지는 성공으로 보지 않음
 병합 충돌 ──► 아래 "병합 충돌 처리"
@@ -844,6 +866,9 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 
 작업이 끝나기 전(G3 수용 전)에 사람이 요청을 바꾸는 경우의 절차입니다. my-dev의 Revisions 절차를 바탕으로, my-agent에만 있는 병렬 실행, worktree, workflow, `.active`를 반영했습니다(P16).
 
+- **기록의 기준 (v0.27, 검토 B4):** 수정 이력의 단일 소스는 run-log `revision:` 줄입니다. `plan.md` 맨 끝 `## Revisions`는 사람이 읽는 보조 기록입니다. architect가 `plan.md`를 다시 써도 남고(4.4절), 남지 않더라도 이력은 run-log에 있습니다.
+- **SKILL.md 앞부분 (검토 B6):** 이 절차는 SKILL.md 뒤쪽에 있어 압축 뒤 다시 붙는 앞 5,000토큰 밖입니다. 그래서 핵심 규칙에 "수정 요청" 한 줄(바로 고치지 말고 이 절차, 승인 전은 보관과 `revision` 줄)을 둡니다.
+
 **1. 요청 분류 (L1, 팝업)**
 
 수정처럼 보이는 메시지를 받으면 L1이 먼저 종류를 팝업으로 확인합니다. 사용자가 질문으로 되물었으면 답한 뒤 같은 결정을 팝업으로 묻습니다(P3).
@@ -851,20 +876,20 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 | 선택지 | 뜻 | 다음 |
 |---|---|---|
 | 같은 작업 수정 | 완료 기준, 비목표, 제약, 예외 경우가 바뀌거나, 승인된 계획의 방법·작업 단위·파일이 바뀜 | 아래 2~8번 |
-| 승인 범위 안 조정 | 승인된 요청을 지키는 데 파일 하나, 동작 하나, 의존성 하나가 더 필요함 | `plan.md`의 `## Approval` 아래에 `Scope change:` 줄로 남기고(Edit로 그 절만 고침) 계속 진행합니다. Verify와 Review는 이 줄도 기준으로 판정합니다. |
+| 승인 범위 안 조정 | 승인된 요청을 지키는 데 파일 하나, 동작 하나, 의존성 하나가 더 필요함 | `plan.md`의 `## Approval` 아래에 `Scope change:` 줄로 남기고(Edit로 그 절만 고침) run-log에 `fix: what="Scope change: <내용>" files=plan.md` 줄을 남긴 뒤 계속 진행합니다(v0.27, 검토 B3). 집계는 이 줄을 L1 작은 수정과 따로 `승인 범위 안 조정 수`로 세고, 모니터는 기록 목록에 보입니다. Verify와 Review는 이 줄도 기준으로 판정합니다. |
 | 새 작업으로 분리 | 지금 작업과 독립된 요청 | 지금 작업을 끝내거나 중단한 뒤, 새 작업 ID로 시작합니다(4.7.3절). |
 | 취소 | 수정하지 않음 | 하던 단계를 계속합니다. |
 
 - 권장안은 상황에 맞게 L1이 골라 맨 앞에 `(Recommended)`로 둡니다.
-- **직접 확인을 미룸 (2026-10-26):** 사람이 실기 확인처럼 직접 해야 하는 확인을 나중으로 미루면, L1이 그 자리에서 `plan.md` `## Approval` 아래에 `Scope change: 기준 <n> 직접 확인은 사용자가 나중에 함` 줄을 남깁니다. Verify는 이 줄을 받아 그 기준을 그 범위로 판정하므로, 미룬 확인 때문에 Verify가 FAIL로 끝나지 않습니다.
-- G1b 승인 전의 "수정 요청"은 이 절차를 타지 않습니다. 아직 승인한 계획이 없으므로 architect에게 다시 맡기기만 합니다(4.4절 G1b 진행 순서). 단, 그 요청이 확정된 범위(`scope.md`)를 바꾸면 이 절차를 탑니다.
+- **직접 확인을 미룸 (2026-10-26):** 사람이 실기 확인처럼 직접 해야 하는 확인을 나중으로 미루면, L1이 그 자리에서 `plan.md` `## Approval` 아래에 `Scope change: 기준 <n> 직접 확인은 사용자가 나중에 함` 줄을 남깁니다(run-log `fix:` 줄도 같음). Verify는 이 줄을 받아 그 기준을 그 범위로 판정하므로, 미룬 확인 때문에 Verify가 FAIL로 끝나지 않습니다.
+- **승인 전 다시 쓰기 (v0.27, 검토 B1):** G1b 승인 전에 architect에게 `plan.md`를 다시 쓰게 하는 모든 경우(G1b `수정 요청`, Plan Review `REVISE`, Plan Review 지적 반영, prototype 팝업 `계획 수정`)는 이 분류 팝업과 2~8번을 타지 않습니다. 아직 승인한 계획이 없으므로 rev도 오르지 않습니다. 대신 architect에게 다시 맡기기 전에 L1이 작업 폴더를 `archive/<YYMMDD-hhmmss>-rev<N>-draft/`(N은 지금 rev, 수정한 적이 없으면 0)로 보관하고(4번과 같은 방법) run-log에 `revision: rev=<N> before=G1b why=… archive=…` 줄을 남깁니다. `## Revisions`에는 쓰지 않습니다. 모니터는 이 줄을 "승인 전 계획 다시 쓰기"로 보이고, 집계는 `승인 전 계획 다시 쓰기 수`로 셉니다. 그 요청이 확정된 범위(`scope.md`)를 바꾸면 이 절차(같은 작업 수정)를 탑니다.
 
 **2. 멈춤**
 
 | 실행 중인 것 | 처리 |
 |---|---|
 | 새 위임 | 시작하지 않습니다. |
-| 백그라운드 서브에이전트 | 끝날 때까지 기다리고, 결과는 버리지 않습니다. run-log에 `stale: <agent_id> rev<N>` 줄을 새로 더하고(이미 쓴 줄은 고치지 않음), `plan.md`의 해당 작업 단위를 `stale`로 바꿉니다. 오래 걸리는 조사라면 팝업으로 `중지 (Recommended)` / `끝까지 기다림`을 묻습니다. |
+| 백그라운드 서브에이전트 | 끝날 때까지 기다리고, 결과는 버리지 않습니다. run-log에 `stale: id=<agent_id> rev=<새 rev>` 줄을 새로 더하고(이미 쓴 줄은 고치지 않음), `plan.md`의 해당 작업 단위를 `stale`로 바꿉니다. 오래 걸리는 조사라면 팝업으로 `중지 (Recommended)` / `끝까지 기다림`을 묻습니다. |
 | workflow | 실행 중에는 입력을 받지 않으므로(F4) 중지(TaskStop)합니다. 끝낸 단위와 처리하지 못한 단위 목록을 run-log에 남깁니다. |
 | coder worktree | 지우지도 병합하지도 않고 그대로 둡니다. 처리는 7번에서 정합니다. |
 | 코드 되돌리기 | 하지 않습니다. 고친 계획이 승인된 뒤에만 합니다. |
@@ -880,21 +905,23 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 - **위치:** `docs/agent/<task-id>/archive/<YYMMDD-hhmmss>-rev<N>/`
   - 시각은 `date +%y%m%d-%H%M%S`로 한 번만 정합니다.
   - 같은 이름이 있으면 `-b`, `-c`를 붙입니다. 이미 있는 보관 폴더에는 쓰지 않습니다.
-- **복사 범위:** 작업 폴더 전체를 `cp -pR`로 복사합니다. `work/`, `prototype/` 하위 폴더도 포함하고, `archive/` 자체는 뺍니다.
+  - 승인 전 다시 쓰기는 `-rev<N>-draft`, Execute로 되돌리기 전 판정 보관은 `-run<n>`으로 끝납니다(아래). 모니터는 `-rev<N>`(N ≥ 1)으로 끝나는 폴더만 승인된 옛 계획으로 보고 mock-up 이력에 넣습니다.
+- **복사 범위:** 작업 폴더 전체를 `cp -pR`로 복사합니다. 경로는 `cd` 없이 절대 경로로 씁니다. G1b hook은 `cd` 뒤의 상대 경로를 바뀔 수 있는 폴더 모두로 보므로(4.4절), 승인 전 다시 쓰기의 보관이 막힙니다(v0.27에 확인). `work/`, `prototype/` 하위 폴더도 포함하고, `archive/` 자체는 뺍니다.
 - **확인:** 모든 파일을 `cmp`로 대조합니다. 하나라도 빠지거나 다르면 멈추고 사람에게 알립니다. 이때 원본은 아무것도 지우지 않습니다.
 - **보관 폴더는 기록일 뿐입니다.** 게이트, hook, 재개, 판정자(L2)는 읽지 않고, 판정자에게 넘기는 경로에도 넣지 않습니다.
 
 **5. 기록**
 
-- 되돌아간 phase의 파일(`scope.md` 또는 `plan.md`) 끝 `## Revisions`에 한 줄을 남깁니다. 다른 것을 바꾸기 전에 먼저 씁니다.
+- run-log에 `revision: rev=<N> why=… archive=… to=<되돌아갈 phase> invalidated=… keep=… state=pending` 줄을 남깁니다(4.7.2절 예). `to=`는 이 수정이 중간에 끊겼을 때 `continue`가 `.active`의 `phase:`를 정하는 데 씁니다. 다른 것을 바꾸기 전에 먼저 씁니다. run-log는 같은 작업이므로 옮기지 않고 이어서 씁니다.
+- `plan.md` 맨 끝(`## Approval` 뒤) `## Revisions`에 한 줄을 더합니다. 절이 없으면 만듭니다. ①로 돌아가도 `scope.md`가 아니라 `plan.md`에 씁니다(v0.27, 검토 B5: 모니터와 hook이 `plan.md`만 봄). architect는 `plan.md`를 다시 쓸 때 이 절을 그대로 옮깁니다(4.4절).
 - **절을 고치는 방법 (2026-10-26):** `## Revisions`와 `## Approval`(6번)은 줄 맨 앞에서 시작하는 제목으로 절을 찾아 Edit 도구로 그 절만 고칩니다. 문자열 위치로 파일을 자르거나 Write로 파일 전체를 덮어쓰지 않습니다. 본문에 같은 글자가 인용되어 있으면 위치로 자를 때 본문이 중복되거나 사라지기 때문입니다(my-dev 피드백).
 
   ```text
-  - rev<N> <YYYY-MM-DD HH:MM> <바뀐 내용, 사용자 요청>; archive <경로>; back to <phase>; invalidated: pending
+  - rev<N> <YYYY-MM-DD HH:MM> <바뀐 내용, 사용자 요청>; archive <경로>; back to <phase>
   ```
 
-- run-log에 `revision: rev<N> <바뀐 내용>` 줄을 남깁니다. run-log는 같은 작업이므로 옮기지 않고 이어서 씁니다.
-- 어느 수정 줄에도 이름이 나오지 않는 보관 폴더는 중간에 끊긴 수정의 흔적입니다. 그대로 두고 무시합니다.
+- 무효화가 끝났는지는 이 줄이 아니라 run-log의 `state=` 줄로 남깁니다(6번). v0.26까지의 `; invalidated: pending|done` 꼬리는 쓰지 않습니다.
+- 어느 `revision:` 줄의 `archive=`에도, 어느 `step:` 줄의 `archive=`에도 나오지 않는 보관 폴더는 중간에 끊긴 수정의 흔적입니다. 그대로 두고 무시합니다.
 
 **6. 무효화와 `.active`**
 
@@ -902,14 +929,15 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 - `plan.md`의 `## Approval`을 비웁니다. `Scope change:` 줄도 함께 비웁니다. ①로 돌아가면 `scope.md`의 `## Confirmation`도 비웁니다.
 - `prototype/`은 mock-up이 바뀐 경우에만 다시 만듭니다.
 - `.active`의 `phase:`를 되돌아간 phase로 바꿉니다. 승인 줄이 비었으므로 hook이 다시 위임과 쓰기를 막습니다(4.4절).
-- 끝나면 수정 줄을 `invalidated: done`으로 바꿉니다.
+- 끝나면 run-log에 `revision: rev=<N> state=done` 줄을 남깁니다. 모니터는 같은 rev의 두 줄을 합쳐 보이고, `check-run.py`는 `state=done`이 없는 rev를 실패로 셉니다. `continue`는 `state=done`이 없는 rev를 보면 남은 일을 마칩니다. 보관은 `revision` 줄보다 먼저 끝났으므로 다시 대조하지 않고(판정 파일을 이미 지웠을 수 있음) 보관 폴더가 있고 비어 있지 않은지만 본 뒤, `## Revisions` 줄, 판정 파일 지우기, `## Approval`·(①이면) `## Confirmation` 비우기, `.active`의 `phase:`(`to=`), `state=done` 줄을 차례로 보며 이미 된 것은 건너뜁니다.
+- Verify의 연속 FAIL 수는 마지막 `Verdict: ALL PASS`나 같은 작업 수정 뒤로 이어진 `Verdict: FAIL` 수입니다. L1과 모니터 모두 run-log의 verifier `stop:` 줄 `result=`로 셉니다. `verify.md`의 `Run:`은 판정 회차라 PASS 뒤에도 오르므로 연속 수로 쓰지 않습니다(검토 D5).
 
 **7. 다시 진행**
 
 - 되돌아간 phase부터 순서대로 다시 진행하고, 모든 게이트를 다시 거칩니다. 생략 규칙(4.3절)도 고친 요청을 기준으로 다시 판단합니다.
-- 이미 만든 결과물이 있으면 architect가 고친 계획 맨 앞에 `## Existing work` 표를 둡니다.
+- 이미 만든 결과물이 있으면 architect가 고친 계획의 `## Estimate` 다음, `## Approval` 앞에 `## Existing work` 표(`| 대상 | 결정 | 이유 |`)를 둡니다(v0.27, 위치와 열을 architect 정의와 통일). 대상마다 고를 수 있는 결정은 이렇습니다.
 
-  | 대상 | 정하는 것 |
+  | 대상 | 결정 |
   |---|---|
   | `work/`의 노트, 초안 | 유지 / 수정 / 폐기. 폐기한 파일은 지우지 않고 `archive/<이번 수정 폴더>/discarded/`로 옮깁니다. |
   | 병합하지 않은 coder worktree | 병합 / 다시 작업 / 폐기. 폐기는 worktree 정리를 작업 단위 하나로 둡니다. |
@@ -925,12 +953,23 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 
 | 시점 | 요청 | 처리 |
 |---|---|---|
-| G3 팝업에서 `재작업` | 기준은 그대로이고 결과가 부족함 | 수정 절차 없이 ③ 구축으로 되돌립니다. 부족한 점을 실패한 기준처럼 넘깁니다. |
+| G3 팝업에서 `재작업` | 기준은 그대로이고 결과가 부족함 | 수정 절차(rev) 없이 아래 "Execute로 되돌리기"로 ③ 구축에 갑니다. 부족한 점을 실패한 기준처럼 넘깁니다. |
 | G3 팝업에서 기준을 바꾸는 요청 | 기준이 바뀜 | 이 절차(같은 작업 수정)를 탑니다. |
 | G3 수용 뒤 | 결과물이 이미 저장되고 회고가 끝나 `.active`가 지워짐 | **새 작업**입니다. 새 작업 ID를 만들고 `intake.md`에 `Follows: <이전 작업 ID>`를 적습니다. 이전 작업 폴더는 건드리지 않습니다. |
 
 - 최종 결과물(조사 노트, 문서, 커밋)은 G3 뒤에만 저장합니다. 그래서 G3 전 수정에서는 프로젝트 밖에 정리할 결과물이 없습니다.
 - 예외는 개발 프로파일에서 메인 작업 트리에 이미 병합된 코드입니다. 7번의 `## Existing work`에서 다룹니다.
+
+**Execute로 되돌리기 (v0.27, 검토 B2)**
+
+Verify FAIL, Review BLOCKER(L1의 작은 수정으로 끝나지 않을 때), G3 `재작업`으로 ③ 구축에 돌아갈 때입니다. rev는 오르지 않습니다. 다음 판정이 `verify.md`·`review.md`를 덮어쓰므로 지금 판정을 먼저 남깁니다(`phases/accept.md`).
+
+1. `verify.md`와 (있으면) `review.md`를 `archive/<YYMMDD-hhmmss>-run<n>/`(n은 `verify.md`의 `Run:`)에 `cp -p`로 복사하고 `cmp`로 대조합니다.
+2. 실패한 기준(또는 G3에서 부족하다고 한 점)에 걸린 작업 단위만 `Status: pending`으로 되돌립니다. 문서 결과물을 합치는 마지막 writer 단위는 앞 단위가 하나라도 `pending`이면 함께 `pending`입니다. 나머지는 `done`으로 둡니다.
+3. `.active`의 `phase:`를 `3`으로 바꾸고, Execute `step:` 줄에 `back="<이유>" archive=<보관 폴더>`를 붙입니다(4.7.2절 예). 새 run-log 종류는 만들지 않습니다. 모니터는 이 줄을 "back to Execute"로 보입니다.
+4. 다시 도는 Execute는 기준점(`base:`)과 커밋하지 않은 변경 팝업을 다시 하지 않고, coder는 worktree 없이 메인 트리에서 돌립니다. 이미 병합한 변경이 커밋되지 않아 worktree가 보지 못하기 때문입니다(Q9).
+
+- **Review만 다시 받는 작은 수정 (검토 A3):** BLOCKER를 L1이 작은 수정으로 고치고 Verify 없이 Review만 다시 받으면, L1이 새 `review.md` 끝에 `## Applied after review` 절을 Edit로 더하고 고친 것을 한 줄씩 적습니다. 판정 최신성 hook은 `verify.md`가 변경보다 오래됐을 때 이 절이 있어야 G3 저장·커밋을 통과시킵니다(4.4절).
 
 **수정이 있을 때의 파일 모습**
 
@@ -938,11 +977,13 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 <작업 프로젝트>/docs/agent/
 ├── .active                          # task는 그대로, phase만 되돌린 phase로
 └── 261024-cli-json-output/          # 같은 작업이므로 폴더 유지
-    ├── scope.md                     # (①로 갔다면) ## Confirmation 비움, ## Revisions 줄
-    ├── plan.md                      # ## Approval 비움, ## Revisions 줄, 다시 쓴 뒤 ## Existing work
+    ├── scope.md                     # (①로 갔다면) ## Confirmation 비움
+    ├── plan.md                      # ## Approval 비움, 맨 끝 ## Revisions 줄, 다시 쓴 뒤 ## Existing work
     ├── work/                        # 그대로 둠 → Existing work에서 유지/수정/폐기
-    ├── run-log.md                   # 이어서 씀 (revision: rev1 …)
+    ├── run-log.md                   # 이어서 씀 (revision: rev=1 … state=pending, revision: rev=1 state=done)
     └── archive/
+        ├── 261024-140500-rev0-draft/ # G1b 수정 요청으로 다시 쓰기 전 (승인 전 다시 쓰기)
+        ├── 261024-150000-run1/       # Verify FAIL로 Execute에 돌아가기 전의 verify.md
         └── 261024-153000-rev1/      # 수정 직전 상태 전체 (work/, prototype/, 판정 파일 포함)
             └── discarded/           # 고친 계획에서 폐기한 work/ 파일
 ```
@@ -959,7 +1000,8 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 
 **작업 단위 진행 상태 (`plan.md`)**
 
-- 작업 단위마다 `Status:` 줄을 둡니다.
+- 작업 단위는 `## 작업 단위` 아래 `### u<n> <이름>` 제목으로 씁니다(v0.27, 검토 D3). 계획을 다시 써도 유지하거나 고치는 단위는 같은 ID를 쓰고, 새 단위는 쓰지 않은 다음 번호를 받으며, 폐기한 ID는 다시 쓰지 않습니다. L1은 위임 프롬프트 첫 줄에 `작업 단위: u<n> <이름>`을 적고, hook이 이 줄로 `call:`/`stop:`에 `unit=`을 남깁니다(4.7.2절). 그래서 "같은 단위 두 번 중단"과 `continue`의 대조를 run-log로 할 수 있습니다.
+- 작업 단위마다 `- Status:` 줄을 둡니다.
 
   | 값 | 바꾸는 때 |
   |---|---|
@@ -968,7 +1010,18 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
   | `done` | 결과 파일을 확인한 뒤 |
   | `stale` | 작업 중 수정(4.8.1절)으로 옛 버전 결과가 된 때 |
 
-- 상태는 L1만 바꿉니다. 작업자는 바꾸지 않습니다.
+- 처음 값은 계획을 쓰는 architect가 적고(다시 쓸 때 `## Existing work`에서 결과를 그대로 유지하는 단위는 `done`), 그 뒤 상태는 L1만 바꿉니다. 작업자는 바꾸지 않습니다. `check-run.py`는 수용한 작업의 모든 단위가 `done` 또는 `stale`인지 봅니다.
+- **상태가 바뀌는 때 (검토 D5):**
+
+  | 일 | 작업 단위 `Status:` | `.active` `phase:` | Verify 연속 FAIL 수 |
+  |---|---|---|---|
+  | 계획을 씀 | 모두 `pending` | 2 | 없음 |
+  | 위임 직전 / 결과 파일 확인 | `running` / `done` | 3 | 그대로 |
+  | Verify FAIL, Review BLOCKER, G3 재작업 (4.8.1절 "Execute로 되돌리기") | 걸린 단위만 `pending`, 나머지 `done` | 3 | FAIL로 되돌렸으면 이어서 셈, PASS 뒤(Review BLOCKER, G3 재작업)면 0부터 |
+  | 같은 작업 수정 (rev) | 끝난 백그라운드 결과는 `stale`. 다시 쓴 계획에서 architect가 `## Existing work`에 따라 `pending`이나 `done`으로 다시 적거나 단위를 뺌 | 되돌아간 phase | 0부터 |
+  | `continue`에서 `running`인데 `end=ok` `stop:`이나 결과 파일이 없음 | `pending` | 그대로 | 그대로 |
+
+- **`Status:`의 세 수준 (검토 D4):** `intake.md`의 `Status:`는 작업 전체(`active`·`done`·`aborted`), `plan.md`의 `- Status:`는 작업 단위(`pending`·`running`·`done`·`stale`), run-log `stop:`의 `end=`는 실행 한 번(`ok`·`partial`·`error`)입니다. `done`은 작업에서는 G3 수용, 작업 단위에서는 결과 파일 확인을 뜻합니다.
 
 **재개 (`/my-agent continue`)**
 
@@ -977,10 +1030,11 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
    - `intake.md`의 `my-agent:` 커밋이 지금 저장소 커밋과 다르면, 그 사이 바뀐 파일 목록(`git diff --stat`)을 보여주고 팝업으로 묻습니다: `그대로 진행 (Recommended)` / `중단`. 플러그인은 저장소를 제자리에서 읽으므로(F17) 작업 도중 my-agent를 고치면 다음 세션부터 새 규칙이 적용되기 때문입니다. 진행하면 `my-agent:` 줄을 새 커밋으로 바꾸고 run-log에 `rules-changed` 줄을 남깁니다.
 2. `.active`의 `session:`이 지금 세션과 다르면 팝업으로 묻습니다: `이어받기 (Recommended)` / `취소`. 이어받으면 `session:`을 지금 세션으로 바꿉니다.
 3. phase 파일과 프로파일 파일을 다시 읽습니다.
-4. `plan.md`에서 `running`인 작업 단위를 run-log의 `agent_id`와 대조합니다. 결과 파일이 없으면 `pending`으로 되돌립니다.
+4. `plan.md`에서 `running`인 작업 단위를 run-log `call:`/`stop:` 줄의 `unit=`과 대조합니다. 그 단위의 `stop:`이 `end=ok`이고 결과 파일이 있으면 `done`, 아니면 `pending`으로 되돌립니다.
    - 대화형 `/exit`는 백그라운드 작업이 있으면 멈출지 묻고, 기본값이면 함께 멈춥니다(F31, 탐침 6). 멈춘 작업자는 `stop:` 줄이 없거나 `end=partial`이므로, `continue`에서 결과 파일과 run-log로 판단해 다시 맡깁니다.
 5. `git worktree list`로 남은 coder worktree를 찾습니다. 작업 단위와 이어지지 않는 worktree는 팝업으로 `병합` / `다시 작업` / `폐기`를 정합니다.
-6. 남은 작업 단위부터 진행하고, run-log에 `resume` 줄을 남깁니다.
+6. run-log에 `state=pending`인 `revision:` 줄이 있는데 같은 rev의 `state=done` 줄이 없으면, 끊긴 수정을 먼저 마칩니다(4.8.1절 6번).
+7. 남은 작업 단위부터 진행하고, run-log에 `resume` 줄을 남깁니다.
 
 **새 세션 알림 (Q8 결정)**
 
@@ -1021,7 +1075,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 - **프로젝트에서 실행하면:** git 저장소 안에서 실행하면 그 저장소 루트의 `docs/agent/`를 씁니다.
 - **프로젝트가 아니면:** 홈, `~/dev` 루트처럼 git 저장소가 아닌 곳에서 실행하면 Intake에서 **매번** 팝업으로 묻습니다: `~/dev/agent-tasks (Recommended)` / `현재 폴더` / `다른 경로`
 - **기록:** 고른 위치는 `intake.md`에 `Location: <경로>`로 남깁니다.
-- **프로젝트 목록 (v0.19):** 작업 위치를 정한 뒤, `~/dev/agent-tasks/projects.txt`에 그 경로가 없으면 한 줄 추가합니다. 지우지 않습니다. 모니터가 이 목록으로 볼 프로젝트를 찾습니다.
+- **프로젝트 목록 (v0.19):** 작업 위치를 정한 뒤, `~/dev/agent-tasks/projects.txt`에 그 절대 경로가 없으면 한 줄 추가합니다. 지우지 않습니다. 모니터가 이 목록으로 볼 프로젝트를 찾습니다. L1은 절대 경로로 쓰고, 모니터는 사람이 손으로 더한 `~`로 시작하는 줄도 읽습니다.
 - **모니터 띄우기 (v0.20):** 등록한 직후 `monitor-up.py`를 실행하고 URL을 Intake 보고에 넣습니다. 실패해도 계속합니다(4.7.4절).
 - **hook이 `.active`를 찾는 순서:** 실행한 폴더와 작업 위치가 다를 수 있으므로 hook과 `continue`는 다음 순서로 찾습니다.
   1. 실행한 폴더가 속한 git 저장소 루트의 `docs/agent/.active`. 그 루트가 연결된 worktree(`.git`이 `gitdir:` 파일)이고 `.active`가 없으면 메인 worktree의 `docs/agent/.active` (worktree 에이전트, F19)
@@ -1063,8 +1117,8 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
          ┌ 팝업: 계획 승인 ▸ 승인 ▸ 수정 ▸ 중단 ┐   ← G1b (hook이 승인 전 위임을 막음)
 [Execute] researcher ×4 (백그라운드) → writer
           ⚠ 권한 요청: researcher-2 WebFetch(외부 도메인) ▸ 이번만 허용    ← G2
-[Verify] 기준 5개 중 4 PASS, 1 FAIL (인용 1건 링크 깨짐) → Execute로 되돌림
-[Verify] ALL PASS (Run 2)
+[Verify] Verdict: FAIL (Run: 1) 기준 5개 중 4 PASS, 1 FAIL (인용 1건 링크 깨짐) → 판정 보관(archive/…-run1) 뒤 Execute로 되돌림
+[Verify] Verdict: ALL PASS (Run: 2)
 [Deliver] (채팅) 결과 요약 · 사용 토큰 · 약 $N(참고)
           ┌ 팝업: 저장 경로 docs/notes/claude-code-approval-notify.md ▸ 수용 ▸ 재작업 ▸ 중단 ┐  ← G3
 ```
@@ -1084,7 +1138,8 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
 
 - **`maintenance-notes.md`:** 레벨별 4개 절(L1~L4)로 나눠, 각 절에 "현재 상태 · 외부 동작 의존 · 주의할 점"을 적습니다.
 - **개입 시점:**
-  - 작업이 끝날 때마다 ④ 수용 phase에서 회고합니다. 회고에서 나온 개선점은 레벨을 붙여 저장소의 `feedback.md`에 기록합니다(my-dev retro 방식). `scripts/feedback.py`가 항목을 더하고, 레벨별 열린 항목 수를 셉니다.
+  - 작업이 끝날 때마다 ④ 수용 phase에서 회고합니다. 회고에서 나온 개선점은 레벨을 붙여 저장소의 `feedback.md`에 기록합니다(my-dev retro 방식). `scripts/feedback.py`가 항목을 더하고(`add`), 레벨별 열린 항목 수를 셉니다(`count`). 고친 항목은 `list`로 번호를 보고 `done <번호> "<고친 내용>"`으로 닫습니다(v0.27).
+  - **`feedback.md` 형식:** 첫 `add` 때 만들어집니다. `# my-agent feedback` 아래 `## Open`과 `## Done` 두 절이고, 항목마다 한 줄 `- [open|done] L<1-4> <YYYY-MM-DD> <task-id>: <내용>`입니다. `done`은 그 줄을 `## Done` 끝으로 옮기며 `- [done] … → <고친 내용>`으로 바꿉니다.
   - **회고 순서 (2026-10-26, 일반 수용과 개발 G3 공통):**
     1. `Delivered`와 `deliver` 줄을 남기고 `intake.md`를 `Status: done`으로 바꿉니다.
     2. 회고를 합니다. (a) `gate-report.py tally`로 결정 표·지표를 집계해 `gate-tally.md`에 저장 (b) `my-agent:gate-analyst`에게 `gate-tally.md` 경로, 결과 경로 `gate-report.md`, 프롬프트에 적은 프로파일을 넘겨 리포트를 맡김 (c) 4.12절 "바깥으로 나가기 전 점검" 뒤 `gate-report.py copy`로 복사 (d) 경로 두 개(작업 폴더, 복사본)와 요약 3줄을 채팅에 보여 줌 (e) 개선 제안 중 `뚜렷함` 표시가 있는 것을 `feedback.py add L1`로 올림. gate-analyst는 뚜렷한 경향마다 팝업 쪽 조치를 제안합니다: 같은 종류 팝업에서 늘 권장안을 고르면 그 팝업의 질문 생략이나 기본값 유지, 늘 다른 선택지를 고르면 권장안(기본값) 조정 (f) 기존 feedback 열린 항목 수, 누락 점검, mode 점검.
@@ -1092,8 +1147,9 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
   - **순서의 이유:** 집계는 진행 중인 작업(`.active`)을 찾아야 하고, scope-guard는 `.active`가 없으면 my-agent 에이전트를 막습니다. 그래서 회고는 `.active`를 지우기 앞에 둡니다. `Status: done`을 회고 앞에 두는 것은 회고 중에 세션이 끊겨도 `continue`가 G3를 다시 하지 않게 하려는 것입니다.
   - **프로파일을 L1이 넘기는 이유:** 집계는 run-log만 읽어 프로파일(`intake.md`의 `Profile:`)을 담지 못하고, gate-analyst는 `intake.md`를 읽을 수 없습니다. 프로파일마다 나오는 게이트가 달라(개발은 G3가 커밋 승인) 해석에 필요합니다.
   - **집계·해석·복사의 분리:** L4(`gate-report.py tally`)는 숫자와 표만 만들고 해석하지 않습니다. 해석(성향 3~5개, 개선 제안)은 L2 gate-analyst가 하고 `gate-report.md`(요약 3줄, 결정 표, 성향, 개선 제안)를 씁니다. L1은 리포트를 직접 쓰지 않고 복사만 합니다. 복사를 `cp`가 아니라 `gate-report.py copy`로 하는 이유: 작업 폴더에서 읽어 `docs/agent/` 밖에 쓰는 `cp`는 판정 최신성 hook이 걸고, 일반 프로파일에서는 방금 저장한 결과물이 `review.md`보다 새로워 막히기 때문입니다.
+  - **`gate-tally.md` 형식 (v0.27, 검토 E):** 세 절입니다. `## 결정 표`는 7열 `| # | 게이트 | 질문 | 권장안 | 고른 선택지 | 권장안 선택 | 비고 |`, `## 지표`는 `| 항목 | 값 |`, `## 단계별 비용·토큰`은 `| 구간 | 단계 | 비용 USD (근사) | 서브에이전트 토큰 |`입니다. gate-analyst는 `gate-report.md`의 결정 표에 게이트, 질문, 고른 선택지, 권장안 선택 네 열만 옮깁니다.
   - **종료 코드:** `tally`는 0 출력(결정 없음도 포함), 1 진행 중인 작업 없음, 2 인자 오류, 3 `gate-tally.md` 쓰기 실패. `copy`는 0 복사, 1 작업 없음 또는 `gate-report.md` 없음, 2 인자 오류, 3 복사본 쓰기 실패. 3은 원인을 출력합니다.
-  - **집계 지표:** Verify 횟수, Plan Review 횟수, 서브에이전트 수, 모델 불일치 수(주 세션은 `step` 줄 기준, 서브에이전트는 `stop` 줄 `mismatch=1`), L1 작은 수정 수(`fix` 줄), opus로 올린 호출 수(`call` 줄 `model=`, 재시도와 명시 호출을 구별하지 않음), 단계별 비용(`cost` 줄 누적값의 구간 차이)·서브에이전트 토큰. `cost` 줄이 없으면 `기록 없음`입니다. 각 세션의 첫 `cost` 줄은 기준값만 정하고, 그 앞 구간 비용은 늘 `기록 없음`입니다(세션이 작업보다 먼저 시작했을 수 있어 누적값을 이 작업의 비용으로 보지 않음). 단계별 비용은 status line 스냅샷에서 온 근사치입니다(4.8절).
+  - **집계 지표:** Verify 횟수, Plan Review 횟수, 서브에이전트 수, 모델 불일치 수(주 세션은 `step` 줄 기준, 서브에이전트는 `stop` 줄 `mismatch=1`), L1 작은 수정 수(`Scope change:`가 아닌 `fix` 줄), 승인 범위 안 조정 수(`what="Scope change: …"`인 `fix` 줄), 승인 전 계획 다시 쓰기 수(`before=`가 있는 `revision` 줄), 작업 중 수정 수(`before=`가 없는 `revision` 줄의 서로 다른 rev 수), opus로 올린 호출 수(`call` 줄 `model=`, 재시도와 명시 호출을 구별하지 않음), 단계별 비용(`cost` 줄 누적값의 구간 차이)·서브에이전트 토큰. `cost` 줄이 없으면 `기록 없음`입니다. 각 세션의 첫 `cost` 줄은 기준값만 정하고, 그 앞 구간 비용은 늘 `기록 없음`입니다(세션이 작업보다 먼저 시작했을 수 있어 누적값을 이 작업의 비용으로 보지 않음). 단계별 비용은 status line 스냅샷에서 온 근사치입니다(4.8절).
   - **복사 위치:** `~/dev/skills/my-surrogate/gate-report/<task-id>.md`. 폴더가 없으면 만들고, 같은 이름이 있으면 덮어쓰지 않고 `-2`, `-3`을 붙입니다.
   - **예외:**
     - 결정 줄이 없거나 run-log가 없으면 "결정 없음"으로 집계하고(exit 0) 리포트도 "결정 없음"으로 씁니다. 회고는 계속합니다.
@@ -1106,7 +1162,7 @@ workflow 결과 completed ──► "처리 못 함" 목록을 확인하기 전�
     - 작업을 중단했으면 회고를 하지 않으므로 리포트도 없습니다.
     - 회고 중에 세션이 끊기면 다음 `continue`가 `.active`만 정리합니다(4.8.2절). 회고는 다시 하지 않습니다.
   - 레벨 하나에 열린 개선점이 4개 이상 쌓이면 Recorder가 사람에게 알립니다. 그 레벨을 정리할 때라는 신호입니다.
-- **시스템을 고치는 방법:** my-agent를 고칠 때는 my-agent 자신의 개발 프로파일로 고칩니다. 그래서 G1(계획 승인)과 G3(커밋 승인)을 거칩니다.
+- **시스템을 고치는 방법:** my-agent를 고칠 때는 my-agent 자신의 개발 프로파일로 고칩니다. 그래서 G1b(계획 승인)와 G3(커밋 승인)을 거칩니다. 사람이 일반 세션에서 직접 고치라고 정하면 그렇게 하고, 그 결정과 바꾼 내용을 `maintenance-notes.md`의 해당 레벨 절에 남깁니다(예: 2026-10-28 검토 반영).
   - 개발 프로파일이 검증되기 전(6장 7단계를 마치기 전)에는 일반 세션에서 직접 고치고, 바꾼 내용을 `maintenance-notes.md`의 해당 레벨 절에 남깁니다. 이때도 커밋과 push는 G2 `ask`를 거칩니다.
 - **스스로 막히지 않게 (자기 수정):**
   - 플러그인은 저장소를 제자리에서 읽고(F17), 스킬 hook은 `~/dev/my-plugins/plugins/my-agent`의 스크립트를 직접 실행합니다. 그래서 my-agent로 my-agent를 고치면 coder가 지금 작동 중인 hook 스크립트를 고치게 됩니다.

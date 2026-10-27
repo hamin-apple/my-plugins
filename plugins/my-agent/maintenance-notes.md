@@ -22,6 +22,14 @@
 - run-log 명령은 `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" <kind> key=value…` 전체 형태로 쓴다. `test_skill_md`가 모든 명령을 실제로 돌려 본다.
 - 대화형 검증에서 고친 L1 규칙(2026-10-25): phase·프로파일 파일의 팝업은 선택지를 그대로 쓴다(Sonnet L1이 dev NIT 팝업 순서를 바꿨음). `git`이 든 명령에 `$(`·백틱을 넣지 않는다(verdict hook이 커밋인지 판단 못 함). L1은 세션 모델로 돈다(F13). `step:`의 `model=`은 `run-log.py`가 transcript에서 읽는다.
 - 파일 표시는 모니터 파서와 맞춘다: `## Approval`의 `- Approved <YYYY-MM-DD HH:MM> G1b`, `## Confirmation`의 `Confirmed <…>`, `## 완료 기준` 번호 목록, `intake.md`의 `Status:`/`Location:`/`Profile:`/`Request:`.
+- 검토 반영 (2026-10-28, `docs/handoff/my-agent-review-2026-10-27.md`, ARCH v0.27): 사용자가 my-agent 개발 프로파일 대신 일반 세션에서 직접 고치기로 정함(ARCH 4.11 "시스템을 고치는 방법").
+  - 핵심 규칙에 "수정 요청" 절을 더함(B6). 앞 6,000자 안에 있어야 한다.
+  - 작업 중 수정: run-log `revision` 줄이 기준. 같은 작업 수정은 `state=pending` 줄로 시작해 `revision rev=<N> state=done`으로 끝내고, `## Revisions`는 항상 `plan.md` 맨 끝(꼬리 `invalidated:`는 없앰). 승인 전 다시 쓰기(G1b `수정 요청`, Plan Review `REVISE`)는 `-rev<N>-draft` 보관과 `revision rev=<지금 rev> before=G1b` 줄. `continue`는 `state=done`이 없는 rev를 먼저 마친다.
+  - `Scope change:`는 `fix what="Scope change: …" files=plan.md` 줄도 남긴다(집계가 따로 셈).
+  - `accept.md` "Execute로 되돌리기": Verify FAIL·Review BLOCKER·G3 재작업 때 판정을 `archive/<시각>-run<n>/`에 복사, 걸린 단위만 `pending`, `.active phase: 3`, `step n=5 … back= archive=`. Review만 다시 받은 작은 수정은 L1이 `## Applied after review`를 쓴다(A3).
+  - 작업 단위는 `### u<n> <이름>`, 위임 프롬프트 첫 줄 `작업 단위: u<n> <이름>`(hook이 `unit=`으로 남김). `Prototype: requested`는 `## Prototype` 절 안에만. plan-review 생략 줄은 `SKIPPED <이유>`. dev 결과물 표기 `Delivered: commit:<sha>`.
+  - general 프로파일에서 문서 단위가 둘 이상이면 마지막 writer 단위가 `work/final.md`로 합친다. 그 단위는 research와 같이 6 Merge에서 맡긴다(L1은 점검만).
+  - 독립 리뷰 반영(같은 날): 보관 `mkdir`·`cp`는 `cd` 없이 절대 경로(승인 전에는 G1b hook이 `cd` 뒤 상대 경로를 막음, 직접 확인). Verify 연속 FAIL은 `Run:`이 아니라 마지막 ALL PASS·수정 뒤의 `Verdict: FAIL` 수(모니터와 같음). 되돌린 Execute는 `base`·변경 팝업을 다시 하지 않고 worktree를 쓰지 않음. 합치기 단위는 앞 단위가 `pending`이면 함께 `pending`. 다시 쓴 계획에서 유지하는 단위는 architect가 `done`으로 적음. `revision … state=pending`에 `to=<phase>`(끊긴 수정을 `continue`가 마칠 때 씀). 승인 전 다시 쓰기는 Plan Review 지적 반영·prototype `계획 수정`도 포함.
 
 ## L2 설계 · 판정 (`l2-design-judge/agents/`)
 
@@ -32,7 +40,8 @@
 - 모니터 `web/index.html`의 L2 에이전트 목록에 gate-analyst가 없음(2026-10-26 결정으로 그대로 둠).
 - 판정자 점검: `tests/judge-fixtures/run-judge-check.sh`(유료, 노트마다 verifier 1회). verifier나 reviewer를 고치면 돌린다. 2026-10-25 4/4 일치.
 - 결과 첫 줄: plan-reviewer `READY FOR APPROVAL` | `REVISE`, verifier `Verdict: ALL PASS` | `Verdict: FAIL`(아래에 `- <번호>. PASS|FAIL <근거>`), reviewer `BLOCKER <개수>`.
-- 마지막 메시지 첫 줄이 run-log `result=`가 되고 모니터가 `startswith('FAIL')`로 본다. 첫 줄에 판정어가 없으면 판정이 화면에 안 나온다(F26).
+- 마지막 메시지 첫 줄이 run-log `result=`가 되고 모니터가 `ma_schema.verify_failed`(`Verdict: FAIL`로 시작)로 본다. 첫 줄에 판정어가 없으면 판정이 화면에 안 나온다(F26). 2026-10-28 전에는 모니터가 `startswith('FAIL')`로 봐서 연속 FAIL이 늘 0이었다(검토 A1).
+- 2026-10-28: 모든 정의 파일에 frontmatter `level: L2|L3`(Claude Code는 쓰지 않음, validate 통과, `test_agents`가 폴더·`ma_schema.AGENTS`와 대조). architect: `## Revisions`를 그대로 옮김(scope-guard가 막음), `### u<n>` 단위와 ID 규칙, `## Mock-up` 첫 줄 `Kind:`, `## Existing work`(`| 대상 | 결정 | 이유 |`)는 `## Estimate` 뒤 `## Approval` 앞. verifier: 완료 기준 파일은 `scope.md`, 없으면 `plan.md`. gate-analyst: `gate-tally.md` 세 절 형식을 정의에 적음. 판정어는 `ma_schema` 상수와 같아야 한다(`test_schema`).
 
 ## L3 작업 (`l3-workers/agents/`)
 
@@ -43,6 +52,7 @@
 - 모든 작업자에 `maxTurns`를 둔다. 걸리면 SubagentStop이 오지 않고 sweep이 `end=partial`로 남긴다(F22).
 - researcher 노트 항목은 `- <주장> · <출처 URL> · "<인용>"` 또는 `- 찾지 못함: …`만. verifier·writer가 같은 형식을 쓴다.
 - workflow 안에서도 `agentType: 'my-agent:<name>'`이면 정의 파일과 hook이 그대로 적용된다(F29).
+- 2026-10-28: researcher·writer·coder는 위임 프롬프트 첫 줄 `작업 단위: u<n> <이름>`을 받는다(정의 파일 "받는 것"). 작업자가 스스로 쓰는 `PARTIAL <이유>`와 maxTurns의 `end=partial`은 다른 것이다(ARCH 4.7.2).
 
 ## L4 도구 · 가드 (`l4-tools-guards/`)
 
@@ -53,12 +63,15 @@
 - `lib/ma_bash`: Bash 명령의 쓰기 대상·읽는 경로·복사 원본·git 변경 판정. 못 잡는 쓰기(`python -c` 등)는 남는 위험(4.4절). 셸 예약어, `bash -c`/`eval`, `cd`는 따라가고, 따라가지 못하는 형태(명령 치환, 열린 heredoc, 변수 경로, 변수 `cd`, symlink+쓰기)는 None(막음). git은 읽기 하위 명령 허용 목록.
 - `ma_bash.http_sends`: curl·wget이 데이터를 보내는지(짧은 옵션 묶음 `-sd`, `-XPOST`, `--data=…` 포함). scope-guard는 verifier에게만 적용한다(사용자 결정 2026-10-25). curl 옵션이 늘면 `CURL_SEND_*`를 고친다.
 - `lib/ma_path`: 경로 비교(`under`, `same`)는 대소문자를 접어서 한다. hook의 경로 비교는 모두 이것을 쓴다(macOS 볼륨에서 `Docs/agent`로 우회하던 빈틈, 최종 리뷰 C3).
-- `lib/ma_plan`: plan.md의 승인 줄·`Prototype: requested` 읽기. scope-guard는 architect가 이 두 줄을 새로 넣는 쓰기를 막는다(C2).
+- `lib/ma_plan`: plan.md의 승인 줄·`Prototype: requested`(`## Prototype` 절 안만)·작업 단위 읽기. `ma_schema`에 맡긴다. scope-guard는 architect가 이 두 줄을 새로 넣거나 `## Revisions` 줄을 지우거나 바꾸는 쓰기를 막는다(C2, 2026-10-28 A2).
 - `permissions/permissions.json`: G2 ask/deny. 2026-10-25 설치 때 사용자 설정(`~/.claude/settings.json`)에 병합했다(백업 `settings.json.backup-20261025-141535`). 샌드박스 `.claude/settings.json`에도 같은 사본이 있다. 규칙을 바꾸면 두 곳과 `test_permissions`를 함께 고친다. "작업 디렉터리 밖에 쓰기"는 규칙 문자열이 없어 Claude Code의 기본 확인에 맡긴다. git 옵션이 하위 명령 앞에 오는 꼴(`git -C … commit`)은 `Bash(git * commit*)`처럼 가운데 `*` 규칙으로 잡는다. 접두어 규칙만으로는 지나갔음(2026-10-25, 대화형으로 ask·deny 둘 다 확인).
 - `scripts/run-log.py`: L1 기록. 쓰기 전에 sweep을 돌려 maxTurns로 끝난 작업자를 닫고 `PARTIAL:`/`MISMATCH:`를 출력한다. `step:` 줄의 메인 모델은 `<projects>/*/<session>.jsonl`의 마지막 메인 assistant 항목에서 읽고(`ma_subagent.main_model`, 끝 4MB만), 없을 때만 `--model`을 쓴다.
 - `lib/`: `ma_active`(`.active` 찾기, worktree면 메인 트리로. 색인은 저장소 안에서 그 루트 줄만 본다, C1), `ma_logline`(줄 형식), `ma_subagent`(transcript 합계, `stop:` 줄, sweep). `SendMessage`로 이어 부른 에이전트는 같은 id로 다시 시작하므로 `stop:`은 `start:` 수만큼 쓰고, 이어 부른 실행은 마지막 `start:` 시각 −2초부터 센다(`run_since`, F33). sweep은 첫 실행만 닫는다(meta가 첫 실행의 finished를 그대로 두므로). 실행 중에도 user 항목이 들어오므로 user 항목으로 실행을 나누지 않는다. `ma_gate_report`(run-log 결정 집계와 `cost:` 구간별 비용·토큰, 복사 폴더 `report_dir()`, 2026-10-26).
 - `scripts/`: `run-log.py`, `feedback.py`, `secret-scan.py`, `check-run.py`(시나리오 통과 조건), `gate-report.py`(회고 집계 `tally`·복사 `copy`, 종료 코드 0/1/2/3, 2026-10-26). 종료 코드 3(`gate-tally.md`나 복사본을 쓰지 못함)은 261026 계획 사양(0/1/2)에 없던 보완이고, ARCH 4.11과 `accept.md`에는 적혀 있다.
-- 테스트: `python3 -m unittest discover -s l4-tools-guards/tests` (174개). 시나리오는 `tests/scenarios/`.
+- 테스트: `python3 -m unittest discover -s l4-tools-guards/tests` (227개, 2026-10-28). 시나리오는 `tests/scenarios/`.
+- 형식의 단일 소스 (2026-10-28, 검토 C): `lib/ma_schema.py`가 에이전트·레벨, 판정어, 상태 값, 게이트, 모델 family, run-log 줄 읽기, `## 절` 찾기, plan.md 표시 줄을 가진다. `ma_logline`·`ma_plan`·`ma_subagent`·`ma_gate_report`, hook 셋, `run-log.py`·`check-run.py`·`feedback.py`, 모니터가 이것을 쓴다. 낱말을 바꾸면 정의 파일·L1 파일과 함께 바꾸고 `test_schema`를 돌린다.
+- 2026-10-28: scope-guard를 레벨 기본 규칙 + 역할 규칙으로 다시 짰다(D2). `subagent-log`가 `call:`(프롬프트)·`stop:`(transcript 첫 user 항목)에 `unit=`을 남기고 sweep도 같다. `run-log.py`의 `PARTIAL:`에 `unit=`. 읽히지 않는 run-log 줄은 `run-log.py` stderr 경고와 `check-run` 실패(`log-format`), `.active`에 `task:`가 없으면 G1b·판정 hook은 경고(systemMessage)하고 scope-guard는 막는다(C9). `check-run`은 `units`(모든 단위 done|stale)·`revisions`(rev마다 `state=done`)도 본다. `feedback.py`에 `list`·`done <n> "<고친 내용>"`. `gate-tally.md` 지표에 승인 범위 안 조정·승인 전 다시 쓰기·작업 중 수정 수.
+- `permissions.json`은 플러그인이 실을 수 없어 사람이 `~/.claude/settings.json`에 병합한다. README 두 개의 설치 절에 적었다(2026-10-28).
 
 **외부 동작 의존 (탐침 결과, `probe/results.md`)**
 
@@ -108,6 +121,7 @@
 - 미니 창 List 줄은 단계 이름을 그리지 않는다. `stepLabel`은 `--print-list`(`renderList`)가 쓰므로 남아 있다.
 - 첫 클릭 (2026-10-28): 다른 앱이 앞에 있을 때 미니 창의 첫 클릭이 필터·List/Detail·핀·줄에 바로 적용된다. `FirstClickHostingView`가 first mouse를 받고, List 줄은 SwiftUI 스크롤 컨테이너가 받지 않으므로 `FirstClickWindow`가 제자리에서 놓인 클릭만 창이 key가 된 뒤 다시 보낸다(4pt 넘게 움직인 끌기는 다시 보내지 않음). GUI 테스트는 없다.
 - 아이콘 왼쪽 클릭 토글 (2026-10-28): 창이 앞에 있으면(위에 겹치는 다른 창이 없거나 핀) 숨기고, 아니면 연다/앞으로 가져온다. 앞에 있는지는 `NSApp.isActive`가 아니라 `CGWindowListCopyWindowInfo(.optionOnScreenAboveWindow)`로 본다(상태 아이템 클릭이 앱을 항상 활성화하지는 않음). Dock(레벨 20)과 메뉴 막대는 화면 전체를 덮는 투명 창이 있어 Dock 레벨 미만만 센다. 숨길 때 `NSApp.hide`는 비활성 앱에서 무시되므로 `orderOut`을 쓰고, 활성일 때만 `hide`로 포커스를 돌려준다. `show()`는 `NSApp.activate(ignoringOtherApps:)`가 자주 거부되어(그러면 메뉴 막대 클릭 때 활성 앱 창이 다시 위로 올라와 매번 다시 열기만 함) `NSApp.activate()`를 쓰고, 그래도 앞에 오도록 `orderFrontRegardless`를 더 부른다. 왼쪽 클릭은 mouse-down에서 판단한다(`sendAction(on: [.leftMouseDown, .rightMouseUp])`). 확인은 CGEvent down/up 합성 클릭으로 Terminal이 앞일 때 앞으로→숨김→열기 3회. 이어서 (2026-10-28): 창을 선택한 뒤(앱 활성) 아이콘을 누르면 클릭이 도착하기 전에 앱이 비활성이 되고 Terminal 창이 다시 위로 올라와 첫 클릭이 무시됐다. 그래서 `willResignActive` 때 창이 앞이었는지(1초 안), 포인터가 아이콘에 들어올 때(`NSTrackingArea` mouseEntered, 10초 안) 앞이었는지를 기록해 둘 중 하나면 숨긴다. `FirstClickWindow`도 `NSApp.activate()`로 바꿨다. 확인: Terminal이 가린 경우 8회, 창 선택 후 5회, 연속 클릭 8회 모두 맞음(합성 클릭은 포인터를 아이콘으로 옮긴 뒤 down/up).
+- 2026-10-28: 모니터가 `l4-tools-guards/lib`를 `sys.path`에 넣고(`monitor/__init__.py`) `ma_schema`로 run-log 줄·절·판정어를 읽는다. 플러그인 폴더 구조를 바꾸면 이 경로도 고친다. Verify 연속 FAIL은 `Verdict: FAIL`로 세고 ALL PASS나 rev가 바뀌면 처음부터, 작업자 중단은 (rev, unit)마다(`unit=` 없는 stop은 id마다 따로). `step:`의 `back=`은 "back to Execute" 로그 항목, 보관 폴더 이름의 `-b` 같은 꼬리도 mock-up 이력에 들어간다. `revision` 줄의 `before=`는 "승인 전 계획 다시 쓰기"로, 같은 rev의 `state=done`은 한 수정으로 합쳐 보인다. `fix what="Scope change: …"`도 보인다. mock-up은 `Kind:` 첫 줄, prototype은 `## Prototype` 절, `Delivered: commit:<sha>`는 커밋으로 표시. 쓰이지 않던 `mdfiles.read_active`를 지웠고, 테스트 fixture를 실제 산출물 형식으로 다시 만들었다(`tests/build_fixtures.py`).
 - 알려진 표시 문제: `call:`만 있고 `start:`가 없는 호출(거부되었거나 시작하지 못한 에이전트)은 계속 "running"으로 보인다. 내용 없는 partial의 `result=-`가 결과 칸에 `-`로 보인다.
 
 ## 설치 (2026-10-25)

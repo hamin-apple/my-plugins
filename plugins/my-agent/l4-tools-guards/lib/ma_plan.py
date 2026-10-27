@@ -1,10 +1,8 @@
 """Read the markers L1 writes into plan.md (architecture 4.4 G1b): the `Approved` line under `## Approval` and
-the `Prototype: requested` line."""
-import re
+the `Prototype: requested` line under `## Prototype`; and the `### u<n>` work units (4.8.2). Shapes: ma_schema."""
 from pathlib import Path
 
-APPROVED = re.compile(r'Approved\s+\d{4}-\d{2}-\d{2} \d{2}:\d{2}')
-PROTOTYPE = re.compile(r'(?m)^\s*(?:-\s*)?Prototype:\s*requested\s*$')
+import ma_schema
 
 
 def read(path: Path) -> str:
@@ -16,20 +14,15 @@ def read(path: Path) -> str:
 
 def section(text: str, heading: str) -> str:
     """Body of `## <heading>` up to the next `## `, or ''."""
-    m = re.search(rf'(?m)^## {re.escape(heading)}\s*$', text)
-    if not m:
-        return ''
-    rest = text[m.end():]
-    nxt = re.search(r'(?m)^## ', rest)
-    return rest[:nxt.start()] if nxt else rest
+    return ma_schema.section(text, heading)
 
 
 def approved_text(text: str) -> bool:
-    return bool(APPROVED.search(section(text, 'Approval')))
+    return ma_schema.approved_at(text) is not None
 
 
 def prototype_text(text: str) -> bool:
-    return bool(PROTOTYPE.search(text))
+    return ma_schema.prototype_requested_text(text)
 
 
 def approved(plan_md: Path) -> bool:
@@ -38,3 +31,7 @@ def approved(plan_md: Path) -> bool:
 
 def prototype_requested(plan_md: Path) -> bool:
     return prototype_text(read(plan_md))
+
+
+def units(plan_md: Path) -> list:
+    return ma_schema.units(read(plan_md))

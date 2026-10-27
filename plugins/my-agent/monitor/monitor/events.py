@@ -3,12 +3,13 @@
 Gates here are only what the run-log says (pending asks, G2 answers); taskview
 finishes them with scope.md, plan.md and intake.md.
 """
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 
+import ma_schema
+
 PHASE_START = {1: '① Define', 3: '② Plan', 5: '③ Build', 7: '④ Accept'}
-WORKERS = {'coder', 'researcher', 'writer'}
+WORKERS = set(ma_schema.UNIT_AGENTS)
 
 
 @dataclass
@@ -29,11 +30,10 @@ class Events:
 
 
 def alias(model_id):
-    """`claude-sonnet-5-5` → `sonnet`; aliases and `-` pass through."""
+    """`claude-sonnet-5-5` → `sonnet` (ma_schema.family); other ids pass through, `-` is None."""
     if not model_id or model_id == '-':
         return None
-    m = re.match(r'claude-([a-z]+)', model_id)
-    return m.group(1) if m else model_id
+    return ma_schema.family(model_id) or model_id
 
 
 def _int(v):
@@ -56,7 +56,8 @@ def build_events(lines) -> Events:
     asks = {}         # gate -> open popup item (G1a/G1b/G3/E)
     g2_open = []      # open G2 popup items
     revs, back_wanted = [], None
-    verdicts = []
+    verdicts = []     # True per FAIL; None marks a revision, which starts the count again (D5)
+    stops = {}        # (rev, unit) -> worker stops; a stop without unit= (not a plan unit) counts on its own id
     costs = {}        # session -> [first, last]
 
     def item(l, k, a, tx, **kw):
@@ -82,6 +83,9 @@ def build_events(lines) -> Events:
             if n in PHASE_START and (n, rev) not in phases_seen:
                 phases_seen.add((n, rev))
                 item(l, 'phase', 'router' if n == 1 else 'recorder', f'{PHASE_START[n]} start')
+            if f.get('back'):        # back to Execute after a Verify FAIL, Review BLOCKER or G3 rework (B2)
+                item(l, 'phase', 'recorder', f"back to {f.get('name') or n} · {f['back']}",
+                     sub=f"archive {f['archive']}" if f.get('archive') else None)
         elif l.kind == 'call':
             a = f.get('agent', '').removeprefix('my-agent:')
             iso = f.get('isolation')
@@ -111,9 +115,11 @@ def build_events(lines) -> Events:
                       actual_id=f.get('actual'))
             it['mm'] = bool(it['model'] and it['actual'] and it['model'] != it['actual'])
             if it['a'] == 'verifier' and it['res']:
-                verdicts.append(it['res'].startswith('FAIL'))
-            if it['a'] in WORKERS and it['end'] in ('partial', 'error') and it['r'] == rev:
-                e.sstop += 1
+                verdicts.append(ma_schema.verify_failed(it['res']))
+            if it['a'] in WORKERS and it['end'] in ma_schema.INTERRUPTED and it['r'] == rev:
+                key = (rev, f.get('unit') or 'id:' + str(f.get('id')))
+                stops[key] = stops.get(key, 0) + 1
+                e.sstop = max(e.sstop, stops[key])
             for g in g2_open:
                 if g.get('id') == it['id'] and g['sub'] is None:
                     g['sub'] = 'not run (denied?)'
@@ -136,14 +142,25 @@ def build_events(lines) -> Events:
                 asks.pop(gate)['sub'] = f.get('choice')
                 e.answered[gate] = f.get('choice')
         elif l.kind == 'revision':
-            rev = _int(f.get('rev')) or rev + 1
+            n = _int(f.get('rev'))
+            if f.get('before'):      # a plan rewritten before G1b: no new rev (B1)
+                item(l, 'phase', 'recorder', f"plan rewrite before {f.get('before')} · {f.get('why', '')}".strip(' ·'))
+                continue
+            done = next((r for r in revs if r['rev'] == n), None) if n is not None else None
+            if done is not None:     # `state=done`: the same revision finished its invalidation (B4)
+                done['state'] = f.get('state') or done['state']
+                continue
+            rev = n if n is not None else rev + 1
             entry = {'at': l.ts.strftime('%H:%M'), 'from': step, 'back': None, 'why': f.get('why'),
                      'archive': f.get('archive'),
                      'invalid': [s.strip() for s in f.get('invalidated', '').split(',') if s.strip()],
-                     'keep': f.get('keep')}
+                     'keep': f.get('keep'), 'rev': rev, 'state': f.get('state')}
             revs.append(entry)
             back_wanted = entry
+            verdicts.append(None)
             item(l, 'rev', 'gatekeeper', f"rev{rev} {f.get('why', '')}".strip(), sub=f.get('keep'))
+        elif l.kind == 'fix' and (f.get('what') or '').startswith('Scope change:'):
+            item(l, 'phase', 'recorder', f.get('what'))
         elif l.kind == 'cost':
             s = f.get('session', '')
             try:
@@ -170,7 +187,7 @@ def build_events(lines) -> Events:
     e.running = [{'a': it['a'], 'id': it['id'], 'sub': it['sub'], 'model': it['model'], 'effort': it.get('effort'), 'since': it['t']}
                  for it in e.log if it['k'] == 'agent' and it['live']]
     if revs:
-        e.revs = [{'at': e.started.strftime('%H:%M')}] + revs
+        e.revs = [{'at': e.started.strftime('%H:%M')}] + [{k: v for k, v in r.items() if k != 'rev'} for r in revs]
     streak = 0
     for failed in verdicts:
         streak = streak + 1 if failed else 0

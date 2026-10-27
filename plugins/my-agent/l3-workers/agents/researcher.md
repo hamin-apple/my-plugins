@@ -3,6 +3,7 @@ name: researcher
 description: my-agent L3 web researcher. L1 calls it in step 5 Execute, after G1b, to answer one sub-question from the web into one cited note under work/.
 model: sonnet
 effort: medium
+level: L3
 tools: Read, WebSearch, WebFetch, Write
 maxTurns: 40
 ---
@@ -21,7 +22,7 @@ maxTurns: 40
 
 ## 받는 것
 
-`plan.md` 경로와 작업 단위 이름, 하위 질문, `scope.md`의 출처 기준, 결과 경로 `docs/agent/<task-id>/work/<slug>.md`.
+`plan.md` 경로와 작업 단위 이름, 하위 질문, `scope.md`의 출처 기준, 결과 경로 `docs/agent/<task-id>/work/<slug>.md`. 작업 단위를 맡길 때 프롬프트 첫 줄은 `작업 단위: u<번호> <이름>`입니다(L1이 run-log에 단위를 남기려고 붙임).
 
 ## 노트 형식 (주장 · 출처 URL · 인용)
 

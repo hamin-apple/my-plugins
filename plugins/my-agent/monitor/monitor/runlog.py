@@ -1,15 +1,13 @@
-"""run-log.md line parser (my-agent-architecture.md v0.19, 4.7.2 "줄 형식").
+"""run-log.md line parser (my-agent-architecture.md 4.7.2 "줄 형식"), the same `ma_schema.split_line` the hooks use.
 
 A line is `<YYYY-MM-DD HH:MM:SS> <kind>: <key=value ...>`; values with spaces
 are double-quoted. Anything else (headings, old-style lines) is ignored.
 """
-import re
-import shlex
 from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple
 
-LINE_RE = re.compile(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) ([a-z][a-z0-9-]*):(?:\s+(.*))?$')
+import ma_schema
 
 
 class Line(NamedTuple):
@@ -20,20 +18,15 @@ class Line(NamedTuple):
 
 
 def parse_line(text: str):
-    m = LINE_RE.match(text.strip())
-    if not m:
+    parsed = ma_schema.split_line(text)
+    if not parsed:
         return None
+    stamp, kind, fields = parsed
     try:
-        ts = datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S')
-        tokens = shlex.split(m.group(3) or '')
+        ts = datetime.strptime(stamp, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         return None
-    fields = {}
-    for tok in tokens:
-        key, sep, value = tok.partition('=')
-        if sep:
-            fields[key] = value
-    return Line(ts, m.group(2), fields, text)
+    return Line(ts, kind, fields, text)
 
 
 def read_lines(path: Path) -> list:

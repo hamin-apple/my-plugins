@@ -3,10 +3,11 @@
 
 usage: subagent-log.py call|start|stop   (hook input JSON on stdin)
 
-call   PreToolUse(Agent): `call:` line with the call's model, effort, isolation, background
+call   PreToolUse(Agent): `call:` line with the call's model, effort, isolation, background, and the work unit
+       (`unit=u1`) when the prompt has a `작업 단위: u1` line (4.8.2)
 start  SubagentStart: `start:` line with the expected model and effort (call → definition file) and session
-stop   SubagentStop: `stop:` line with the answering model, tokens, time, result, end (from the transcript),
-       permission mode and effort; once per agent id
+stop   SubagentStop: `stop:` line with the work unit, answering model, tokens, time, result, end (from the
+       transcript), permission mode and effort; once per agent id
 start and stop first sweep agents that ended without SubagentStop (lib/ma_subagent.py).
 
 Writes nothing when no `.active` is found or the agent is not `my-agent:*`.
@@ -22,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_logline  # noqa: E402
+import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
 
 HANDBACK_WAIT = 3   # seconds to wait for a late SubagentHandback line (live run 2026-10-25)
@@ -61,9 +63,11 @@ def do_call(inp, active):
     if inp.get('tool_name') != 'Agent' or not agent.startswith(PREFIX):
         return
     bg = ti.get('run_in_background')
+    unit = ma_schema.unit_of_prompt(ti.get('prompt'))
     ma_logline.append(active.log, ma_logline.format_line('call', [
         ('agent', agent), ('model', ti.get('model')), ('effort', ti.get('effort')),
-        ('isolation', ti.get('isolation')), ('background', bool(bg) if bg is not None else False)]))
+        ('isolation', ti.get('isolation')), ('background', bool(bg) if bg is not None else False)]
+        + ([('unit', unit)] if unit else [])))
 
 
 def do_start(inp, active):
@@ -111,9 +115,14 @@ def do_stop(inp, active):
         error = True
     error = error or not message
     effort = inp.get('effort')
+    try:
+        unit = ma_subagent.unit_of(inp.get('agent_transcript_path') or '')
+    except OSError:
+        unit = None
     ma_logline.append(active.log, ma_subagent.stop_line(
-        lines, agent_id, sums, actual, secs, ma_subagent.first_line(message), 'error' if error else 'ok',
-        mode=inp.get('permission_mode'), effort=effort.get('level') if isinstance(effort, dict) else effort))
+        lines, agent_id, sums, actual, secs, ma_subagent.first_line(message),
+        ma_schema.END_ERROR if error else ma_schema.END_OK,
+        mode=inp.get('permission_mode'), effort=effort.get('level') if isinstance(effort, dict) else effort, unit=unit))
 
 
 def main(argv) -> int:

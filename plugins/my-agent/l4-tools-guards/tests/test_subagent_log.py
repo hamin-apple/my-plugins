@@ -55,6 +55,22 @@ class SubagentLogTest(unittest.TestCase):
         line = log_lines(self.task)[-1]
         self.assertTrue(line.endswith(' call: agent=my-agent:probe-worker model=opus effort=- isolation=worktree background=true'), line)
 
+    def test_unit_on_call_and_stop(self):
+        """D3: the `작업 단위: u<n>` line L1 puts in a worker's prompt lands on call: and stop: as unit=."""
+        prompt = '작업 단위: u2 CLI 옵션\nplan.md: docs/agent/x/plan.md'
+        self.hook('call', dict(CALL, tool_input=dict(CALL['tool_input'], prompt=prompt)))
+        self.assertEqual(self.last()['unit'], 'u2')
+        self.start()
+        tr = self.root / 'unit.jsonl'
+        first = json.dumps({'type': 'user', 'timestamp': '2026-10-25T00:00:00.000Z',
+                            'message': {'role': 'user', 'content': prompt}})
+        tr.write_text(first + '\n' + FIXTURE.read_text(encoding='utf-8').split('\n', 1)[1], encoding='utf-8')
+        self.stop(transcript=tr)
+        f = self.last()
+        self.assertEqual((f['unit'], f['end']), ('u2', 'ok'))
+        self.hook('call', CALL)   # no unit line: no unit= field
+        self.assertNotIn('unit', self.last())
+
     def test_call_ignored_for_others(self):
         self.hook('call', dict(CALL, tool_input={'subagent_type': 'Explore', 'prompt': 'x'}))
         self.assertEqual(log_lines(self.task), [])

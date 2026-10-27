@@ -45,8 +45,24 @@ class FeedbackTest(unittest.TestCase):
         self.file.unlink()
         self.assertEqual(self.run_fb('count').stdout, 'L1 0 · L2 0 · L3 0 · L4 0\n')
 
+    def test_list_and_done(self):
+        """E: an open item moves to ## Done with what fixed it."""
+        self.run_fb('add', 'L4', '261025-a', 'first')
+        self.run_fb('add', 'L1', '261025-b', 'second')
+        today = datetime.date.today().isoformat()
+        self.assertEqual(self.run_fb('list').stdout, f'1. L4 {today} 261025-a: first\n2. L1 {today} 261025-b: second\n')
+        r = self.run_fb('done', '2', 'SKILL.md 고침')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        text = self.file.read_text(encoding='utf-8')
+        done = f'- [done] L1 {today} 261025-b: second → SKILL.md 고침'
+        self.assertGreater(text.index(done), text.index('## Done'))
+        self.assertNotIn('[open] L1', text)
+        self.assertEqual(self.run_fb('count').stdout, 'L1 0 · L2 0 · L3 0 · L4 1\n')
+        self.assertEqual(self.run_fb('done', '5', 'x').returncode, 2)
+
     def test_bad_args(self):
-        for args in ([], ['add', 'L5', 't', 'x'], ['add', 'L1', 't'], ['add', 'L1', 't', ' '], ['drop']):
+        for args in ([], ['add', 'L5', 't', 'x'], ['add', 'L1', 't'], ['add', 'L1', 't', ' '], ['drop'],
+                     ['done', 'x', 'y'], ['done', '1']):
             self.assertEqual(self.run_fb(*args).returncode, 2, args)
 
 

@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by jahoonjin.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.1.3 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.2.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 
 ## Requirements
 
@@ -27,6 +27,8 @@ claude plugin install my-agent@my-plugins
 
 The repository is private, so you must be signed in with a GitHub account that has been invited to it.
 
+A plugin cannot ship permission rules. For the risky-action prompts (G2: `git commit`, `git push`, `rm -rf`, package installs) and the denied commands (secret files, `--no-verify`, `git push --force`), merge the `ask` and `deny` lists of `plugins/my-agent/l4-tools-guards/permissions/permissions.json` into `permissions` in `~/.claude/settings.json` by hand. Without them those actions are not asked or blocked.
+
 ## my-agent
 
 The main session (L1) takes a request, runs plan → execute → verify → review in order, and asks the person in a popup at fixed points.
@@ -36,7 +38,7 @@ The main session (L1) takes a request, runs plan → execute → verify → revi
 | L1 | Main session (`/my-agent` skill): runs the steps, delegates, asks, records |
 | L2 | `architect` · `plan-reviewer` · `verifier` · `reviewer` · `gate-analyst`: plans, judgments, decision analysis |
 | L3 | `explorer` · `researcher` · `writer` · `coder`: one assigned piece of work each |
-| L4 | Hooks · permission rules · scripts: recording and blocking |
+| L4 | Tools·MCP · hooks · permission rules · scripts: running, recording and blocking |
 
 | Command | What it does |
 |---|---|

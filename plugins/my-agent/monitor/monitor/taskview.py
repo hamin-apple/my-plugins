@@ -9,7 +9,9 @@ from .mdfiles import read_confirmation, read_criteria, read_intake, read_plan, r
 from .prices import cost
 from .runlog import read_lines
 
-STATUS = {'active': 'running', 'done': 'done', 'aborted': 'stopped'}
+import ma_schema
+
+STATUS = dict(zip(ma_schema.INTAKE_STATUS, ('running', 'done', 'stopped')))
 PREVIEW_MAX_BYTES, PREVIEW_CHARS = 200 * 1024, 4000
 LIVE_SECS = 10 * 60
 INTERNAL = ('usage', 'actual_id', 'tokens')
@@ -82,26 +84,27 @@ def _files(task_dir: Path, ev, running, now):
 
 
 def _mock(plan: dict, r: int):
+    """The `## Mock-up` body with its first-line `Kind:` (architect.md) split off; `proto` when L1 asked for one."""
     body = plan.get('mockup')
     if not body:
         return None
-    kind, proto, rest = None, None, []
-    for line in body.splitlines():
-        if line.startswith('Kind:') and kind is None:
-            kind = line[5:].strip()
-        elif line.startswith('Prototype:') and proto is None:
-            proto = line[10:].strip()
-        else:
-            rest.append(line)
+    lines = body.splitlines()
+    first = next((i for i, line in enumerate(lines) if line.strip()), None)
+    m = ma_schema.MOCKUP_KIND.match(lines[first].strip()) if first is not None else None
+    kind = m.group(1).strip() if m else None
+    rest = lines[first + 1:] if m else lines
     at = plan.get('approved_at')
-    return {'r': r, 'at': at[11:] if at else None, 'kind': kind, 'body': '\n'.join(rest).strip('\n'), 'proto': proto}
+    return {'r': r, 'at': at[11:] if at else None, 'kind': kind, 'body': '\n'.join(rest).strip('\n'),
+            'proto': plan.get('prototype')}
 
 
 def _mocks(task_dir: Path, plan_now: dict, cur_rev: int):
     out = []
     for d in sorted((task_dir / 'archive').glob('*/')):
-        m = re.search(r'rev(\d+)$', d.name.rstrip('/'))
-        mk = _mock(read_plan(d / 'plan.md'), int(m.group(1)) - 1 if m else 0)
+        m = re.search(r'-rev(\d+)(?:-[b-z])?$', d.name.rstrip('/'))   # `-b`, `-c` when the name was taken
+        if not m or int(m.group(1)) < 1:
+            continue   # drafts before G1b (`-rev<N>-draft`) and kept verdicts (`-run<n>`) are not an approved plan
+        mk = _mock(read_plan(d / 'plan.md'), int(m.group(1)) - 1)
         if mk:
             out.append(mk)
     mk = _mock(plan_now, cur_rev)
@@ -114,6 +117,9 @@ def _deliver(project: Path, intake: dict, status: str):
     if intake['delivered']:
         items = []
         for rel in intake['delivered']:
+            if rel.startswith(ma_schema.DELIVERED_COMMIT):   # dev profile: the deliverable is a commit (accept.md)
+                items.append([rel, 'commit', '–'])
+                continue
             p = Path(rel) if Path(rel).is_absolute() else project / rel
             try:
                 st = p.stat()

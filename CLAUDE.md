@@ -1,6 +1,6 @@
 # my-plugins
 
-Claude Code 플러그인 마켓플레이스. 지금은 `my-agent` 하나(HITL 멀티 에이전트 오케스트레이션: 계획 → 실행 → 검증 → 리뷰). 사용자용 설명은 `README.md`.
+Claude Code 플러그인 마켓플레이스. 지금은 `my-agent` 하나(HITL 멀티 에이전트 오케스트레이션: 계획 → 실행 → 검증 → 리뷰). 사용자용 설명은 `README.md`(영문)와 `README-ko.md`(한국어).
 
 ## 구조 (`plugins/my-agent/`)
 
@@ -21,11 +21,12 @@ cd plugins/my-agent && python3 -m unittest discover -s l4-tools-guards/tests   #
 cd plugins/my-agent/monitor && python3 -m unittest discover tests            # 모니터 (116개)
 ```
 
-빌드 단계는 없다(Python 표준 라이브러리 + 정적 HTML).
+빌드 단계는 없다(Python 표준 라이브러리 + 정적 HTML). 예외: `monitor/menubar/`의 Swift 앱은 `sh menubar/build.sh`로 빌드한다(선택).
 
 ## 주의
 
-- 버전을 올릴 때는 `plugins/my-agent/.claude-plugin/plugin.json`의 `version`과 `README.md` 플러그인 표의 버전을 같은 커밋에서 함께 바꾼다. 두 값은 항상 같아야 한다.
+- 버전을 올릴 때는 `plugins/my-agent/.claude-plugin/plugin.json`의 `version`과 `README.md`·`README-ko.md` 플러그인 표의 버전을 같은 커밋에서 함께 바꾼다. 세 값은 항상 같아야 한다.
+- `README.md`(영문)와 `README-ko.md`(한국어)는 같은 내용이다. 하나를 고치면 다른 하나도 함께 고친다(요구 사항의 도구 버전 포함).
 - my-agent는 `docs/build-guide/my-agent-architecture.md` 설계대로만 동작해야 한다. 임시 예외·우회 문구를 런타임 규칙에 넣지 않는다.
 - `monitor/web/index.html`은 `monitor/tools/build-web.py`가 생성했지만 이후 직접 수정되어 있다. 생성기를 다시 돌리면 직접 수정이 사라진다.
 - `docs/agent/`(my-agent 작업 기록)와 `.superpowers/`는 git에서 제외된다.

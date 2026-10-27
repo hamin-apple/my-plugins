@@ -100,6 +100,12 @@
 - 미니 창 (2026-10-27): 메뉴바 아이콘 왼쪽 클릭은 List/Detail 미니 창, 오른쪽·Ctrl 클릭은 기존 메뉴. 화면 설정(`mode`, `pinned`, `frame.list`, `frame.detail`)만 UserDefaults suite `my-agent.monitor-menubar`에 저장한다(지우기: `defaults delete my-agent.monitor-menubar`). `/api/tasks` 요약에 읽기 전용 `elapsed` 필드가 늘었다.
 - 미니 창의 Detail은 `web/index.html`의 전역 `selectTask`와 처음 load 때의 `#task=` hash 읽기에 기댄다. 둘 중 하나의 이름이나 형식을 바꾸면 Detail 선택이 깨진다. `tests/test_web_contract.py`가 이를 잡는다.
 - List 깜빡임(진행 중·답 대기 줄의 기호와 막대 현재 칸)은 웹 `.dot.run`의 `pulse`(1.4초, 불투명도 .3)에 맞춘 값이다. 웹 쪽 값을 바꾸면 `menubar/Sources/Views.swift`도 함께 맞춘다. Reduce Motion이면 멈춘다.
+- List 높이·상태 색 (2026-10-27): 상태 색은 `web/index.html`의 `--st-*`와 `menubar/Sources/ListModel.swift`의 `statusPalette` 두 곳에 있다. `tests/test_menubar.py`의 `test_palette_matches_web`이 둘이 같은지 본다. 한쪽을 바꾸면 다른 쪽도 바꾼다.
+- `--ok`/`--run`/`--gate`/`--l1-soft`는 상태 밖(게이트 결과, L1 표시 등)에서도 쓰므로 상태 색을 바꿀 때 건드리지 않는다.
+- 웹에는 상태 없는 작업의 tone이 없다. 서버가 상태를 항상 셋 중 하나로 보내기 때문이다(`monitor/taskview.py:173`).
+- List 높이는 `ListMetrics` 상수로 계산하고, 뷰가 같은 상수로 높이를 고정한다. 줄 모양을 바꾸면 상수도 맞춘다.
+- List 높이 애니메이션은 제약 풀기 → 애니메이션 → completion에서 높이 고정·저장 순서다. 순서를 바꾸면 애니메이션이 사라지거나 중간 frame이 저장된다.
+- 미니 창 List 줄은 단계 이름을 그리지 않는다. `stepLabel`은 `--print-list`(`renderList`)가 쓰므로 남아 있다.
 - 알려진 표시 문제: `call:`만 있고 `start:`가 없는 호출(거부되었거나 시작하지 못한 에이전트)은 계속 "running"으로 보인다. 내용 없는 partial의 `result=-`가 결과 칸에 `-`로 보인다.
 
 ## 설치 (2026-10-25)

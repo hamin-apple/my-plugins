@@ -275,6 +275,76 @@ class MenubarTest(unittest.TestCase):
             with self.subTest(argv=argv):
                 self.assertEqual(self.run_flag('--fit-frame', *argv).returncode, 2)
 
+    def list_frame(self, *argv):
+        r = self.run_flag('--list-frame', *argv)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout.strip()
+
+    def test_list_frame(self):
+        s = '0,0,1512,944'
+        saved = '1180,220,300,640'
+        self.assertEqual(self.list_frame(saved, '12', s), '1180,336,300,524 fit')
+        self.assertEqual(self.list_frame(saved, '3', s), '1180,678,300,182 fit')
+        self.assertEqual(self.list_frame(saved, '0', s), '1180,748,300,112 fit')
+        self.assertEqual(self.list_frame(saved, '30', s), '1180,0,300,860 scroll')
+        self.assertEqual(self.list_frame('100,700,300,640', '3', s), '100,762,300,182 fit')
+        self.assertEqual(self.list_frame('3000,220,300,640', '3', s), '1212,678,300,182 fit')
+        self.assertEqual(self.list_frame('1700,300,400,500', '2', s, '1512,0,1920,1080'), '1700,656,400,144 fit')
+        self.assertEqual(self.list_frame('100,0,300,50', '3', s), '100,0,300,106 scroll')
+        self.assertEqual(self.list_frame('0,500,2000,300', '1', s), '0,694,1512,106 fit')
+        # a frame saved by the previous version (height 640) and a new one (height 182) give the same result
+        self.assertEqual(self.list_frame('1180,678,300,182', '3', s), '1180,678,300,182 fit')
+
+    def test_list_frame_height_formula(self):
+        s = '0,0,1512,944'
+        for n in range(6):
+            with self.subTest(rows=n):
+                x, y, w, h = map(int, self.list_frame('10,300,300,640', str(n), s).split()[0].split(','))
+                self.assertEqual(h, 112 if n == 0 else 68 + n * 38)
+                self.assertEqual(y + h, 940)
+
+    def test_list_frame_bad_input(self):
+        for argv in ([], ['1,2,3,4'], ['1,2,3,4', '3'], ['1,2,3,4', '-1', '0,0,100,100'],
+                     ['1,2,3,4', 'x', '0,0,100,100'], ['a,b,c,d', '3', '0,0,100,100']):
+            with self.subTest(argv=argv):
+                self.assertEqual(self.run_flag('--list-frame', *argv).returncode, 2)
+
+    def test_list_tones(self):
+        lines = self.print_list(self.stub(self.MIXED), '--tones')
+        rows = {l.split('\t')[1]: l.split('\t')[7:] for l in lines[1:]}
+        self.assertEqual(rows, {
+            'b-run': ['run', 'ppppr---'], 'd-wait': ['wait', 'pw------'], 'g-odd': ['run', 'pppppppp'],
+            'a-done': ['done', 'bbbbbbbb'], 'c-stop': ['stop', 'ppps----'], 'e-broken': ['none', '--------'],
+            'f-nostatus': ['none', 'pp------'], 'h-stop': ['stop', 's-------']})
+
+    def test_list_tones_keeps_default_output(self):
+        port = self.stub(self.MIXED)
+        plain = self.print_list(port)
+        toned = self.print_list(port, '--tones')
+        self.assertEqual(plain[0], toned[0])
+        self.assertEqual(['\t'.join(l.split('\t')[:7]) for l in toned[1:]], plain[1:])
+        self.assertTrue(all(len(l.split('\t')) == 9 for l in toned[1:]))
+
+    def test_palette(self):
+        r = self.run_flag('--print-palette')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.splitlines(), [
+            'run\t#c25e00\t#ffa94d', 'wait\t#d1242f\t#ff6b6b', 'done\t#2552c9\t#7ea3ff',
+            'stop\t#4b5563\t#c9d1d9', 'past\t#1d7a3e\t#5fd08a'])
+
+    def test_palette_matches_web(self):
+        html = (ROOT / 'web' / 'index.html').read_text(encoding='utf-8')
+        dark_at = html.index('prefers-color-scheme: dark')
+        values = {}
+        for scheme, block in (('light', html[:dark_at]), ('dark', html[dark_at:])):
+            values[scheme] = dict(re.findall(r'--st-(run|wait|done|stop|past):\s*(#[0-9a-fA-F]{6})', block))
+            self.assertEqual(len(values[scheme]), 5, scheme)
+        r = self.run_flag('--print-palette')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for line in r.stdout.splitlines():
+            tone, light, dark = line.split('\t')
+            self.assertEqual((light, dark), (values['light'][tone], values['dark'][tone]), tone)
+
     def detail(self, *argv):
         r = self.run_flag('--print-detail', *argv)
         self.assertEqual(r.returncode, 0, r.stderr)

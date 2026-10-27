@@ -18,7 +18,7 @@ Claude Code 플러그인 마켓플레이스. 지금은 `my-agent` 하나(HITL �
 
 ```sh
 cd plugins/my-agent && python3 -m unittest discover -s l4-tools-guards/tests   # L1~L4 규칙·hook (214개)
-cd plugins/my-agent/monitor && python3 -m unittest discover tests            # 모니터 (116개)
+cd plugins/my-agent/monitor && python3 -m unittest discover tests            # 모니터 (128개)
 ```
 
 빌드 단계는 없다(Python 표준 라이브러리 + 정적 HTML). 예외: `monitor/menubar/`의 Swift 앱은 `sh menubar/build.sh`로 빌드한다(선택).

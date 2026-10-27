@@ -13,13 +13,26 @@ The menu bar icon shows the number of running tasks (`off` when the monitor serv
 
 A window with a thin title-less header: a `List | Detail` switch and a pin button. Drag the background to move it.
 
-- **List** (default about 300x640) is native. One line per task: status mark (`?` waiting for an answer, a dot for running, `✓` done, `■` stopped or unknown), task ID (one line, shortened in the middle), current step (`5. Execute`, `Done`, or `–` when unknown), elapsed time (`38m`, `1h 5m`, `2d 3h`) and an 8-cell progress bar. Running and waiting tasks come first; the rest keep the server order (newest first).
+- **List** (default width 300, height set by the number of lines) is native. One line per task: status mark (`?` waiting for an answer, a dot for running, `✓` done, `■` stopped or unknown), task ID (one line), elapsed time (`38m`, `1h 5m`, `2d 3h`) and an 8-cell progress bar. The step name is not shown in the window; the status shows in the mark color and the bar. The elapsed time takes only the width of its text, the ID gets all the remaining width and is shortened in the middle only when it still does not fit. Running and waiting tasks come first; the rest keep the server order (newest first).
+- The List height fits the visible lines (after the filter): header + filter row + lines x line height. The top edge stays fixed; the bottom edge grows or shrinks (a short animation) when the number of lines changes, by a refresh or by the filter. A refresh that keeps the same number of lines does not touch the window. If the height is more than the visible height of the screen the window is only as tall as the screen and the list scrolls. With no lines (no tasks, no match, server off) it shrinks to the one-line notice. If the window sits so near the bottom of the screen that the header, filter row and one line would not show, the top edge is moved up. Moving the window to another screen fits it to that screen. Fitting waits while you drag the window.
+- In List you can change only the width; the height cannot be dragged. List remembers the position (top edge) and the width only, and opens at that position and width with the height fitted to the current lines. A saved height from an older version is ignored. Detail still remembers its position and size.
+- Status colors (the same values as the web monitor's `--st-*`, set in `statusPalette` in `Sources/ListModel.swift`):
+
+  | State | Used for | Light | Dark |
+  | --- | --- | --- | --- |
+  | `run` running (orange) | dot, current bar cell | `#c25e00` | `#ffa94d` |
+  | `wait` waiting for an answer (red) | `?`, current bar cell | `#d1242f` | `#ff6b6b` |
+  | `done` done (blue) | `✓`, all 8 bar cells | `#2552c9` | `#7ea3ff` |
+  | `stop` stopped (dark gray) | `■`, stopped bar cell | `#4b5563` | `#c9d1d9` |
+  | `past` passed cell (green) | passed cells of running, waiting and stopped tasks | `#1d7a3e` | `#5fd08a` |
+
+  A cell not reached yet is a faint gray; a task with no status shows a gray `■`.
 - The status mark and the current bar cell of running and waiting lines blink slowly (opacity 1, 0.3, 1 every 1.4 s, like the running dot of the web monitor). Done, stopped and unknown lines do not blink. With macOS Reduce Motion on, nothing blinks.
 - The filter `All | Running | Done | Stopped` sits under the header. A task with no status shows only under All. With the server off the list shows `Monitor server is off`; with no match it shows `No tasks` or `No done tasks` and so on.
 - Clicking a line switches the same window to **Detail** with that task selected. Clicking the same line again selects it again.
 - **Detail** (default about 1000x700) is the web monitor itself in a web view, so it looks the same as in the browser. Choosing Detail with the switch keeps the task already shown. With the server off it shows `Monitor server is off`; when the server comes back (even on another port) the page is loaded again. The web state of Detail (selection, scroll) is not kept across app restarts; only the frame is.
 - **Pin** keeps the window above other apps' windows; unpinned it is a normal window.
-- The position and size are remembered separately for List and Detail. Switching mode moves to that mode's frame. A saved frame that is off every connected screen is moved back inside the visible screen, and one larger than the screen is shrunk to it.
+- The frame is remembered separately for List (position and width) and Detail (position and size). Switching mode moves to that mode's frame. A saved frame that is off every connected screen is moved back inside the visible screen, and one larger than the screen is shrunk to it.
 - The list refreshes every 5 s, in the same poll as the menu, with the same server lookup (`monitor.json`, then ports 8765 to 8775).
 
 Only screen settings are stored, in the defaults domain `my-agent.monitor-menubar`: `mode`, `pinned`, `frame.list`, `frame.detail`. Task data is never written. Check them with `defaults read my-agent.monitor-menubar`.
@@ -54,6 +67,12 @@ menubar/build/my-agent-menubar
 menubar/build/my-agent-menubar --print-menu    # print the menu and the commands it would run, then exit
 menubar/build/my-agent-menubar --print-list [--filter all|running|done|stopped] [--ports A-B]
                                                # print the List lines (symbol, ID, step, elapsed, bar, pulse or -, key), then exit
+                                               # (the step column is printed here only; the window does not show it)
+menubar/build/my-agent-menubar --print-list --tones
+                                               # add two columns: the mark's tone and 8 bar tone letters (p past, r run, w wait, b done, s stop, -)
+menubar/build/my-agent-menubar --list-frame 1180,220,300,640 12 0,0,1512,944
+                                               # saved frame, number of lines, then screens; print the fitted frame and fit or scroll
+menubar/build/my-agent-menubar --print-palette # print tone, light, dark for the status colors
 menubar/build/my-agent-menubar --fit-frame 3000,100,300,640 0,0,1512,944
                                                # saved frame first, then screens (x,y,w,h); print the frame moved inside a screen
 menubar/build/my-agent-menubar --print-detail loaded=8765 port=8765 applied=1 seq=2 key=<key>

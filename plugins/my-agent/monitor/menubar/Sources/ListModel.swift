@@ -103,6 +103,107 @@ func fitFrame(_ frame: CGRect, screens: [CGRect]) -> CGRect {
     return CGRect(x: x, y: y, width: w, height: h)
 }
 
+// MARK: List window height
+
+/// Heights in points. The view fixes the same values with .frame(height:), so calculation and drawing agree.
+enum ListMetrics {
+    static let header: CGFloat = 36       // header row + divider
+    static let filterBar: CGFloat = 32    // filter row + divider
+    static let row: CGFloat = 38          // one task row
+    static let notice: CGFloat = 44       // one notice line (no tasks, no match, server off)
+    static let minWidth: CGFloat = 260
+    static let defaultWidth: CGFloat = 300
+}
+
+/// Rows the list shows: the same count ListView and renderList see after sort and filter.
+func visibleRowCount(_ state: ListState, filter: ListFilter) -> Int {
+    switch state {
+    case .off: return 0
+    case .on(let all): return filterRows(sortRows(all), filter).count
+    }
+}
+
+func listContentHeight(rows: Int) -> CGFloat {
+    ListMetrics.header + ListMetrics.filterBar + (rows <= 0 ? ListMetrics.notice : CGFloat(rows) * ListMetrics.row)
+}
+
+/// The List window frame for `rows` rows. Only the top edge, x and width of `anchor` count; its height is dropped.
+/// The top edge stays unless it is above the screen or so near the screen bottom that header, filter and one row
+/// would not fit. Taller than the screen: cut at the screen bottom (scrolls). Screens are visibleFrames.
+func listFrame(anchor: CGRect, rows: Int, screens: [CGRect]) -> (frame: CGRect, scrolls: Bool) {
+    let want = listContentHeight(rows: rows)
+    var top = anchor.maxY
+    guard let first = screens.first else {
+        return (CGRect(x: anchor.minX, y: top - want, width: anchor.width, height: want), false)
+    }
+    let probe = CGRect(x: anchor.minX, y: top - want, width: anchor.width, height: want)
+    var screen = first
+    var bestArea: CGFloat = 0
+    for s in screens {
+        let i = probe.intersection(s)
+        let area = i.isNull ? 0 : i.width * i.height
+        if area > bestArea { screen = s; bestArea = area }
+    }
+    let w = min(max(anchor.width, ListMetrics.minWidth), screen.width)
+    let x = min(max(anchor.minX, screen.minX), screen.maxX - w)
+    top = min(top, screen.maxY)
+    let floor = min(want, ListMetrics.header + ListMetrics.filterBar + ListMetrics.row)
+    if top - screen.minY < floor { top = screen.minY + floor }
+    let h = min(want, top - screen.minY)
+    return (CGRect(x: x, y: top - h, width: w, height: h), h < want)
+}
+
+// MARK: status tones (colors are in statusPalette, the only native place for the values)
+
+enum Tone: String {
+    case run, wait, done, stop, past, todo
+    case idle = "none"
+}
+
+func markTone(_ row: TaskRow) -> Tone {
+    switch row.status {
+    case "running": return row.waiting ? .wait : .run
+    case "done": return .done
+    case "stopped": return .stop
+    default: return .idle
+    }
+}
+
+/// Eight tones from railStates: a done task is all done, past cells stay green, the current cell takes the status.
+func railTones(_ row: TaskRow) -> [Tone] {
+    if row.status == "done" { return Array(repeating: .done, count: 8) }
+    return railStates(row).map { c in
+        switch c {
+        case "d": return .past
+        case "c":
+            if row.status == "running" { return row.waiting ? .wait : .run }
+            return .todo
+        case "s": return .stop
+        default: return .todo
+        }
+    }
+}
+
+/// Same values as --st-* in web/index.html (a test compares them).
+let statusPalette: [(tone: Tone, light: String, dark: String)] = [
+    (.run, "#c25e00", "#ffa94d"),
+    (.wait, "#d1242f", "#ff6b6b"),
+    (.done, "#2552c9", "#7ea3ff"),
+    (.stop, "#4b5563", "#c9d1d9"),
+    (.past, "#1d7a3e", "#5fd08a"),
+]
+
+func toneChar(_ t: Tone) -> Character {
+    switch t {
+    case .past: return "p"
+    case .run: return "r"
+    case .wait: return "w"
+    case .done: return "b"
+    case .stop: return "s"
+    default: return "-"
+    }
+}
+
 // MARK: Detail (the web monitor in a web view)
 
 /// Value after `#task=`. Only letters, digits and `-._~` stay; same as Python quote(key, safe='').
@@ -146,7 +247,7 @@ func detailAction(loadedPort: Int?, port: Int?, appliedSeq: Int, seq: Int, key: 
 
 // MARK: text output for --print-list
 
-func renderList(_ state: ListState, filter: ListFilter) -> String {
+func renderList(_ state: ListState, filter: ListFilter, tones: Bool = false) -> String {
     switch state {
     case .off:
         return "list: off\nMonitor server is off"
@@ -157,8 +258,10 @@ func renderList(_ state: ListState, filter: ListFilter) -> String {
         }
         var lines = ["list: \(rows.count)"]
         for r in rows {
-            lines.append([statusMark(r), r.id, stepLabel(r), elapsedText(r.elapsed), String(railStates(r)),
-                          pulses(r) ? "pulse" : "-", r.key].joined(separator: "\t"))
+            var cols = [statusMark(r), r.id, stepLabel(r), elapsedText(r.elapsed), String(railStates(r)),
+                        pulses(r) ? "pulse" : "-", r.key]
+            if tones { cols += [markTone(r).rawValue, String(railTones(r).map(toneChar))] }
+            lines.append(cols.joined(separator: "\t"))
         }
         return lines.joined(separator: "\n")
     }

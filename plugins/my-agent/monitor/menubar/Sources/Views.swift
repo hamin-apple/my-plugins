@@ -91,28 +91,19 @@ private func dynamic(_ light: (Double, Double, Double), _ dark: (Double, Double,
     })
 }
 
-private let okColor = dynamic((0x1d, 0x7a, 0x3e), (0x5f, 0xd0, 0x8a))     // web --ok
-private let runColor = dynamic((0x25, 0x52, 0xc9), (0x7e, 0xa3, 0xff))    // web --run
-private let gateColor = dynamic((0xc4, 0x3d, 0x12), (0xff, 0x8a, 0x5c))   // web --gate
-private let doneColor = dynamic((0x25, 0x52, 0xc9), (0x7e, 0xa3, 0xff))
-private let idleColor = Color.secondary
-
-private func markColor(_ row: TaskRow) -> Color {
-    switch row.status {
-    case "running": return row.waiting ? gateColor : okColor
-    case "done": return doneColor
-    default: return idleColor
-    }
+private func hexRGB(_ hex: String) -> (Double, Double, Double) {
+    let v = Int(hex.dropFirst(), radix: 16) ?? 0
+    return (Double((v >> 16) & 255), Double((v >> 8) & 255), Double(v & 255))
 }
 
-private func cellColor(_ c: Character) -> Color {
-    switch c {
-    case "d": return okColor
-    case "c": return runColor
-    case "s": return gateColor
-    default: return Color.secondary.opacity(0.25)
-    }
-}
+/// Status colors come from statusPalette (ListModel.swift), the same values as --st-* in the web monitor.
+private let toneColors: [Tone: Color] = {
+    var m: [Tone: Color] = [.idle: Color.secondary, .todo: Color.secondary.opacity(0.25)]
+    for p in statusPalette { m[p.tone] = dynamic(hexRGB(p.light), hexRGB(p.dark)) }
+    return m
+}()
+
+private func toneColor(_ t: Tone) -> Color { toneColors[t] ?? Color.secondary }
 
 // MARK: pulse (one shared clock)
 
@@ -205,12 +196,13 @@ struct Header: View {
             .padding(.trailing, 10)
             .padding(.top, 8)
             .padding(.bottom, 8)
+            .frame(height: store.mode == .list ? ListMetrics.header - 1 : nil)   // List height is calculated from these
             .background(Color(nsColor: .controlBackgroundColor))
             Divider()
             if store.mode == .list {
                 Seg(items: ListFilter.allCases.map { ($0, $0.rawValue.capitalized) }, selection: $store.filter, fill: true)
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
+                    .frame(height: ListMetrics.filterBar - 1)
                     .background(Color(nsColor: .controlBackgroundColor))
                 Divider()
             }
@@ -243,7 +235,7 @@ struct ListView: View {
     }
 
     private func notice(_ text: String) -> some View {
-        Text(text).foregroundColor(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+        Text(text).foregroundColor(.secondary).frame(maxWidth: .infinity).frame(height: ListMetrics.notice)
     }
 }
 
@@ -258,33 +250,26 @@ struct RowView: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(statusMark(row))
                     .font(.system(size: 12.5, weight: .bold))
-                    .foregroundColor(markColor(row))
+                    .foregroundColor(toneColor(markTone(row)))
                     .frame(width: 14)
                     .modifier(Pulse(active: pulse))
                 Text(row.id)
                     .font(.system(size: 12.5, weight: .semibold))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Spacer(minLength: 0)
-                Text(stepLabel(row))
-                    .font(.system(size: 11.5))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: 120, alignment: .trailing)
-                    .layoutPriority(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Text(elapsedText(row.elapsed))
                     .font(.system(size: 11.5).monospacedDigit())
                     .foregroundColor(.secondary)
-                    .frame(minWidth: 34, alignment: .trailing)
+                    .fixedSize()
                     .layoutPriority(1)
             }
             HStack(spacing: 2) {
-                ForEach(Array(railStates(row).enumerated()), id: \.offset) { _, c in
+                ForEach(Array(zip(railStates(row), railTones(row)).enumerated()), id: \.offset) { _, cell in
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(cellColor(c))
+                        .fill(toneColor(cell.1))
                         .frame(height: 6)
-                        .modifier(Pulse(active: pulse && c == "c"))
+                        .modifier(Pulse(active: pulse && cell.0 == "c"))
                 }
             }
             .frame(maxWidth: 150)
@@ -294,7 +279,7 @@ struct RowView: View {
         .padding(.horizontal, 10)
         .padding(.top, 7)
         .padding(.bottom, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: ListMetrics.row, maxHeight: ListMetrics.row, alignment: .topLeading)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .overlay(alignment: .bottom) { Divider() }

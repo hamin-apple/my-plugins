@@ -67,3 +67,5 @@ python3 tools/feed-fixture.py "$S/claude-sessions/docs/agent/261024-cli-json-out
 
 `web/index.html` is built from mock-up v22 by `tools/build-web.py` (string edits that fail loudly if the mock-up changed).
 Edit the page directly for small fixes; re-run the script only when starting again from a new mock-up.
+
+Status colors: running is orange, waiting for an answer is red, done is blue, stopped is dark gray, and passed steps are green. The file and agent activity marks (the live dot, the file being written, a running agent) are orange too. Log replay steps use the same colors as the Dashboard. The values are the `--st-*` variables in `web/index.html` and are the same as the menu bar app's (`menubar/Sources/ListModel.swift`, `statusPalette`). Blinking is unchanged.

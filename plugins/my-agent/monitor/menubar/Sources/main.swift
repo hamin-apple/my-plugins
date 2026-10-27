@@ -117,6 +117,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.button?.target = self
         item.button?.action = #selector(clicked(_:))
         item.button?.sendAction(on: [.leftMouseDown, .rightMouseUp])   // left on down: the window order is read before the click changes it
+        // The window order is read again when the pointer enters the icon, before a click can change it.
+        item.button?.addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                                    owner: self, userInfo: nil))
         render(.off)
         launch(command(.start, python: pythonPath, root: monitorRoot))   // server only, no window
         poll()
@@ -179,6 +182,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         self.menu = menu
     }
+
+    @objc func mouseEntered(with event: NSEvent) { windows.noteHover() }
 
     @objc func clicked(_ sender: Any?) {
         let e = NSApp.currentEvent

@@ -4,14 +4,64 @@ import Combine
 import SwiftUI
 
 /// The first click on an inactive window activates it and counts as a click.
+/// AppKit drops that click when the clicked view does not accept first mouse. The hosting view does
+/// (FirstClickHostingView), but the List rows sit in SwiftUI's scroll container, which does not:
+/// for those the click (down and up) is posted again once the button is released in place and the window is key.
+/// A drag that starts there (moving more than 4 pt) is not replayed.
 final class FirstClickWindow: NSWindow {
+    private var pendingDown: (at: NSPoint, screen: NSPoint)?   // a dropped first click, until its mouse-up
+    private var pendingClick: NSPoint?                          // a released click, until the window is key
+
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .leftMouseDown, !isKeyWindow {
-            NSApp.activate(ignoringOtherApps: true)
-            makeKeyAndOrderFront(nil)
+        if event.type == .leftMouseDown {
+            pendingDown = nil
+            pendingClick = nil
+            if !isKeyWindow {
+                if dropsFirstClick(event) { pendingDown = (event.locationInWindow, NSEvent.mouseLocation) }
+                NSApp.activate(ignoringOtherApps: true)
+                makeKeyAndOrderFront(nil)
+            }
+        } else if event.type == .leftMouseUp, let down = pendingDown {
+            pendingDown = nil
+            let moved = hypot(NSEvent.mouseLocation.x - down.screen.x, NSEvent.mouseLocation.y - down.screen.y)
+            if moved <= 4 {
+                pendingClick = down.at
+                if isKeyWindow { replayClick() }
+                // Activation can finish later (becomeKey replays then); forget the click if it never does.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.pendingClick = nil }
+            }
         }
         super.sendEvent(event)
     }
+
+    override func becomeKey() {
+        super.becomeKey()
+        replayClick()
+    }
+
+    private func replayClick() {
+        guard let at = pendingClick else { return }
+        pendingClick = nil
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            if let e = NSEvent.mouseEvent(with: type, location: at, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                          windowNumber: windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                NSApp.postEvent(e, atStart: false)
+            }
+        }
+    }
+
+    /// True when the view under the click does not accept first mouse, so AppKit would drop it.
+    private func dropsFirstClick(_ event: NSEvent) -> Bool {
+        guard let content = contentView, let parent = content.superview,
+              let hit = content.hitTest(parent.convert(event.locationInWindow, from: nil)) else { return false }
+        return !hit.acceptsFirstMouse(for: event)
+    }
+}
+
+/// AppKit drops the first click on an inactive window unless the clicked view accepts it.
+/// The filter, the List/Detail switch and the pin are SwiftUI taps directly in this view.
+final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 final class WindowController: NSObject, NSWindowDelegate {
@@ -52,7 +102,7 @@ final class WindowController: NSObject, NSWindowDelegate {
         win.isReleasedWhenClosed = false
         win.collectionBehavior = [.moveToActiveSpace]
         win.delegate = self
-        let hosting = NSHostingView(rootView: RootView(store: store))
+        let hosting = FirstClickHostingView(rootView: RootView(store: store))
         hosting.sizingOptions = []   // the window size is ours, not the content's
         win.contentView = hosting
         window = win

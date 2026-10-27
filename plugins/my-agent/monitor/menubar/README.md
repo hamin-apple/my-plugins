@@ -6,7 +6,7 @@ A small menu bar app for the my-agent monitor. It only shows state and runs `mon
 
 The menu bar icon shows the number of running tasks (`off` when the monitor server is off). It reacts to the click:
 
-- **Left click** opens the mini window, or brings it to the front if it is already open (the first click works even when another app is active). The app does not open the window by itself at start.
+- **Left click** opens the mini window, or brings it to the front if it is already open (the first click works even when another app is active). The app does not open the window by itself at start. In the mini window, too, the first click acts right away: on the filter, the List/Detail switch, the pin and a row.
 - **Right click or Ctrl+left click** shows the menu described below.
 
 ### Mini window

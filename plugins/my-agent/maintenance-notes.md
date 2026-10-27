@@ -106,6 +106,7 @@
 - List 높이는 `ListMetrics` 상수로 계산하고, 뷰가 같은 상수로 높이를 고정한다. 줄 모양을 바꾸면 상수도 맞춘다.
 - List 높이 애니메이션은 제약 풀기 → 애니메이션 → completion에서 높이 고정·저장 순서다. 순서를 바꾸면 애니메이션이 사라지거나 중간 frame이 저장된다.
 - 미니 창 List 줄은 단계 이름을 그리지 않는다. `stepLabel`은 `--print-list`(`renderList`)가 쓰므로 남아 있다.
+- 첫 클릭 (2026-10-28): 다른 앱이 앞에 있을 때 미니 창의 첫 클릭이 필터·List/Detail·핀·줄에 바로 적용된다. `FirstClickHostingView`가 first mouse를 받고, List 줄은 SwiftUI 스크롤 컨테이너가 받지 않으므로 `FirstClickWindow`가 제자리에서 놓인 클릭만 창이 key가 된 뒤 다시 보낸다(4pt 넘게 움직인 끌기는 다시 보내지 않음). GUI 테스트는 없다.
 - 알려진 표시 문제: `call:`만 있고 `start:`가 없는 호출(거부되었거나 시작하지 못한 에이전트)은 계속 "running"으로 보인다. 내용 없는 partial의 `result=-`가 결과 칸에 `-`로 보인다.
 
 ## 설치 (2026-10-25)

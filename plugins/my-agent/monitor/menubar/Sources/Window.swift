@@ -18,7 +18,7 @@ final class FirstClickWindow: NSWindow {
             pendingClick = nil
             if !isKeyWindow {
                 if dropsFirstClick(event) { pendingDown = (event.locationInWindow, NSEvent.mouseLocation) }
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()   // activate(ignoringOtherApps:) was often refused, leaving the other app active
                 makeKeyAndOrderFront(nil)
             }
         } else if event.type == .leftMouseUp, let down = pendingDown {
@@ -73,6 +73,11 @@ final class WindowController: NSObject, NSWindowDelegate {
     private var listRows = 0            // rows the List shows, from the filter and list publishers
     private var refitPending = false    // a fit was asked for while a frame animation ran
     private var refitScheduled = false  // a retry is waiting for the mouse to be released
+    /// When the app last resigned active with the window in front. A menu bar click can make the app
+    /// resign (and raise the other app's windows) before the click reaches toggle().
+    private var resignedInFront: Date?
+    /// When the pointer last entered the menu bar icon with the window in front (see noteHover).
+    private var hoveredInFront: Date?
 
     private static let defaultSize: [Mode: NSSize] = [.list: NSSize(width: ListMetrics.defaultWidth, height: 640), .detail: NSSize(width: 1000, height: 700)]
     private static let detailMinContent = NSSize(width: 720, height: 420)
@@ -82,16 +87,31 @@ final class WindowController: NSObject, NSWindowDelegate {
         self.store = store
         currentMode = store.mode
         super.init()
+        NotificationCenter.default.addObserver(forName: NSApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self = self, let win = self.window else { return }
+            self.resignedInFront = win.isVisible && !win.isMiniaturized && self.isInFront(win) ? Date() : nil
+        }
     }
 
     /// Left click on the icon: hides the window when it is in front, else opens it or brings it to the front.
     func toggle() {
-        if let win = window, win.isVisible, !win.isMiniaturized, win.isOnActiveSpace, isInFront(win) {
+        let justResigned = resignedInFront.map { Date().timeIntervalSince($0) < 1 } ?? false
+        let hovered = hoveredInFront.map { Date().timeIntervalSince($0) < 10 } ?? false
+        resignedInFront = nil
+        hoveredInFront = nil
+        if let win = window, win.isVisible, !win.isMiniaturized, win.isOnActiveSpace, justResigned || hovered || isInFront(win) {
             win.orderOut(nil)
             if NSApp.isActive { NSApp.hide(nil) }   // gives the focus back to the app that had it (ignored when inactive)
         } else {
             show()
         }
+    }
+
+    /// The pointer entered the menu bar icon: remember whether the window is in front now. When this app is not
+    /// active, a click on the icon can raise the active app's windows over it before toggle() runs.
+    func noteHover() {
+        guard let win = window, win.isVisible, !win.isMiniaturized, isInFront(win) else { hoveredInFront = nil; return }
+        hoveredInFront = Date()
     }
 
     /// In front: pinned (always above), or no other window above it overlaps it (below the Dock level:

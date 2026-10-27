@@ -1,6 +1,6 @@
-"""What a Bash command line writes, reads, or copies from (architecture 4.4 "막는 대상", 4.5 "L2 판정자의 Bash",
-4.12 "읽기 경로도 제한하기"). Best effort by design: a write it cannot see (`python -c`, a script) is the accepted
-risk of 4.4 "남는 위험"; the forms it knows are pinned case by case in tests/test_bash.py. What it cannot follow
+"""What a Bash command line writes, reads, or copies from (architecture 4.4 "what is blocked", 4.5 "Bash for L2 judges",
+4.12 "limiting read paths too"). Best effort by design: a write it cannot see (`python -c`, a script) is the accepted
+risk of 4.4 "remaining risk"; the forms it knows are pinned case by case in tests/test_bash.py. What it cannot follow
 (command substitution, a heredoc left open, a `cd` to a variable, a symlink made and written through in one command)
 fails closed: None.
 """
@@ -181,7 +181,7 @@ def _git_sub(args: List[str]):
 
 
 def _git_mutating(args: List[str]) -> bool:
-    """True unless the git command is a known read (an allowlist, 4.5 "읽기·확인 명령"): `-c` and `--exec-path`
+    """True unless the git command is a known read (an allowlist, 4.5 "read and check commands"): `-c` and `--exec-path`
     can run code, `--output` writes a file."""
     sub, rest, opts = _git_sub(args)
     if any(o in ('-c', '--config-env') or o.startswith(('--exec-path', '--config-env=')) for o in opts):

@@ -42,7 +42,7 @@ class ServerTest(unittest.TestCase):
         key = json.loads(self.get('/api/tasks')[2])['tasks'][0]['key']
         t = json.loads(self.get('/api/tasks/' + key)[2])
         self.assertEqual(t['id'], '261024-cli-json-output')
-        self.assertIn('CLI에', self.get('/api/tasks/' + key)[2].decode('utf-8'))   # ensure_ascii=False
+        self.assertIn('① Define', self.get('/api/tasks/' + key)[2].decode('utf-8'))   # ensure_ascii=False
 
     def test_index(self):
         status, headers, body = self.get('/')

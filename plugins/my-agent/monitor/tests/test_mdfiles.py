@@ -16,7 +16,7 @@ class MdFilesTest(unittest.TestCase):
         self.assertEqual(i['status'], 'done')
         self.assertEqual(i['profile'], 'research')
         self.assertEqual(i['delivered'], ['docs/notes/claude-hooks-notify.md'])
-        self.assertEqual(i['title'], 'hooks로 승인 알림 보내는 방법 조사 → 노트')
+        self.assertEqual(i['title'], 'How to send approval notifications with hooks → note')
 
     def test_intake_aborted(self):
         self.assertEqual(read_intake(FLIGHT / 'intake.md')['status'], 'aborted')
@@ -30,7 +30,7 @@ class MdFilesTest(unittest.TestCase):
         p = read_plan(CLI / 'plan.md')
         self.assertEqual(p['estimate_k'], 600)
         self.assertEqual(p['approved_at'], '2026-10-24 15:55')
-        self.assertTrue(p['mockup'].startswith('Kind: CLI 입출력'))
+        self.assertTrue(p['mockup'].startswith('Kind: CLI input/output'))
 
     def test_missing_files(self):
         self.assertIsNone(read_intake(Path('/nonexistent/intake.md')))

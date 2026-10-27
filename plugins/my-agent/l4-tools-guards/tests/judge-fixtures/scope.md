@@ -1,27 +1,27 @@
-# Scope: shlex 요약
+# Scope: shlex summary
 
-## 질문
+## Questions
 
-Python 표준 라이브러리 `shlex`의 `split`과 `quote`가 무엇을 하는가.
+What do `split` and `quote` in the Python standard library module `shlex` do?
 
-## 범위
+## Scope
 
-- 다룸: `shlex.split`, `shlex.quote`
-- 비목표: 다른 함수, 다른 언어
+- Covered: `shlex.split`, `shlex.quote`
+- Non-goals: other functions, other languages
 
-## 출처 기준
+## Source criteria
 
-- Python 공식 문서(docs.python.org)만
+- Official Python docs (docs.python.org) only
 
-## 결과물 형식
+## Deliverable format
 
-- 노트 하나. 항목마다 주장 · 출처 URL · 인용
+- One note. Each item is claim · source URL · quote
 
-## 완료 기준
+## Completion criteria
 
-1. `shlex.split`이 하는 일을 출처와 인용으로 설명한다.
-2. `shlex.quote`가 하는 일을 출처와 인용으로 설명한다.
-3. 모든 항목이 주장 · 출처 URL · 인용 형식이고, 인용은 출처 페이지에 그대로 있다.
+1. Explain what `shlex.split` does, with a source and a quote.
+2. Explain what `shlex.quote` does, with a source and a quote.
+3. Every item is in claim · source URL · quote format, and each quote appears verbatim on the source page.
 
 ## Confirmation
 

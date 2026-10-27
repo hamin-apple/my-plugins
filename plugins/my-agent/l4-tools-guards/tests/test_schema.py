@@ -49,9 +49,9 @@ class SchemaTest(unittest.TestCase):
         self.assertIn(f'`{ma_schema.REVIEW_PASS}`', definition('reviewer'))
         self.assertIn(f'## {ma_schema.APPLIED_AFTER_REVIEW}', definition('reviewer'))
         for name in ('architect', 'gate-analyst', 'explorer', 'researcher', 'writer', 'coder'):
-            self.assertIn(f'`{ma_schema.WORKER_DONE}` 또는 `{ma_schema.WORKER_PARTIAL} <이유>`', definition(name), name)
+            self.assertIn(f'`{ma_schema.WORKER_DONE}` or `{ma_schema.WORKER_PARTIAL} <reason>`', definition(name), name)
         plan_phase = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
-        self.assertIn(f'`{ma_schema.PLAN_SKIPPED} <이유>`', plan_phase)
+        self.assertIn(f'`{ma_schema.PLAN_SKIPPED} <reason>`', plan_phase)
 
     def test_verifier_fail_counts_in_monitor(self):
         """A1 regression: a real verifier stop line (`result="Verdict: FAIL"`) is a FAIL for the E counter."""
@@ -64,19 +64,19 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual((e.vfail, e.vfail_max), (3, 3))
 
     def test_one_line_parser(self):
-        line = ma_logline.format_line('ask', [('gate', 'G3'), ('q', 'a "b" c'), ('rec', '수용')])
+        line = ma_logline.format_line('ask', [('gate', 'G3'), ('q', 'a "b" c'), ('rec', 'Accept')])
         self.assertEqual(ma_logline.parse_line(line), (parse_line(line).kind, parse_line(line).f))
         self.assertEqual(ma_schema.unreadable_lines(line + '\n2026-10-25 10:00:00 ask: q="x\n# heading'), [2])
 
     def test_sections(self):
-        text = '# t\n## 완료 기준 (일반)\n1. a\n### sub\n## Approval\n- Approved 2026-10-25 10:00 G1b\n'
-        self.assertEqual(ma_schema.section_lines(text, '완료 기준'), ['1. a', '### sub'])
+        text = '# t\n## Completion criteria (general)\n1. a\n### sub\n## Approval\n- Approved 2026-10-25 10:00 G1b\n'
+        self.assertEqual(ma_schema.section_lines(text, 'Completion criteria'), ['1. a', '### sub'])
         self.assertEqual(ma_schema.approved_at(text), '2026-10-25 10:00')
         self.assertIsNone(ma_schema.section_lines(text, 'Revisions'))
-        self.assertEqual(ma_schema.units('## 작업 단위\n### u1 a\n- Status: done\n### u12 b\n- x\n## Approval\n'),
+        self.assertEqual(ma_schema.units('## Work units\n### u1 a\n- Status: done\n### u12 b\n- x\n## Approval\n'),
                          [('u1', 'a', 'done'), ('u12', 'b', None)])
-        self.assertEqual(ma_schema.unit_of_prompt('작업 단위: u3 cli\n…'), 'u3')
-        self.assertIsNone(ma_schema.unit_of_prompt('see 작업 단위: u3'))
+        self.assertEqual(ma_schema.unit_of_prompt('Work unit: u3 cli\n…'), 'u3')
+        self.assertIsNone(ma_schema.unit_of_prompt('see Work unit: u3'))
 
 
 if __name__ == '__main__':

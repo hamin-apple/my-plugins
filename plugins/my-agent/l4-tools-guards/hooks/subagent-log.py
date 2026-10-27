@@ -4,7 +4,7 @@
 usage: subagent-log.py call|start|stop   (hook input JSON on stdin)
 
 call   PreToolUse(Agent): `call:` line with the call's model, effort, isolation, background, and the work unit
-       (`unit=u1`) when the prompt has a `작업 단위: u1` line (4.8.2)
+       (`unit=u1`) when the prompt has a `Work unit: u1` line (4.8.2)
 start  SubagentStart: `start:` line with the expected model and effort (call → definition file) and session
 stop   SubagentStop: `stop:` line with the work unit, answering model, tokens, time, result, end (from the
        transcript), permission mode and effort; once per agent id

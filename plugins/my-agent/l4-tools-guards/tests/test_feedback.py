@@ -7,7 +7,7 @@ from pathlib import Path
 from helpers import L4, run_script
 
 SCRIPT = L4 / 'scripts' / 'feedback.py'
-EMPTY = '# my-agent feedback\n\n형식: …\n\n## Open\n\n## Done\n\n- [done] L1 2026-10-01 t: x → y\n'
+EMPTY = '# my-agent feedback\n\nFormat: …\n\n## Open\n\n## Done\n\n- [done] L1 2026-10-01 t: x → y\n'
 
 
 class FeedbackTest(unittest.TestCase):
@@ -24,11 +24,11 @@ class FeedbackTest(unittest.TestCase):
         return run_script(SCRIPT, *args, env=self.env)
 
     def test_add_and_count(self):
-        r = self.run_fb('add', 'L2', '261025-a', 'verifier가 인용을 3개만 확인함')
+        r = self.run_fb('add', 'L2', '261025-a', 'verifier checked only 3 quotes')
         self.assertEqual(r.returncode, 0, r.stderr)
         today = datetime.date.today().isoformat()
         text = self.file.read_text(encoding='utf-8')
-        line = f'- [open] L2 {today} 261025-a: verifier가 인용을 3개만 확인함'
+        line = f'- [open] L2 {today} 261025-a: verifier checked only 3 quotes'
         self.assertIn(line, text)
         self.assertLess(text.index(line), text.index('## Done'))
         self.assertIn('- [done] L1 2026-10-01 t: x → y', text)
@@ -51,10 +51,10 @@ class FeedbackTest(unittest.TestCase):
         self.run_fb('add', 'L1', '261025-b', 'second')
         today = datetime.date.today().isoformat()
         self.assertEqual(self.run_fb('list').stdout, f'1. L4 {today} 261025-a: first\n2. L1 {today} 261025-b: second\n')
-        r = self.run_fb('done', '2', 'SKILL.md 고침')
+        r = self.run_fb('done', '2', 'fixed SKILL.md')
         self.assertEqual(r.returncode, 0, r.stderr)
         text = self.file.read_text(encoding='utf-8')
-        done = f'- [done] L1 {today} 261025-b: second → SKILL.md 고침'
+        done = f'- [done] L1 {today} 261025-b: second → fixed SKILL.md'
         self.assertGreater(text.index(done), text.index('## Done'))
         self.assertNotIn('[open] L1', text)
         self.assertEqual(self.run_fb('count').stdout, 'L1 0 · L2 0 · L3 0 · L4 1\n')

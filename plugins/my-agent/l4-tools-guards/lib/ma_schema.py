@@ -1,4 +1,4 @@
-"""One place for the words and shapes my-agent files share (architecture 4.7 "형식의 단일 소스").
+"""One place for the words and shapes my-agent files share (architecture 4.7 "single source of formats").
 
 The L4 hooks and scripts and the monitor (`monitor/monitor/`, which puts this folder on sys.path) read files with
 these values; the agent definitions and L1 files write them. `test_schema` checks that each definition still
@@ -23,7 +23,7 @@ VERIFY_PASS = 'Verdict: ALL PASS'
 VERIFY_FAIL = 'Verdict: FAIL'
 PLAN_READY = 'READY FOR APPROVAL'
 PLAN_REVISE = 'REVISE'
-PLAN_SKIPPED = 'SKIPPED'          # L1 writes `SKIPPED <이유>` when the profile skips Plan Review
+PLAN_SKIPPED = 'SKIPPED'          # L1 writes `SKIPPED <reason>` when the profile skips Plan Review
 REVIEW_PASS = 'BLOCKER 0'
 REVIEW_PREFIX = 'BLOCKER '
 WORKER_DONE = 'DONE'
@@ -93,7 +93,7 @@ def unreadable_lines(text: str) -> list:
 # --- Markdown sections: a line-start `## <name>`, optionally followed by ` (<note>)` ---
 
 def heading_name(line: str):
-    """`## 완료 기준 (일반)` → `완료 기준`; None for a line that is not a `## ` heading."""
+    """`## Completion criteria (general)` → `Completion criteria`; None for a line that is not a `## ` heading."""
     if not line.startswith('## '):
         return None
     return line[3:].strip().split(' (')[0]
@@ -130,9 +130,9 @@ def has_section(text: str, name: str) -> bool:
 
 APPROVED = re.compile(r'Approved\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2})')   # under ## Approval, L1 only
 PROTOTYPE = re.compile(r'(?m)^\s*(?:-\s*)?Prototype:\s*requested\s*$')  # under ## Prototype, L1 only
-UNIT_HEAD = re.compile(r'^###\s+(u\d+)\b\s*(.*)$')                     # `### u1 <이름>` under ## 작업 단위
+UNIT_HEAD = re.compile(r'^###\s+(u\d+)\b\s*(.*)$')                     # `### u1 <name>` under ## Work units
 UNIT_STATUS_LINE = re.compile(r'^\s*(?:-\s*)?Status:\s*([a-z]+)')
-UNIT_MARK = re.compile(r'(?m)^작업 단위:\s*(u\d+)\b')                  # first prompt line L1 gives a unit's worker
+UNIT_MARK = re.compile(r'(?m)^Work unit:\s*(u\d+)\b')                   # first prompt line L1 gives a unit's worker
 MOCKUP_KIND = re.compile(r'^Kind:\s*(.*)$')                            # first line of ## Mock-up
 DELIVERED_COMMIT = 'commit:'                                           # `Delivered: commit:<sha>` / deliver path=
 
@@ -148,9 +148,9 @@ def prototype_requested_text(text: str) -> bool:
 
 
 def units(text: str) -> list:
-    """[(id, name, status)] of the `### u<n>` work units under ## 작업 단위; status None when missing."""
+    """[(id, name, status)] of the `### u<n>` work units under ## Work units; status None when missing."""
     out = []
-    for line in section_lines(text, '작업 단위') or []:
+    for line in section_lines(text, 'Work units') or []:
         head = UNIT_HEAD.match(line)
         if head:
             out.append([head.group(1), head.group(2).strip(), None])
@@ -162,6 +162,6 @@ def units(text: str) -> list:
 
 
 def unit_of_prompt(prompt):
-    """`u1` from a `작업 단위: u1 …` line in a worker's prompt, or None."""
+    """`u1` from a `Work unit: u1 …` line in a worker's prompt, or None."""
     m = UNIT_MARK.search(prompt or '')
     return m.group(1) if m else None

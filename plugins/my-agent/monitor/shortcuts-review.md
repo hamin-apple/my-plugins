@@ -1,11 +1,11 @@
-# Opening the monitor from Shortcuts (단축어)
+# Opening the monitor from Shortcuts
 
-Can the macOS Shortcuts app (단축어) open the monitor, with a keyboard shortcut? Yes, with one shortcut and one shell command. This note records how, and compares it with the menu bar app (`menubar/README.md`). No shortcut file is shipped.
+Can the macOS Shortcuts app open the monitor, with a keyboard shortcut? Yes, with one shortcut and one shell command. This note records how, and compares it with the menu bar app (`menubar/README.md`). No shortcut file is shipped.
 
-## One shortcut: Run Shell Script (셸 스크립트 실행)
+## One shortcut: Run Shell Script
 
-1. In Shortcuts, create a shortcut, for example "my-agent 모니터".
-2. Add the action "셸 스크립트 실행" (Run Shell Script). Shell `zsh`, input not used.
+1. In Shortcuts, create a shortcut, for example "my-agent monitor".
+2. Add the action "Run Shell Script". Shell `zsh`, input not used.
 3. Script:
 
    ```sh
@@ -14,21 +14,21 @@ Can the macOS Shortcuts app (단축어) open the monitor, with a keyboard shortc
 
 `--open` starts the server if needed and always opens the monitor the way `monitor-config.json` says (window by default). Add `--task <key>` to open one task; the key changes per task, so a fixed shortcut cannot do that.
 
-Running shell scripts needs the Shortcuts setting "스크립트 실행 허용" (Allow Running Scripts, in Shortcuts settings, Advanced). Without it the action fails. The first run may also ask for permission to control Safari (see the menu bar README).
+Running shell scripts needs the Shortcuts setting "Allow Running Scripts" (in Shortcuts settings, Advanced). Without it the action fails. The first run may also ask for permission to control Safari (see the menu bar README).
 
-## Keyboard shortcut (키보드 단축키 추가)
+## Keyboard shortcut (Add Keyboard Shortcut)
 
-Open the shortcut's details (세부사항, the "i" button in the editor), choose "키보드 단축키 추가" (Add Keyboard Shortcut) and press the keys. Pick a combination that includes Command or Control, since the key works system-wide.
+Open the shortcut's details (Details, the "i" button in the editor), choose "Add Keyboard Shortcut" and press the keys. Pick a combination that includes Command or Control, since the key works system-wide.
 
 ## Running it: menu bar, Spotlight, `shortcuts run`
 
-- Menu bar: in the details, turn on "메뉴 막대에 고정" (Pin in Menu Bar). The Shortcuts icon then lists the shortcut.
+- Menu bar: in the details, turn on "Pin in Menu Bar". The Shortcuts icon then lists the shortcut.
 - Spotlight: type the shortcut's name and press Return.
-- Terminal: `shortcuts run "my-agent 모니터"` (list names with `shortcuts list`).
+- Terminal: `shortcuts run "my-agent monitor"` (list names with `shortcuts list`).
 
-## Using the existing "URL 열기" shortcut
+## Using the existing "Open URLs" shortcut
 
-A shortcut made of the "URL 열기" (Open URLs) action with `http://127.0.0.1:8765/` needs no script permission, but:
+A shortcut made of the "Open URLs" action with `http://127.0.0.1:8765/` needs no script permission, but:
 
 - It always opens a tab in the default browser, never a sized window.
 - It does not start the server. If the monitor is off, the page does not load.

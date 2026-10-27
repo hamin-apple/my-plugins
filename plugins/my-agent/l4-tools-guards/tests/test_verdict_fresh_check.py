@@ -134,7 +134,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
         r = self.bash('echo "HEAD=$(git rev-parse HEAD)" && git status --porcelain')
         self.assertDenied(r)
         why = json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason']
-        self.assertIn('git commit인지 판단할 수 없', why)
+        self.assertIn('cannot tell whether this is a git commit', why)
         self.assertNotIn('verify.md', why)
 
     def test_commit_inside_shell_keywords_checked(self):

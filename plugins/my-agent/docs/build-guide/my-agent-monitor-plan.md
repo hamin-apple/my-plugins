@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13 (macOS `python3`), standard library only (`http.server`, `json`, `unittest`, `hashlib`, `pathlib`), plain HTML/CSS/JS, no build step.
 
-**Spec:** `~/dev/my-agent/my-agent-monitor-design.md` (v0.1, approved). Data contract: spec 5.2 and `~/dev/my-agent/my-agent-architecture.md` v0.19 4.7.2 ("줄 형식", "G2 기록"). Screen: `~/dev/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html`.
+**Spec:** `~/dev/my-agent/my-agent-monitor-design.md` (v0.1, approved). Data contract: spec 5.2 and `~/dev/my-agent/my-agent-architecture.md` v0.19 4.7.2 ("line format", "G2 records"). Screen: `~/dev/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html`.
 
 ## Global Constraints
 
@@ -22,7 +22,7 @@
 - run-log line: `<YYYY-MM-DD HH:MM:SS> <kind>: <key=value ...>`; values with spaces in double quotes; unknown kinds ignored; a line without `rev` takes the latest `revision:` rev (rev0 if none).
 - A task that fails to parse is returned as `{"id", "project", "error": "<message>"}`; other tasks are unaffected.
 - Values not in the records are `null` in JSON and shown as `–`; never invented.
-- Titles stay English; other UI text follows the EN/한국어 toggle; text read from records is never translated (spec 4).
+- Titles stay English; other UI text follows the EN/Korean toggle; text read from records is never translated (spec 4).
 - Git: `git init` the new project in Task 1. Each "Commit" step runs only after the user approves committing (user's git rule).
 
 ## Review Focus
@@ -115,11 +115,11 @@ Fixtures: build the five mock-up tasks (`TASKS` in webapp-v22.html) as real fold
 **Interfaces:**
 - Consumes: `Line`, `read_lines` (Task 1).
 - Produces:
-  - `read_intake(p: Path) -> dict` keys `status` ('active'|'done'|'aborted'), `profile`, `location`, `title` (first `요청:`/`Request:` line), `delivered: list[str]`.
+  - `read_intake(p: Path) -> dict` keys `status` ('active'|'done'|'aborted'), `profile`, `location`, `title` (first `Request:` line), `delivered: list[str]`.
   - `read_active(docs_agent: Path) -> dict|None` keys `task, phase, session, started`.
-  - `read_criteria(scope_or_plan: Path) -> int` (numbered items under `## 완료 기준` or `## Criteria`).
+  - `read_criteria(scope_or_plan: Path) -> int` (numbered items under `## Completion criteria` or `## Criteria`).
   - `read_verify(p: Path) -> list[str]` ('p'/'f' per `- <n>. PASS|FAIL`).
-  - `read_plan(p: Path) -> dict` keys `estimate_k: int|None` (first `<n>k` on a line containing `token`/`토큰` in `## Estimate`), `approved_at: str|None`, `mockup: str|None`, `revisions: list[str]`.
+  - `read_plan(p: Path) -> dict` keys `estimate_k: int|None` (first `<n>k` on a line containing `token` in `## Estimate`), `approved_at: str|None`, `mockup: str|None`, `revisions: list[str]`.
   - `build_events(lines: list[Line]) -> Events` where `Events` has `log: list[dict]` (task JSON `log` items), `step_enter: list[(datetime, step, rev, session)]`, `gates: dict`, `waiting`, `running`, `revs`, `vfail`, `vfail_max`, `sstop`, `cost_usd: str|None`, `started: datetime|None`, `last: datetime|None`.
 
 Mapping rules (decided here):

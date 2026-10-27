@@ -1,5 +1,5 @@
 """Sweep: an agent that ends at maxTurns gets no SubagentStop (probe r4/r7); the next L1 record or
-subagent hook closes it from its meta file with end=partial (architecture 4.7.2, E "slice 두 번 중단")."""
+subagent hook closes it from its meta file with end=partial (architecture 4.7.2, E "slice stopped twice")."""
 import json
 import tempfile
 import unittest

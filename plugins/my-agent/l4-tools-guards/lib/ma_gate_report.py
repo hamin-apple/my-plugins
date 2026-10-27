@@ -1,4 +1,4 @@
-"""Gate decision tally and the report copy folder (architecture 4.11, "회고").
+"""Gate decision tally and the report copy folder (architecture 4.11, "retrospective").
 
 `tally_text` only counts what the active task's run-log says: the ask/answer decision table, a few counters and
 the cost/tokens per stretch between `cost:` lines. It does not interpret anything (the gate-analyst does).
@@ -12,7 +12,7 @@ import ma_logline
 import ma_schema
 
 DEFAULT_REPORT_DIR = Path.home() / 'dev/skills/my-surrogate/gate-report'
-NO_REC = '(기록 없음)'
+NO_REC = '(not recorded)'
 SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustment (B3), not a fix
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
 
@@ -56,8 +56,8 @@ def decisions(lines) -> list:
         gate = f.get('gate') or '?'
         if kind == 'ask':
             rec = _bare(f.get('rec'))
-            shown = NO_REC if rec is None else ('없음' if rec == '-' else rec)
-            row = [gate, f.get('q', '-'), shown, '-', '알 수 없음', '답 없음']
+            shown = NO_REC if rec is None else ('none' if rec == '-' else rec)
+            row = [gate, f.get('q', '-'), shown, '-', 'unknown', 'no answer']
             rows.append(row)
             pending[gate], last_ask[gate], after_answer[gate] = (row, rec), (row[1], shown, rec), False
             continue
@@ -68,14 +68,14 @@ def decisions(lines) -> list:
         else:
             twice = after_answer.get(gate) and gate in last_ask
             q, shown, rec = last_ask[gate] if twice else ('-', NO_REC, None)
-            note = '답 두 번' if twice else '답만 있음'
-            row = [gate, q, shown, '-', '알 수 없음', note]
+            note = 'answered twice' if twice else 'answer only'
+            row = [gate, q, shown, '-', 'unknown', note]
             rows.append(row)
         row[3], row[5] = choice, note
         if f.get('other') == '1':
-            row[4] = '직접 입력'
+            row[4] = 'typed (Other)'
         elif rec not in (None, '-'):
-            row[4] = '예' if choice == rec else '아니오'
+            row[4] = 'yes' if choice == rec else 'no'
         after_answer[gate] = True
     return rows
 
@@ -118,15 +118,15 @@ def _segments(lines) -> list:
 
 
 def tally_text(lines) -> str:
-    """The "결정 표", "지표" and "단계별 비용·토큰" sections for a run-log's stamped lines."""
-    out = ['## 결정 표']
+    """The "Decision table", "Metrics" and "Cost and tokens per stretch" sections for a run-log's stamped lines."""
+    out = ['## Decision table']
     rows = decisions(lines)
     if rows:
-        out += ['| # | 게이트 | 질문 | 권장안 | 고른 선택지 | 권장안 선택 | 비고 |', '|---|---|---|---|---|---|---|']
+        out += ['| # | Gate | Question | Recommended | Choice | Picked recommended | Note |', '|---|---|---|---|---|---|---|']
         out += [(f'| {i} | ' + ' | '.join(_cell(c) for c in r) + ' |').replace(' |  |', ' | |')
                 for i, r in enumerate(rows, 1)]
     else:
-        out.append('결정 없음 (ask/answer 줄이 없습니다)')
+        out.append('No decisions (no ask/answer lines)')
     kinds = [(k, f) for _, k, f in lines]
     count = lambda kind, **want: sum(1 for k, f in kinds if k == kind and all(f.get(a) == b for a, b in want.items()))  # noqa: E731
     main = sum(1 for k, f in kinds if k == 'step' and f.get('model') not in (None, '-')
@@ -137,25 +137,25 @@ def tally_text(lines) -> str:
     fixes = count('fix') - scope
     drafts = sum(1 for k, f in kinds if k == 'revision' and f.get('before'))
     revs = len({f.get('rev') for k, f in kinds if k == 'revision' and not f.get('before') and f.get('rev')})
-    out += ['', '## 지표', '| 항목 | 값 |', '|---|---|',
-            f"| Verify 횟수 | {count('step', name='Verify')} |",
-            f"| Plan Review 횟수 | {count('step', name='Plan-Review')} |",
-            f"| 서브에이전트 수 | {count('start')} |",
-            f'| 모델 불일치 수 | {main + sub} (주 세션 {main} · step 줄 기준, 서브에이전트 {sub}) |',
-            f'| L1 작은 수정 수 | {fixes} |',
-            f'| 승인 범위 안 조정 수 | {scope} |',
-            f'| 승인 전 계획 다시 쓰기 수 | {drafts} |',
-            f'| 작업 중 수정 수 | {revs} |',
-            f'| opus로 올린 호출 수 | {opus} (재시도와 명시 호출을 구별하지 않음) |',
-            '', '## 단계별 비용·토큰']
+    out += ['', '## Metrics', '| Item | Value |', '|---|---|',
+            f"| Verify runs | {count('step', name='Verify')} |",
+            f"| Plan Review runs | {count('step', name='Plan-Review')} |",
+            f"| Subagents | {count('start')} |",
+            f'| Model mismatches | {main + sub} (main session {main} · by step lines, subagents {sub}) |',
+            f'| L1 small fixes | {fixes} |',
+            f'| Adjustments within the approved scope | {scope} |',
+            f'| Plan rewrites before approval | {drafts} |',
+            f'| In-flight revisions | {revs} |',
+            f'| Calls raised to opus | {opus} (retries and explicit calls are not told apart) |',
+            '', '## Cost and tokens per stretch']
     segs = _segments(lines)
     if segs:
-        out += ['| 구간 | 단계 | 비용 USD (근사) | 서브에이전트 토큰 |', '|---|---|---|---|']
+        out += ['| Stretch | Steps | Cost USD (approx.) | Subagent tokens |', '|---|---|---|---|']
         for start, end, names, usd, tokens in segs:
-            cost = '기록 없음' if usd is None else f'{usd:.2f}'
+            cost = 'not recorded' if usd is None else f'{usd:.2f}'
             out.append(f"| {start}–{end} | {', '.join(names) or '-'} | {cost} | {tokens:,} |")
     else:
-        out.append('기록 없음')
+        out.append('Not recorded')
     return '\n'.join(out)
 
 

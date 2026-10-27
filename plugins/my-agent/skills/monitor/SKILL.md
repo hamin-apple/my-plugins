@@ -20,11 +20,11 @@ Run exactly one command, chosen by the arguments:
 | `stop` | `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" stop` |
 | anything else | run nothing; say the arguments are `status` and `stop` |
 
-Then report the printed line to the user in Korean, in one sentence, keeping the URL as it is:
+Then report the printed line to the user in their language, in one sentence, keeping the URL as it is:
 
-- `(started)`: 모니터를 띄우고 모니터 창을 열었다(설정이 tab이면 탭)
-- `(running…)`: 이미 떠 있다 (no argument: 모니터 창을 열었다, 설정이 tab이면 탭)
+- `(started)`: started the monitor and opened the monitor window (a tab if the setting is tab)
+- `(running…)`: it is already running (no argument: opened the monitor window, a tab if the setting is tab)
 - `not running`, `stopped <port>`, `nothing to stop`: as they say
-- `not started (<reason>)`: 띄우지 못했다, with the reason
+- `not started (<reason>)`: could not start it, with the reason
 
 Do nothing else.

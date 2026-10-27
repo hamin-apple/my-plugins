@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Scan files for secret-shaped text before a result leaves the task folder (architecture 4.12
-"바깥으로 나가기 전 점검": prototype publish, G3 deliver copy, a commit).
+"check before anything leaves": prototype publish, G3 deliver copy, a commit).
 
 usage: secret-scan.py <path>...   (directories are walked; files that are not UTF-8 text are skipped)
 Prints `<path>:<line>: <kind>` per hit, never the matched text. Exit 0 clean, 1 hits, 2 no paths or a path that

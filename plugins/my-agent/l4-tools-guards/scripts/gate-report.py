@@ -34,9 +34,9 @@ def tally(active) -> int:
     head = [f'gate-report tally: {active.task}']
     if active.log.exists():
         l1, hook, g2 = ma_gate_report.counts(lines)
-        head.append(f'run-log: {shown(active.log, active)} (L1 줄 {l1}, hook 줄 {hook}, G2 줄 {g2} 제외)')
+        head.append(f'run-log: {shown(active.log, active)} (L1 lines {l1}, hook lines {hook}, G2 lines {g2} left out)')
     else:
-        head.append(f'run-log: {shown(active.log, active)} 없음')
+        head.append(f'run-log: {shown(active.log, active)} missing')
     body = ma_gate_report.tally_text(lines) + '\n'
     target = active.task_dir / 'gate-tally.md'
     try:

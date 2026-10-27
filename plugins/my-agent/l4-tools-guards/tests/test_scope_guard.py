@@ -1,4 +1,4 @@
-"""scope-guard.py: per-agent read/write scope for my-agent:* agents (architecture 4.5 "읽기·쓰기 경로 제한", 4.12)."""
+"""scope-guard.py: per-agent read/write scope for my-agent:* agents (architecture 4.5 "read and write path limits", 4.12)."""
 import json
 import tempfile
 import unittest
@@ -104,7 +104,7 @@ class ScopeGuardTest(unittest.TestCase):
         ref = self.L / 'docs' / 'ref.md'
         ref.write_text('r')
         self.assertTrue(self.denied('my-agent:writer', 'Read', {'file_path': str(ref)}))
-        (self.T / 'plan.md').write_text('# Plan\n\n## 참고 파일\n\n- `docs/ref.md`\n\n## Approval\n')
+        (self.T / 'plan.md').write_text('# Plan\n\n## Reference files\n\n- `docs/ref.md`\n\n## Approval\n')
         self.assertFalse(self.denied('my-agent:writer', 'Read', {'file_path': str(ref)}))
         self.assertFalse(self.denied('my-agent:writer', 'Write', {'file_path': str(self.T / 'prototype/index.html')}))
         self.assertTrue(self.denied('my-agent:writer', 'Write', {'file_path': str(ref)}))
@@ -155,14 +155,14 @@ class ScopeGuardTest(unittest.TestCase):
 
     def test_architect_cannot_add_approval_or_prototype(self):
         plan = self.T / 'plan.md'
-        plan.write_text('# Plan\n\n## Prototype\n\n필요\n\n## Approval\n')
+        plan.write_text('# Plan\n\n## Prototype\n\nneeded\n\n## Approval\n')
         write = lambda content: self.denied('my-agent:architect', 'Write',  # noqa: E731
                                             {'file_path': str(plan), 'content': content})
-        self.assertTrue(write('# Plan v2\n\n## Prototype\n\n필요\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n'))
-        self.assertTrue(write('# Plan v2\n\n## Prototype\n\n필요\nPrototype: requested\n\n## Approval\n'))
-        self.assertFalse(write('# Plan v2\n\n## Prototype\n\n필요\n\n## Approval\n'))
+        self.assertTrue(write('# Plan v2\n\n## Prototype\n\nneeded\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n'))
+        self.assertTrue(write('# Plan v2\n\n## Prototype\n\nneeded\nPrototype: requested\n\n## Approval\n'))
+        self.assertFalse(write('# Plan v2\n\n## Prototype\n\nneeded\n\n## Approval\n'))
         # outside ## Prototype the line opens nothing (A5), so it is not L1's marker either
-        self.assertFalse(write('# Plan v2\n\nPrototype: requested\n\n## Prototype\n\n필요\n\n## Approval\n'))
+        self.assertFalse(write('# Plan v2\n\nPrototype: requested\n\n## Prototype\n\nneeded\n\n## Approval\n'))
         plan.write_text('# Plan\n\n## Prototype\n\nPrototype: requested\n\n## Approval\n')
         self.assertFalse(write('# Plan v2\n\n## Prototype\n\nPrototype: requested\n\n## Approval\n'))
         self.assertTrue(self.denied('my-agent:architect', 'Edit',
@@ -172,13 +172,13 @@ class ScopeGuardTest(unittest.TestCase):
     def test_architect_keeps_revisions(self):
         """A2: a rewrite after a revision must carry `## Revisions` over unchanged."""
         plan = self.T / 'plan.md'
-        rev = '- rev1 2026-10-25 10:00 기준 3 추가; archive archive/261025-100000-rev1/; back to ② 계획'
+        rev = '- rev1 2026-10-25 10:00 criterion 3 added; archive archive/261025-100000-rev1/; back to ② Plan'
         plan.write_text(f'# Plan\n\n## Approval\n\n## Revisions\n\n{rev}\n')
         write = lambda content: self.denied('my-agent:architect', 'Write',  # noqa: E731
                                             {'file_path': str(plan), 'content': content})
         self.assertTrue(write('# Plan v2\n\n## Approval\n'))
         self.assertTrue(write(f'# Plan v2\n\n## Approval\n\n## Revisions\n\n{rev[:-3]}\n'))
-        self.assertFalse(write(f'# Plan v2\n\n## Existing work\n\n| a | 유지 | b |\n\n## Approval\n\n## Revisions\n\n{rev}\n'))
+        self.assertFalse(write(f'# Plan v2\n\n## Existing work\n\n| a | keep | b |\n\n## Approval\n\n## Revisions\n\n{rev}\n'))
         self.assertTrue(self.denied('my-agent:architect', 'Edit',
                                     {'file_path': str(plan), 'old_string': rev, 'new_string': ''}))
         plan.write_text('# Plan\n\n## Approval\n')

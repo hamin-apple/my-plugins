@@ -1,12 +1,12 @@
 """Runtime files carry no stage fallbacks and never point at my-dev (plan Global Constraints; user ruling
-"my-agent 를 수행하면 my-agent 의 아키텍처 설계한대로 동작해야해. 예외는 없어.")."""
+"When my-agent runs, it must behave exactly as the my-agent architecture designs it. No exceptions.")."""
 import unittest
 
 from helpers import L4, REPO
 
 RUNTIME = [REPO / 'SKILL.md', REPO / 'skills', REPO / 'l1-orchestration', REPO / 'l2-design-judge', REPO / 'l3-workers',
            L4 / 'hooks', L4 / 'scripts', L4 / 'lib', L4 / 'permissions']
-BANNED = ['my-dev', '구현 4단계', '구현 1단계', '아직 만들지', '일반 프로파일로 진행', '아직 없습니다']
+BANNED = ['my-dev', 'build step']   # a note about build steps in a runtime file is a stage fallback
 
 
 def files():

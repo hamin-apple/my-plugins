@@ -23,10 +23,10 @@ EXPECTED = {
     ('agent-tasks', '261024-hitl-survey'): dict(
         status='running', step=5, profile='research', gates=G('ok', 'ok', 'todo', 'todo'),
         crit={'total': 4, 'res': []}, vfail=0, sstop=0,
-        revs=[{'at': '14:10'}, {'at': '14:47', 'from': 5, 'back': 3, 'why': '하위 질문에 "비용 통제" 추가 (사용자)',
+        revs=[{'at': '14:10'}, {'at': '14:47', 'from': 5, 'back': 3, 'why': 'Added "cost control" to the sub-questions (user)',
                                 'archive': 'archive/261024-144700-rev1/',
                                 'invalid': ['plan-review.md', 'plan.md ## Approval'],
-                                'keep': 'Existing work: work/q1~q3 유지', 'state': 'done'}]),
+                                'keep': 'Existing work: work/q1~q3 keep', 'state': 'done'}]),
     ('obsidian-notes', '261023-hooks-notify-note'): dict(
         status='done', step=9, profile='research', gates=G('ok', 'ok', 'ok', 'ok'),
         crit={'total': 5, 'res': ['p'] * 5}, vfail=0, sstop=0, revs=None),
@@ -54,7 +54,7 @@ class TaskViewTest(unittest.TestCase):
     def test_header_fields(self):
         t = task('claude-sessions', '261024-cli-json-output')
         self.assertEqual((t['started'], t['elapsed'], t['now'], t['est'], t['cost']), ('15:30', 38, '16:08', 600, '2.41'))
-        self.assertEqual(t['title'], 'CLI에 --json 출력 옵션 추가')
+        self.assertEqual(t['title'], 'Add a --json output option to the CLI')
         self.assertRegex(t['key'], r'^[0-9a-f]{8}/261024-cli-json-output$')
         self.assertEqual(t['running'][0]['a'], 'coder')
         done = task('obsidian-notes', '261023-hooks-notify-note')
@@ -96,8 +96,8 @@ class TaskViewTest(unittest.TestCase):
     def test_mocks_with_archive(self):
         m = task('agent-tasks', '261024-hitl-survey')['mocks']
         self.assertEqual([(x['r'], x['at']) for x in m], [(0, '14:31'), (1, '14:56')])
-        self.assertEqual(m[1]['kind'], '노트 목차 + 샘플 단락')
-        self.assertIn('비용 통제', m[1]['body'])
+        self.assertEqual(m[1]['kind'], 'note outline + sample paragraph')
+        self.assertIn('Cost control', m[1]['body'])
 
     def test_deliver(self):
         d = task('obsidian-notes', '261023-hooks-notify-note')['deliver']
@@ -116,10 +116,10 @@ class TaskViewTest(unittest.TestCase):
                               + 'Delivered: commit:a491e13\n', encoding='utf-8')
             plan = T / 'plan.md'
             plan.write_text(plan.read_text(encoding='utf-8').replace(
-                '## Approval', '## Prototype\n필요\nPrototype: requested\n## Approval'), encoding='utf-8')
+                '## Approval', '## Prototype\nneeded\nPrototype: requested\n## Approval'), encoding='utf-8')
             t = task('claude-sessions', '261024-cli-json-output', Path(d))
             self.assertEqual(t['deliver']['items'], [['commit:a491e13', 'commit', '–']])
-            self.assertEqual((t['mocks'][-1]['kind'], t['mocks'][-1]['proto']), ('CLI 입출력', 'prototype'))
+            self.assertEqual((t['mocks'][-1]['kind'], t['mocks'][-1]['proto']), ('CLI input/output', 'prototype'))
             self.assertFalse(t['mocks'][-1]['body'].startswith('Kind:'))
 
     def test_broken_task_isolated(self):

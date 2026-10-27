@@ -4,8 +4,8 @@
 
 While a task is active and its `plan.md` has no `Approved` line under `## Approval`, deny delegation and writes,
 whatever the phase. Allowed before approval: my-agent:explorer / architect / plan-reviewer (and writer once
-`Prototype: requested` is in plan.md), and writes under `<location>/docs/agent/` or to the agent-tasks
-`active-index.json` / `projects.txt` (and `mkdir -p` of the agent-tasks folder itself, Intake step 7). No `.active` → exit 0 at once. A task folder that is gone → pass with a
+`Prototype: requested` is under plan.md's `## Prototype`), and writes under `<location>/docs/agent/` or to the agent-tasks
+`active-index.json` / `projects.txt` (and `mkdir -p` of the agent-tasks folder itself, Intake step 7). No `.active` → exit 0 at once; a `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with a
 warning. Any error → exit 2, so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
 
 After approval, a write outside the location, the agent-tasks folder and the result path that plan.md / scope.md
@@ -24,9 +24,10 @@ import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
 import ma_gate_report  # noqa: E402
 import ma_plan  # noqa: E402
+import ma_schema  # noqa: E402
 from ma_path import same, under  # noqa: E402
 
-BEFORE_APPROVAL = {'my-agent:explorer', 'my-agent:architect', 'my-agent:plan-reviewer'}
+BEFORE_APPROVAL = {f'my-agent:{name}' for name in ma_schema.BEFORE_APPROVAL}
 REASON = '작업 {task}: plan.md에 승인 줄이 없어 위임과 쓰기를 막았습니다 (G1b). {what}'
 ASK = '작업 {task}: 작업 위치 밖 쓰기입니다 ({paths}). 범위 문서의 결과물 위치가 아니므로 확인합니다.'
 RESULT_LINE = re.compile(r'(?m)^\s*-\s*(?:결과물 위치|저장 경로)\s*:\s*`([^`]+)`')
@@ -105,8 +106,11 @@ def main() -> int:
         if not isinstance(inp, dict):
             raise ValueError('hook input is not an object')
         tasks_dir = ma_active.default_tasks_dir().expanduser().resolve()
-        active = ma_active.find_active(inp.get('cwd') or os.getcwd(), tasks_dir)
+        broken = []
+        active = ma_active.find_active(inp.get('cwd') or os.getcwd(), tasks_dir, broken)
         if active is None:
+            if broken:
+                print(json.dumps({'systemMessage': ma_active.BROKEN.format(path=broken[0])}, ensure_ascii=False))
             return 0
         if not active.task_dir.is_dir():
             print(json.dumps({'systemMessage': f'my-agent: .active가 가리키는 작업 폴더 {active.task_dir}가 없습니다'},

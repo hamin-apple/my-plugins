@@ -27,21 +27,32 @@ class Active(NamedTuple):
     log: Path
 
 
+BROKEN = ('my-agent: {path}에 `task:` 줄이 없어 진행 중인 작업으로 읽지 못했습니다. 이대로면 G1b와 판정 최신성 '
+          'hook이 걸리지 않습니다. `.active`를 고치거나 지우세요.')
+
+
 def default_tasks_dir() -> Path:
     return Path(os.environ.get('MA_TASKS_DIR') or Path.home() / 'dev/agent-tasks')
 
 
-def read_active(location: Path):
+def read_active(location: Path, broken: list = None):
+    """The Active task of `location`, or None. A `.active` that exists but cannot be read or has no `task:` line is
+    appended to `broken` (C9: hooks warn instead of passing silently)."""
+    path = location / 'docs' / 'agent' / '.active'
     try:
-        text = (location / 'docs' / 'agent' / '.active').read_text(encoding='utf-8')
-    except (OSError, UnicodeDecodeError):
+        text = path.read_text(encoding='utf-8')
+    except (FileNotFoundError, NotADirectoryError):
         return None
+    except (OSError, UnicodeDecodeError):   # there, but unreadable
+        text = ''
     f = {}
     for line in text.splitlines():
         key, sep, value = line.partition(':')
         if sep:
             f[key.strip()] = value.strip()
     if not f.get('task'):
+        if broken is not None:
+            broken.append(path)
         return None
     task_dir = location / 'docs' / 'agent' / f['task']
     return Active(location, f['task'], f.get('phase', ''), f.get('session', ''), f.get('started', ''),
@@ -71,25 +82,25 @@ def main_worktree(root: Path):
     return common.parent if common is not None and common.name == '.git' else None
 
 
-def find_active(cwd: str, tasks_dir: Path = None):
-    """The Active task for `cwd`, or None. Never raises."""
+def find_active(cwd: str, tasks_dir: Path = None, broken: list = None):
+    """The Active task for `cwd`, or None. Never raises. `broken` collects `.active` files it met without a task."""
     try:
         start = Path(cwd).expanduser().resolve()
     except (OSError, RuntimeError, TypeError, ValueError):
         return None
     root = git_root(start)
     if root is not None:
-        found = read_active(root)
+        found = read_active(root, broken)
         if found:
             return found
         main = main_worktree(root) if (root / '.git').is_file() else None
-        found = read_active(main) if main is not None else None
+        found = read_active(main, broken) if main is not None else None
         if found:
             return found
         candidates = [root] + ([main] if main is not None else [])   # a repo never takes a parent's index entry
     else:
         for d in (start, *start.parents):
-            found = read_active(d)
+            found = read_active(d, broken)
             if found:
                 return found
         candidates = [start, *start.parents]
@@ -107,5 +118,5 @@ def find_active(cwd: str, tasks_dir: Path = None):
             pass
     for d in candidates:
         if d in keys and isinstance(keys[d], str):
-            return read_active(Path(keys[d]).expanduser().resolve())
+            return read_active(Path(keys[d]).expanduser().resolve(), broken)
     return None

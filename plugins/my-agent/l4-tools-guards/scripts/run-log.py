@@ -10,7 +10,8 @@ transcript's last main-chain reply (F13: the skill's `model:` holds for one
 turn), else --model; it is checked against the configured main model (opus, P9)
 and a main-session MISMATCH is printed once per task and model.
 Prints the line, then one MISMATCH line per subagent stop: line with
-mismatch=1 written since the previous L1 line.
+mismatch=1 written since the previous L1 line, and PARTIAL lines (with unit=)
+for workers the sweep closed. Unreadable record lines are named on stderr.
 Exit 0 written, 1 no active task, 2 bad arguments.
 """
 import argparse
@@ -22,12 +23,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_logline  # noqa: E402
+import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
 
 KINDS = ('step', 'ask', 'answer', 'revision', 'cost', 'stale', 'base', 'abort', 'deliver', 'resume',
          'rules-changed', 'merge', 'fix')
 MAIN_MODEL = 'opus'
-FAMILY = re.compile(r'(opus|sonnet|haiku|fable)')
 
 
 def subagent_mismatches(lines) -> list:
@@ -96,14 +97,17 @@ def main(argv=None) -> int:
         return 1
     print(line)
     if model:
-        fam = FAMILY.search(model)
+        fam = ma_schema.family(model)
         seen = any(f.get('model') == model for k, f in lines if not ma_logline.is_hook_line(k, f))
-        if (not fam or fam.group(1) != MAIN_MODEL) and not seen:   # once per task and model
+        if fam != MAIN_MODEL and not seen:   # once per task and model
             print(f'MISMATCH: main session configured {MAIN_MODEL}, actual {model}')
     for m in report:
         print(m)
-    for agent, agent_id in partial:
-        print(f'PARTIAL: {agent} {agent_id} stopped before its final reply (maxTurns?)')
+    for agent, agent_id, unit in partial:
+        print(f'PARTIAL: {agent} {agent_id}{f" unit={unit}" if unit else ""} stopped before its final reply (maxTurns?)')
+    bad = ma_logline.unreadable(active.log)
+    if bad:   # C9: such lines drop out of every reader, so say so instead of losing them quietly
+        print(f"run-log: unreadable line(s) {', '.join(map(str, bad))} in {active.log}", file=sys.stderr)
     return 0
 
 

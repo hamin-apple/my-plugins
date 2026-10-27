@@ -8,20 +8,15 @@ line with `end=partial`; run-log.py and subagent-log.py start/stop call it.
 """
 import json
 import os
-import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import ma_logline
+import ma_schema
+from ma_schema import family
 
-FAMILY = re.compile(r'(opus|sonnet|haiku|fable)')
 RESULT_MAX = 80
-
-
-def family(model):
-    m = FAMILY.search(model or '')
-    return m.group(1) if m else None
 
 
 def claude_projects() -> Path:
@@ -68,6 +63,19 @@ def _entries(path, since=None):
                     continue
             out.append(e)
     return out
+
+
+def unit_of(path) -> str:
+    """The work unit (`u1`) named on a `작업 단위:` line of the run's first prompt, or None (4.8.2)."""
+    for e in _entries(path):
+        msg = e.get('message') if e.get('type') == 'user' else None
+        if not isinstance(msg, dict):
+            continue
+        content = msg.get('content')
+        if isinstance(content, list):
+            content = ' '.join(c.get('text', '') for c in content if isinstance(c, dict) and c.get('type') == 'text')
+        return ma_schema.unit_of_prompt(content if isinstance(content, str) else '')
+    return None
 
 
 def handback_message(path, since=None) -> str:
@@ -128,8 +136,8 @@ def runs(lines, agent_id) -> tuple:
     return count('start'), count('stop')
 
 
-def stop_line(lines, agent_id, sums, actual, secs, result, end, mode=None, effort=None) -> str:
-    fields = [('id', agent_id), ('actual', actual)]
+def stop_line(lines, agent_id, sums, actual, secs, result, end, mode=None, effort=None, unit=None) -> str:
+    fields = [('id', agent_id)] + ([('unit', unit)] if unit else []) + [('actual', actual)]
     if sums is None:
         fields += [('tokens', None), ('in', None), ('out', None), ('cw', None), ('cr', None)]
     else:
@@ -173,7 +181,7 @@ def find_meta(agent_id, session):
 
 def sweep(active) -> list:
     """Write `stop: … end=partial` for each open start whose agent finished without a final reply.
-    Returns [(agent, id)] for the lines written."""
+    Returns [(agent, id, unit)] for the lines written (unit None when the prompt named none)."""
     lines = ma_logline.read(active.log)
     closed = []
     for kind, f in lines:
@@ -198,9 +206,13 @@ def sweep(active) -> list:
             continue   # a normal end: SubagentStop writes that line
         text = ' '.join(c.get('text', '') for c in msg.get('content') or [] if isinstance(c, dict) and c.get('type') == 'text')
         actual = models.most_common(1)[0][0] if models else None
-        line = stop_line(lines, agent_id, sums, actual, secs, first_line(text), 'partial',
-                         effort=(last or {}).get('effort'))
+        try:
+            unit = unit_of(meta_path.with_name(f'agent-{agent_id}.jsonl'))
+        except OSError:
+            unit = None   # the stop line matters more than its unit
+        line = stop_line(lines, agent_id, sums, actual, secs, first_line(text), ma_schema.END_PARTIAL,
+                         effort=(last or {}).get('effort'), unit=unit)
         ma_logline.append(active.log, line)
         lines.append(('stop', {'id': agent_id}))
-        closed.append((f.get('agent'), agent_id))
+        closed.append((f.get('agent'), agent_id, unit))
     return closed

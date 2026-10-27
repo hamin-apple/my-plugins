@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from helpers import REPO
+import ma_schema
 
 MANIFEST = [
     './l2-design-judge/agents/architect.md',
@@ -103,7 +104,11 @@ class AgentsTest(unittest.TestCase):
                 for key in ('hooks', 'permissionMode', 'mcpServers', 'isolation'):
                     self.assertNotIn(key, fm)
                 self.assertNotIn('Agent', fm['tools'].split(', '))
-                self.assertEqual(set(fm) - {'name', 'description', 'model', 'effort', 'tools', 'maxTurns'}, set())
+                self.assertEqual(set(fm) - {'name', 'description', 'model', 'effort', 'level', 'tools', 'maxTurns'},
+                                 set())
+                # D1: the level is data — frontmatter, folder and ma_schema.AGENTS agree
+                self.assertEqual(fm['level'], ma_schema.AGENTS[name])
+                self.assertEqual(rel.split('/')[1], ma_schema.LEVEL_FOLDER[fm['level']])
 
     def test_bodies_have_rules(self):
         for rel in MANIFEST:

@@ -74,8 +74,31 @@ class CheckRunTest(unittest.TestCase):
     def test_missing_step_fails_unless_skipped(self):
         self.lines = [ln for ln in self.lines if 'name=Plan-Review' not in ln]
         self.assertIn('FAIL steps', self.check().stdout)
-        (self.T / 'plan-review.md').write_text('Verdict: SKIPPED 작은 작업\n')
+        (self.T / 'plan-review.md').write_text('SKIPPED 작은 작업\n')
         self.assertEqual(self.check().returncode, 0)
+
+    def test_units_must_end_done(self):
+        """D3/C4: every `### u<n>` unit ends `done` (or `stale` after a revision)."""
+        units = '## 작업 단위\n\n### u1 parser\n- Status: done\n\n### u2 cli\n- Status: running\n\n### u3 old\n- Status: stale\n\n'
+        (self.T / 'plan.md').write_text(f'# Plan\n\n{units}## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')
+        out = self.check().stdout
+        self.assertIn('FAIL units: unit Status not done: u2 running', out)
+        (self.T / 'plan.md').write_text((self.T / 'plan.md').read_text().replace('running', 'done'))
+        self.assertEqual(self.check().returncode, 0)
+
+    def test_unreadable_line_fails(self):
+        """C9: a record line no reader can parse is named, not dropped silently."""
+        self.lines.insert(3, '2026-10-25 10:00:00 ask: gate=Q q="open quote')
+        self.assertIn('FAIL log-format: unreadable run-log line(s) 4', self.check().stdout)
+
+    def test_revision_needs_done(self):
+        """B4: a revision line without its `state=done` line is an unfinished invalidation."""
+        rev = L('revision', rev=1, why='x', archive='archive/a-rev1/', invalidated='verify.md', keep='-', state='pending')
+        draft = L('revision', rev=0, before='G1b', why='수정 요청', archive='archive/b-rev0/')
+        self.lines[6:6] = [draft, rev]
+        self.assertIn('FAIL revisions: no state=done for rev 1', self.check().stdout)
+        self.lines.insert(8, L('revision', rev=1, state='done'))
+        self.assertEqual(self.check().returncode, 0, self.check().stdout)
 
     def test_verdict_files(self):
         (self.T / 'verify.md').write_text('Verdict: FAIL\n')

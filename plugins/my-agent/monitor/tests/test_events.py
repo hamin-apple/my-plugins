@@ -74,14 +74,53 @@ class EventsTest(unittest.TestCase):
         self.assertEqual(rev['r'], 1)
 
     def test_escalation_counters(self):
+        """A1: the verifier's real first line is `Verdict: FAIL` (verifier.md); D5: a revision starts the count again."""
+        def verify(i, res):
+            return [f'2026-10-24 16:0{i}:00 call: agent=my-agent:verifier model=- effort=- isolation=- background=false',
+                    f'2026-10-24 16:0{i}:01 start: agent=my-agent:verifier id=v{i} configured=opus effort=high',
+                    f'2026-10-24 16:0{i}:30 stop: id=v{i} actual=claude-opus-5-5 tokens=1000 secs=29 result={res} end=ok']
         lines = []
-        for i, res in enumerate(['FAIL', 'FAIL', '"ALL PASS"', 'FAIL']):
-            lines += [f'2026-10-24 16:0{i}:00 call: agent=my-agent:verifier model=- effort=- isolation=- background=false',
-                      f'2026-10-24 16:0{i}:01 start: agent=my-agent:verifier id=v{i} configured=opus effort=high',
-                      f'2026-10-24 16:0{i}:30 stop: id=v{i} actual=claude-opus-5-5 tokens=1000 secs=29 result={res} end=ok']
+        for i, res in enumerate(['"Verdict: FAIL"', '"Verdict: FAIL"', '"Verdict: ALL PASS"', '"Verdict: FAIL"']):
+            lines += verify(i, res)
         e = synth(*lines)
         self.assertEqual((e.vfail, e.vfail_max), (1, 2))
+        e = synth(*(lines + ['2026-10-24 16:05:00 revision: rev=1 why=x archive=a state=pending'] + verify(6, '"Verdict: FAIL"')))
+        self.assertEqual((e.vfail, e.vfail_max), (1, 2))
         self.assertEqual(ev('flight-search', '261021-flight-watch').sstop, 2)
+
+    def test_unit_stops_counted_per_unit(self):
+        """D3: E's "same unit stopped twice" counts per `unit=`; two units stopping once each is 1."""
+        def worker(i, unit):
+            return [f'2026-10-24 16:0{i}:01 start: agent=my-agent:coder id=c{i} configured=sonnet effort=medium',
+                    f'2026-10-24 16:0{i}:30 stop: id=c{i} unit={unit} actual=claude-sonnet-5-5 tokens=1 result=- end=partial']
+        self.assertEqual(synth(*(worker(1, 'u1') + worker(2, 'u2'))).sstop, 1)
+        self.assertEqual(synth(*(worker(1, 'u1') + worker(2, 'u2') + worker(3, 'u1'))).sstop, 2)
+
+    def test_unitless_stops_are_not_one_unit(self):
+        """A stop without unit= (a prototype writer, an old line) is not "the same unit" as another one."""
+        lines = [f'2026-10-24 16:0{i}:01 start: agent=my-agent:writer id=w{i} configured=sonnet effort=medium\n'
+                 f'2026-10-24 16:0{i}:30 stop: id=w{i} actual=claude-sonnet-5-5 tokens=1 result=- end=partial'
+                 for i in (1, 2)]
+        self.assertEqual(synth(*'\n'.join(lines).splitlines()).sstop, 1)
+
+    def test_back_to_execute_logged(self):
+        """B2: the `step:` line that goes back to Execute shows its reason and the kept verdicts."""
+        e = synth('2026-10-24 16:00:00 step: n=7 name=Verify rev=0',
+                  '2026-10-24 16:10:00 step: n=5 name=Execute rev=0 back="Verify FAIL 2" archive=archive/261024-161000-run1')
+        it = [x for x in e.log if x['tx'].startswith('back to')][0]
+        self.assertEqual((it['tx'], it['sub'], it['s']), ('back to Execute · Verify FAIL 2', 'archive archive/261024-161000-run1', 5))
+
+    def test_draft_and_done_revisions(self):
+        """B1/B4: a plan rewritten before G1b is no new rev; `state=done` updates its revision, not a second one."""
+        e = synth('2026-10-24 16:00:00 step: n=3 name=Plan rev=0 session=s',
+                  '2026-10-24 16:01:00 revision: rev=0 before=G1b why="수정 요청" archive=archive/a-rev0/',
+                  '2026-10-24 16:02:00 step: n=3 name=Plan rev=0 session=s',
+                  '2026-10-24 16:10:00 revision: rev=1 why=x archive=archive/b-rev1/ state=pending',
+                  '2026-10-24 16:10:30 revision: rev=1 state=done',
+                  '2026-10-24 16:11:00 step: n=3 name=Plan rev=1 session=s')
+        self.assertEqual(len(e.revs), 2)
+        self.assertEqual((e.revs[1]['state'], e.revs[1]['back']), ('done', 3))
+        self.assertEqual([x['r'] for x in e.log if x['tx'].startswith('plan rewrite')], [0])
 
     def test_cost_usd(self):
         self.assertEqual(ev('claude-sessions', '261024-cli-json-output').cost_usd, '2.41')

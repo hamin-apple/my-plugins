@@ -1,7 +1,7 @@
 # my-agent monitor
 
 A read-only local web page that shows every my-agent task: Dashboard, Architecture, Deliverables and Log replay.
-Spec: `~/dev/my-plugins/plugins/my-agent/my-agent-monitor-design.md` (v0.2, 6.1: this folder lives inside the my-agent plugin). Plan: `~/dev/my-plugins/plugins/my-agent/my-agent-monitor-plan.md`.
+Spec: `~/dev/my-plugins/plugins/my-agent/docs/build-guide/my-agent-monitor-design.md` (v0.3, 6.1: this folder lives inside the my-agent plugin). Plan: `~/dev/my-plugins/plugins/my-agent/docs/build-guide/my-agent-monitor-plan.md`. The monitor reads run-log lines and task files with the plugin's `l4-tools-guards/lib/ma_schema.py` (added to `sys.path` by `monitor/__init__.py`).
 
 The monitor only reads. It never writes to a project's `docs/agent/`, a transcript, or `~/dev/agent-tasks/`.
 
@@ -34,7 +34,7 @@ The server binds `127.0.0.1` only. The page polls every 2 s.
 
 | Source | Default | Override |
 |---|---|---|
-| Project list (one path per line, `~` allowed) | `~/dev/agent-tasks/projects.txt` | `MA_PROJECTS_FILE` |
+| Project list (one path per line; my-agent writes absolute paths, a hand-added `~/…` line also works) | `~/dev/agent-tasks/projects.txt` | `MA_PROJECTS_FILE` |
 | Main-session transcripts | `~/.claude/projects/*/<session>.jsonl` | `MA_CLAUDE_PROJECTS` |
 | Prices | `~/dev/agent-tasks/prices.json` if it exists, else `prices.json` in this folder | `MA_TASKS_DIR` (folder) |
 

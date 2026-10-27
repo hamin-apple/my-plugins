@@ -35,7 +35,7 @@ class ProfilesTest(unittest.TestCase):
     def test_dev_rules_present(self):
         text = (PROFILES / 'dev.md').read_text(encoding='utf-8')
         for word in ('목적·사용자', '완료 기준', '강한 제약', '예외 경우', '데이터', '비목표', 'UX 선호', 'G1a',
-                     '작은 작업', '3개', 'Verdict: SKIPPED', '`isolation: "worktree"`', '첫 병렬 그룹', 'base commit=',
+                     '작은 작업', '3개', 'SKIPPED 작은 작업', '`isolation: "worktree"`', '첫 병렬 그룹', 'base commit=',
                      '사용자가 먼저 정리 (Recommended)', '그대로 두고 진행', '`Run:`', 'git diff', 'git status',
                      '커밋 (Recommended)', '재작업', '완료 기준 번호', '## Decisions', 'git apply'):
             self.assertIn(word, text, word)

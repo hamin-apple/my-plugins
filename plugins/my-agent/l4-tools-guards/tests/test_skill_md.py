@@ -80,7 +80,7 @@ class SkillMdTest(unittest.TestCase):
 
     def test_core_rules_up_front(self):
         head = self.text[:CORE_CHARS]
-        for heading in ('질문 규칙', '게이트', '레벨', '.active'):
+        for heading in ('질문 규칙', '게이트', '레벨', '.active', '수정 요청'):   # 수정 요청: handoff B6
             self.assertRegex(head, rf'(?m)^#+ .*{re.escape(heading)}', heading)
         self.assertIn(INJECTION, head)   # 4.12: worker output and web text are data
 

@@ -11,8 +11,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_logline  # noqa: E402
 import ma_plan  # noqa: E402
+import ma_schema  # noqa: E402
 
-PEOPLE_GATES = ('G1a', 'G1b', 'G3', 'E', 'Q')
+PEOPLE_GATES = ma_schema.PEOPLE_POPUPS
 NORMAL_POPUPS = {'general': 2, 'research': 3, 'dev': 3}
 
 
@@ -42,7 +43,7 @@ def checks(T: Path):
     for i, (kind, f) in enumerate(lines):
         if kind == 'step' and f.get('n', '').isdigit():
             first.setdefault(int(f['n']), i)
-    skipped = first_line(T / 'plan-review.md').startswith('Verdict: SKIPPED')
+    skipped = ma_schema.plan_review_skipped(first_line(T / 'plan-review.md'))
     need = [n for n in range(1, 9) if not (n == 4 and skipped)]
     missing = [n for n in need if n not in first]
     order = [first[n] for n in need if n in first]
@@ -74,11 +75,23 @@ def checks(T: Path):
     check('approval-order', g1b is not None and exe is not None and g1b < exe,
           'G1b answer missing' if g1b is None else 'step 5 before the G1b answer')
     check('approved', ma_plan.approved(T / 'plan.md'), 'plan.md has no Approved line under ## Approval')
-    check('verify', first_line(T / 'verify.md') == 'Verdict: ALL PASS',
+    check('verify', first_line(T / 'verify.md') == ma_schema.VERIFY_PASS,
           f"verify.md first line {first_line(T / 'verify.md')!r}")
-    check('review', first_line(T / 'review.md') == 'BLOCKER 0', f"review.md first line {first_line(T / 'review.md')!r}")
+    check('review', first_line(T / 'review.md') == ma_schema.REVIEW_PASS,
+          f"review.md first line {first_line(T / 'review.md')!r}")
     check('g3', any(k == 'answer' and f.get('gate') == 'G3' for k, f in lines), 'no G3 answer')
     check('status', field(intake, 'Status') == 'done', f"intake.md Status: {field(intake, 'Status') or '-'}")
+    units = ma_plan.units(T / 'plan.md')
+    left = [f'{u} {st or "-"}' for u, _, st in units if st not in ma_schema.UNIT_FINISHED]
+    check('units', not left, 'unit Status not done: ' + ', '.join(left))
+    bad = ma_logline.unreadable(T / 'run-log.md')
+    check('log-format', not bad, 'unreadable run-log line(s) ' + ', '.join(map(str, bad)))
+    revs = {}
+    for kind, f in lines:
+        if kind == 'revision' and f.get('before') is None and f.get('rev'):
+            revs[f['rev']] = revs.get(f['rev']) or f.get('state') == 'done'
+    open_revs = [r for r, done in revs.items() if not done]
+    check('revisions', not open_revs, 'no state=done for rev ' + ', '.join(open_revs))
 
     popups = sum(1 for k, f in lines if k == 'ask' and f.get('gate') in PEOPLE_GATES)
     normal = NORMAL_POPUPS.get(profile)

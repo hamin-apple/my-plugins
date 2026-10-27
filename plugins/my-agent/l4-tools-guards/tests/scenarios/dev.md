@@ -34,7 +34,7 @@ touch tools/__init__.py tests/__init__.py && PYTHONDONTWRITEBYTECODE=1 python3 -
 /my-agent tools/wc.py에 --lines 옵션을 더해 줘. 주면 단어 대신 줄 수를 출력해. 빈 입력은 0. 다른 옵션은 필요 없어.
 ```
 
-**기대:** `Profile: dev`, 작은 작업 예외(고칠 파일 2개, 목적·완료 기준·비목표가 요청에 있음) → G1a 없음, `plan-review.md`가 `Verdict: SKIPPED 작은 작업`.
+**기대:** `Profile: dev`, 작은 작업 예외(고칠 파일 2개, 목적·완료 기준·비목표가 요청에 있음) → G1a 없음, `plan-review.md`가 `SKIPPED 작은 작업`.
 
 | 팝업 | 고를 답 |
 |---|---|

@@ -1,6 +1,6 @@
 """Builds the five mock-up tasks (webapp-v22.html TASKS) as real my-agent task folders.
 
-Run-log lines follow my-agent-architecture.md v0.19 4.7.2. File mtimes are set to
+Run-log lines and file shapes follow my-agent-architecture.md 4.7.2 and the agent definitions (C8). File mtimes are set to
 the times the mock-up shows, so the whole tree is regenerated on every test run.
 """
 import json
@@ -47,12 +47,13 @@ class Task:
         self.lines.append(f'{t:%Y-%m-%d %H:%M:%S} {kind}:' + (' ' + body if body else ''))
 
     def agent(self, hm_call, hm_stop, agent, aid, configured, effort, actual=None, tokens=0, mins=0,
-              result='DONE', end='ok', model='-', isolation='-', background='false'):
-        self.log(hm_call, 'call', agent=f'my-agent:{agent}', model=model, effort='-', isolation=isolation, background=background)
+              result='DONE', end='ok', model='-', isolation='-', background='false', unit=None):
+        u = {'unit': unit} if unit else {}
+        self.log(hm_call, 'call', agent=f'my-agent:{agent}', model=model, effort='-', isolation=isolation, background=background, **u)
         self.log(hm_call, 'start', agent=f'my-agent:{agent}', id=aid, configured=configured, effort=effort)
         if hm_stop:
             i, o = int(tokens * .75), int(tokens * .15)
-            self.log(hm_stop, 'stop', id=aid, actual=actual or f'claude-{configured}-5-5', tokens=tokens,
+            self.log(hm_stop, 'stop', id=aid, **u, actual=actual or f'claude-{configured}-5-5', tokens=tokens,
                      **{'in': i, 'out': o, 'cw': int(tokens * .06), 'cr': tokens - i - o - int(tokens * .06)},
                      secs=mins * 60, result=result, end=end)
 
@@ -83,7 +84,7 @@ class Task:
 
 
 def intake(task_id, status, location, profile, request, extra=''):
-    return f'# {task_id}\nStatus: {status}\nmy-agent: a3f91c2\nLocation: {location}\nProfile: {profile}\n{extra}\n요청: {request}\n'
+    return f'Status: {status}\nmy-agent: a3f91c2\nLocation: {location}\nProfile: {profile}\nTask: {task_id}\nRequest: {request}\n{extra}'
 
 
 def cli_json_output():
@@ -91,13 +92,13 @@ def cli_json_output():
     S = 's-cli'
     t.step('15:30', 1, 'Intake', session=S)
     t.log('15:30:30', 'cost', session=S, usd='0.10')
-    t.step('15:31', 2, 'Explore → Scope', session=S)
+    t.step('15:31', 2, 'Explore-Scope', session=S)
     t.agent('15:31:05', '15:34', 'explorer', 'ag-ex1', 'sonnet', 'low', tokens=38000, mins=3)
     t.popup('15:41', 'G1a', '이 범위로 확정할까요?', '15:41:20', '확정 (Recommended)')
     t.step('15:42', 3, 'Plan', session=S)
     t.log('15:42:01', 'cost', session=S, usd='0.72')
-    t.agent('15:42:05', '15:49', 'architect', 'ag-ar1', 'opus', 'high', tokens=61000, mins=7, result='READY')
-    t.step('15:50', 4, 'Plan Review → G1b', session=S)
+    t.agent('15:42:05', '15:49', 'architect', 'ag-ar1', 'opus', 'high', tokens=61000, mins=7, result='DONE')
+    t.step('15:50', 4, 'Plan-Review', session=S)
     t.agent('15:50:05', '15:53', 'plan-reviewer', 'ag-pr1', 'sonnet', 'high', tokens=29000, mins=3, result='READY FOR APPROVAL')
     t.popup('15:55', 'G1b', '이 계획으로 진행할까요?', '15:55:30', '승인 (Recommended)')
     t.step('15:56', 5, 'Execute', session=S)
@@ -109,11 +110,11 @@ def cli_json_output():
     t.log('16:07:00', 'cost', session=S, usd='2.51')
     t.file('intake.md', intake('261024-cli-json-output', 'active', t.project, 'dev', 'CLI에 --json 출력 옵션 추가'), '15:30')
     t.file('explore.md', '# Explore\n- 출력: claude_sessions/view.py:render_table\n', '15:34')
-    t.file('scope.md', '# Scope\n## 완료 기준\n1. --json이면 표 대신 JSON 배열\n2. 오류도 JSON으로\n## 비목표\n- YAML 출력\n## Confirmation\n2026-10-24 15:41 확정 (G1a)\n', '15:41')
+    t.file('scope.md', '# Scope\n## 완료 기준\n1. --json이면 표 대신 JSON 배열\n2. 오류도 JSON으로\n## 비목표\n- YAML 출력\n## Confirmation\nConfirmed 2026-10-24 15:41\n', '15:41')
     t.file('plan.md', '# Plan\n## Slices\n- 그룹 A: slice 1 formatter · slice 2 CLI 옵션\n## Estimate\n- 서브에이전트 6\n- 예상 토큰: 600k\n'
            '## Mock-up\nKind: CLI 입출력\n$ tool list --json            (기준 1)\n[{"name": "alpha", "size": 120}]\n'
-           '## Approval\nApproved 2026-10-24 15:55 (G1b)\n', '15:55')
-    t.file('plan-review.md', '# Plan Review\nVerdict: READY FOR APPROVAL\n', '15:53')
+           '## Approval\n- Approved 2026-10-24 15:55 G1b\n', '15:55')
+    t.file('plan-review.md', 'READY FOR APPROVAL\nRun: 1\n', '15:53')
     t.file('work/slice-2.md', 'slice 2 notes\n', '16:04')
     t.done('16:07')
     return t
@@ -123,22 +124,23 @@ def hitl_survey():
     t = Task('agent-tasks', '261024-hitl-survey', '2026-10-24')
     S = 's-hitl'
     t.step('14:10', 1, 'Intake', session=S)
-    t.step('14:11', 2, 'Explore → Scope', session=S)
+    t.step('14:11', 2, 'Explore-Scope', session=S)
     t.agent('14:11:05', '14:13', 'explorer', 'ag-ex1', 'sonnet', 'low', tokens=20000, mins=2)
     t.popup('14:20', 'G1a', '이 범위로 확정할까요?', '14:20:20', '확정 (Recommended)')
     t.step('14:21', 3, 'Plan', session=S)
-    t.agent('14:21:05', '14:27', 'architect', 'ag-ar1', 'opus', 'high', tokens=52000, mins=6, result='READY')
-    t.step('14:28', 4, 'Plan Review → G1b', session=S)
+    t.agent('14:21:05', '14:27', 'architect', 'ag-ar1', 'opus', 'high', tokens=52000, mins=6, result='DONE')
+    t.step('14:28', 4, 'Plan-Review', session=S)
     t.agent('14:28:05', '14:30', 'plan-reviewer', 'ag-pr1', 'sonnet', 'high', tokens=18000, mins=2, result='READY FOR APPROVAL')
     t.popup('14:31', 'G1b', '이 계획으로 진행할까요?', '14:31:30', '승인 (Recommended)')
     t.step('14:32', 5, 'Execute', session=S)
     for i, end in enumerate(['14:41', '14:43', '14:44'], 1):
         t.agent(f'14:32:0{i}', end, 'researcher', f'ag-r{i}', 'sonnet', 'medium', tokens=40000, mins=10, background='true')
     t.log('14:47:00', 'revision', rev=1, why='하위 질문에 "비용 통제" 추가 (사용자)', archive='archive/261024-144700-rev1/',
-          invalidated='plan-review.md,plan.md ## Approval', keep='Existing work: work/q1~q3 유지')
+          invalidated='plan-review.md,plan.md ## Approval', keep='Existing work: work/q1~q3 유지', state='pending')
+    t.log('14:47:30', 'revision', rev=1, state='done')
     t.step('14:48', 3, 'Plan', rev=1, session=S)
-    t.agent('14:48:05', '14:52', 'architect', 'ag-ar2', 'opus', 'high', tokens=31000, mins=4, result='READY')
-    t.step('14:53', 4, 'Plan Review → G1b', rev=1, session=S)
+    t.agent('14:48:05', '14:52', 'architect', 'ag-ar2', 'opus', 'high', tokens=31000, mins=4, result='DONE')
+    t.step('14:53', 4, 'Plan-Review', rev=1, session=S)
     t.agent('14:53:05', '14:55', 'plan-reviewer', 'ag-pr2', 'sonnet', 'high', tokens=15000, mins=2, result='READY FOR APPROVAL')
     t.popup('14:56', 'G1b', '고친 계획으로 진행할까요? (rev1)', '14:56:20', '승인 (Recommended)')
     t.step('14:57', 5, 'Execute', rev=1, session=S)
@@ -146,18 +148,18 @@ def hitl_survey():
     t.file('intake.md', intake('261024-hitl-survey', 'active', t.project, 'research', 'HITL 오케스트레이션 사례 조사 → 비교 노트'), '14:10')
     t.file('explore.md', '# Explore\n', '14:13')
     crit = '## 완료 기준\n1. 승인 게이트 위치\n2. 비동기 알림\n3. 실패 시 사람에게\n'
-    t.file('scope.md', '# Scope\n' + crit + '4. 비용 통제\n## Confirmation\n2026-10-24 14:20 확정 (G1a)\n', '14:20')
+    t.file('scope.md', '# Scope\n' + crit + '4. 비용 통제\n## Confirmation\nConfirmed 2026-10-24 14:20\n', '14:20')
     mock0 = 'Kind: 노트 목차 + 샘플 단락\n# HITL 오케스트레이션 비교\n1. 승인 게이트 위치   (기준 1)\n2. 비동기 알림        (기준 2)\n3. 실패 시 사람에게   (기준 3)\n'
     mock1 = mock0 + '4. 비용 통제          (기준 4)  ← rev1 추가\n'
-    t.file('plan.md', '# Plan (rev1)\n## Existing work\n| work/q1~q3.md | 유지 |\n## Estimate\n- 예상 토큰: 450k\n## Mock-up\n' + mock1 +
-           '## Approval\nApproved 2026-10-24 14:56 (G1b, rev1)\n## Revisions\n- rev1 2026-10-24 14:47 하위 질문 "비용 통제" 추가; archive archive/261024-144700-rev1/; back to ② 계획; invalidated: done\n', '14:56')
-    t.file('plan-review.md', 'Verdict: READY FOR APPROVAL (rev1)\n', '14:55')
+    t.file('plan.md', '# Plan (rev1)\n## Estimate\n- 예상 토큰: 450k\n## Mock-up\n' + mock1 +
+           '## Existing work\n| work/q1~q3.md | 유지 | 하위 질문 그대로 |\n## Approval\n- Approved 2026-10-24 14:56 G1b\n## Revisions\n- rev1 2026-10-24 14:47 하위 질문 "비용 통제" 추가; archive archive/261024-144700-rev1/; back to ② 계획\n', '14:56')
+    t.file('plan-review.md', 'READY FOR APPROVAL\nRun: 1\n', '14:55')
     for n, hm in [(1, '14:41'), (2, '14:43'), (3, '14:44'), (4, '15:03')]:
         t.file(f'work/q{n}.md', f'# q{n}\n', hm)
     a = 'archive/261024-144700-rev1/'
     t.file(a + 'intake.md', '# 261024-hitl-survey\n', '14:47')
-    t.file(a + 'plan.md', '# Plan\n## Estimate\n- 예상 토큰: 400k\n## Mock-up\n' + mock0 + '## Approval\nApproved 2026-10-24 14:31 (G1b)\n', '14:47')
-    t.file(a + 'plan-review.md', 'Verdict: READY FOR APPROVAL\n', '14:47')
+    t.file(a + 'plan.md', '# Plan\n## Estimate\n- 예상 토큰: 400k\n## Mock-up\n' + mock0 + '## Approval\n- Approved 2026-10-24 14:31 G1b\n', '14:47')
+    t.file(a + 'plan-review.md', 'READY FOR APPROVAL\nRun: 1\n', '14:47')
     t.done('14:57')
     return t
 
@@ -166,12 +168,12 @@ def hooks_notify_note():
     t = Task('obsidian-notes', '261023-hooks-notify-note', '2026-10-23')
     S = 's-hooks'
     t.step('14:02', 1, 'Intake', session=S)
-    t.step('14:03', 2, 'Explore → Scope', session=S)
+    t.step('14:03', 2, 'Explore-Scope', session=S)
     t.agent('14:03:05', '14:05', 'explorer', 'ag-ex1', 'sonnet', 'low', tokens=22000, mins=2)
     t.popup('14:15', 'G1a', '이 범위로 확정할까요?', '14:15:20', '확정 (Recommended)')
     t.step('14:16', 3, 'Plan', session=S)
-    t.agent('14:16:05', '14:22', 'architect', 'ag-ar1', 'opus', 'high', tokens=48000, mins=6, result='READY')
-    t.step('14:23', 4, 'Plan Review → G1b', session=S)
+    t.agent('14:16:05', '14:22', 'architect', 'ag-ar1', 'opus', 'high', tokens=48000, mins=6, result='DONE')
+    t.step('14:23', 4, 'Plan-Review', session=S)
     t.agent('14:23:05', '14:25', 'plan-reviewer', 'ag-pr1', 'sonnet', 'high', tokens=19000, mins=2, result='READY FOR APPROVAL')
     t.popup('14:27', 'G1b', '이 계획으로 진행할까요?', '14:27:30', '승인 (Recommended)')
     t.step('14:28', 5, 'Execute', session=S)
@@ -180,26 +182,26 @@ def hooks_notify_note():
     t.log('14:35:00', 'ask', gate='G2', agent='my-agent:researcher', id='ag-r2', tool='WebFetch', q='WebFetch example-blog.dev')
     t.log('14:35:20', 'answer', gate='G2', id='ag-r2', result='allowed')
     t.agent('14:43:05', '14:48', 'writer', 'ag-w1', 'sonnet', 'medium', actual='claude-haiku-5-5', tokens=41000, mins=5)
-    t.step('14:49', 6, 'Merge · Self-check', session=S)
+    t.step('14:49', 6, 'Merge', session=S)
     t.step('14:50', 7, 'Verify', session=S)
-    t.agent('14:50:05', '14:54', 'verifier', 'ag-v1', 'opus', 'high', tokens=37000, mins=4, result='FAIL')
-    t.agent('14:58:05', '15:01', 'verifier', 'ag-v2', 'opus', 'high', tokens=31000, mins=3, result='ALL PASS')
-    t.step('15:03', 8, 'Review → Deliver', session=S)
+    t.agent('14:50:05', '14:54', 'verifier', 'ag-v1', 'opus', 'high', tokens=37000, mins=4, result='Verdict: FAIL')
+    t.agent('14:58:05', '15:01', 'verifier', 'ag-v2', 'opus', 'high', tokens=31000, mins=3, result='Verdict: ALL PASS')
+    t.step('15:03', 8, 'Review-Deliver', session=S)
     t.agent('15:03:05', '15:05', 'reviewer', 'ag-rv1', 'sonnet', 'high', tokens=18000, mins=2, result='BLOCKER 0')
     t.popup('15:10', 'G3', '이 노트를 수용할까요?', '15:10:40', '수용')
     t.log('15:14:00', 'deliver', path='docs/notes/claude-hooks-notify.md')
     t.file('intake.md', intake('261023-hooks-notify-note', 'done', t.project, 'research', 'hooks로 승인 알림 보내는 방법 조사 → 노트',
                               'Delivered: docs/notes/claude-hooks-notify.md\n'), '15:14')
     t.file('explore.md', '# Explore\n', '14:05')
-    t.file('scope.md', '# Scope\n## 완료 기준\n1. a\n2. b\n3. c\n4. d\n5. e\n## Confirmation\n2026-10-23 14:15 확정 (G1a)\n', '14:15')
+    t.file('scope.md', '# Scope\n## 완료 기준\n1. a\n2. b\n3. c\n4. d\n5. e\n## Confirmation\nConfirmed 2026-10-23 14:15\n', '14:15')
     t.file('plan.md', '# Plan\n## Estimate\n- 예상 토큰: 450k\n## Mock-up\nKind: 노트 목차 + 샘플 단락\n1. Notification hook 개요   (기준 1)\n'
-           '## Approval\nApproved 2026-10-23 14:27 (G1b)\n', '14:27')
-    t.file('plan-review.md', 'Verdict: READY FOR APPROVAL\n', '14:25')
+           '## Approval\n- Approved 2026-10-23 14:27 G1b\n', '14:27')
+    t.file('plan-review.md', 'READY FOR APPROVAL\nRun: 1\n', '14:25')
     for n, hm in [(1, '14:40'), (2, '14:41'), (3, '14:39'), (4, '14:42')]:
         t.file(f'work/q{n}.md', f'# q{n}\n', hm)
     t.file('work/draft.md', '# draft\n', '14:48')
-    t.file('verify.md', 'Verdict: ALL PASS\n- 1. PASS 확인\n- 2. PASS 확인\n- 3. PASS 확인\n- 4. PASS 확인\n- 5. PASS 확인\n', '15:01')
-    t.file('review.md', 'Verdict: BLOCKER 0\n', '15:05')
+    t.file('verify.md', 'Verdict: ALL PASS\nRun: 2\n- 1. PASS 확인\n- 2. PASS 확인\n- 3. PASS 확인\n- 4. PASS 확인\n- 5. PASS 확인\n', '15:01')
+    t.file('review.md', 'BLOCKER 0\n', '15:05')
     t.done('15:14')
     note = t.project / 'docs' / 'notes' / 'claude-hooks-notify.md'
     note.parent.mkdir(parents=True, exist_ok=True)
@@ -216,18 +218,18 @@ def weekly_report():
     t.step('09:17', 5, 'Execute', session=S)
     t.agent('09:17:05', '09:21', 'writer', 'ag-w1', 'sonnet', 'medium', tokens=31000, mins=4)
     t.step('09:25', 7, 'Verify', session=S)
-    t.agent('09:25:05', '09:27', 'verifier', 'ag-v1', 'opus', 'high', tokens=12000, mins=2, result='ALL PASS')
-    t.step('09:28', 8, 'Review → Deliver', session=S)
+    t.agent('09:25:05', '09:27', 'verifier', 'ag-v1', 'opus', 'high', tokens=12000, mins=2, result='Verdict: ALL PASS')
+    t.step('09:28', 8, 'Review-Deliver', session=S)
     t.agent('09:28:05', '09:30', 'reviewer', 'ag-rv1', 'sonnet', 'high', tokens=9000, mins=2, result='BLOCKER 0')
     t.popup('09:33', 'G3', '이 보고 초안을 수용할까요?', '09:33:30', '수용')
     t.log('09:34:00', 'deliver', path='reports/2026-w43.md')
     t.file('intake.md', intake('261022-weekly-report', 'done', t.project, 'general', '회의록 2개 → 주간 보고 초안',
                               'Delivered: reports/2026-w43.md\n'), '09:34')
     t.file('plan.md', '# Plan\n## 완료 기준\n1. 결정 사항\n2. 다음 주 할 일\n3. 미결 질문\n## Estimate\n- 예상 토큰: 150k\n'
-           '## Mock-up\nKind: 보고서 첫 페이지\n# 주간 보고 (10/20 ~ 10/24)\n## Approval\nApproved 2026-10-22 09:16 (G1b)\n', '09:16')
+           '## Mock-up\nKind: 보고서 첫 페이지\n# 주간 보고 (10/20 ~ 10/24)\n## Approval\n- Approved 2026-10-22 09:16 G1b\n', '09:16')
     t.file('work/draft.md', '# draft\n', '09:22')
-    t.file('verify.md', 'Verdict: ALL PASS\n- 1. PASS\n- 2. PASS\n- 3. PASS\n', '09:27')
-    t.file('review.md', 'Verdict: BLOCKER 0\n', '09:30')
+    t.file('verify.md', 'Verdict: ALL PASS\nRun: 2\n- 1. PASS\n- 2. PASS\n- 3. PASS\n', '09:27')
+    t.file('review.md', 'BLOCKER 0\n', '09:30')
     t.done('09:34')
     return t
 
@@ -236,23 +238,23 @@ def flight_watch():
     t = Task('flight-search', '261021-flight-watch', '2026-10-21')
     S = 's-fl'
     t.step('20:40', 1, 'Intake', session=S)
-    t.step('20:41', 2, 'Explore → Scope', session=S)
+    t.step('20:41', 2, 'Explore-Scope', session=S)
     t.agent('20:41:05', '20:45', 'explorer', 'ag-ex1', 'sonnet', 'low', tokens=25000, mins=4)
     t.popup('20:52', 'G1a', '이 범위로 확정할까요?', '20:52:20', '확정 (Recommended)')
     t.step('20:53', 3, 'Plan', session=S)
-    t.agent('20:53:05', '20:59', 'architect', 'ag-ar1', 'opus', 'high', tokens=50000, mins=6, result='READY')
-    t.step('21:00', 4, 'Plan Review → G1b', session=S)
+    t.agent('20:53:05', '20:59', 'architect', 'ag-ar1', 'opus', 'high', tokens=50000, mins=6, result='DONE')
+    t.step('21:00', 4, 'Plan-Review', session=S)
     t.agent('21:00:05', '21:01', 'plan-reviewer', 'ag-pr1', 'sonnet', 'high', tokens=15000, mins=1, result='READY FOR APPROVAL')
     t.popup('21:02', 'G1b', '이 계획으로 진행할까요?', '21:02:20', '승인 (Recommended)')
     t.step('21:03', 5, 'Execute', session=S)
-    t.agent('21:03:05', '21:15', 'coder', 'ag-f1', 'sonnet', 'medium', tokens=120000, mins=12, result='PARTIAL', end='partial')
-    t.agent('21:15:30', '21:28', 'coder', 'ag-f2', 'opus', 'medium', model='opus', tokens=150000, mins=12, result='ERROR', end='error')
-    t.popup('21:30', 'E', 'slice 2가 두 번 중단됨 (알림 전송)', '21:30:40', '중단')
-    t.log('21:31:00', 'abort', why='E slice 중단')
-    t.file('intake.md', intake('261021-flight-watch', 'aborted 2026-10-21 21:31 E slice 중단', t.project, 'dev', '가격 감시에 알림 추가'), '21:31')
-    t.file('scope.md', '# Scope\n## 완료 기준\n1. a\n2. b\n3. c\n4. d\n## Confirmation\n2026-10-21 20:52 확정\n', '20:52')
+    t.agent('21:03:05', '21:15', 'coder', 'ag-f1', 'sonnet', 'medium', tokens=120000, mins=12, result='PARTIAL maxTurns', end='partial', unit='u2')
+    t.agent('21:15:30', '21:28', 'coder', 'ag-f2', 'opus', 'medium', model='opus', tokens=150000, mins=12, result='-', end='error', unit='u2')
+    t.popup('21:30', 'E', '작업 단위 u2가 두 번 중단됨 (알림 전송)', '21:30:40', '중단')
+    t.log('21:31:00', 'abort', why='E 작업 단위 중단')
+    t.file('intake.md', intake('261021-flight-watch', 'aborted 2026-10-21 21:31 E 작업 단위 중단', t.project, 'dev', '가격 감시에 알림 추가'), '21:31')
+    t.file('scope.md', '# Scope\n## 완료 기준\n1. a\n2. b\n3. c\n4. d\n## Confirmation\nConfirmed 2026-10-21 20:52\n', '20:52')
     t.file('plan.md', '# Plan\n## Estimate\n- 예상 토큰: 250k\n## Mock-up\nKind: CLI 입출력\n$ flight watch add ICN-NRT --notify\n'
-           '## Approval\nApproved 2026-10-21 21:02 (G1b)\n', '21:02')
+           '## Approval\n- Approved 2026-10-21 21:02 G1b\n', '21:02')
     t.done('21:31')
     return t
 

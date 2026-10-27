@@ -8,11 +8,11 @@ writes outside `<location>/docs/agent/`. It needs `verify.md` starting `Verdict:
 `BLOCKER 0`, both no older than the newest changed file: git changes outside `docs/agent/`, plus the task folder's
 `work/` (and `deliverable/` when the deliver leaves the task folder; a copy into `deliverable/` does not count the
 copies made just before it). A `verify.md` older than a change is accepted when `review.md` is newer than every change
-and has `## Applied after review`. No `.active`, or another command → exit 0 at once. Any error → exit 2 (blocked).
+and has `## Applied after review`. No `.active`, or another command → exit 0 at once (a `.active` without `task:`
+prints a warning, C9). Any error → exit 2 (blocked).
 """
 import json
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
+import ma_schema  # noqa: E402
 from ma_path import under  # noqa: E402
 
 REASON = '작업 {task}: {why} G3 전에 Verify ALL PASS와 Review BLOCKER 0을 최신 결과로 다시 받으세요.'
@@ -66,20 +67,20 @@ def changed_files(active, with_deliverable: bool = True) -> list:
 
 def stale_reason(active, changed: list):
     verify, review = active.task_dir / 'verify.md', active.task_dir / 'review.md'
-    if first_line(verify) != 'Verdict: ALL PASS':
-        return 'verify.md 첫 줄이 `Verdict: ALL PASS`가 아닙니다.'
-    if first_line(review) != 'BLOCKER 0':
-        return 'review.md 첫 줄이 `BLOCKER 0`이 아닙니다.'
+    if first_line(verify) != ma_schema.VERIFY_PASS:
+        return f'verify.md 첫 줄이 `{ma_schema.VERIFY_PASS}`가 아닙니다.'
+    if first_line(review) != ma_schema.REVIEW_PASS:
+        return f'review.md 첫 줄이 `{ma_schema.REVIEW_PASS}`이 아닙니다.'
     newest = max((p.stat().st_mtime for p in changed), default=0)
     if review.stat().st_mtime < newest:
         return 'review.md보다 나중에 바뀐 파일이 있습니다.'
     if verify.stat().st_mtime < newest:
         try:
-            applied = re.search(r'(?m)^## Applied after review\s*$', review.read_text(encoding='utf-8'))
+            applied = ma_schema.has_section(review.read_text(encoding='utf-8'), ma_schema.APPLIED_AFTER_REVIEW)
         except (OSError, UnicodeDecodeError):
-            applied = None
+            applied = False
         if not applied:
-            return 'verify.md보다 나중에 바뀐 파일이 있습니다 (review.md에 `## Applied after review` 없음).'
+            return f'verify.md보다 나중에 바뀐 파일이 있습니다 (review.md에 `## {ma_schema.APPLIED_AFTER_REVIEW}` 없음).'
     return None
 
 
@@ -111,8 +112,11 @@ def main() -> int:
         inp = json.loads(sys.stdin.read())
         if not isinstance(inp, dict):
             raise ValueError('hook input is not an object')
-        active = ma_active.find_active(inp.get('cwd') or os.getcwd())
+        broken = []
+        active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
         if active is None:
+            if broken:
+                print(json.dumps({'systemMessage': ma_active.BROKEN.format(path=broken[0])}, ensure_ascii=False))
             return 0
         cwd = Path(inp.get('cwd') or os.getcwd()).resolve()
         mode = applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active)

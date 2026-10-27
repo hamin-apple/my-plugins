@@ -71,8 +71,17 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'}))
         self.assertDenied(self.hook('Agent', {'subagent_type': 'general-purpose', 'prompt': 'x'}))
         self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:writer', 'prompt': 'x'}))
+        self.plan('# Plan\n\nPrototype: requested\n\n## Prototype\n\n필요\n\n## Approval\n')   # A5: outside the section
+        self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:writer', 'prompt': 'x'}))
         self.plan('# Plan\n\n## Prototype\n\nPrototype: requested\n\n## Approval\n')
         self.assertPassed(self.hook('Agent', {'subagent_type': 'my-agent:writer', 'prompt': 'x'}))
+
+    def test_broken_active_warns(self):
+        """C9: a `.active` without `task:` passes, but says so instead of passing silently."""
+        (self.proj / 'docs' / 'agent' / '.active').write_text('phase: 2\n')
+        r = self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('task:', json.loads(r.stdout)['systemMessage'])
 
     def test_workflow_denied(self):
         self.assertDenied(self.hook('Workflow', {'script': 'x'}))

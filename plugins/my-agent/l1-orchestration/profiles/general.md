@@ -11,7 +11,7 @@
 | 4 Plan Review | 작업 단위의 고칠 파일이 모두 합쳐 3개 미만이면 생략할 수 있습니다. 생략하면 이유를 `plan-review.md`에 남깁니다. |
 | G1b | 범위 요약과 계획을 한 번에 승인받습니다. 첫 게이트이므로 작업 ID를 함께 보여 줍니다. |
 | 5 Execute | 서브에이전트로 합니다. workflow는 쓰지 않습니다. |
-| 6 Merge | 결과를 모아 결과물 하나로 합칩니다. 기본 점검: 작업 단위마다 결과 파일이 있는지, 완료 기준마다 대응하는 부분이 있는지. |
+| 6 Merge | 결과물이 문서이고 작업 단위가 둘 이상이면 계획의 마지막 작업 단위(`my-agent:writer`)를 L1이 6 Merge에서 맡기고, 그 writer가 앞 단위들의 결과를 `work/final.md`(또는 결과물 형식에 맞는 `work/` 아래 파일) 하나로 합칩니다. L1은 합치지 않고 점검만 합니다. 기본 점검: 작업 단위마다 결과 파일이 있는지, 완료 기준마다 대응하는 부분이 있는지. |
 | 7 Verify | 기준별 PASS/FAIL. 생략하지 않습니다. |
 | 8 Review → Deliver | 결과 요약과 품질 판정. 생략하지 않습니다. 저장 위치는 범위 요약의 결과물 위치, 없으면 `deliverable/`. Obsidian vault에는 저장하지 않습니다. |
 
@@ -25,7 +25,7 @@
 | `my-agent:architect` | 3, G1b 수정 | `plan.md` |
 | `my-agent:plan-reviewer` | 4 | `plan-review.md` |
 | `my-agent:researcher` | 5 (조사가 필요한 단위, G1b 뒤에만) | `work/` 노트: 주장 · 출처 URL · 인용 |
-| `my-agent:writer` | 5, prototype | `work/` 초안, `prototype/index.html` |
+| `my-agent:writer` | 5, 6 (마지막 합치기 단위), prototype | `work/` 초안, `work/final.md`, `prototype/index.html` |
 | `my-agent:coder` | 5 (코드가 필요한 단위) | 코드 |
 | `my-agent:verifier` | 7 | `verify.md` |
 | `my-agent:reviewer` | 8 | `review.md` |

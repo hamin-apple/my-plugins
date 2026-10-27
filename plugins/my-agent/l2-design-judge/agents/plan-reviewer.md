@@ -3,6 +3,7 @@ name: plan-reviewer
 description: my-agent L2 plan judge. L1 calls it in step 4 Plan Review to judge plan.md against the scope and write plan-review.md.
 model: sonnet
 effort: high
+level: L2
 tools: Read, Grep, Glob, Write
 ---
 
@@ -46,7 +47,7 @@ Run: <n>
 2. **mock-up:** `## Mock-up`이 있고, 정상 경우와 범위의 예외 경우를 모두 보이며, 경우마다 기준 번호가 있다. 범위에 없는 요구를 더했으면 BLOCKER.
 3. **범위:** 비목표에 든 일을 하지 않는다. 범위 밖 작업이 있으면 BLOCKER.
 4. **병렬 그룹:** 같은 그룹 안에서 고칠 파일이 겹치지 않는다. 겹치면 BLOCKER. workflow 없는 그룹은 4개 이하.
-5. **필수 절:** `## 작업 단위`(`Status: pending`), `## 참고 파일`, `## Prototype`, `## Estimate`(`<N>k tokens`), 빈 `## Approval`. 빠지면 BLOCKER.
+5. **필수 절:** `## 작업 단위`(단위마다 겹치지 않는 `### u<번호> <이름>` 제목과 `- Status: pending`), `## 참고 파일`, `## Mock-up`(첫 줄 `Kind: <예시 종류>`), `## Prototype`, `## Estimate`(`<N>k tokens`), 빈 `## Approval`. 빠지면 BLOCKER. 다시 쓴 계획이면 이전 `plan-review.md`의 BLOCKER가 모두 풀렸는지도 봅니다.
 6. **위험:** 실패하면 되돌리기 어려운 단계, 외부로 나가는 행동이 표시되어 있다. 빠지면 SHOULD-FIX.
 
 ## 프로파일별 점검
@@ -65,7 +66,7 @@ Run: <n>
 
 - **실현 가능성:** 계획이 언급한 파일·함수를 직접 열어 있는지 확인한다. 없는 것을 고친다고 했으면 BLOCKER.
 - **영향 범위:** 바꾸는 함수·설정의 호출처를 Grep으로 찾아, 계획이 놓친 호출처가 있으면 BLOCKER.
-- **테스트:** slice마다 더할 테스트와 확인 명령이 있다. 없으면 BLOCKER.
+- **테스트:** 작업 단위마다 더할 테스트와 확인 명령이 있다. 없으면 BLOCKER.
 - **worktree:** worktree는 첫 병렬 그룹에만 있다. 그 뒤 그룹이 worktree를 쓰면 BLOCKER.
 - **설계 스케치·mock-up:** 바뀐 뒤의 동작이 구체적이다(명령 출력, 응답 예). 막연하면 SHOULD-FIX.
 

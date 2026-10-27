@@ -3,6 +3,7 @@ name: reviewer
 description: my-agent L2 quality judge. L1 calls it in step 8 Review to judge the deliverable's quality and write review.md.
 model: sonnet
 effort: high
+level: L2
 tools: Read, Grep, Glob, Bash, Write
 ---
 
@@ -36,7 +37,7 @@ BLOCKER <n>
 
 - 첫 줄은 `BLOCKER <개수>`만. 문제가 없으면 `BLOCKER 0`.
 - BLOCKER: 그대로 내보내면 사람이 쓰지 못하거나 틀린 것을 믿게 되는 문제. SHOULD-FIX: 고치는 것이 좋은 문제. NIT: 사소한 것.
-- 이 파일에 `## Applied after review` 절은 쓰지 않습니다. 그 절은 판정 뒤 작은 수정을 한 L1이 씁니다.
+- 이 파일에 `## Applied after review` 절은 쓰지 않습니다. 그 절은 판정 뒤 작은 수정을 하고 Verify 없이 Review만 다시 받은 L1이, 새 `review.md` 끝에 고친 것을 한 줄씩 더하는 절입니다(`phases/accept.md`).
 
 ## 프로파일별 점검
 

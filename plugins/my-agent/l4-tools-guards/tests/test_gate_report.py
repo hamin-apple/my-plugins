@@ -93,10 +93,15 @@ class GateReportTest(unittest.TestCase):
             '2026-10-26 23:00:06 start: agent=my-agent:coder id=a2 configured=sonnet',
             '2026-10-26 23:00:07 stop: id=a1 actual=claude-opus-4-8 tokens=10 mismatch=1',
             '2026-10-26 23:00:08 stop: id=a2 actual=claude-sonnet-5-5 tokens=5',
-            '2026-10-26 23:00:09 fix: what=x', '2026-10-26 23:00:10 fix: what=y')
+            '2026-10-26 23:00:09 fix: what=x', '2026-10-26 23:00:10 fix: what=y',
+            '2026-10-26 23:00:11 fix: what="Scope change: 기준 2 직접 확인은 사용자가 나중에 함" files=plan.md',
+            '2026-10-26 23:00:12 revision: rev=0 before=G1b why=x archive=a',
+            '2026-10-26 23:00:13 revision: rev=1 why=x archive=b state=pending',
+            '2026-10-26 23:00:14 revision: rev=1 state=done')
         for row in ('| Verify 횟수 | 2 |', '| Plan Review 횟수 | 1 |', '| 서브에이전트 수 | 2 |',
                     '| 모델 불일치 수 | 2 (주 세션 1 · step 줄 기준, 서브에이전트 1) |',
-                    '| L1 작은 수정 수 | 2 |',
+                    '| L1 작은 수정 수 | 2 |', '| 승인 범위 안 조정 수 | 1 |', '| 승인 전 계획 다시 쓰기 수 | 1 |',
+                    '| 작업 중 수정 수 | 1 |',
                     '| opus로 올린 호출 수 | 1 (재시도와 명시 호출을 구별하지 않음) |'):
             self.assertIn(row, out)
 

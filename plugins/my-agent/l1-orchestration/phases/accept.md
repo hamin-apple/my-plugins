@@ -77,3 +77,4 @@ After Accept (or Commit) and before deleting `.active`, do these in this order. 
 6. `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/feedback.py" count`. If a `REVIEW: L<n> …` line appears (4 or more open improvements at one level), tell the person in one line.
 7. Missing-call check: compare the list of this session's subagent transcripts (`~/.claude/projects/<project>/<session>/subagents/`) with the `id` of `start:` lines in the run-log. If a call is missing, file it as an L4 improvement.
 8. If any `stop:` line in the run-log has a `mode=` other than auto, note it in the retrospective.
+9. Last, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/usage-snapshot.py"`. It saves the main session's tokens per step to `main-usage.json` in the task folder, because Claude Code deletes transcripts after a while (architecture 4.8.2 "Task records over time"). On exit 3, state the printed cause in one line; do not undo the Accept or Commit.

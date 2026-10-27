@@ -1,7 +1,7 @@
 """One task folder → one task dict in the mock-up's TASKS shape (plan "Task JSON shape")."""
 import hashlib
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from .events import build_events
@@ -10,6 +10,7 @@ from .prices import cost
 from .runlog import read_lines
 
 import ma_schema
+import ma_usage
 
 STATUS = dict(zip(ma_schema.INTAKE_STATUS, ('running', 'done', 'stopped')))
 PREVIEW_MAX_BYTES, PREVIEW_CHARS = 200 * 1024, 4000
@@ -132,31 +133,37 @@ def _deliver(project: Path, intake: dict, status: str):
     return None
 
 
-def _main(ev, tcache, prices, unpriced, running):
-    """{(rev, step): [k, usd]} from the main-session transcript, or None if none was found.
+def _main(ev, tcache, prices, unpriced, running, task_dir):
+    """{(rev, step): [k, usd]} of the main session, or None if neither a snapshot nor a transcript was found.
 
-    A finished task's last window ends at its last run-log record: the session goes on to other work.
+    A finished task reads `main-usage.json` (written by L1 at the end of the task, ma_usage) when it exists, since
+    Claude Code deletes transcripts after `cleanupPeriodDays`; otherwise the transcript. A finished task's last window
+    ends at its last run-log record: the session goes on to other work.
     """
-    windows = []
-    for i, (ts, n, rev, sess) in enumerate(ev.step_enter):
-        end = ev.step_enter[i + 1][0] if i + 1 < len(ev.step_enter) else (None if running else ev.last + timedelta(seconds=1))
-        windows.append((sess, ts, end, (rev, n)))
-    found, out = False, {}
-    for sess in {w[0] for w in windows if w[0]}:
-        got = tcache.usage_by_window(sess, [(s, e, k) for ss, s, e, k in windows if ss == sess])
-        if tcache.size(sess) is not None:
-            found = True
-        for key, models in got.items():
-            acc = out.setdefault(key, [0, 0.0])
-            for model, usage in models.items():
-                acc[0] += sum(usage.values())
-                c = cost(prices, model, usage)
-                if c is None:
-                    unpriced.add(model)
-                else:
-                    acc[1] += c
-    if not found:
-        return None
+    got = None if running else ma_usage.read_snapshot(task_dir)
+    if got is None:
+        wins = ma_usage.windows(ev.step_enter, ev.last, running)
+        found, got = False, {}
+        for sess in {w[0] for w in wins if w[0]}:
+            for key, models in tcache.usage_by_window(sess, [(s, e, k) for ss, s, e, k in wins if ss == sess]).items():
+                for model, usage in models.items():
+                    acc = got.setdefault(key, {}).setdefault(model, dict.fromkeys(ma_usage.KEYS, 0))
+                    for k in ma_usage.KEYS:
+                        acc[k] += usage[k]
+            if tcache.size(sess) is not None:
+                found = True
+        if not found:
+            return None
+    out = {}
+    for key, models in got.items():
+        acc = out.setdefault(key, [0, 0.0])
+        for model, usage in models.items():
+            acc[0] += sum(usage.values())
+            c = cost(prices, model, usage)
+            if c is None:
+                unpriced.add(model)
+            else:
+                acc[1] += c
     return {k: [round(v[0] / 1000), round(v[1], 2)] for k, v in out.items()}
 
 
@@ -208,7 +215,7 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
             it.pop(k, None)
         log.append(it)
 
-    main = _main(ev, tcache, prices, unpriced, status == 'running')
+    main = _main(ev, tcache, prices, unpriced, status == 'running', task_dir)
     main_tokens = sum(v[0] for v in main.values()) if main else 0
 
     started = ev.started or datetime.fromtimestamp((task_dir / 'intake.md').stat().st_mtime)

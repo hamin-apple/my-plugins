@@ -9,6 +9,8 @@ from .runlog import read_lines
 from .taskview import build_task, task_key
 from .transcript import TranscriptCache
 
+import ma_usage
+
 ROOT = Path(__file__).resolve().parent.parent
 SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed')
 
@@ -89,6 +91,8 @@ class Registry:
             task = build_task(project, task_dir, prices, self.tcache, now)
             lines = read_lines(task_dir / 'run-log.md')
             sessions = tuple(sorted({l.f['session'] for l in lines if l.kind == 'step' and l.f.get('session')}))
+            if task.get('status') != 'running' and (task_dir / ma_usage.SNAPSHOT).is_file():
+                sessions = ()   # read from main-usage.json: the transcript no longer matters
             started = lines[0].ts if lines else datetime.fromtimestamp(_signature(task_dir))
             sig = sig[:2] + (tuple(self.tcache.size(s) for s in sessions),)
             cached = self._cache[key] = {'sig': sig, 'task': task, 'sessions': sessions, 'started': started}
@@ -113,6 +117,10 @@ class Registry:
 
     def _list(self):
         tasks = [self._get(p, d) for p, d in self._task_dirs()]
+        keys = {t['key'] for t in tasks}
+        for k in set(self._cache) - keys:   # folders that were moved or deleted
+            del self._cache[k]
+        self.tcache.keep({s for c in self._cache.values() for s in c['sessions']})
         tasks.sort(key=lambda t: (self._started(t), t['id']), reverse=True)
         return [{k: t.get(k) for k in SUMMARY} for t in tasks]
 

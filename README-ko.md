@@ -40,7 +40,7 @@ claude plugin install my-agent@my-plugins
 | L3 | `explorer` · `researcher` · `writer` · `coder`: 맡은 작업 하나 |
 | L4 | 도구·MCP · hook · 권한 규칙 · 스크립트: 실행, 기록과 차단 |
 
-레벨별 구성 요소, 각 구성의 역할과 권한, 단계와 게이트, 작업 파일마다의 형식까지 전체 구조는 한 페이지 `docs/index.html`(GitHub Pages용)에 있습니다. `python3 tools/build-docs.py`가 플러그인 파일에서 만들며, 플러그인 파일을 고친 뒤 다시 실행합니다.
+레벨별 구성 요소, 각 구성의 역할과 권한, 단계와 게이트, 작업 파일마다의 형식까지 전체 구조는 한 페이지 `docs/index.html`에 있고, <https://hamin-apple.github.io/my-plugins/> 에서 볼 수 있습니다. `python3 tools/build-docs.py`가 플러그인 파일에서 만들며, 플러그인 파일을 고친 뒤 다시 실행합니다.
 
 | 명령 | 하는 일 |
 |---|---|

@@ -143,3 +143,8 @@ For each level, record "current state · dependence on external behavior · poin
 - Reinstall: `marketplace remove my-agent-dev` → `marketplace add ~/dev/my-plugins` → `install my-agent@my-plugins`. `claude plugin list` shows `Read from: ~/dev/my-plugins/plugins/my-agent`.
 - The plugin version (`my-agent:` in `intake.md`) looks only at the plugin folder: `git -C "${CLAUDE_PLUGIN_ROOT}" log -1 --format=%h -- .` (`test_plugin_version_scoped_to_plugin_folder`). Commits to other plugins do not trigger the rule-change popup in `continue`.
 - Places where the old path remains: dated plans, probe results and validation records (records of that time, not changed), `~/dev/my-agent-monitor/` (a folder left untouched).
+
+## Public repository (2026-10-28)
+
+- The repository is public under the MIT license (`LICENSE`). `docs/ref/` (copies of Claude Code, Managed Agents and Anthropic articles, the two Gemini reports, the dev profile validation record) is excluded from git and removed from history; `docs/reference.md` lists each source. Design documents still cite `docs/ref/<file>` by name, so those links work only in a local checkout.
+- Absolute home paths in tracked files are written as `~/`.

@@ -8,6 +8,8 @@ plugins/my-agent/.superpowers/
 plugins/my-agent/monitor/menubar/build/
 plugins/my-agent/feedback.md
 plugins/my-agent/docs/dev/
+# reference copies, kept locally (sources: plugins/my-agent/docs/reference.md)
+plugins/my-agent/docs/ref/
 # my-agent monitor test fixtures (generated)
 plugins/my-agent/monitor/tests/fixtures/projects/
 plugins/my-agent/monitor/tests/fixtures/claude-projects/

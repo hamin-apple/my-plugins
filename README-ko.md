@@ -76,3 +76,8 @@ claude plugin uninstall my-agent@my-plugins
 - `tests/`: `tools/` 테스트
 - `docs/handoff/`: 다른 환경에서 이어 할 작업의 handoff 문서
 - `docs/agent/`: 이 저장소에서 돌린 my-agent 작업 기록. git에서 제외됩니다.
+- `plugins/my-agent/docs/reference.md`: 참고 문서의 출처 목록. 로컬 사본(`plugins/my-agent/docs/ref/`)은 git에서 제외됩니다.
+
+## 라이선스
+
+[MIT](LICENSE)

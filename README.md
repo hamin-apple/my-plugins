@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by jahoonjin.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.3.1 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.3.2 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 
 ## Requirements
 
@@ -45,6 +45,7 @@ The whole architecture — each level's components, their roles and permissions,
 | Command | What it does |
 |---|---|
 | `/my-agent <request>` | Starts a new task. |
+| `/my-agent --dev <request>` | Starts a new task with the profile you name: `--general`, `--research` or `--dev`. Without a flag, the profile is picked from the request. |
 | `/my-agent continue` | Continues the task in progress. |
 | `/my-agent status` | Shows the task in progress and recent tasks. |
 | `/my-agent:monitor` | Opens a local, read-only web page of task records. Also `status`, `stop`. |

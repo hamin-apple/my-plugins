@@ -6,7 +6,7 @@ jahoonjin의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| `my-agent` | 0.3.1 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent` | 0.3.2 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
 
 ## 요구 사항
 
@@ -45,6 +45,7 @@ claude plugin install my-agent@my-plugins
 | 명령 | 하는 일 |
 |---|---|
 | `/my-agent <요청>` | 새 작업을 시작합니다. |
+| `/my-agent --dev <요청>` | 지정한 프로필로 새 작업을 시작합니다: `--general`, `--research`, `--dev`. 플래그가 없으면 요청을 보고 프로필을 고릅니다. |
 | `/my-agent continue` | 진행 중인 작업을 이어 갑니다. |
 | `/my-agent status` | 진행 중인 작업과 최근 작업을 보여 줍니다. |
 | `/my-agent:monitor` | 작업 기록을 보는 로컬 웹 페이지(읽기 전용)를 띄웁니다. `status`, `stop` |

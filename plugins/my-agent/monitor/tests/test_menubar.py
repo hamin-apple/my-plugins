@@ -383,6 +383,91 @@ class MenubarTest(unittest.TestCase):
             with self.subTest(argv=argv):
                 self.assertEqual(self.run_flag('--print-detail', *argv).returncode, 2)
 
+    # ---- data folder from the setting ----
+
+    def clean_env(self, **extra):
+        env = {k: v for k, v in os.environ.items() if k not in ('MA_TASKS_DIR', 'CLAUDE_PLUGIN_OPTION_DATA_DIR')}
+        env.update(extra)
+        return env
+
+    def test_setting_env_locates_state_and_config(self):
+        (self.dir / 'monitor-config.json').write_text('{"browser": "chrome"}')
+        (self.dir / 'monitor.json').write_text(json.dumps({'port': self.serve(PROJECTS_TXT)}))
+        env = self.clean_env(CLAUDE_PLUGIN_OPTION_DATA_DIR=str(self.dir), HOME=str(self.dir / 'home'))
+        r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True, env=env, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[0], 'icon: 2')
+        self.assertEqual(self.browser_marks(lines), [False, False, True])
+
+    def test_ma_tasks_dir_beats_setting(self):
+        other = self.dir / 'other'
+        other.mkdir()
+        (other / 'monitor-config.json').write_text('{"browser": "safari"}')
+        env = self.clean_env(MA_TASKS_DIR=str(other), CLAUDE_PLUGIN_OPTION_DATA_DIR=str(self.dir / 'unused'))
+        r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True, env=env, timeout=30)
+        self.assertEqual(self.browser_marks(r.stdout.splitlines()), [False, True, False])
+
+    def test_default_folder_is_home_my_agent_and_tilde_expands(self):
+        home = self.dir / 'home'
+        (home / 'my-agent').mkdir(parents=True)
+        (home / 'my-agent' / 'monitor-config.json').write_text('{"browser": "chrome"}')
+        for setting, expect in (('', [False, False, True]), ('~/nowhere', [True, False, False])):
+            with self.subTest(setting=setting):
+                env = self.clean_env(HOME=str(home))
+                if setting:
+                    env['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = setting
+                r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True, env=env, timeout=30)
+                self.assertEqual(self.browser_marks(r.stdout.splitlines()), expect)
+        (home / 'cfg').mkdir()
+        (home / 'cfg' / 'monitor-config.json').write_text('{"browser": "safari"}')
+        env = self.clean_env(HOME=str(home), CLAUDE_PLUGIN_OPTION_DATA_DIR='~/cfg')
+        r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True, env=env, timeout=30)
+        self.assertEqual(self.browser_marks(r.stdout.splitlines()), [False, True, False])
+
+    # ---- login item ----
+
+    def run_login_item(self, *args):
+        home = self.dir / 'home'
+        fake = self.dir / 'fakebin'
+        fake.mkdir(exist_ok=True)
+        (home / 'Library' / 'LaunchAgents').mkdir(parents=True, exist_ok=True)
+        launchctl = fake / 'launchctl'
+        launchctl.write_text('#!/bin/sh\nexit 0\n')
+        launchctl.chmod(0o755)
+        env = dict(os.environ, HOME=str(home), PATH=f'{fake}:{os.environ["PATH"]}')
+        r = subprocess.run(['sh', str(MENUBAR / 'login-item.sh'), *args], capture_output=True, text=True, env=env, timeout=30)
+        return r, home / 'Library' / 'LaunchAgents' / 'my-agent.monitor-menubar.plist'
+
+    def test_login_item_install_records_folder(self):
+        r, plist = self.run_login_item('install', str(self.dir / 'my data'))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn(str(self.dir / 'my data'), r.stdout)
+        import plistlib
+        data = plistlib.loads(plist.read_bytes())
+        self.assertEqual(data['EnvironmentVariables'], {'CLAUDE_PLUGIN_OPTION_DATA_DIR': str(self.dir / 'my data')})
+        # reinstalling with another folder replaces the value
+        r, plist = self.run_login_item('install', str(self.dir / 'second'))
+        self.assertEqual(plistlib.loads(plist.read_bytes())['EnvironmentVariables']['CLAUDE_PLUGIN_OPTION_DATA_DIR'],
+                         str(self.dir / 'second'))
+
+    def test_login_item_default_and_tilde(self):
+        import plistlib
+        r, plist = self.run_login_item('install')
+        home = self.dir / 'home'
+        self.assertEqual(plistlib.loads(plist.read_bytes())['EnvironmentVariables']['CLAUDE_PLUGIN_OPTION_DATA_DIR'],
+                         str(home / 'my-agent'))
+        r, plist = self.run_login_item('install', '~/dev/agent-data')
+        self.assertEqual(plistlib.loads(plist.read_bytes())['EnvironmentVariables']['CLAUDE_PLUGIN_OPTION_DATA_DIR'],
+                         str(home / 'dev/agent-data'))
+
+    def test_login_item_escapes_xml(self):
+        import plistlib
+        r, plist = self.run_login_item('install', str(self.dir / 'a&b<c>'))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(plistlib.loads(plist.read_bytes())['EnvironmentVariables']['CLAUDE_PLUGIN_OPTION_DATA_DIR'],
+                         str(self.dir / 'a&b<c>'))
+
 
 if __name__ == '__main__':
     unittest.main()

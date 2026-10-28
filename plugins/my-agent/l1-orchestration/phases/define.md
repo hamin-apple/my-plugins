@@ -4,7 +4,7 @@ Step 1 Intake is the "Intake" procedure in SKILL.md. This file starts at step 2.
 
 ## 2. Explore → Scope
 
-1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=2 name=Explore-Scope --model <main session model ID>`
+1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=2 name=Explore-Scope --model <main session model ID> --data-dir "<data folder>"`
 2. **Explore:** If the request is about existing files or a project, hand it to `my-agent:explorer`.
    - Pass: the `intake.md` path and a list of what to find out (where the related files are, current behavior, constraints).
    - explorer writes no files; it returns a report (its last message), and L1 saves it as is to `explore.md`. If the first line is `PARTIAL`, follow SKILL.md "Failure handling".
@@ -17,7 +17,7 @@ Step 1 Intake is the "Intake" procedure in SKILL.md. This file starts at step 2.
 4. **Confirm the scope:**
    - General profile: do not ask G1a separately. Pass the scope summary you settled (purpose, numbered completion criteria, non-goals, deliverable location) to architect in ② Plan; it goes at the top of `plan.md` and is approved together at G1b.
    - Profiles with G1a: write `scope.md` (`## Completion criteria` as a numbered list `1.`, `2.`), and record before and after the popup.
-     - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1a q="Scope confirmation: <task-id>" rec="Confirm"`
-     - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1a choice="<Confirm/Revise/Abort>"`
+     - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1a q="Scope confirmation: <task-id>" rec="Confirm" --data-dir "<data folder>"`
+     - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1a choice="<Confirm/Revise/Abort>" --data-dir "<data folder>"`
      - On Confirm, write `Confirmed <YYYY-MM-DD HH:MM>` in `## Confirmation` of `scope.md`.
 5. Change `phase:` in `.active` to `2` and read `plan.md` (the phase file).

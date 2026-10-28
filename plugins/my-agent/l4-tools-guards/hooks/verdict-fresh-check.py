@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""Skill hook (PreToolUse: Bash|Edit|Write|NotebookEdit): commit or deliver only on fresh verdicts
+"""Plugin hook (hooks.json, PreToolUse: Bash|Edit|Write|NotebookEdit): commit or deliver only on fresh verdicts
 (architecture 4.4 G3, P11).
+
+Runs in every session where the plugin is on, so it first narrows down: a call from inside a subagent (`agent_id` in
+the input) passes; no task found passes (a `.active` without `task:` warns, before the session check); a `.active`
+whose `session:` differs from the input `session_id` (both set) passes.
 
 Applies while a task is active, to a `git commit` and to the G3 deliver: any write into the task folder's
 `deliverable/` (the default save place, accept.md), and a Bash command that reads or copies from the task folder and
@@ -112,11 +116,15 @@ def main() -> int:
         inp = json.loads(sys.stdin.read())
         if not isinstance(inp, dict):
             raise ValueError('hook input is not an object')
+        if ma_active.in_subagent(inp):
+            return 0
         broken = []
         active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
         if active is None:
             if broken:
                 print(json.dumps({'systemMessage': ma_active.BROKEN.format(path=broken[0])}, ensure_ascii=False))
+            return 0
+        if not ma_active.owns(active, inp):
             return 0
         cwd = Path(inp.get('cwd') or os.getcwd()).resolve()
         mode = applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active)

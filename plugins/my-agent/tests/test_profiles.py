@@ -7,7 +7,7 @@ from helpers import L4, REPO
 
 PROFILES = REPO / 'l1-orchestration' / 'profiles'
 SKILL = REPO / 'SKILL.md'
-FIXTURES = L4 / 'tests' / 'judge-fixtures'
+FIXTURES = REPO / 'tests' / 'judge-fixtures'
 
 
 class ProfilesTest(unittest.TestCase):

@@ -23,6 +23,28 @@ class FeedbackTest(unittest.TestCase):
     def run_fb(self, *args):
         return run_script(SCRIPT, *args, env=self.env)
 
+    def run_dd(self, *args):
+        """No MA_* overrides: the data folder comes from --data-dir (empty values count as not set)."""
+        env = {'MA_FEEDBACK_FILE': '', 'MA_TASKS_DIR': '', 'CLAUDE_PLUGIN_OPTION_DATA_DIR': ''}
+        return run_script(SCRIPT, *args, env=env)
+
+    def test_data_dir_feedback_file(self):
+        """Criterion 7: the default file is <data folder>/feedback.md, not in the plugin folder."""
+        d = Path(self.tmp.name) / 'data'
+        plugin = L4.parent / 'feedback.md'
+        before = plugin.read_bytes() if plugin.exists() else None
+        r = self.run_dd('add', 'L2', 't-1', 'point', '--data-dir', str(d))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('t-1: point', (d / 'feedback.md').read_text(encoding='utf-8'))
+        self.assertEqual(self.run_dd('count', '--data-dir', str(d)).stdout, 'L1 0 · L2 1 · L3 0 · L4 0\n')
+        self.assertEqual(plugin.read_bytes() if plugin.exists() else None, before)
+
+    def test_data_dir_misplaced_is_usage_error(self):
+        d = str(Path(self.tmp.name) / 'data2')
+        self.assertEqual(self.run_dd('count', f'--data-dir={d}').returncode, 2)
+        self.assertEqual(self.run_dd('--data-dir', d, 'count').returncode, 2)
+        self.assertFalse(Path(d).exists())
+
     def test_add_and_count(self):
         r = self.run_fb('add', 'L2', '261025-a', 'verifier checked only 3 quotes')
         self.assertEqual(r.returncode, 0, r.stderr)

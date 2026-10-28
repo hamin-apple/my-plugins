@@ -1,6 +1,6 @@
 {
   "name": "my-agent",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks",
   "author": {
     "name": "jahoonjin"
@@ -19,5 +19,14 @@
     "./l3-workers/agents/writer.md",
     "./l3-workers/agents/coder.md"
   ],
-  "hooks": "./l4-tools-guards/hooks/hooks.json"
+  "hooks": "./l4-tools-guards/hooks/hooks.json",
+  "userConfig": {
+    "data_dir": {
+      "type": "directory",
+      "title": "Data folder",
+      "description": "Where my-agent keeps its project list, run index, monitor state, retrospective notes and report copies.",
+      "required": true,
+      "default": "~/my-agent"
+    }
+  }
 }

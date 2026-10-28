@@ -1,6 +1,7 @@
 #!/bin/sh
 # Register / unregister the menu bar app as a login item (launchd user agent).
 # install and uninstall write outside the repository (~/Library/LaunchAgents).
+# install [<data folder>] records the folder in the plist (default ~/my-agent); reinstall to change it.
 here=$(cd "$(dirname "$0")" && pwd)
 bin="$here/build/my-agent-menubar"
 label="my-agent.monitor-menubar"
@@ -13,8 +14,14 @@ case "$1" in
       echo "not installed: build first (sh menubar/build.sh)"
       exit 1
     fi
+    folder="${2:-$HOME/my-agent}"
+    case "$folder" in
+      "~") folder="$HOME" ;;
+      "~/"*) folder="$HOME/${folder#\~/}" ;;
+    esac
     mkdir -p "$HOME/Library/LaunchAgents"
     xbin=$(printf '%s' "$bin" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
+    xfolder=$(printf '%s' "$folder" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
     cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -23,13 +30,16 @@ case "$1" in
   <key>ProgramArguments</key><array>
     <string>$xbin</string>
   </array>
+  <key>EnvironmentVariables</key><dict>
+    <key>CLAUDE_PLUGIN_OPTION_DATA_DIR</key><string>$xfolder</string>
+  </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><false/>
 </dict></plist>
 PLIST
     launchctl bootout "$domain/$label" >/dev/null 2>&1
     if launchctl bootstrap "$domain" "$plist"; then
-      echo "installed: ~/Library/LaunchAgents/$label.plist (loaded)"
+      echo "installed: ~/Library/LaunchAgents/$label.plist (loaded), data folder: $folder"
     else
       echo "not loaded: launchctl bootstrap failed; run login-item.sh uninstall"
       exit 1
@@ -52,7 +62,7 @@ PLIST
     fi
     ;;
   *)
-    echo "usage: login-item.sh install|uninstall|status"
+    echo "usage: login-item.sh install [<data folder>]|uninstall|status"
     exit 2
     ;;
 esac

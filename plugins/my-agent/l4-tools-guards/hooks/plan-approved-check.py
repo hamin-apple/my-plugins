@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Skill hook (PreToolUse: Agent|Workflow|Edit|Write|NotebookEdit|Bash): the G1b hard gate
+"""Plugin hook (hooks.json, PreToolUse: Agent|Workflow|Edit|Write|NotebookEdit|Bash): the G1b hard gate
 (architecture 4.4 "G1b hard gate").
+
+Runs in every session where the plugin is on, so it first narrows down: a call from inside a subagent (`agent_id` in
+the input) passes; no task found passes (a `.active` without `task:` warns, before the session check); a `.active`
+whose `session:` differs from the input `session_id` (both set) passes. Only then the verdict below.
 
 While a task is active and its `plan.md` has no `Approved` line under `## Approval`, deny delegation and writes,
 whatever the phase. Allowed before approval: my-agent:explorer / architect / plan-reviewer (and writer once
-`Prototype: requested` is under plan.md's `## Prototype`), and writes under `<location>/docs/agent/` or to the agent-tasks
-`active-index.json` / `projects.txt` (and `mkdir -p` of the agent-tasks folder itself, Intake step 7). No `.active` → exit 0 at once; a `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with a
+`Prototype: requested` is under plan.md's `## Prototype`), and writes under `<location>/docs/agent/` or to the data folder's
+`active-index.json` / `projects.txt` (and `mkdir -p` of the data folder itself, Intake step 7). A `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with a
 warning. Any error → exit 2, so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
 
-After approval, a write outside the location, the agent-tasks folder and the result path that plan.md / scope.md
+After approval, a write outside the location, the data folder and the result path that plan.md / scope.md
 declare (`- Deliverable location: `…`` or `- Save path: `…``) gets `ask`: auto mode lets such a write through without a
 prompt (probe 2026-10-25). A Bash write whose target cannot be told passes, as before (git commit asks via G2).
 The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
@@ -105,12 +109,16 @@ def main() -> int:
         inp = json.loads(sys.stdin.read())
         if not isinstance(inp, dict):
             raise ValueError('hook input is not an object')
+        if ma_active.in_subagent(inp):
+            return 0
         tasks_dir = ma_active.default_tasks_dir().expanduser().resolve()
         broken = []
         active = ma_active.find_active(inp.get('cwd') or os.getcwd(), tasks_dir, broken)
         if active is None:
             if broken:
                 print(json.dumps({'systemMessage': ma_active.BROKEN.format(path=broken[0])}, ensure_ascii=False))
+            return 0
+        if not ma_active.owns(active, inp):
             return 0
         if not active.task_dir.is_dir():
             print(json.dumps({'systemMessage': f'my-agent: the task folder {active.task_dir} that .active points to does not exist'},

@@ -3,7 +3,7 @@
 A read-only local web page that shows every my-agent task: Dashboard, Architecture, Deliverables and Log replay.
 Spec: `~/dev/my-plugins/plugins/my-agent/docs/build-guide/my-agent-monitor-design.md` (v0.3, 6.1: this folder lives inside the my-agent plugin). Plan: `~/dev/my-plugins/plugins/my-agent/docs/build-guide/my-agent-monitor-plan.md`. The monitor reads run-log lines and task files with the plugin's `l4-tools-guards/lib/ma_schema.py` (added to `sys.path` by `monitor/__init__.py`).
 
-The monitor only reads. It never writes to a project's `docs/agent/`, a transcript, or `~/dev/agent-tasks/`.
+The monitor only reads. It never writes to a project's `docs/agent/`, a transcript, or the my-agent data folder.
 
 ## Run
 
@@ -22,7 +22,7 @@ my-agent starts it for you with `monitor-up.py` (Router at Intake, or `/my-agent
 
 `monitor-up.py` opens a new window by default (about 1200x800), or a tab.
 
-- Setting: `~/dev/agent-tasks/monitor-config.json`, `{"open": "window"}` or `{"open": "tab"}`. Missing, broken or unknown values mean `window`.
+- Setting: `<data folder>/monitor-config.json`, `{"open": "window"}` or `{"open": "tab"}`. Missing, broken or unknown values mean `window`.
 - Per run: `--window` or `--tab` beats the file. `--task <sha1 8>/<task-id>` opens the page with that task selected (`/#task=<key>`). `--open` always opens, `--no-open` never does.
 - Browser: `"browser": "default" | "safari" | "chrome"` in the same file (other keys are kept). Missing, broken or unknown means `default` (the system default browser, detected as below). `safari` always uses Safari (window: sized new window; tab: `open -a Safari`), `chrome` always uses Chrome (window: app window; tab: `open -b com.google.chrome`). If the chosen browser fails to open, the default browser's tab is used. Per run: `--browser default|safari|chrome` beats the file (an unknown value is ignored). `monitor-up.py set-browser <value>` writes the key; the menu bar app uses it.
 - Window by default browser (`browser` is `default`): Safari opens a sized new Safari window, and a default browser that was never changed (no http entry in LaunchServices) counts as Safari. Chrome, Edge, Brave, Chromium and Vivaldi open an app window. Any other browser, an unreadable LaunchServices file, or Safari automation being refused opens a tab.
@@ -34,9 +34,11 @@ The server binds `127.0.0.1` only. The page polls every 2 s.
 
 | Source | Default | Override |
 |---|---|---|
-| Project list (one path per line; my-agent writes absolute paths, a hand-added `~/…` line also works) | `~/dev/agent-tasks/projects.txt` | `MA_PROJECTS_FILE` |
+| Project list (one path per line; my-agent writes absolute paths, a hand-added `~/…` line also works) | `<data folder>/projects.txt` | `MA_PROJECTS_FILE` |
 | Main-session transcripts | `~/.claude/projects/*/<session>.jsonl` | `MA_CLAUDE_PROJECTS` |
-| Prices | `~/dev/agent-tasks/prices.json` if it exists, else `prices.json` in this folder | `MA_TASKS_DIR` (folder) |
+| Prices | `<data folder>/prices.json` if it exists, else `prices.json` in this folder | `MA_TASKS_DIR` (the data folder) |
+
+The data folder is the my-agent plugin setting `data_dir` (default `~/my-agent`). Order: `MA_TASKS_DIR`, then the setting, then `~/my-agent`; a leading `~` is expanded. `monitor-up.py --data-dir <folder>` takes the setting for the commands the my-agent skill runs, and passes the resolved folder to the server it starts. `monitor.json`, `monitor.log` and `monitor-config.json` sit directly in the data folder. A running server keeps the folder it started with: after changing the folder, run `/my-agent:monitor stop` and start the monitor again.
 
 Main session tokens of a finished task are read from `main-usage.json` in its task folder when it exists (my-agent writes it at the end of a task with `usage-snapshot.py`), because Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days). Without it, they come from the transcript, and turn into `–` once the transcript is gone.
 Only `docs/agent/*/` is listed. Finished tasks moved to `docs/agent/.archived/` by `l4-tools-guards/scripts/archive-tasks.py` leave the list (architecture 4.8.2 "Task records over time").

@@ -563,7 +563,7 @@ function renderChrome() {
   document.querySelectorAll('#filter button').forEach(b => b.textContent = L(...F[b.dataset.f]));
   const np = new Set(TASKS.map(t => t.project)).size;
   $('side-note').innerHTML = TASKS.length ? L(`Tasks found in <code>docs/agent/</code> of ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳의 <code>docs/agent/</code>에서 찾은 작업입니다.`)
-    : L('No tasks yet. my-agent lists projects in <code>~/dev/agent-tasks/projects.txt</code>.', '아직 작업이 없습니다. my-agent가 <code>~/dev/agent-tasks/projects.txt</code>에 프로젝트를 적습니다.');
+    : L('No tasks yet. my-agent lists projects in <code>projects.txt</code> in its data folder.', '아직 작업이 없습니다. my-agent가 데이터 폴더의 <code>projects.txt</code>에 프로젝트를 적습니다.');
   document.querySelectorAll('#lang-seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
 }
 

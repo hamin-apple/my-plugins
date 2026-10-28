@@ -6,7 +6,7 @@ hooks:
   PreToolUse:
     - hooks:
         - type: command
-          command: "python3 \"$HOME/dev/my-plugins/plugins/my-agent/l4-tools-guards/probe/probe-log.py\" skill-pretool '${CLAUDE_PLUGIN_ROOT}' \"${CLAUDE_PLUGIN_ROOT}\""
+          command: "python3 \"$HOME/dev/my-plugins/plugins/my-agent/tests/probe/probe-log.py\" skill-pretool '${CLAUDE_PLUGIN_ROOT}' \"${CLAUDE_PLUGIN_ROOT}\""
           timeout: 10
 ---
 

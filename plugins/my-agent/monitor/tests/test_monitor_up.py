@@ -268,5 +268,84 @@ class OpenModeTest(unittest.TestCase):
         self.assertEqual(json.loads((self.d / 'monitor-config.json').read_text()), {'browser': 'chrome'})
 
 
+class DataDirTest(unittest.TestCase):
+    """The data folder comes from `--data-dir` (no MA_* override): state, log and the server's project list live there."""
+
+    def setUp(self):
+        for p in range(8791, 8795):
+            if port_open(p):
+                self.skipTest(f'port {p} is in use on this machine')
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.d = Path(self.tmp.name) / 'data'
+        self.env = {k: v for k, v in os.environ.items()
+                    if not k.startswith('MA_') and k != 'CLAUDE_PLUGIN_OPTION_DATA_DIR'}
+        self.env.update(HOME=self.tmp.name, MA_CLAUDE_PROJECTS=str(Path(self.tmp.name) / 'claude'))
+        self.addCleanup(self.kill_server)
+
+    def kill_server(self):
+        try:
+            os.kill(json.loads((self.d / 'monitor.json').read_text())['pid'], signal.SIGTERM)
+        except (OSError, ValueError, KeyError):
+            pass
+        for p in range(8791, 8795):
+            for _ in range(50):
+                if not port_open(p):
+                    break
+                time.sleep(0.1)
+
+    def up(self, *args, env=None):
+        r = subprocess.run([sys.executable, str(SCRIPT), *args], env=env or self.env, capture_output=True, text=True, timeout=20)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(len(lines), 1, r.stdout)
+        return lines[0]
+
+    def tasks(self, port):
+        import http.client
+        c = http.client.HTTPConnection('127.0.0.1', port, timeout=2)
+        c.request('GET', '/api/tasks')
+        return json.loads(c.getresponse().read())['tasks']
+
+    def test_data_dir_option_places_state_and_server_reads_its_projects(self):
+        project = Path(self.tmp.name) / 'proj'
+        (project / 'docs' / 'agent' / '261029-x').mkdir(parents=True)
+        (project / 'docs' / 'agent' / '261029-x' / 'intake.md').write_text('# Intake\n')
+        self.d.mkdir()
+        (self.d / 'projects.txt').write_text(f'{project}\n')
+        self.assertEqual(self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d)),
+                         'monitor: http://127.0.0.1:8791/ (started)')
+        self.assertEqual(json.loads((self.d / 'monitor.json').read_text())['port'], 8791)
+        self.assertTrue((self.d / 'monitor.log').exists())
+        self.assertEqual([t['id'] for t in self.tasks(8791)], ['261029-x'])
+
+    def test_ma_tasks_dir_beats_data_dir_option(self):
+        other = Path(self.tmp.name) / 'other'
+        env = dict(self.env, MA_TASKS_DIR=str(other))
+        self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d), env=env)
+        self.assertTrue((other / 'monitor.json').exists())
+        self.assertFalse((self.d / 'monitor.json').exists())
+        os.kill(json.loads((other / 'monitor.json').read_text())['pid'], signal.SIGTERM)
+
+    def test_status_and_stop_with_trailing_data_dir(self):
+        self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d))
+        self.assertRegex(self.up('status', '--ports', PORTS, '--data-dir', str(self.d)), r'\(running, since ')
+        self.assertEqual(self.up('stop', '--ports', PORTS, '--data-dir', str(self.d)), 'monitor: stopped 8791')
+        self.assertFalse((self.d / 'monitor.json').exists())
+
+    def test_data_dir_after_subcommand_and_for_set_browser(self):
+        self.assertEqual(self.up('set-browser', 'safari', '--data-dir', str(self.d)), 'monitor: browser set to safari')
+        self.assertEqual(json.loads((self.d / 'monitor-config.json').read_text())['browser'], 'safari')
+
+    def test_setting_env_is_used_without_option(self):
+        env = dict(self.env, CLAUDE_PLUGIN_OPTION_DATA_DIR=str(self.d))
+        self.up('set-browser', 'chrome', env=env)
+        self.assertTrue((self.d / 'monitor-config.json').exists())
+
+    def test_default_is_home_my_agent(self):
+        self.up('set-browser', 'chrome')
+        self.assertTrue((Path(self.tmp.name) / 'my-agent' / 'monitor-config.json').exists())
+
+
 if __name__ == '__main__':
     unittest.main()

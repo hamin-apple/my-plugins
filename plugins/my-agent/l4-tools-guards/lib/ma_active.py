@@ -4,7 +4,7 @@
    when that root is a linked worktree (`.git` file, e.g. an isolation:worktree agent in
    `<main>/.claude/worktrees/agent-<id>`, probe r2) and has no `.active`, the main worktree's `.active`;
    outside any git repo, the nearest of `cwd` and its ancestors with `docs/agent/.active` (a location such as
-   ~/dev/agent-tasks run from itself, which Intake writes no index line for);
+   the data folder run from itself, which Intake writes no index line for);
 2. `<tasks_dir>/active-index.json` (`{"<run folder>": "<task location>"}`): inside a git repo, only the entry for
    its root (or main worktree), so a run folder such as ~/dev never reaches the repos below it; outside git, the
    entry for `cwd` or its nearest ancestor.
@@ -12,9 +12,10 @@
 `.active` is four `key: value` lines: task, phase, session, started (4.7.3).
 """
 import json
-import os
 from pathlib import Path
 from typing import NamedTuple
+
+import ma_data
 
 
 class Active(NamedTuple):
@@ -31,8 +32,23 @@ BROKEN = ('my-agent: {path} has no `task:` line, so it cannot be read as the act
           'verdict-freshness hooks do not apply. Fix or delete `.active`.')
 
 
+def in_subagent(inp: dict) -> bool:
+    """True when the hook input comes from inside a subagent (it has `agent_id`). The gate hooks skip such calls;
+    scope-guard.py covers subagents. A session started with `--agent` has `agent_id` on its main thread too, so the
+    gate hooks skip that whole session."""
+    return bool(inp.get('agent_id'))
+
+
+def owns(active: 'Active', inp: dict) -> bool:
+    """False only when `.active` `session:` and the input `session_id` are both set and differ: another session of
+    the same repo is not this task's session, so the gate hooks let it through (fail open, as session-notice.py
+    compares). If either side is empty the hook applies (closed side)."""
+    mine, theirs = active.session, inp.get('session_id')
+    return not (mine and theirs and mine != theirs)
+
+
 def default_tasks_dir() -> Path:
-    return Path(os.environ.get('MA_TASKS_DIR') or Path.home() / 'dev/agent-tasks')
+    return ma_data.data_dir()
 
 
 def read_active(location: Path, broken: list = None):

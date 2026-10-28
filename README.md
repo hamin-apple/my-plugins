@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by jahoonjin.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.3.2 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.4.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 
 ## Requirements
 
@@ -28,6 +28,8 @@ claude plugin install my-agent@my-plugins
 The repository is private, so you must be signed in with a GitHub account that has been invited to it.
 
 A plugin cannot ship permission rules. For the risky-action prompts (G2: `git commit`, `git push`, `rm -rf`, package installs) and the denied commands (secret files, `--no-verify`, `git push --force`), merge the `ask` and `deny` lists of `plugins/my-agent/l4-tools-guards/permissions/permissions.json` into `permissions` in `~/.claude/settings.json` by hand. Without them those actions are not asked or blocked.
+
+When you enable the plugin, Claude Code asks for one setting, the data folder (default `~/my-agent`; change it later in `/config`). It holds everything my-agent keeps outside task folders: the project list (`projects.txt`), the run index (`active-index.json`), the monitor state, log and settings, the price override, the improvement list (`feedback.md`) and the retrospective report copies (`gate-report/`). A leading `~` is expanded. Nothing is written into the plugin's own folder. If the folder is changed, the old one is left as is and the new one is used from then on. If the setting is missing (for example with `--plugin-dir`), `~/my-agent` is used. The environment variables `MA_TASKS_DIR` (data folder), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE` and `MA_GATE_REPORT_DIR` win over the setting.
 
 ## my-agent
 
@@ -54,9 +56,11 @@ Task records are kept in `docs/agent/<task ID>/` in the task location.
 Finished tasks pile up there and in the monitor's list. To move tasks finished 30 days ago or more to `docs/agent/.archived/` (out of the list; move a folder back to bring it back):
 
 ```bash
-python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py --dry-run   # list only
-python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py [--days N]
+python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py --dry-run [--data-dir <folder>]   # list only
+python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py [--days N] [--data-dir <folder>]
 ```
+
+Run by hand in a shell, the script does not know the setting. Unless your data folder is the default `~/my-agent`, pass it with `--data-dir <folder>` so the script finds the project list.
 
 ## Update and remove
 

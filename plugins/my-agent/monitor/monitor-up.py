@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """Start the my-agent monitor once and print its URL (architecture 4.7.4, monitor spec 6.1).
 
-usage: monitor-up.py [--open | --no-open] [--window | --tab] [--browser default|safari|chrome] [--task KEY] [--ports A-B]
-       monitor-up.py set-browser default|safari|chrome
-       monitor-up.py status [--ports A-B]
-       monitor-up.py stop [--ports A-B]
+usage: monitor-up.py [--open | --no-open] [--window | --tab] [--browser default|safari|chrome] [--task KEY] [--ports A-B] [--data-dir DIR]
+       monitor-up.py set-browser default|safari|chrome [--data-dir DIR]
+       monitor-up.py status [--ports A-B] [--data-dir DIR]
+       monitor-up.py stop [--ports A-B] [--data-dir DIR]
 
 Prints exactly one line and always exits 0, so the my-agent Router can pass the
 line on and carry on when the monitor cannot start. A port that answers
 /api/health with this folder as `root` is ours; anything else on a port is
-left alone. State goes to $MA_TASKS_DIR (default ~/dev/agent-tasks):
-monitor.json (port, pid, root, started) and monitor.log.
+left alone. State goes to the data folder (ma_data.data_dir: $MA_TASKS_DIR, else
+--data-dir, else $CLAUDE_PLUGIN_OPTION_DATA_DIR, else ~/my-agent): monitor.json
+(port, pid, root, started) and monitor.log. The server child gets the resolved
+folder in CLAUDE_PLUGIN_OPTION_DATA_DIR.
 """
 import argparse
 import http.client
@@ -27,13 +29,18 @@ from pathlib import Path
 
 from monitor.opener import BROWSERS, open_monitor, read_browser, read_mode, write_browser
 
+import ma_data   # on sys.path through monitor/__init__.py
+
 ROOT = Path(__file__).resolve().parent
 HOST = '127.0.0.1'
 WAIT_SECS = 3.0
 
 
+DATA_DIR_ARG = None   # --data-dir, set by main()
+
+
 def tasks_dir() -> Path:
-    return Path(os.environ.get('MA_TASKS_DIR') or Path.home() / 'dev/agent-tasks')
+    return ma_data.data_dir(DATA_DIR_ARG)
 
 
 def health(port: int):
@@ -96,7 +103,8 @@ def start(ports, open_browser, mode=None, task=None, browser=None):
     d = tasks_dir()
     d.mkdir(parents=True, exist_ok=True)
     with open(d / 'monitor.log', 'ab') as log:
-        proc = subprocess.Popen([sys.executable, str(ROOT / 'server.py'), '--port', str(free)], cwd=str(ROOT),
+        env = dict(os.environ, **{ma_data.SETTING_ENV: str(d)})
+        proc = subprocess.Popen([sys.executable, str(ROOT / 'server.py'), '--port', str(free)], cwd=str(ROOT), env=env,
                                 stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
     deadline = time.monotonic() + WAIT_SECS
     while time.monotonic() < deadline:
@@ -172,7 +180,10 @@ def main(argv=None):
     ap.add_argument('--browser', default=None, metavar='B', help='open in default | safari | chrome this time (unknown: use the config)')
     ap.add_argument('--task', default=None, metavar='KEY', help='open with this task selected (<sha1 8>/<task-id>)')
     ap.add_argument('--ports', default='8765-8775')
+    ap.add_argument('--data-dir', default=None, metavar='DIR', help='the my-agent data folder (the plugin setting)')
     args = ap.parse_args(argv)
+    global DATA_DIR_ARG
+    DATA_DIR_ARG = args.data_dir
     try:
         ports = parse_ports(args.ports)
         line = {'start': lambda: start(ports, args.open_browser, args.mode, args.task, args.browser), 'status': lambda: status(ports),

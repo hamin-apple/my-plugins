@@ -1,5 +1,6 @@
 """ma_active.find_active (architecture 4.8.2 lookup order) and ma_logline.format_line (4.7.2 line format)."""
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime
@@ -9,6 +10,31 @@ from helpers import make_task, parse  # also puts lib/ on sys.path
 
 import ma_active
 import ma_logline
+
+
+class SessionJudgementTest(unittest.TestCase):
+    """in_subagent / owns: what the plugin gate hooks use to skip calls that are not the active task's main session."""
+
+    def active(self, session):
+        return ma_active.Active(Path('/x'), 't', '1', session, '', Path('/x/t'), Path('/x/t/run-log.md'))
+
+    def test_owns_table(self):
+        for active_session, input_session, expected in [
+            ('s1', 's1', True),      # same session
+            ('s1', 's2', False),     # another session of the same repo
+            ('', 's2', True),        # .active has no session: apply (closed side)
+            ('s1', '', True),        # input has no session_id: apply
+            ('s1', None, True),
+            ('', '', True),
+        ]:
+            with self.subTest(active=active_session, input=input_session):
+                self.assertIs(ma_active.owns(self.active(active_session), {'session_id': input_session}), expected)
+        self.assertTrue(ma_active.owns(self.active('s1'), {}))
+
+    def test_in_subagent(self):
+        self.assertTrue(ma_active.in_subagent({'agent_id': 'a1'}))
+        self.assertFalse(ma_active.in_subagent({'session_id': 's1'}))
+        self.assertFalse(ma_active.in_subagent({'agent_id': ''}))
 
 
 class FindActiveTest(unittest.TestCase):
@@ -30,6 +56,23 @@ class FindActiveTest(unittest.TestCase):
         self.assertEqual(a.task_dir, task_dir)
         self.assertEqual(a.log, task_dir / 'run-log.md')
         self.assertEqual((a.phase, a.session, a.started), ('1', 's-test', '2026-10-25 09:00'))
+
+    def test_index_found_via_setting(self):
+        """No tasks_dir argument and no MA_TASKS_DIR: the data folder setting locates active-index.json."""
+        task_dir = make_task(self.root / 'loc', git=False)
+        (self.root / 'run' / '.git').mkdir(parents=True)
+        data = self.root / 'data'
+        data.mkdir()
+        (data / 'active-index.json').write_text(json.dumps({str(self.root / 'run'): str(self.root / 'loc')}))
+        saved = {k: os.environ.pop(k, None) for k in ('MA_TASKS_DIR', 'CLAUDE_PLUGIN_OPTION_DATA_DIR')}
+        try:
+            os.environ['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = str(data)
+            self.assertEqual(ma_active.find_active(str(self.root / 'run')).task_dir, task_dir)
+        finally:
+            for k, v in saved.items():
+                os.environ.pop(k, None)
+                if v is not None:
+                    os.environ[k] = v
 
     def test_find_git_worktree_file(self):
         make_task(self.root / 'wt', git=False)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Retro improvement points in the plugin's feedback.md (architecture 4.11).
+"""Retro improvement points in <data folder>/feedback.md (architecture 4.11).
 
 usage: feedback.py add L<1-4> <task-id> "<text>"   append `- [open] L<n> <YYYY-MM-DD> <task-id>: <text>` under ## Open
        feedback.py count                           print `L1 <n> · L2 <n> · L3 <n> · L4 <n>`, then
@@ -8,24 +8,27 @@ usage: feedback.py add L<1-4> <task-id> "<text>"   append `- [open] L<n> <YYYY-M
        feedback.py done <n> "<what fixed it>"      move open item <n> (as `list` numbers it) to the end of ## Done
                                                    as `- [done] … → <what fixed it>`
 File format: `# my-agent feedback`, `## Open`, `## Done`; one `- [open|done] L<1-4> <YYYY-MM-DD> <task-id>: <text>`
-line per item. $MA_FEEDBACK_FILE overrides the file (tests). Exit 0 done, 2 bad arguments.
+line per item. $MA_FEEDBACK_FILE overrides the file. Any form ends with `--data-dir <folder>` (the data folder; default: the
+setting, else ~/my-agent); it is taken only as the last two arguments. Exit 0 done, 2 bad arguments.
 """
 import datetime
-import os
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+import ma_data  # noqa: E402
 import ma_schema  # noqa: E402
 
-DEFAULT = Path(__file__).resolve().parents[2] / 'feedback.md'
 OPEN = re.compile(r'^- \[open\] L([1-4]) ')
 REVIEW_AT = 4
 
 
+DATA_DIR = None   # set by main() from a trailing `--data-dir X`
+
+
 def path() -> Path:
-    return Path(os.environ.get('MA_FEEDBACK_FILE') or DEFAULT)
+    return ma_data.feedback_file(DATA_DIR)
 
 
 def load() -> list:
@@ -35,6 +38,7 @@ def load() -> list:
 
 
 def save(lines: list) -> None:
+    path().parent.mkdir(parents=True, exist_ok=True)
     path().write_text('\n'.join(lines).rstrip('\n') + '\n', encoding='utf-8')
 
 
@@ -97,6 +101,10 @@ def count() -> str:
 
 
 def main(argv) -> int:
+    global DATA_DIR
+    DATA_DIR = None
+    if len(argv) >= 2 and argv[-2] == '--data-dir':
+        DATA_DIR, argv = argv[-1], argv[:-2]
     if argv[:1] == ['count'] and len(argv) == 1:
         print(count())
         return 0

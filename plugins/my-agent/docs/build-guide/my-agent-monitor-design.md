@@ -43,7 +43,7 @@ The monitor shows these four things as a local web page on the Mac. **It only re
 - The server listens only on `127.0.0.1` and uses only the Python 3 standard library. There must be no dependencies to install.
 - The frontend is one HTML file (+ JS/CSS files if needed), with no build step. The web font (IBM Plex) loads from Google Fonts; offline, system fonts take its place.
 - `~/dev/tools/claude-sessions` is read-only. The monitor does not reuse its code (the price table is its own file).
-- The server writes no files. Only the launch script `monitor-up.py` writes `~/dev/agent-tasks/monitor.json` and `monitor.log` (section 6.1).
+- The server writes no files. Only the launch script `monitor-up.py` writes `<data folder>/monitor.json` and `monitor.log` (section 6.1). The data folder is the plugin setting `data_dir` (default `~/my-agent`; `$MA_TASKS_DIR` wins; architecture 4.7).
 
 ## 4. Screen (fixed by mock-up v22)
 
@@ -125,7 +125,7 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 
 ### 5.1 Project list
 
-- File: `~/dev/agent-tasks/projects.txt`. One project path (task location) per line
+- File: `<data folder>/projects.txt` (`$MA_PROJECTS_FILE` overrides the file). One project path (task location) per line
 - After my-agent sets the task location in Intake, it adds a line if the path is not listed. It never removes lines.
 - For each line the monitor looks for `<path>/docs/agent/*/intake.md`. If the path is gone, it skips it.
 
@@ -166,7 +166,7 @@ The monitor's parser interprets only the lines below and ignores lines it does n
 
 ### 5.4 Price table
 
-- File: `prices.json` in the monitor folder (default). If `~/dev/agent-tasks/prices.json` exists, that one is used (section 6.1). For each model ID prefix (e.g. `claude-opus-5`): input, output, cache write and cache read prices (USD / 1M tokens) and the date checked
+- File: `prices.json` in the monitor folder (default). If `<data folder>/prices.json` exists, that one is used (section 6.1). For each model ID prefix (e.g. `claude-opus-5`): input, output, cache write and cache read prices (USD / 1M tokens) and the date checked
 - The person updates it by hand. A model not in the table gets cost `?`, and one line "model not in the price table" appears below the Models table.
 
 ## 6. Structure
@@ -194,16 +194,16 @@ The detailed behavior is in section 4.7.4 of the architecture document. Only the
 
 - **Location:** the code moved to `monitor/` inside the plugin (now `~/dev/my-plugins/plugins/my-agent/monitor/`). The reading code was renamed from `reader/` to the `monitor/` package.
 - **`GET /api/health`:** returns `{"app": "my-agent-monitor", "root": <absolute path of the monitor folder>}`. The launch script uses it to recognize a server that is already up.
-- **`monitor-up.py`:** if already up, prints only the URL; otherwise starts the server on a free port. Takes `--open`, `--no-open`, `--window`, `--tab`, `--task <key>`, `status`, `stop`. The open mode (`window`/`tab`) is chosen from the option, then `~/dev/agent-tasks/monitor-config.json`, then the default `window`. The browser (`default`/`safari`/`chrome`) is chosen from the `--browser` option, then `browser` in the config file, then the default `default` (detects the default browser); `monitor-up.py set-browser <value>` rewrites only `browser` in the config file. If the chosen browser does not open, a tab in the default browser is used instead. It exits 0 in every case.
+- **`monitor-up.py`:** if already up, prints only the URL; otherwise starts the server on a free port. Takes `--open`, `--no-open`, `--window`, `--tab`, `--task <key>`, `status`, `stop`. The open mode (`window`/`tab`) is chosen from the option, then `<data folder>/monitor-config.json`, then the default `window`. The browser (`default`/`safari`/`chrome`) is chosen from the `--browser` option, then `browser` in the config file, then the default `default` (detects the default browser); `monitor-up.py set-browser <value>` rewrites only `browser` in the config file. If the chosen browser does not open, a tab in the default browser is used instead. It exits 0 in every case.
 - **Task link:** opening `/#task=<key>` (key is `<8-char sha1>/<task-id>`, URL-encoded) selects that task. If the key is wrong or the task is finished, the usual selection rules apply.
 - **Menu bar app:** a small app in `monitor/menubar/` shows the number of running tasks and a line per task, and runs `monitor-up.py` (`monitor/menubar/README.md`).
-- **Price table override:** if `~/dev/agent-tasks/prices.json` exists, it is used instead of `prices.json` in the monitor folder.
+- **Price table override:** if `<data folder>/prices.json` exists, it is used instead of `prices.json` in the monitor folder.
 - **Who starts it:** the my-agent Router right after it sets the task location in Intake, and the person calling `/my-agent:monitor` directly.
 - **Lifetime:** the server stays up after the session ends. `/my-agent:monitor stop` turns it off.
 
 ## 7. Changes on the my-agent side (applied in architecture document v0.19)
 
-1. **Project list registration:** after setting the task location in Intake, add it to `~/dev/agent-tasks/projects.txt` if missing (section 4.8.2 "task location")
+1. **Project list registration:** after setting the task location in Intake, add it to `<data folder>/projects.txt` if missing (section 4.8.2 "task location")
 2. **`step:` line:** run-log.py records time, step, rev and session ID each time a step (1~8) is entered (the L1 Recorder row of the table in section 4.7.2)
 3. **Split popup records in two:** `ask:` right before the popup shows, `answer:` after the answer comes. Today the question and choice are recorded in one line, so there is no record while waiting for the answer (the L1 Recorder row of the table in section 4.7.2)
 4. **Line format:** put the format from 5.2 into section 4.7.2
@@ -226,7 +226,7 @@ The detailed behavior is in section 4.7.4 of the architecture document. Only the
 
 ## 9. What I decided (please confirm)
 
-- The project list file is at `~/dev/agent-tasks/projects.txt`, because that folder already holds `active-index.json`
+- The project list file is at `<data folder>/projects.txt`, because that folder already holds `active-index.json` (v0.3: the data folder replaced the earlier fixed folder under `~/dev`; the server gets it from `monitor-up.py` in `CLAUDE_PLUGIN_OPTION_DATA_DIR`, the menu bar app from its login item)
 - A task whose records are malformed shows "read error" for that task only; the rest keep showing
 - The server uses only the standard library; the frontend has no build
 - 2-second polling (instead of file watching), because it is simple and the Mac's built-in Python is enough
@@ -234,7 +234,7 @@ The detailed behavior is in section 4.7.4 of the architecture document. Only the
 - (v0.2) Recognize a server already up by `root` in `/api/health`, and skip ports other programs use
 - (v0.2) Open the browser only when the server was newly started, so that a new tab does not open every time a task starts
 - (v0.2) Keep the server up after the session ends, because several sessions share one server and it does almost nothing once the screen is closed
-- (v0.2) Keep the state file, the log and the price table override in `~/dev/agent-tasks/`, because that is where `projects.txt` lives and no plugin files need to change
+- (v0.2) Keep the state file, the log and the price table override in the data folder (a fixed folder under `~/dev` at v0.2), because that is where `projects.txt` lives and no plugin files need to change
 
 ## 10. Left to the builder
 

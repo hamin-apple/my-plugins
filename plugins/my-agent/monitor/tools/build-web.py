@@ -57,7 +57,7 @@ rep('<option value="${t.id}" ${t.id === st.task ? \'selected\' : \'\'}>', '<opti
 rep("  $('side-note').innerHTML = L('Tasks found in <code>docs/agent/</code> of 3 projects.', '프로젝트 3곳의 <code>docs/agent/</code>에서 찾은 작업입니다.');",
     "  const np = new Set(TASKS.map(t => t.project)).size;\n"
     "  $('side-note').innerHTML = TASKS.length ? L(`Tasks found in <code>docs/agent/</code> of ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳의 <code>docs/agent/</code>에서 찾은 작업입니다.`)\n"
-    "    : L('No tasks yet. my-agent lists projects in <code>~/dev/agent-tasks/projects.txt</code>.', '아직 작업이 없습니다. my-agent가 <code>~/dev/agent-tasks/projects.txt</code>에 프로젝트를 적습니다.');")
+    "    : L('No tasks yet. my-agent lists projects in <code>projects.txt</code> in its data folder.', '아직 작업이 없습니다. my-agent가 데이터 폴더의 <code>projects.txt</code>에 프로젝트를 적습니다.');")
 rep("  $('live-txt').textContent = st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks docs/agent/ every 2s', '실시간 · 2초마다 docs/agent/ 확인');",
     "  $('live-txt').textContent = st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks docs/agent/ every 2s', '실시간 · 2초마다 docs/agent/ 확인');\n"
     "  $('live-dot').classList.toggle('run', !st.offline && !st.liveWait && TASKS.some(t => t.status === 'running'));")

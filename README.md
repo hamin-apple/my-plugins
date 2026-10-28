@@ -40,6 +40,8 @@ The main session (L1) takes a request, runs plan → execute → verify → revi
 | L3 | `explorer` · `researcher` · `writer` · `coder`: one assigned piece of work each |
 | L4 | Tools·MCP · hooks · permission rules · scripts: running, recording and blocking |
 
+The whole architecture — each level's components, their roles and permissions, the steps and gates, and the format of every task file — is on one page, `docs/index.html` (for GitHub Pages). `python3 tools/build-docs.py` builds it from the plugin files; run it again after changing them.
+
 | Command | What it does |
 |---|---|
 | `/my-agent <request>` | Starts a new task. |
@@ -68,5 +70,8 @@ claude plugin uninstall my-agent@my-plugins
 - `CLAUDE.md`: notes for development (folder roles, test commands, version rule)
 - `.claude-plugin/marketplace.json`: plugin list
 - `plugins/<name>/`: a plugin. Only this folder is copied on install.
+- `tools/build-docs.py`, `tools/docs-template.html`: build the my-agent architecture page
+- `docs/index.html`: the architecture page (generated; GitHub Pages source `main` · `/docs`)
+- `tests/`: tests for `tools/`
 - `docs/handoff/`: handoff notes for work continued in another environment
 - `docs/agent/`: my-agent task records from this repository. Excluded from git.

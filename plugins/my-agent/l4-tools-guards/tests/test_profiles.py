@@ -71,5 +71,30 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn('`- Deliverable location: `', general)
         self.assertIn('`- Save path: `', research)
 
+    def test_argument_hint_matches_profiles_and_phases(self):
+        text = SKILL.read_text(encoding='utf-8')
+        m = re.search(r'^argument-hint: (.+)$', text, re.M)
+        self.assertIsNotNone(m)
+        hint = m.group(1).strip().strip('\'"')
+        flags = set(re.findall(r'--([a-z]+)', hint))
+        self.assertEqual(flags, {p.stem for p in PROFILES.glob('*.md')})
+        for phase in (p.stem for p in (REPO / 'l1-orchestration' / 'phases').glob('*.md')):
+            self.assertIn(phase, hint)
+        self.assertIn('continue', hint)
+        self.assertIn('status [all]', hint)
+
+    def test_arguments_table_names_every_flag(self):
+        text = SKILL.read_text(encoding='utf-8')
+        args = text[text.index('## Arguments'):text.index('## Intake')]
+        for p in PROFILES.glob('*.md'):
+            self.assertIn(f'--{p.stem}', args)
+        self.assertIn('Let the Router pick (Recommended)', args)
+        self.assertIn('`Let the Router pick (Recommended)` / `Abort`', args)
+        self.assertIn('`Type the request in Other (Recommended)` / `Abort`', args)
+        intake = text[text.index('## Intake'):text.index('## status')]
+        self.assertIn('`Proceed as general (Recommended)` / `Abort`', intake)
+        self.assertIn('the flag is ignored', intake)
+        self.assertIn('keeps `--dev` as its first word', intake)
+
 if __name__ == '__main__':
     unittest.main()

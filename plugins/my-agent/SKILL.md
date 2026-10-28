@@ -1,7 +1,7 @@
 ---
 name: my-agent
 description: Use when a request needs several steps — implementing a feature, fixing a bug, or refactoring across files; researching a topic into a note; or producing a multi-part document. Do not use for one-line fixes, typo corrections, quick factual answers, or questions about how the code works.
-argument-hint: '[task] | continue | status [all] | <phase>'
+argument-hint: '[--general|--research|--dev] <request> | continue | status [all] | define|plan|build|accept'
 model: opus
 hooks:
   PreToolUse:
@@ -88,26 +88,35 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 | Call | What it does |
 |---|---|
 | `/my-agent <request>` | Starts a new task from Intake. |
+| `/my-agent --general` · `--research` · `--dev` `<request>` | Starts a new task with that profile. The Router does not pick one (Intake item 3). |
 | `/my-agent continue` | Resumes the task `.active` points to, from its phase. |
 | `/my-agent status` / `status all` | Shows the running task and the 4 most recent tasks (`all`: every task). |
 | `/my-agent define` · `plan` · `build` · `accept` | Reruns that phase. After G1b approval, define·plan are handled as "In-flight revision", and build·accept the same as G3 "Rework". |
 
 If called with no argument, ask in a popup: `New task (Recommended)` / `continue` / `status`.
 
+**Profile flag:** Check the first word of the argument before Intake item 1. If it starts with `--`, it is a profile flag; a `--dev` later in the request is part of the request text. The `--dev` git check is not made here; it happens in Intake item 3, after the task location is set.
+
+- Valid: exactly one of `--general`, `--research`, `--dev` (lowercase), followed by a request. The new task uses that profile (Intake item 3).
+- Invalid: a name that does not exist (`--foo`), a different case (`--Dev`), two flags, or a flag before `continue`, `status` or a phase name. Show the valid flags and popup: `Let the Router pick (Recommended)` / `Abort`. `Let the Router pick` drops the flag and treats the rest as if it had been called without one (`continue` runs `continue`; an empty rest shows the no-argument popup).
+- A valid flag with no request: popup with the question "Type the request in the Other field": `Type the request in Other (Recommended)` / `Abort`. Read the request from the Other field (as in the `Other path` of Intake item 2), then start the new task with that profile.
+- In these three popups, `Abort` stops the call and creates nothing.
+- Record these popups only when a new task starts, in Intake item 10 together with the item 1–5 popups, as `ask gate=Q … rec=…` / `answer gate=Q …` lines. Always give `rec=`; do not put backticks or `$(` in values; do not start the `q=` value with `--` (for example `q="dev flag outside a git repository"`). After `Let the Router pick` leads to `continue` or `status`, write no `ask`/`answer` lines.
+
 ## Intake (step 1, Router)
 
 Do these in order. If any item fails, show the reason and ask in a popup: `Retry (Recommended)` / `Abort`.
 
-1. **Task already running:** If `.active` exists in a task location candidate (item 2 below), popup: `Continue it (Recommended)` / `Abort that task and start new` / `Cancel`. Continue it goes to `continue`; abort first finishes the "Abort" procedure below.
+1. **Task already running:** If `.active` exists in a task location candidate (item 2 below), popup: `Continue it (Recommended)` / `Abort that task and start new` / `Cancel`. Continue it goes to `continue`; abort first finishes the "Abort" procedure below. If the call has a valid profile flag and the person picks `Abort that task and start new`, the new task uses that profile. If the person picks `Continue it` or `Cancel`, the flag is ignored.
 2. **Task location:**
    - If run inside a git repository, it is that repository's root (`git rev-parse --show-toplevel`). Do not ask.
    - Otherwise, popup every time: `~/dev/agent-tasks (Recommended)` / `Current folder` / `Other path`. For `Other path`, show one more popup that asks for the path in the Other field.
    - The task folder is `<task location>/docs/agent/<task-id>/`.
-3. **Profile:** The Router picks it from the request. Do not ask; show it in the Intake report and the first gate popup (change it if the person picks a revision).
+3. **Profile:** If the call has a valid profile flag (Arguments), use that profile; the Router does not pick. If the flag is `--dev` and the task location is not a git repository, show the reason and popup: `Proceed as general (Recommended)` / `Abort` (`Abort` stops the call and creates nothing). After `Proceed as general`, `Request:` in `intake.md` keeps `--dev` as its first word while `Profile:` is general, and the label is `(set by you)` because the person chose general; this is intended. Without a flag, the Router picks it from the request and does not ask. Show it in the Intake report and the first gate popup with `(set by you)` or `(Router)` (change it if the person picks a revision). To tell which, check whether the first word of `Request:` in `intake.md` is a valid profile flag: if so `(set by you)`, otherwise `(Router)`; this holds after compaction or `continue` too. The rules below are for the Router's pick:
    - `dev`: requests that change code in a git repository (feature, bug fix, refactoring). The deliverable is a commit. If the task location is not a git repository, do not pick `dev`; pick `general` and write the reason in the Intake report.
    - `research`: requests to research a topic into a note or report with sources (mainly web research).
    - `general`: any other multi-step task.
-4. **Task ID:** `<YYMMDD>-<slug>`. Set the date once with `date +%y%m%d`. The slug is 2–4 English words for the request: lowercase letters, digits and hyphens, 30 characters or fewer. If the same folder exists, add `-b`, `-c`. Do not ask; show it in the first gate popup.
+4. **Task ID:** `<YYMMDD>-<slug>`. Set the date once with `date +%y%m%d`. The slug is 2–4 English words for the request without the profile flag: lowercase letters, digits and hyphens, 30 characters or fewer. If the same folder exists, add `-b`, `-c`. Do not ask; show it in the first gate popup.
 5. **`.gitignore`:** Only when the task location is a git repository and `docs/agent/.gitignore` does not exist, popup: `Don't commit (Recommended)` / `Commit`. For Don't commit, write the single line `*`; for Commit, the single line `# my-agent: commit`.
 6. **`.active` and index:** Create the task folder and write the four lines of `.active` (`phase: 1`, `started:` from `date '+%Y-%m-%d %H:%M'`). If the task location differs from the folder you ran in (or its git root), add one line to `~/dev/agent-tasks/active-index.json` (`{"<run folder>": "<task location>"}`). Leave other lines as they are.
 7. **Project list:** If `~/dev/agent-tasks/projects.txt` lacks the task location's absolute path, add one line. Never delete lines.
@@ -120,12 +129,12 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
    Location: <task location>
    Profile: <general | research | dev>
    Task: <task-id>
-   Request: <the request as written, one line>
+   Request: <the request as written, one line; keep a valid profile flag as its first word, drop an invalid flag the person let the Router replace>
    ```
 
    For a follow-up task, add `Follows: <previous task ID>`.
-10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID>`. Record the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist).
-11. **Report:** Show the task ID, task location, profile and monitor line in 4 lines or fewer, then go to step 2 in `define.md`.
+10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID>`. Record the profile-flag popups (Arguments) and the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist).
+11. **Report:** Show the task ID, task location, profile (with `(set by you)` or `(Router)`) and monitor line in 4 lines or fewer, then go to step 2 in `define.md`.
 
 ## status
 

@@ -26,7 +26,7 @@ class ReadmeVersionTest(unittest.TestCase):
     def test_install_section_explains_the_data_folder(self):
         for path in READMES:
             section = install_section(path.read_text(encoding='utf-8'))
-            self.assertIn('~/my-agent', section, path.name)
+            self.assertIn('~/dev/my-agent', section, path.name)
             self.assertIn('/config', section, path.name)
 
     def test_archive_tasks_lines_pass_data_dir(self):

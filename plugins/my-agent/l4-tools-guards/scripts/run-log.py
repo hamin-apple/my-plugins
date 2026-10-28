@@ -29,7 +29,7 @@ import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
 
 KINDS = ('step', 'ask', 'answer', 'revision', 'cost', 'stale', 'base', 'abort', 'deliver', 'resume',
-         'rules-changed', 'merge', 'fix')
+         'rules-changed', 'merge', 'fix', 'delegate', 'profile')
 MAIN_MODEL = 'opus'
 
 
@@ -51,7 +51,7 @@ def main(argv=None) -> int:
     ap.add_argument('fields', nargs='*', metavar='key=value')
     ap.add_argument('--model')
     ap.add_argument('--cwd', default=os.getcwd())
-    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/my-agent)')
+    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/my-agent)')
     args = ap.parse_args(argv)
     if args.kind not in KINDS:
         print(f"run-log: unknown kind {args.kind!r}; one of: {' '.join(KINDS)}", file=sys.stderr)
@@ -66,6 +66,13 @@ def main(argv=None) -> int:
     keys = {k for k, _ in fields}
     if args.kind == 'step' and not {'n', 'name'} <= keys:
         print('run-log: step needs n= and name=', file=sys.stderr)
+        return 2
+    fields_d = dict(fields)
+    if args.kind == 'delegate' and fields_d.get('state') not in ma_schema.DELEGATE_STATES:
+        print('run-log: delegate needs state=on|off', file=sys.stderr)
+        return 2
+    if args.kind == 'profile' and not {'from', 'to'} <= keys:
+        print('run-log: profile needs from= and to=', file=sys.stderr)
         return 2
     active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir))
     if active is None:

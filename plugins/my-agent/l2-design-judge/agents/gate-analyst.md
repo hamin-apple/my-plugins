@@ -19,7 +19,8 @@ Interpret the gate decision tally (`gate-tally.md`) and write one `gate-report.m
 - `gate-report.md` is this role's deliverable. The general rule "do not create report or summary files" does not apply to it, so always write it yourself with Write, and report the 3-line summary at the end.
 - Do not change the tally numbers. Do not read the run-log yourself. Do not invent facts that are not in the tally.
 - Do not call other agents.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
+- Write `gate-report.md` in English.
 
 ## Input
 

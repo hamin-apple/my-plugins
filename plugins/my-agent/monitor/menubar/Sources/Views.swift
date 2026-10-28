@@ -7,19 +7,35 @@ enum Mode: String {
     case list, detail
 }
 
-/// Screen settings only: mode, pinned and the two frames. No task data is written anywhere.
+/// Screen settings only: mode, pinned and the three frames (list, detail, components). No task data is written anywhere.
 let settings = UserDefaults(suiteName: "my-agent.monitor-menubar") ?? .standard
 
 /// Owns the one web view so it survives switching to List and back (no reload when only the row changes).
-final class DetailHost {
+final class DetailHost: NSObject, WKUIDelegate, WKScriptMessageHandler {
     let web: WKWebView
+    let comp = CompWindowController()
     var loadedPort: Int?
     var appliedSeq = 0
 
-    init() {
+    override init() {
         let cfg = WKWebViewConfiguration()
         cfg.websiteDataStore = .nonPersistent()   // the app writes nothing but its screen settings
         web = WKWebView(frame: .zero, configuration: cfg)
+        super.init()
+        web.uiDelegate = self
+        comp.detailWeb = web
+        web.configuration.userContentController.add(self, name: "compFocus")   // the page asks to bring the Components window to front
+    }
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        comp.host(WKWebView(frame: .zero, configuration: configuration), features: windowFeatures)
+    }
+
+    func webViewDidClose(_ webView: WKWebView) { comp.webViewDidClose(webView) }
+
+    func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == "compFocus" { comp.front() }
     }
 
     func sync(port: Int?, seq: Int, key: String?) {
@@ -54,7 +70,10 @@ final class Store: ObservableObject {
         didSet { settings.set(mode.rawValue, forKey: "mode") }
     }
     @Published var pinned: Bool {
-        didSet { settings.set(pinned, forKey: "pinned") }
+        didSet {
+            settings.set(pinned, forKey: "pinned")
+            detail.comp.pinned = pinned
+        }
     }
     @Published var filter = ListFilter.all
     @Published var listState = ListState.off
@@ -66,6 +85,7 @@ final class Store: ObservableObject {
     init() {
         mode = Mode(rawValue: settings.string(forKey: "mode") ?? "") ?? .list
         pinned = settings.bool(forKey: "pinned")
+        detail.comp.pinned = pinned
     }
 
     /// Called from the 5 s poll with the result of the same server lookup the menu uses.

@@ -19,7 +19,8 @@ Write the document for the one work unit you are given: a draft, a synthesis not
 - Do not read or write files outside the scope. Read only your own task folder and the files listed under `## Reference files` in `plan.md`, and write only to `work/` and `prototype/` in the task folder. If blocked, do not work around it; report it.
 - Do not call other agents.
 - Do not add content that is not in the scope. Keep the sources of sourced claims as they are.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
+- Write `work/` notes in English. Write the deliverable in the language of the request in `intake.md`, even when it sits under `work/`: the combined deliverable file, a document a single writer unit produces (no combining step), and `prototype/index.html`.
 
 ## Input
 
@@ -28,7 +29,7 @@ The `plan.md` path and the work unit name, the files to read, the result path, a
 ## Rules per job
 
 - **Draft:** follow the structure shown in `## Mock-up` of `plan.md`.
-- **Synthesis note (research 6 Merge):** place the notes in `work/` into the synthesis structure in `plan.md`. Copy each claim as `<claim> · <source URL> · "<quote>"` as is, and make no new claims. If notes contradict each other, keep both and mark them `To confirm`.
+- **Synthesis note (research 6 Merge):** place the notes in `work/` into the synthesis structure in `plan.md`. Write each claim as `<claim> · <source URL> · "<quote>"`. If the deliverable is in another language than the English notes, translate the claim faithfully and keep the source and the quote as they are; make no new claims. If notes contradict each other, keep both and mark them `To confirm`.
 - **Prototype:** a single HTML file, `docs/agent/<task-id>/prototype/index.html`. It opens with no external files, reads well in light and dark themes and at phone width (about 400px), and uses real content. It only shows the mock-up visually; it adds no new requirements.
 
 ## When done

@@ -26,7 +26,7 @@ Do this every time you go back to ③ Build for Verify FAIL, Review BLOCKER (whe
    - Save location: the deliverable location in `## Scope summary` (or `scope.md`). If none, `deliverable/` in the task folder.
    - File names are lowercase English with hyphens. If the same name exists, do not overwrite; add `-2`. If the task changes an existing file, show the diff.
    - If the path is outside `~/dev`, state in the popup question that picking `Accept` counts as approval of that write.
-5. **G3 popup:**
+5. **G3 popup:** always to the person, even while delegated approval is on (SKILL.md "Delegated approval").
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G3 q="Final acceptance: <task-id> → <save path>" rec="Accept" --data-dir "<data folder>"`
    - Popup: `Accept (Recommended)` / `Rework` / `Abort`
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G3 choice="<chosen choice>" --data-dir "<data folder>"`
@@ -35,6 +35,7 @@ Do this every time you go back to ③ Build for Verify FAIL, Review BLOCKER (whe
    - Copy the final version from the task folder to the save location. Workers do not write outside the task folder, so L1 makes this copy. If the judgments are not fresh, the hook (`verdict-fresh-check.py`) blocks it. If blocked, redo from Verify.
    - Add `Delivered: <path>` to `intake.md` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" deliver path=<path> --data-dir "<data folder>"`.
    - Change `intake.md` to `Status: done`.
+   - If delegated approval is on, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=end --data-dir "<data folder>"` before the retrospective.
    - Retrospective: do "Retrospective" below. After the retrospective ends, last of all delete `.active` and this task's line in `<data folder>/active-index.json` (the retrospective needs `.active`).
    - The dev profile follows "G3 in the dev profile" below instead of this item 6.
 7. **Rework:** If the criteria stay the same, do "Back to Execute" and go to ③ Build with the shortfalls as failed criteria. If the request changes the criteria, take SKILL.md "In-flight revision".
@@ -43,6 +44,8 @@ Do this every time you go back to ③ Build for Verify FAIL, Review BLOCKER (whe
 ## G3 in the dev profile (commit approval)
 
 The deliverable is a commit, so do this instead of items 4–6.
+
+G3 always goes to the person, even while delegated approval is on.
 
 1. **Paste into the chat:** `git status --porcelain`, `git diff --stat` and the main diffs, the list of new files, the judgment summary (`verify.md` `Run:`, SHOULD-FIX·NIT in `review.md`), the proposed commit message (first line says what changed; the body lists completion criterion numbers `criteria: 1, 2, 3`), tokens used and cost (reference).
 2. Commit only the files this task changed (changes since the `base` line, excluding `docs/agent/`; if `docs/agent/.gitignore` is `# my-agent: commit`, include the task folder too).
@@ -54,13 +57,13 @@ The deliverable is a commit, so do this instead of items 4–6.
    - Do SKILL.md "Check before anything leaves" on the files to commit.
    - `git add <files>`, then `git commit -m "<message>"`. The G2 permission dialog showing once more is a deliberate second check. If the judgments are not fresh, the hook (`verdict-fresh-check.py`) blocks it. If blocked, redo from Verify. Never use `--no-verify`.
    - Add `Delivered: commit:<short sha>` to `intake.md` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" deliver path=commit:<short sha> --data-dir "<data folder>"`.
-   - Change `intake.md` to `Status: done`. Do "Retrospective" below, and last of all delete `.active` and this task's line in `<data folder>/active-index.json`.
+   - Change `intake.md` to `Status: done`. If delegated approval is on, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=end --data-dir "<data folder>"`. Do "Retrospective" below, and last of all delete `.active` and this task's line in `<data folder>/active-index.json`.
 5. **Rework** and **Abort** are the same as items 7 and 8 above. On abort, do not revert the changed files; only report their list.
 
 ## E escalation
 
 - Conditions: Verify FAIL 3 times in a row, the same work unit stopped twice (`stop:` with the same `unit=` is `end=partial` or `end=error`), a workflow ended with an error, a merge conflict exposes a plan error.
-- Show in the chat where it is stuck and what was tried, then record and ask in a popup.
+- E always goes to the person, even while delegated approval is on. Show in the chat where it is stuck and what was tried, then record and ask in a popup.
   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=E q="<where it is stuck>" rec="<recommended choice>" --data-dir "<data folder>"`
   - Popup: `Give direction` / `Change scope` / `Abort` (put the one that fits first, with `(Recommended)`)
   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=E choice="<chosen choice>" --data-dir "<data folder>"`

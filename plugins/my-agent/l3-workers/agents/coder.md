@@ -21,7 +21,8 @@ Implement one work unit of the plan. Write the test first, see it fail, then imp
 - Install packages only when the work unit says so (a permission prompt appears).
 - Do not call other agents.
 - Follow the surrounding code's names, comment density and style.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
+- Write working notes in English. Text inside the deliverable follows the request's language unless the project's own instructions fix one.
 
 ## Input
 

@@ -15,6 +15,16 @@ class WebContractTest(unittest.TestCase):
     def test_select_task_is_a_global_async_function(self):
         self.assertIn('async function selectTask(', self.html)
 
+    def test_components_window_contract(self):
+        # the menu bar app hosts window.open('', 'ma-components') and tells the page when the window closes
+        self.assertIn("window.open('', 'ma-components'", self.html)
+        self.assertRegex(self.html, r'\$\(.p-log.\)\.innerHTML = head[^\n]*\n\s*syncCompWin\(\);')
+        self.assertRegex(self.html, r'(?m)^function compWinGone\(\) \{ compWin = null; \}$')
+        m = re.search(r'function openCompWin\(\) \{\n([^\n]*)\n', self.html)
+        self.assertIsNotNone(m)
+        self.assertIn("window.webkit?.messageHandlers?.compFocus?.postMessage('')", m.group(1))
+        self.assertIn('compWin.focus()', m.group(1))
+
     def test_task_hash_is_read_at_load(self):
         self.assertIn('/^#task=(.+)$/', self.html)
         self.assertIn('decodeURIComponent(hashTask[1])', self.html)

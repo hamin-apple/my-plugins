@@ -20,7 +20,7 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
 - Do not call other agents.
 - Do not change the scope (WHAT/WHY). Do not add requirements that are not in the scope document.
 - When you rewrite `plan.md`, carry over the existing `## Revisions` section as is, without changing a single line. That section is the revision record L1 writes; if it is missing or changed, scope-guard blocks the write.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 
 ## Input
 

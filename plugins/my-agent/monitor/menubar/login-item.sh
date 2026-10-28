@@ -1,7 +1,7 @@
 #!/bin/sh
 # Register / unregister the menu bar app as a login item (launchd user agent).
 # install and uninstall write outside the repository (~/Library/LaunchAgents).
-# install [<data folder>] records the folder in the plist (default ~/my-agent); reinstall to change it.
+# install [<data folder>] records the folder in the plist (default ~/dev/my-agent); reinstall to change it.
 here=$(cd "$(dirname "$0")" && pwd)
 bin="$here/build/my-agent-menubar"
 label="my-agent.monitor-menubar"
@@ -14,7 +14,7 @@ case "$1" in
       echo "not installed: build first (sh menubar/build.sh)"
       exit 1
     fi
-    folder="${2:-$HOME/my-agent}"
+    folder="${2:-$HOME/dev/my-agent}"
     case "$folder" in
       "~") folder="$HOME" ;;
       "~/"*) folder="$HOME/${folder#\~/}" ;;

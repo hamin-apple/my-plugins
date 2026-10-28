@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3 standard library only (hooks, scripts, tests via `unittest`), Markdown (skill, phases, profiles, agents), Claude Code plugin manifest and hooks JSON.
 
-**Spec:** `/Users/jahoonjin/dev/my-agent/my-agent-architecture.md` v0.22 — §6 steps 2–9, with §4.3–4.6, §4.7.1, §4.8–4.8.2, §4.11–4.13. Earlier plan and its ledger: `my-agent-plugin-plan.md`, `.superpowers/sdd/my-agent-plugin-plan/progress.md` (rulings there still hold).
+**Spec:** `~/dev/my-agent/my-agent-architecture.md` v0.22 — §6 steps 2–9, with §4.3–4.6, §4.7.1, §4.8–4.8.2, §4.11–4.13. Earlier plan and its ledger: `my-agent-plugin-plan.md`, `.superpowers/sdd/my-agent-plugin-plan/progress.md` (rulings there still hold).
 
 ## Global Constraints
 

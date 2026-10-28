@@ -76,3 +76,8 @@ claude plugin uninstall my-agent@my-plugins
 - `tests/`: tests for `tools/`
 - `docs/handoff/`: handoff notes for work continued in another environment
 - `docs/agent/`: my-agent task records from this repository. Excluded from git.
+- `plugins/my-agent/docs/reference.md`: sources of the reference documents. The local copies in `plugins/my-agent/docs/ref/` are excluded from git.
+
+## License
+
+[MIT](LICENSE)

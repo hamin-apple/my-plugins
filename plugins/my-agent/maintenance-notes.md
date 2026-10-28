@@ -132,7 +132,7 @@ For each level, record "current state · dependence on external behavior · poin
 ## Install (2026-10-25)
 
 - (First install record) `claude plugin marketplace add ~/dev/my-agent` (name `my-agent-dev`, added to `extraKnownMarketplaces` in the user settings as a directory source), `claude plugin install my-agent@my-agent-dev` (user scope, 0.1.0).
-- `claude plugin list` showed `Read from: /Users/jahoonjin/dev/my-agent` (for the path after the move, see the next section). It is a directory source, so fixes apply right away in a new session (or after `/reload-plugins`) (F17). `--plugin-dir` is no longer used.
+- `claude plugin list` showed `Read from: ~/dev/my-agent` (for the path after the move, see the next section). It is a directory source, so fixes apply right away in a new session (or after `/reload-plugins`) (F17). `--plugin-dir` is no longer used.
 - In a new session, 8 `my-agent:` agents and the `my-agent:my-agent` skill show. (9 after gate-analyst was added on 2026-10-26.) `/my-agent:monitor` has `disable-model-invocation`, so it is not in the model's list and shows only when the person invokes it.
 - The global setting is `"model": "sonnet"`, so L1 runs on the session model (Sonnet) (F13). To use opus as designed, open the session with opus.
 
@@ -140,6 +140,11 @@ For each level, record "current state · dependence on external behavior · poin
 
 - Moved the plugin folder from `~/dev/my-agent` to `~/dev/my-plugins/plugins/my-agent`. `~/dev/my-plugins` is the marketplace (`my-plugins`) and a git repository. Other plugins go in `plugins/<name>`, with an entry added to `.claude-plugin/marketplace.json`.
 - Marketplace relative paths point only inside that folder (no `..`, symlinks to outside are not read). Pointing to an outside folder takes a `command` source, so moving was chosen.
-- Reinstall: `marketplace remove my-agent-dev` → `marketplace add ~/dev/my-plugins` → `install my-agent@my-plugins`. `claude plugin list` shows `Read from: /Users/jahoonjin/dev/my-plugins/plugins/my-agent`.
+- Reinstall: `marketplace remove my-agent-dev` → `marketplace add ~/dev/my-plugins` → `install my-agent@my-plugins`. `claude plugin list` shows `Read from: ~/dev/my-plugins/plugins/my-agent`.
 - The plugin version (`my-agent:` in `intake.md`) looks only at the plugin folder: `git -C "${CLAUDE_PLUGIN_ROOT}" log -1 --format=%h -- .` (`test_plugin_version_scoped_to_plugin_folder`). Commits to other plugins do not trigger the rule-change popup in `continue`.
 - Places where the old path remains: dated plans, probe results and validation records (records of that time, not changed), `~/dev/my-agent-monitor/` (a folder left untouched).
+
+## Public repository (2026-10-28)
+
+- The repository is public under the MIT license (`LICENSE`). `docs/ref/` (copies of Claude Code, Managed Agents and Anthropic articles, the two Gemini reports, the dev profile validation record) is excluded from git and removed from history; `docs/reference.md` lists each source. Design documents still cite `docs/ref/<file>` by name, so those links work only in a local checkout.
+- Absolute home paths in tracked files are written as `~/`.

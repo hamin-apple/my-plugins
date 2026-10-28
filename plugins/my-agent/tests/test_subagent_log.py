@@ -5,9 +5,9 @@ from datetime import datetime, timedelta, timezone
 import unittest
 from pathlib import Path
 
-from helpers import L4, events, log_lines, make_task, parse, run_hook
+from helpers import REPO, events, log_lines, make_task, parse, run_hook
 
-FIXTURE = L4 / 'tests' / 'fixtures' / 'agent-transcript.jsonl'
+FIXTURE = REPO / 'tests' / 'fixtures' / 'agent-transcript.jsonl'
 CALL = {'hook_event_name': 'PreToolUse', 'tool_name': 'Agent',
         'tool_input': {'subagent_type': 'my-agent:probe-worker', 'model': 'opus', 'isolation': 'worktree',
                        'run_in_background': True, 'prompt': 'x', 'description': 'd'}}

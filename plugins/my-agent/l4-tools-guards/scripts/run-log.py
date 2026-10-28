@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Append one L1 Recorder line to the active task's run-log.md (architecture 4.7.2).
 
-usage: run-log.py <kind> [key=value ...] [--model MODEL_ID] [--cwd DIR]
+usage: run-log.py <kind> [key=value ...] [--model MODEL_ID] [--cwd DIR] [--data-dir DIR]
 
 The time comes from the clock. `step` needs n= and name=; rev= (latest revision:
 line, else 0) and session= ($CLAUDE_CODE_SESSION_ID, else .active) are filled in.
@@ -12,7 +12,8 @@ and a main-session MISMATCH is printed once per task and model.
 Prints the line, then one MISMATCH line per subagent stop: line with
 mismatch=1 written since the previous L1 line, and PARTIAL lines (with unit=)
 for workers the sweep closed. Unreadable record lines are named on stderr.
-Exit 0 written, 1 no active task, 2 bad arguments.
+--data-dir is the data folder, where the run index (active-index.json) is read for a run folder
+outside git. Exit 0 written, 1 no active task, 2 bad arguments.
 """
 import argparse
 import os
@@ -22,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
+import ma_data  # noqa: E402
 import ma_logline  # noqa: E402
 import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
@@ -49,6 +51,7 @@ def main(argv=None) -> int:
     ap.add_argument('fields', nargs='*', metavar='key=value')
     ap.add_argument('--model')
     ap.add_argument('--cwd', default=os.getcwd())
+    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/my-agent)')
     args = ap.parse_args(argv)
     if args.kind not in KINDS:
         print(f"run-log: unknown kind {args.kind!r}; one of: {' '.join(KINDS)}", file=sys.stderr)
@@ -64,7 +67,7 @@ def main(argv=None) -> int:
     if args.kind == 'step' and not {'n', 'name'} <= keys:
         print('run-log: step needs n= and name=', file=sys.stderr)
         return 2
-    active = ma_active.find_active(args.cwd)
+    active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir))
     if active is None:
         print(f'run-log: no active my-agent task under {args.cwd}')
         return 1

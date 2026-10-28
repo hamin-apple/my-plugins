@@ -36,8 +36,9 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.file(self.T / 'verify.md', verify, verify_at)
         self.file(self.T / 'review.md', review, review_at)
 
-    def bash(self, command, cwd=None):
-        payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'tool_input': {'command': command}}
+    def bash(self, command, cwd=None, **extra):
+        payload = dict({'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'tool_input': {'command': command},
+                        'session_id': 's-test'}, **extra)
         return run_hook('verdict-fresh-check.py', None, payload, cwd or self.L, env=self.env)
 
     def assertDenied(self, r):
@@ -53,6 +54,12 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.assertPassed(self.bash('git status && git diff'))
         (self.L / 'docs' / 'agent' / '.active').unlink()
         self.assertPassed(self.bash('git commit -m x'))
+
+    def test_other_session_and_subagent_pass(self):
+        self.file(self.L / 'src/a.py', 'x', 0)
+        self.assertDenied(self.bash('git commit -m x'))
+        self.assertPassed(self.bash('git commit -m x', session_id='s-other'))
+        self.assertPassed(self.bash('git commit -m x', agent_id='ag1'))
 
     def test_commit_without_verdicts_denied(self):
         self.file(self.L / 'src/a.py', 'x', 0)
@@ -101,7 +108,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.assertPassed(self.bash('cp src/a.py src/b.py'))
 
     def tool(self, name, tool_input):
-        payload = {'hook_event_name': 'PreToolUse', 'tool_name': name, 'tool_input': tool_input}
+        payload = {'hook_event_name': 'PreToolUse', 'tool_name': name, 'tool_input': tool_input, 'session_id': 's-test'}
         return run_hook('verdict-fresh-check.py', None, payload, self.L, env=self.env)
 
     def test_deliver_into_deliverable_checked(self):

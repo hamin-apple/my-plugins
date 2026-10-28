@@ -1,10 +1,11 @@
 """plan-approved-check.py: the G1b hard gate (architecture 4.4 "G1b hard gate")."""
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import make_task, run_hook
+from helpers import L4, make_task, run_hook
 
 TASK = '261025-probe-task'
 
@@ -23,9 +24,10 @@ class PlanApprovedCheckTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def hook(self, tool, tool_input, cwd=None):
-        payload = {'hook_event_name': 'PreToolUse', 'tool_name': tool, 'tool_input': tool_input}
-        return run_hook('plan-approved-check.py', None, payload, cwd or self.proj, env=self.env)
+    def hook(self, tool, tool_input, cwd=None, env=None, **extra):
+        payload = dict({'hook_event_name': 'PreToolUse', 'tool_name': tool, 'tool_input': tool_input,
+                        'session_id': 's-test'}, **extra)
+        return run_hook('plan-approved-check.py', None, payload, cwd or self.proj, env=env or self.env)
 
     def assertDenied(self, r):
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -128,7 +130,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertPassed(self.hook('Write', {'file_path': str(dest), 'content': 'x'}))
         self.assertPassed(self.hook('Bash', {'command': f'mkdir -p {self.reports}'}))
         self.assertPassed(self.hook('Bash', {'command': f'cp a.md {dest}'}))
-        script = Path(__file__).resolve().parents[1] / 'scripts' / 'gate-report.py'
+        script = L4 / 'scripts' / 'gate-report.py'
         self.assertPassed(self.hook('Bash', {'command': f'python3 "{script}" copy'}))
         sibling = self.reports.parent / 'data' / 'x.md'
         r = self.hook('Write', {'file_path': str(sibling), 'content': 'x'})
@@ -160,12 +162,59 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertPassed(self.hook('Write', {'file_path': str(self.task / 'scope.md')}, cwd=run))
 
     def test_missing_task_folder_warns(self):
-        (self.task / '..' / '.active').resolve().write_text(f'task: 261025-gone\nphase: 1\nsession: s\nstarted: x\n')
+        (self.task / '..' / '.active').resolve().write_text(f'task: 261025-gone\nphase: 1\nsession: s-test\nstarted: x\n')
         r = self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')})
         self.assertEqual(r.returncode, 0, r.stderr)
         out = json.loads(r.stdout)
         self.assertIn('261025-gone', out['systemMessage'])
         self.assertNotIn('hookSpecificOutput', out)
+
+    def setting_env(self, data):
+        """Env with only the plugin setting (what a plugin hook gets): no MA_* overrides."""
+        env = {k: '' for k in os.environ if k.startswith('MA_')}   # run_script merges os.environ; empty = not set
+        env.update({k: '' for k in ('MA_TASKS_DIR', 'MA_PROJECTS_FILE', 'MA_FEEDBACK_FILE', 'MA_GATE_REPORT_DIR')})
+        return dict(env, CLAUDE_PLUGIN_OPTION_DATA_DIR=str(data))
+
+    def test_other_session_passes(self):
+        self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other'))
+        self.assertDenied(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-test'))
+
+    def test_subagent_call_passes(self):
+        self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, agent_id='ag1'))
+
+    def test_missing_session_still_applies(self):
+        (self.proj / 'docs/agent/.active').write_text(f'task: {TASK}\nphase: 1\nsession: \nstarted: x\n')
+        self.assertDenied(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other'))
+        (self.proj / 'docs/agent/.active').write_text(f'task: {TASK}\nphase: 1\nsession: s-test\nstarted: x\n')
+        r = run_hook('plan-approved-check.py', None, {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.proj / 'src/a.py')}},
+                     self.proj, env=self.env)
+        self.assertDenied(r)
+
+    def test_broken_active_warns_before_session_compare(self):
+        (self.proj / 'docs/agent/.active').write_text('phase: 1\nsession: s-test\n')
+        r = self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('no `task:` line', json.loads(r.stdout)['systemMessage'])
+
+    def test_no_active_anywhere_with_setting_only(self):
+        other = self.root / 'other'
+        (other / '.git').mkdir(parents=True)
+        data = self.root / 'empty-data'
+        data.mkdir()
+        self.assertPassed(self.hook('Write', {'file_path': str(other / 'a.py')}, cwd=other, env=self.setting_env(data)))
+
+    def test_setting_data_dir_write_rules(self):
+        data = self.root / 'setting-data'
+        data.mkdir()
+        env = self.setting_env(data)
+        sib = self.root / 'setting-data-sibling' / 'x.md'
+        self.assertPassed(self.hook('Write', {'file_path': str(data / 'projects.txt')}, env=env))
+        self.assertDenied(self.hook('Write', {'file_path': str(sib)}, env=env))
+        self.plan('# Plan\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')
+        r = self.hook('Write', {'file_path': str(data / 'gate-report' / 'x.md')}, env=env)
+        self.assertPassed(r)
+        r = self.hook('Write', {'file_path': str(sib)}, env=env)
+        self.assertEqual(json.loads(r.stdout)['hookSpecificOutput']['permissionDecision'], 'ask')
 
     def test_script_error_exits_nonzero(self):
         r = run_hook('plan-approved-check.py', None, 'not json', self.proj, env=self.env)

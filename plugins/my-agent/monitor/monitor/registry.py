@@ -9,6 +9,7 @@ from .runlog import read_lines
 from .taskview import build_task, task_key
 from .transcript import TranscriptCache
 
+import ma_data
 import ma_usage
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -16,12 +17,12 @@ SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waitin
 
 
 def default_projects_file() -> Path:
-    return Path(os.environ.get('MA_PROJECTS_FILE') or Path.home() / 'dev/agent-tasks/projects.txt')
+    return ma_data.projects_file()
 
 
 def default_prices_file() -> Path:
-    """`$MA_TASKS_DIR/prices.json` (default `~/dev/agent-tasks/`) when it exists, else the bundled one (spec 6.1)."""
-    override = Path(os.environ.get('MA_TASKS_DIR') or Path.home() / 'dev/agent-tasks') / 'prices.json'
+    """`prices.json` in the data folder when it exists, else the bundled one (spec 6.1)."""
+    override = ma_data.data_dir() / 'prices.json'
     return override if override.is_file() else ROOT / 'prices.json'
 
 

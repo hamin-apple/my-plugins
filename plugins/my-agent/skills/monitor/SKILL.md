@@ -15,9 +15,9 @@ Run exactly one command, chosen by the arguments:
 
 | Arguments | Command |
 |---|---|
-| (none) | `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" --open` |
-| `status` | `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" status` |
-| `stop` | `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" stop` |
+| (none) | `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" --open --data-dir '${user_config.data_dir}'` |
+| `status` | `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" status --data-dir '${user_config.data_dir}'` |
+| `stop` | `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" stop --data-dir '${user_config.data_dir}'` |
 | anything else | run nothing; say the arguments are `status` and `stop` |
 
 Then report the printed line to the user in their language, in one sentence, keeping the URL as it is:

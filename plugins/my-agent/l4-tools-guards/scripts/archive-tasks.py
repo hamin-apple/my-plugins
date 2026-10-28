@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Move finished task folders out of the monitor's list (architecture 4.8.2 "Task records over time").
 
-usage: archive-tasks.py [--days N] [--dry-run] [--projects FILE]
+usage: archive-tasks.py [--days N] [--dry-run] [--projects FILE] [--data-dir DIR]
 For each project in the project list, a task folder `<project>/docs/agent/<task-id>/` whose `intake.md` says
 `Status: done` or `Status: aborted`, and whose last run-log line (or `intake.md` change, without a run-log) is N days
 old or more (default 30), moves to `<project>/docs/agent/.archived/<task-id>/` (`-b`, `-c` … when the name is taken).
@@ -10,7 +10,7 @@ The task named in that project's `.active` never moves. Before a move, a task wi
 The monitor, the menu bar app and `/my-agent status` read only `docs/agent/*/`, so moved tasks leave them without any
 change there. To bring a task back, move its folder back to `docs/agent/`.
 --dry-run prints what would move and changes nothing. The project list is $MA_PROJECTS_FILE, else
-$MA_TASKS_DIR/projects.txt (default ~/dev/agent-tasks/projects.txt). Transcripts: $MA_CLAUDE_PROJECTS.
+<data folder>/projects.txt ($MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/my-agent). Transcripts: $MA_CLAUDE_PROJECTS.
 Run by the person (not by L1). exit: 0 done (also when nothing was due), 2 bad arguments, 3 a move failed.
 """
 import argparse
@@ -21,6 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
+import ma_data  # noqa: E402
 import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
 import ma_usage  # noqa: E402
@@ -29,9 +30,8 @@ ARCHIVED = '.archived'
 FINISHED = ma_schema.INTAKE_STATUS[1:]   # done, aborted
 
 
-def projects_file() -> Path:
-    env = os.environ.get('MA_PROJECTS_FILE')
-    return Path(env) if env else ma_active.default_tasks_dir() / 'projects.txt'
+def projects_file(data_dir=None) -> Path:
+    return ma_data.projects_file(data_dir)
 
 
 def projects(path: Path) -> list:
@@ -100,6 +100,7 @@ def main(argv=None) -> int:
     ap.add_argument('--days', type=int, default=30)
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--projects')
+    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/my-agent)')
     args = ap.parse_args(argv)   # argparse exits 2 on bad arguments
     if args.days < 0:
         ap.error('--days must be 0 or more')
@@ -107,7 +108,7 @@ def main(argv=None) -> int:
     cutoff = now - timedelta(days=args.days)
     root = ma_subagent.claude_projects()
     moved, failed = 0, 0
-    for project in projects(Path(args.projects).expanduser() if args.projects else projects_file()):
+    for project in projects(Path(args.projects).expanduser() if args.projects else projects_file(args.data_dir)):
         for task_dir, st, when in due(project, cutoff):
             folder = task_dir.parent / ARCHIVED
             head = f'{task_dir} ({st}, last {when:%Y-%m-%d})'

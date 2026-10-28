@@ -6,7 +6,7 @@
 # usage: run-judge-check.sh [note.md ...]   (default: every note in expected.json)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-PLUGIN="$(cd "$HERE/../../.." && pwd)"
+PLUGIN="$(cd "$HERE/../.." && pwd)"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/judge-XXXXXX")"
 TASK=261025-judge
 NOTES=("$@")

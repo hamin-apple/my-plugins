@@ -91,6 +91,18 @@ class SnapshotScriptTest(Base):
         self.assertIn('no transcript', r.stdout)
         self.assertEqual((d / ma_usage.SNAPSHOT).read_text(encoding='utf-8'), '{"windows": []}')
 
+    def test_data_dir_finds_run_index(self):
+        d = self.task(status='active')
+        self.transcript(entry('2026-10-01 10:01:00', 'a'))
+        data, run = self.root / 'data', self.root / 'run'
+        data.mkdir()
+        run.mkdir()
+        (data / 'active-index.json').write_text(json.dumps({str(run): str(self.root / 'proj')}), encoding='utf-8')
+        env = dict(self.env, MA_TASKS_DIR='')
+        r = run_script(SNAP, '--cwd', str(run), '--data-dir', str(data), env=env)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue((d / ma_usage.SNAPSHOT).is_file())
+
     def test_no_task(self):
         self.assertEqual(run_script(SNAP, '--cwd', str(self.root), env=self.env).returncode, 1)
         self.assertEqual(run_script(SNAP, '--task-dir', str(self.root), env=self.env).returncode, 1)
@@ -125,6 +137,18 @@ class ArchiveTest(Base):
         self.assertEqual(moved, ['261001-aborted', '261001-done'])
         self.assertTrue((self.agent() / '.archived' / '261001-done' / ma_usage.SNAPSHOT).is_file())
         self.assertTrue((self.agent() / '.active').is_file())
+
+    def test_data_dir_projects_file(self):
+        """Criterion 4: without MA_PROJECTS_FILE the list is <data folder>/projects.txt."""
+        self.task(task='261001-done')
+        self.task(task='261001-current', status='active')
+        data = self.root / 'data'
+        data.mkdir()
+        (data / 'projects.txt').write_text(f'{self.root / "proj"}\n', encoding='utf-8')
+        self.env.update(MA_PROJECTS_FILE='', MA_TASKS_DIR='')
+        r = self.run_archive('--dry-run', '--days', '7', '--data-dir', str(data))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('would move', r.stdout)
 
     def test_dry_run_moves_nothing(self):
         self.task(task='261001-done')

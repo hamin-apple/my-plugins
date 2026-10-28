@@ -97,3 +97,25 @@ class PricesFileTest(unittest.TestCase):
     def test_prices_default_when_absent(self):
         with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {'MA_TASKS_DIR': d}):
             self.assertEqual(registry.default_prices_file(), registry.ROOT / 'prices.json')
+
+
+class SettingFolderTest(unittest.TestCase):
+    """Without MA_* overrides, projects.txt and prices.json are read from the data folder setting."""
+
+    def env(self, d):
+        keep = {k: v for k, v in os.environ.items() if not k.startswith('MA_') and k != 'CLAUDE_PLUGIN_OPTION_DATA_DIR'}
+        return mock.patch.dict(os.environ, dict(keep, CLAUDE_PLUGIN_OPTION_DATA_DIR=d), clear=True)
+
+    def test_projects_file_under_setting(self):
+        with tempfile.TemporaryDirectory() as d, self.env(d):
+            self.assertEqual(registry.default_projects_file(), Path(d, 'projects.txt'))
+
+    def test_prices_override_under_setting(self):
+        with tempfile.TemporaryDirectory() as d, self.env(d):
+            self.assertEqual(registry.default_prices_file(), registry.ROOT / 'prices.json')
+            Path(d, 'prices.json').write_text('{"models": {}}')
+            self.assertEqual(registry.default_prices_file(), Path(d, 'prices.json'))
+
+    def test_default_folder_is_home_my_agent(self):
+        with tempfile.TemporaryDirectory() as d, self.env(''), mock.patch.dict(os.environ, {'HOME': d}):
+            self.assertEqual(registry.default_projects_file(), Path(d, 'my-agent', 'projects.txt'))

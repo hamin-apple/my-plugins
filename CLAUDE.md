@@ -3,7 +3,7 @@
 ## Tests
 
 ```sh
-cd plugins/my-agent && python3 -m unittest discover -s l4-tools-guards/tests   # L1~L4 rules and hooks
+cd plugins/my-agent && python3 -m unittest discover -s tests                   # L1~L4 rules and hooks
 cd plugins/my-agent/monitor && python3 -m unittest discover tests            # monitor
 python3 -m unittest discover -s tests                                        # tools/ (architecture page)
 ```

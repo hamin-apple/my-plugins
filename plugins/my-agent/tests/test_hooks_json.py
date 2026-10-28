@@ -1,14 +1,16 @@
-"""hooks.json registers the hooks exactly as architecture 4.5.1 / 4.7.2 list them; only scope-guard blocks."""
+"""hooks.json registers the hooks exactly as architecture 4.5.1 / 4.7.2 list them; the three blocking hooks (scope-guard, plan-approved-check, verdict-fresh-check) carry onFailure block."""
 import json
 import re
 import unittest
 
 from helpers import L4
 
-GATES = {'scope-guard.py'}
+GATES = {'scope-guard.py', 'plan-approved-check.py', 'verdict-fresh-check.py'}
 EXPECTED = {
     ('PreToolUse', None, 'scope-guard.py'),
     ('PreToolUse', 'Agent', 'subagent-log.py call'),
+    ('PreToolUse', 'Agent|Workflow|Edit|Write|NotebookEdit|Bash', 'plan-approved-check.py'),
+    ('PreToolUse', 'Bash|Edit|Write|NotebookEdit', 'verdict-fresh-check.py'),
     ('SubagentStart', '^my-agent:', 'subagent-log.py start'),
     ('SubagentStop', '^my-agent:', 'subagent-log.py stop'),
     ('PermissionRequest', None, 'permission-log.py ask'),

@@ -85,10 +85,22 @@ func iconText(_ state: MenuState) -> String {
     }
 }
 
+/// The my-agent data folder: MA_TASKS_DIR, else the plugin setting CLAUDE_PLUGIN_OPTION_DATA_DIR, else ~/my-agent.
+/// Empty values and unsubstituted "${...}" placeholders count as not set; a leading "~" is expanded.
+func dataDir(env: [String: String]) -> String {
+    func value(_ key: String) -> String? {
+        guard let raw = env[key]?.trimmingCharacters(in: .whitespaces), !raw.isEmpty, !raw.hasPrefix("${") else { return nil }
+        return raw
+    }
+    let home = value("HOME") ?? NSHomeDirectory()
+    guard let raw = value("MA_TASKS_DIR") ?? value("CLAUDE_PLUGIN_OPTION_DATA_DIR") else { return home + "/my-agent" }
+    if raw == "~" { return home }
+    return raw.hasPrefix("~/") ? home + String(raw.dropFirst(1)) : raw
+}
+
 /// The `browser` key of monitor-config.json; missing, broken or unknown means "default".
 func readBrowser(env: [String: String]) -> String {
-    let dir = env["MA_TASKS_DIR"].flatMap { $0.isEmpty ? nil : $0 }
-        ?? (NSHomeDirectory() + "/dev/agent-tasks")
+    let dir = dataDir(env: env)
     guard let data = FileManager.default.contents(atPath: dir + "/monitor-config.json"),
           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
           let value = obj["browser"] as? String, browserChoices.contains(where: { $0.value == value }) else { return "default" }
@@ -169,8 +181,7 @@ func isMonitor(_ port: Int) -> Bool {
 }
 
 func statePort(env: [String: String]) -> Int? {
-    let dir = env["MA_TASKS_DIR"].flatMap { $0.isEmpty ? nil : $0 }
-        ?? (NSHomeDirectory() + "/dev/agent-tasks")
+    let dir = dataDir(env: env)
     guard let data = FileManager.default.contents(atPath: dir + "/monitor.json"),
           let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
     return obj["port"] as? Int

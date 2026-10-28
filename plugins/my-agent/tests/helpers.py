@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[1]
 L4 = REPO / 'l4-tools-guards'
 sys.path.insert(0, str(L4 / 'lib'))
 sys.path.insert(0, str(REPO / 'monitor'))

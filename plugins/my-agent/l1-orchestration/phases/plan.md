@@ -2,7 +2,7 @@
 
 ## 3. Plan
 
-1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=3 name=Plan --model <main session model ID>`
+1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=3 name=Plan --model <main session model ID> --data-dir "<data folder>"`
 2. Hand it to `my-agent:architect`. Pass: the paths of `intake.md`, `explore.md` (and `scope.md`), the scope summary in the general profile, and the result path `docs/agent/<task-id>/plan.md`.
 3. Sections `plan.md` must have (if one is missing, have architect rewrite only that section):
    - `## Scope summary` (general profile): purpose, non-goals, deliverable location
@@ -19,7 +19,7 @@
 
 ## 4. Plan Review
 
-1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=4 name=Plan-Review --model <main session model ID>`
+1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=4 name=Plan-Review --model <main session model ID> --data-dir "<data folder>"`
 2. Whether to skip follows the profile file. If skipped, write `SKIPPED <reason>` in `plan-review.md`.
 3. Hand it to `my-agent:plan-reviewer`. Pass: the paths of `plan.md`, `intake.md`, `explore.md` and the result path `plan-review.md`. Do not pass architect's explanation.
 4. If the first line of the result is `READY FOR APPROVAL`, go to G1b. If `REVISE`, do the rewrite before approval in SKILL.md "In-flight revision" (archive, `revision … before=G1b` line), then pass the `plan-review.md` path to architect to rewrite, and judge again. If the third result is also `REVISE`, show that judgment in the G1b popup and leave it to the person.
@@ -32,9 +32,9 @@
    - To make one, add a `Prototype: requested` line inside the `plan.md` `## Prototype` section with Edit and hand `docs/agent/<task-id>/prototype/index.html` to `my-agent:writer` (per `artifact-design`).
    - L1 reads that file to check it, does SKILL.md "Check before anything leaves", then publishes it as a private artifact and shows the link and the local path.
 3. Record before and after the approval popup.
-   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1b q="Plan approval: <task-id>" rec="Approve"`
+   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1b q="Plan approval: <task-id>" rec="Approve" --data-dir "<data folder>"`
    - Popup: `Approve (Recommended)` / `Request changes` / `Abort`
-   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1b choice="<chosen choice>"`
+   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1b choice="<chosen choice>" --data-dir "<data folder>"`
 4. **Approve:** Write `- Approved <YYYY-MM-DD HH:MM> G1b` under `## Approval`. Get the time first with `date '+%Y-%m-%d %H:%M'`, then write the value with the Edit tool, without command substitution (the G1b hook blocks a Bash write containing `$(…)` as a command whose write target it cannot tell). Change `phase:` in `.active` to `3` and read `build.md`.
 5. **Request changes:** Do the rewrite before approval in SKILL.md "In-flight revision" (archive, `revision … before=G1b` line), then pass the request to architect to rewrite, and go back to item 1. If the request changes the confirmed scope, take Revise this task in that section. Remake the prototype only if the mock-up changed.
 6. **Abort:** the "Abort" procedure in SKILL.md.

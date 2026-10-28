@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py PreToolUse '${CLAUDE_PLUGIN_ROOT}'",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/tests/probe/probe-log.py PreToolUse '${CLAUDE_PLUGIN_ROOT}'",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py PostToolUse '${CLAUDE_PLUGIN_ROOT}'",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/tests/probe/probe-log.py PostToolUse '${CLAUDE_PLUGIN_ROOT}'",
             "timeout": 10
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py PermissionRequest '${CLAUDE_PLUGIN_ROOT}'",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/tests/probe/probe-log.py PermissionRequest '${CLAUDE_PLUGIN_ROOT}'",
             "timeout": 10
           }
         ]
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py SubagentStart '${CLAUDE_PLUGIN_ROOT}'",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/tests/probe/probe-log.py SubagentStart '${CLAUDE_PLUGIN_ROOT}'",
             "timeout": 10
           }
         ]
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py SubagentStop '${CLAUDE_PLUGIN_ROOT}'",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/tests/probe/probe-log.py SubagentStop '${CLAUDE_PLUGIN_ROOT}'",
             "timeout": 10
           }
         ]
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/l4-tools-guards/probe/probe-log.py SessionStart '${CLAUDE_PLUGIN_ROOT}'",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/tests/probe/probe-log.py SessionStart '${CLAUDE_PLUGIN_ROOT}'",
             "timeout": 10
           }
         ]

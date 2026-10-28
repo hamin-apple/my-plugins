@@ -57,3 +57,15 @@
 1. In an interactive session, call `my-agent:probe-worker` with `run_in_background: true` and have it run `sleep 60; echo late`
 2. End the session right away with `/exit`
 3. After 1~2 minutes, check `finished` in the meta file, the time of the last transcript entry, and the run-log `stop:` line. If `late` is in the transcript, it kept running
+
+## r11. data_dir setting reaches an installed plugin's skill (2026-10-29)
+
+Run: `sh tests/probe/run-probes.sh r11` builds a one-skill plugin (`data-dir-skill/SKILL.md`) in a temp directory marketplace, installs it with `claude plugin install … --config data_dir=<folder>` under an isolated `CLAUDE_CONFIG_DIR`, then runs `/data-dir-probe:data-dir-probe`. A = the skill's frontmatter hook logs `CLAUDE_PLUGIN_OPTION_DATA_DIR` (`skill-data-dir.jsonl`); B = the Bash command the skill runs shows `BODY=[<folder>]` when `${user_config.data_dir}` is substituted.
+
+- Result (person's run, logged-in isolated config, `R11_HOME=/tmp/r11 sh tests/probe/run-probes.sh r11`):
+  - A (skill frontmatter hook env): **FAIL**. The `skill-data-dir.jsonl` record had `"argv": [""]` and `"CLAUDE_PLUGIN_OPTION_DATA_DIR": null`, so the env var is not set for skill frontmatter hooks.
+  - B (SKILL.md body substitution): **PASS**. `BODY=[/tmp/r11/chosen-data-dir]`.
+- A2 (plugin-level `hooks/hooks.json`, referenced from `plugin.json` like the real plugin; a PreToolUse command hook logs the env under `plugin-data-dir`): **PASS** (same run setup, 2026-10-29 00:44). The `plugin-data-dir.jsonl` record had `"argv": ["/tmp/r11/chosen-data-dir"]` and `"CLAUDE_PLUGIN_OPTION_DATA_DIR": "/tmp/r11/chosen-data-dir"`; in the same run A was again FAIL and B again PASS.
+- So: plugin `hooks.json` hooks get the setting from the environment, skill frontmatter hooks do not, and the SKILL.md body gets it by substitution.
+- A3 (skill frontmatter hook with `${user_config.data_dir}` as a command argument; event `skill-placeholder`): **FAIL** (same run setup, 2026-10-29 01:33). The record had `"argv": ["${user_config.data_dir}"]`, so the placeholder was passed through literally, not substituted. The `A3 hook installed: no` output line was a false negative: the plugin loads in place from the directory marketplace (`CLAUDE_PLUGIN_ROOT` was `/tmp/r11/mp/dd`, outside `$cfg`), so searching only `$cfg` could not find it. The check now also searches `$mp` and prints `yes` in this setup. The A3 record itself proves the new hook ran. In the A3 record `env.CLAUDE_CODE_SESSION_ID` equals `input.session_id` (`cd8066dc-8017-4f5e-842b-9a219a61a9d0`), the third session ID match.
+- Conclusion: skill frontmatter hooks get neither the env var nor `${user_config.*}` substitution, so only plugin `hooks.json` hooks can read the setting (the SKILL.md body is substituted, but that is not a hook).

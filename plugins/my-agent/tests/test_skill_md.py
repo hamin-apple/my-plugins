@@ -43,20 +43,14 @@ class SkillMdTest(unittest.TestCase):
         fm = frontmatter(self.text)
         self.assertEqual(fm.get('name'), 'my-agent')
         self.assertEqual(fm.get('model'), 'opus')
-        self.assertIn('hooks', fm)
+        self.assertNotIn('hooks', fm)
 
-    def test_gate_hooks_in_frontmatter(self):
-        """4.7.1: the gate hooks are skill hooks, quoted for the shell, blocking when they fail."""
+    def test_no_hooks_in_frontmatter(self):
+        """The gate hooks moved to hooks.json (a skill hook gets no plugin setting env): none left in the frontmatter."""
         block = re.match(r'---\n(.*?)\n---\n', self.text, re.S).group(1)
-        hooks = re.findall(r'- matcher: "([^"]+)"\n\s+hooks:\n\s+- type: command\n\s+command: "(.*)"\n'
-                           r'\s+timeout: (\d+)\n\s+onFailure: (\w+)', block)
-        found = {re.search(r'hooks/([a-z-]+\.py)', cmd).group(1): (m, cmd, t, f) for m, cmd, t, f in hooks}
-        self.assertEqual(found['plan-approved-check.py'][0], 'Agent|Workflow|Edit|Write|NotebookEdit|Bash')
-        self.assertEqual(found['verdict-fresh-check.py'][0], 'Bash|Edit|Write|NotebookEdit')
-        for name, (matcher, cmd, timeout, failure) in found.items():
-            self.assertEqual(cmd, rf'python3 \"${{CLAUDE_PLUGIN_ROOT}}/l4-tools-guards/hooks/{name}\"', name)
-            self.assertEqual((timeout, failure), ('30', 'block'), name)
-            self.assertTrue((L4 / 'hooks' / name).is_file(), name)
+        self.assertNotIn('hooks:', block)
+        self.assertNotIn('plan-approved-check.py', block)
+        self.assertNotIn('verdict-fresh-check.py', block)
 
     def test_approval_line_written_without_substitution(self):
         """Live run: L1 wrote the Approved line with `$(date …)` and the G1b hook (rightly) refused it."""
@@ -170,7 +164,7 @@ class SkillMdTest(unittest.TestCase):
         section = self.text[self.text.index('## continue'):self.text.index('## Abort')]
         self.assertIn('Status: done', section)
         self.assertIn('only `.active` cleared', section)
-        self.assertIn('`active-index.json`', section)
+        self.assertIn('`<data folder>/active-index.json`', section)
 
     def test_l2_row_lists_manifest_agents(self):
         import json
@@ -227,6 +221,54 @@ class SkillMdTest(unittest.TestCase):
             (repo / 'other' / 'f').write_text('changed')
             git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qam', 'other again')
             self.assertEqual(run(), before)
+
+    # --- data folder (task 261028-data-dir-config, u3) ---
+    DATA_SCRIPTS = ('run-log', 'usage-snapshot', 'gate-report', 'feedback', 'monitor-up')
+    MONITOR_SKILL = REPO / 'skills' / 'monitor' / 'SKILL.md'
+
+    def command_spans(self, path):
+        """Each backticked `python3 ".../<script>.py" ...` span in the file, with the script name."""
+        text = path.read_text(encoding='utf-8')
+        for m in re.finditer(r'`(python3 "\$\{CLAUDE_PLUGIN_ROOT\}/[^"`]*/(%s)\.py"[^`\n]*)`' % '|'.join(self.DATA_SCRIPTS), text):
+            yield m.group(2), m.group(1)
+
+    def test_data_scripts_carry_data_dir(self):
+        seen = 0
+        for path in [SKILL, self.MONITOR_SKILL] + L1_FILES:
+            for script, cmd in self.command_spans(path):
+                seen += 1
+                self.assertIn('--data-dir', cmd, f'{path.name}: {cmd}')
+        self.assertGreaterEqual(seen, 30)
+
+    def test_phase_files_rule_runs_data_dir_script(self):
+        rule = self.text[self.text.index('### Phase files'):self.text.index('## Arguments')]
+        self.assertIn('data-dir.py', rule)
+
+    def test_placeholder_single_quoted_where_substituted(self):
+        for path in (SKILL, self.MONITOR_SKILL):
+            text = path.read_text(encoding='utf-8')
+            self.assertIn('${user_config.data_dir}', text, path.name)
+            for m in re.finditer(r'.{0,1}\$\{user_config\.data_dir\}.{0,1}', text):
+                self.assertEqual(m.group(0), "'${user_config.data_dir}'", path.name)
+
+    def test_phase_files_have_no_substitution_slot(self):
+        for path in (L1 / 'phases').glob('*.md'):
+            self.assertNotIn('${user_config', path.read_text(encoding='utf-8'), path.name)
+
+    def test_active_index_always_under_data_folder(self):
+        for path in [SKILL] + L1_FILES:
+            for n, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+                for m in re.finditer(r'active-index\.json', line):
+                    self.assertEqual(line[:m.start()][-14:], '<data folder>/', f'{path.name}:{n}')
+
+    def test_intake_popup_recommends_data_folder(self):
+        self.assertIn('`<data folder> (Recommended)`', self.text)
+
+    def test_no_author_machine_paths(self):
+        for path in [SKILL, self.MONITOR_SKILL] + L1_FILES:
+            text = path.read_text(encoding='utf-8')
+            self.assertNotIn('~/dev/agent-tasks', text, path.name)
+            self.assertNotIn('my-surrogate', text, path.name)
 
 
 if __name__ == '__main__':

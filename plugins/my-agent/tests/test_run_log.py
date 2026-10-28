@@ -110,6 +110,20 @@ class RunLogTest(unittest.TestCase):
         r = self.run_log('step', 'n=7', 'name=Verify')
         self.assertNotIn('MISMATCH', r.stdout)
 
+    def test_data_dir_finds_run_index(self):
+        """A run folder outside git is found through <data folder>/active-index.json."""
+        with tempfile.TemporaryDirectory() as d:
+            base = Path(d).resolve()
+            task = make_task(base / 'loc', session='s-x')
+            data, run = base / 'data', base / 'run'
+            data.mkdir()
+            run.mkdir()
+            (data / 'active-index.json').write_text(json.dumps({str(run): str(base / 'loc')}), encoding='utf-8')
+            env = dict(self.env, MA_TASKS_DIR='')
+            r = run_script(SCRIPT, 'ask', 'gate=G1', '--cwd', str(run), '--data-dir', str(data), env=env)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn('ask:', log_lines(task)[-1])
+
     def test_no_active(self):
         with tempfile.TemporaryDirectory() as d:
             r = run_script(SCRIPT, 'step', 'n=1', 'name=Intake', '--cwd', d, env=self.env)

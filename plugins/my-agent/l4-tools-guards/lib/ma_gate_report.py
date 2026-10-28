@@ -4,22 +4,21 @@
 the cost/tokens per stretch between `cost:` lines. It does not interpret anything (the gate-analyst does).
 `report_dir` is the folder `gate-report.py copy` writes to; plan-approved-check lets writes there pass unasked.
 """
-import os
 import re
 from pathlib import Path
 
+import ma_data
 import ma_logline
 import ma_schema
 
-DEFAULT_REPORT_DIR = Path.home() / 'dev/skills/my-surrogate/gate-report'
 NO_REC = '(not recorded)'
 SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustment (B3), not a fix
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
 
 
-def report_dir() -> Path:
-    """$MA_GATE_REPORT_DIR, else ~/dev/skills/my-surrogate/gate-report (like $MA_FEEDBACK_FILE)."""
-    return Path(os.environ.get('MA_GATE_REPORT_DIR') or DEFAULT_REPORT_DIR).expanduser()
+def report_dir(data_dir=None) -> Path:
+    """$MA_GATE_REPORT_DIR, else <data folder>/gate-report (like $MA_FEEDBACK_FILE)."""
+    return ma_data.report_dir(data_dir)
 
 
 def read_stamped(log) -> list:

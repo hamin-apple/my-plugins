@@ -40,7 +40,7 @@ The main session (L1) takes a request, runs plan → execute → verify → revi
 | L3 | `explorer` · `researcher` · `writer` · `coder`: one assigned piece of work each |
 | L4 | Tools·MCP · hooks · permission rules · scripts: running, recording and blocking |
 
-The whole architecture — each level's components, their roles and permissions, the steps and gates, and the format of every task file — is on one page, `docs/index.html` (for GitHub Pages). `python3 tools/build-docs.py` builds it from the plugin files; run it again after changing them.
+The whole architecture — each level's components, their roles and permissions, the steps and gates, and the format of every task file — is on one page, `docs/index.html`, published at <https://hamin-apple.github.io/my-plugins/>. `python3 tools/build-docs.py` builds it from the plugin files; run it again after changing them.
 
 | Command | What it does |
 |---|---|

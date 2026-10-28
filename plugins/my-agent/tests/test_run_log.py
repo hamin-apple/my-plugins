@@ -56,6 +56,18 @@ class RunLogTest(unittest.TestCase):
         self.run_log('fix', 'what=say "hi" \\ there')
         self.assertEqual(parse(log_lines(self.task)[-1])['what'], 'say "hi" \\ there')
 
+    def test_delegate_and_profile_kinds(self):
+        self.assertEqual(self.run_log('delegate', 'state=on', 'how=flag').returncode, 0)
+        self.assertEqual(self.run_log('profile', 'from=dev', 'to=general', 'back=2', 'archive=-').returncode, 0)
+        d, p = (parse(l) for l in log_lines(self.task)[-2:])
+        self.assertEqual((d['state'], d['how']), ('on', 'flag'))
+        self.assertEqual((p['from'], p['to'], p['back']), ('dev', 'general', '2'))
+
+    def test_delegate_and_profile_need_their_fields(self):
+        for args in (('delegate', 'how=flag'), ('delegate', 'state=maybe'), ('profile', 'from=dev'), ('profile', 'to=dev')):
+            self.assertEqual(self.run_log(*args).returncode, 2, args)
+        self.assertEqual(log_lines(self.task), [])
+
     def test_unknown_kind(self):
         r = self.run_log('bogus', 'a=1')
         self.assertEqual(r.returncode, 2)

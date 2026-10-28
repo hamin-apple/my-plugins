@@ -13,6 +13,7 @@ import ma_schema
 
 NO_REC = '(not recorded)'
 SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustment (B3), not a fix
+NOTE_BY_L1 = 'answered by L1'
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
 
 
@@ -70,6 +71,8 @@ def decisions(lines) -> list:
             note = 'answered twice' if twice else 'answer only'
             row = [gate, q, shown, '-', 'unknown', note]
             rows.append(row)
+        if f.get('by') == ma_schema.ANSWERED_BY_L1:
+            note = f'{note}; {NOTE_BY_L1}' if note else NOTE_BY_L1
         row[3], row[5] = choice, note
         if f.get('other') == '1':
             row[4] = 'typed (Other)'
@@ -133,7 +136,11 @@ def tally_text(lines) -> str:
     sub = count('stop', mismatch='1')
     opus = sum(1 for k, f in kinds if k == 'call' and 'opus' in (f.get('model') or ''))
     scope = sum(1 for k, f in kinds if k == 'fix' and (f.get('what') or '').startswith(SCOPE_CHANGE))
-    fixes = count('fix') - scope
+    plan_edits = sum(1 for k, f in kinds if k == 'fix' and f.get('before') == ma_schema.PLAN_EDIT_GATE)
+    fixes = count('fix') - scope - plan_edits
+    delegated = sum(1 for k, f in kinds if k == 'answer' and f.get('by') == ma_schema.ANSWERED_BY_L1)
+    switches = [f'{t} {f.get("state")} ({f.get("how", "-")})' for t, k, f in lines if k == 'delegate']
+    profiles = [f'{f.get("from")} → {f.get("to")}' for _, k, f in lines if k == 'profile']
     drafts = sum(1 for k, f in kinds if k == 'revision' and f.get('before'))
     revs = len({f.get('rev') for k, f in kinds if k == 'revision' and not f.get('before') and f.get('rev')})
     out += ['', '## Metrics', '| Item | Value |', '|---|---|',
@@ -146,6 +153,10 @@ def tally_text(lines) -> str:
             f'| Plan rewrites before approval | {drafts} |',
             f'| In-flight revisions | {revs} |',
             f'| Calls raised to opus | {opus} (retries and explicit calls are not told apart) |',
+            *([f'| Plan edits by L1 before approval | {plan_edits} |'] if plan_edits else []),
+            *([f'| Delegated answers | {delegated} |'] if delegated else []),
+            *([f"| Delegated approval | {', '.join(switches)} |"] if switches else []),
+            *([f"| Profile changes | {len(profiles)} ({', '.join(profiles)}) |"] if profiles else []),
             '', '## Cost and tokens per stretch']
     segs = _segments(lines)
     if segs:

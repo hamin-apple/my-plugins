@@ -19,7 +19,7 @@ Find and report where the relevant files are in the task location, how things wo
 - Do not read files outside the scope. Read only inside the task location (the project), and do not read secret files (`.env`, key files). If blocked, do not work around it; report it.
 - Use Bash only to read: `ls`, `grep`, `git log`, `git status`, `git diff`, listing tests. Do not use commands that change files or git state.
 - Do not call other agents. Do not propose designs or solutions.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 
 ## Input
 

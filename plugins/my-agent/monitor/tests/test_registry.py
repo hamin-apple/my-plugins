@@ -118,4 +118,4 @@ class SettingFolderTest(unittest.TestCase):
 
     def test_default_folder_is_home_my_agent(self):
         with tempfile.TemporaryDirectory() as d, self.env(''), mock.patch.dict(os.environ, {'HOME': d}):
-            self.assertEqual(registry.default_projects_file(), Path(d, 'my-agent', 'projects.txt'))
+            self.assertEqual(registry.default_projects_file(), Path(d, 'dev', 'my-agent', 'projects.txt'))

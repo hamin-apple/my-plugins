@@ -3,7 +3,7 @@
 
 usage: data-dir.py [--data-dir X]
 X is the `data_dir` setting. $MA_TASKS_DIR wins over it; an empty X or an unsubstituted `${...}` placeholder means
-"not set" and gives ~/my-agent. Exit 0.
+"not set" and gives ~/dev/my-agent. Exit 0.
 """
 import argparse
 import sys

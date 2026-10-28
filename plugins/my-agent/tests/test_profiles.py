@@ -77,7 +77,7 @@ class ProfilesTest(unittest.TestCase):
         self.assertIsNotNone(m)
         hint = m.group(1).strip().strip('\'"')
         flags = set(re.findall(r'--([a-z]+)', hint))
-        self.assertEqual(flags, {p.stem for p in PROFILES.glob('*.md')})
+        self.assertEqual(flags, {p.stem for p in PROFILES.glob('*.md')} | {'auto'})
         for phase in (p.stem for p in (REPO / 'l1-orchestration' / 'phases').glob('*.md')):
             self.assertIn(phase, hint)
         self.assertIn('continue', hint)
@@ -95,6 +95,20 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn('`Proceed as general (Recommended)` / `Abort`', intake)
         self.assertIn('the flag is ignored', intake)
         self.assertIn('keeps `--dev` as its first word', intake)
+
+    def test_findings_popup_lives_in_plan_phase(self):
+        """Plan Review findings are handled the same in every profile: the popup text is in phases/plan.md, not only dev.md."""
+        plan = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
+        self.assertIn('`Apply all (Recommended)` / `Approve without applying` / `Pick myself`', plan)
+        dev = (PROFILES / 'dev.md').read_text(encoding='utf-8')
+        self.assertNotIn('Apply all (Recommended)', dev)
+        for name in ('dev', 'general', 'research'):
+            row = next(l for l in (PROFILES / f'{name}.md').read_text(encoding='utf-8').splitlines() if l.startswith('| 4 Plan Review'))
+            if name == 'dev':
+                self.assertIn('Not skipped (except for a small task)', row)
+            else:
+                self.assertIn('`plan.md` step 4', row)
+
 
 if __name__ == '__main__':
     unittest.main()

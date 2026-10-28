@@ -320,4 +320,9 @@ final class WindowController: NSObject, NSWindowDelegate {
     func windowDidResize(_ notification: Notification) {
         if !applyingFrame { saveFrame(currentMode) }
     }
+
+    /// The Components window goes with the main window.
+    func windowWillClose(_ notification: Notification) {
+        store.detail.comp.closeWindow()
+    }
 }

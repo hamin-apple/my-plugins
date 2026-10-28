@@ -866,9 +866,11 @@ function compView() {
     <div class="rp-mini">${LEVELS.map(l => `<div class="lv ${l.cls}"><div class="lh"><b>${l.id}</b><span>${esc(l.name)}</span></div><div class="chips">
       ${l.comps.map(([id, nm]) => `<span class="chip ${used.has(id) ? 'used' : ''} ${id === e.a ? 'live' : ''}"><b>${esc(nm)}</b></span>`).join('')}</div></div>`).join('')}</div>`;
 }
+/* the menu bar app calls this when its Components window closes (it does not pass window.close() through) */
+function compWinGone() { compWin = null; }
 function syncCompWin() { if (!compWin || compWin.closed) return; const r = compWin.document.getElementById('root'); if (r) { compWin.document.documentElement.lang = LANG; r.innerHTML = compView(); } }
 function openCompWin() {
-  if (compWin && !compWin.closed) { compWin.focus(); syncCompWin(); return; }
+  if (compWin && !compWin.closed) { compWin.focus(); window.webkit?.messageHandlers?.compFocus?.postMessage(''); syncCompWin(); return; }
   /* reuse the size (and place) the window had last time; the first click also adopts an already open window of the same name */
   let sz = null; try { sz = JSON.parse(localStorage.getItem('ma-comp-size')); } catch (x) {}
   compWin = window.open('', 'ma-components', sz ? `width=${sz.w},height=${sz.h},left=${sz.x},top=${sz.y}` : 'width=560,height=640');

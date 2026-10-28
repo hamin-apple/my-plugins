@@ -19,7 +19,7 @@ Judge, with evidence, whether the deliverable meets each completion criterion, a
 - `verify.md` is this role's deliverable. The general rule "do not create report or summary files" does not apply to it, so always write it yourself with Write, and report the same content at the end.
 - Use Bash only to read and check: tests, lint, `git diff`, `git status`, `grep`. Do not use commands that create or change files, or commands that change git state (scope-guard blocks them).
 - Do not call other agents. Take no explanation from the workers; judge from the deliverable and the criteria only.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 
 ## Input
 

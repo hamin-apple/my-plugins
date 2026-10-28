@@ -9,6 +9,7 @@ from datetime import datetime
 import ma_schema
 
 PHASE_START = {1: '① Define', 3: '② Plan', 5: '③ Build', 7: '④ Accept'}
+PHASE_NAME = {1: '① Define', 2: '② Plan'}   # `profile back=`: the phase number the change returns to
 WORKERS = set(ma_schema.UNIT_AGENTS)
 
 
@@ -139,7 +140,10 @@ def build_events(lines) -> Events:
                         break
                 e.answered['G2'] = f.get('result') or f.get('choice')
             elif gate in asks:
-                asks.pop(gate)['sub'] = f.get('choice')
+                sub = f.get('choice')
+                if f.get('by') == ma_schema.ANSWERED_BY_L1:
+                    sub = f'{sub} · answered by L1'
+                asks.pop(gate)['sub'] = sub
                 e.answered[gate] = f.get('choice')
         elif l.kind == 'revision':
             n = _int(f.get('rev'))
@@ -161,6 +165,15 @@ def build_events(lines) -> Events:
             item(l, 'rev', 'gatekeeper', f"rev{rev} {f.get('why', '')}".strip(), sub=f.get('keep'))
         elif l.kind == 'fix' and (f.get('what') or '').startswith('Scope change:'):
             item(l, 'phase', 'recorder', f.get('what'))
+        elif l.kind == 'fix' and f.get('before') == ma_schema.PLAN_EDIT_GATE:
+            item(l, 'phase', 'recorder', f"plan edit by L1 · {f.get('what', '')}".rstrip(' ·'))
+        elif l.kind == 'delegate' and f.get('state') in ma_schema.DELEGATE_STATES:
+            how = f" ({f['how']})" if f.get('how') else ''
+            item(l, 'phase', 'recorder', f"delegated approval {f['state']}{how}")
+        elif l.kind == 'profile' and f.get('from') and f.get('to'):
+            back = f.get('back')
+            tail = f" · back to {PHASE_NAME.get(_int(back), back)}" if back not in (None, '', '-') else ''
+            item(l, 'phase', 'recorder', f"profile {f['from']} → {f['to']}{tail}")
         elif l.kind == 'cost':
             s = f.get('session', '')
             try:

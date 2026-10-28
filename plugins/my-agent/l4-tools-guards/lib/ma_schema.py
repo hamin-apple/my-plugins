@@ -64,6 +64,9 @@ def family(model):
 # --- run-log lines (4.7.2): `<YYYY-MM-DD HH:MM:SS> <kind>: <key=value ...>` ---
 
 LINE_RE = re.compile(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) ([a-z][a-z0-9-]*):(?:\s+(.*))?$')
+DELEGATE_STATES = ('on', 'off')   # `delegate: state=` (delegated approval); the last such line is the current state
+ANSWERED_BY_L1 = 'L1'             # `answer: ... by=L1` is an answer L1 gave under delegated approval
+PLAN_EDIT_GATE = 'G1b'            # `fix: ... before=G1b` is an L1 edit of plan.md before plan approval
 STAMPED = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} ')   # looks like a record, readable or not
 
 

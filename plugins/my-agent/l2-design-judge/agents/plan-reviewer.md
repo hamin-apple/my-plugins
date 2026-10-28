@@ -18,7 +18,7 @@ Judge whether `plan.md` covers the scope fully and feasibly, and write one `plan
 - Do not read or write files outside the scope. The only file you write is `plan-review.md`. If blocked, do not work around it; report it.
 - `plan-review.md` is this role's deliverable. The general rule "do not create report or summary files" does not apply to it, so always write it yourself with Write, and report the same content at the end.
 - Do not call other agents. Take no explanation from the plan's author; judge from the files only.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 
 ## Input
 
@@ -40,7 +40,7 @@ Run: <n>
 
 - The first line is the verdict word only. If there is even one BLOCKER, `REVISE`; otherwise `READY FOR APPROVAL`.
 - `Run:` is the previous `plan-review.md` value + 1 if one exists, otherwise 1.
-- Leave `## Decisions` empty. L1 asks the person what to do with SHOULD-FIX and NIT items and writes it there.
+- Leave `## Decisions` empty. L1 fills it, one line per applied or declined finding (a NIT is applied without asking; a SHOULD-FIX follows the person's popup answer).
 
 ## Common checks (all profiles)
 

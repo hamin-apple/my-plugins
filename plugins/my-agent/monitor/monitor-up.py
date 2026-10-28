@@ -10,7 +10,7 @@ Prints exactly one line and always exits 0, so the my-agent Router can pass the
 line on and carry on when the monitor cannot start. A port that answers
 /api/health with this folder as `root` is ours; anything else on a port is
 left alone. State goes to the data folder (ma_data.data_dir: $MA_TASKS_DIR, else
---data-dir, else $CLAUDE_PLUGIN_OPTION_DATA_DIR, else ~/my-agent): monitor.json
+--data-dir, else $CLAUDE_PLUGIN_OPTION_DATA_DIR, else ~/dev/my-agent): monitor.json
 (port, pid, root, started) and monitor.log. The server child gets the resolved
 folder in CLAUDE_PLUGIN_OPTION_DATA_DIR.
 """

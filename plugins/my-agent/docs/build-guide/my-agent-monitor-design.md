@@ -43,7 +43,7 @@ The monitor shows these four things as a local web page on the Mac. **It only re
 - The server listens only on `127.0.0.1` and uses only the Python 3 standard library. There must be no dependencies to install.
 - The frontend is one HTML file (+ JS/CSS files if needed), with no build step. The web font (IBM Plex) loads from Google Fonts; offline, system fonts take its place.
 - `~/dev/tools/claude-sessions` is read-only. The monitor does not reuse its code (the price table is its own file).
-- The server writes no files. Only the launch script `monitor-up.py` writes `<data folder>/monitor.json` and `monitor.log` (section 6.1). The data folder is the plugin setting `data_dir` (default `~/my-agent`; `$MA_TASKS_DIR` wins; architecture 4.7).
+- The server writes no files. Only the launch script `monitor-up.py` writes `<data folder>/monitor.json` and `monitor.log` (section 6.1). The data folder is the plugin setting `data_dir` (default `~/dev/my-agent`; `$MA_TASKS_DIR` wins; architecture 4.7).
 
 ## 4. Screen (fixed by mock-up v22)
 
@@ -93,7 +93,7 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 - Header line: Replay / Parallel timeline switch next to `4 · Log`; at the far right, `run-log.md · task-id` and `↗ Components`
 - Replay: first/previous/next/auto play, speed 0.5×~4×, slider, keyboard (← → Space Home End)
   - Step list on the left, console (level-colored tags) and event cards (model, effort, MISMATCH, the mock-up at G1b time) in the middle, the work files at that moment on the right (newly written files get a typing effect)
-- `↗ Components`: opens "components at this moment" in a separate window. It follows the replay position and remembers the window size and position.
+- `↗ Components`: opens "components at this moment" in a separate window. It follows the replay position and remembers the window size and position. In the menu bar app (see monitor/menubar/README.md) the same button opens a native Components window that floats above other apps while the main window is pinned and remembers its size and position across restarts (`frame.components`); closing it or the main window closes it, and clicking the button while it is open brings it to front.
 - Parallel timeline: subagent calls as bars (model color, `×N` for N rows, red border for MISMATCH), step bands and gate marks, maximum concurrency. Clicking a bar jumps to that moment in the replay
 
 **Effects**
@@ -148,7 +148,7 @@ The monitor's parser interprets only the lines below and ignores lines it does n
 |---|---|---|
 | `step:` **(new)** | run-log.py, each time a step is entered | time, step number (1~8), rev, session ID. A back-to-Execute line has `back=` (reason) and `archive=` (archived verdicts) |
 | phase entry | run-log.py | time, phase |
-| `ask:` / `answer:` **(split)** | run-log.py | gate (G1a/G1b/G3/E), question, choice. An `ask:` with no `answer:` after it yet means "waiting for an answer" |
+| `ask:` / `answer:` **(split)** | run-log.py | gate (G1a/G1b/G3/E), question, choice. An `ask:` with no `answer:` after it yet means "waiting for an answer". An `answer:` with `by=L1` was given by the main session during delegated approval; the monitor shows it as `<choice> · answered by L1`, and the `delegate`, `profile` and `fix … before=G1b` lines as phase items |
 | `ask: gate=G2` / `answer: gate=G2` **(new)** | plugin hooks `PermissionRequest` / `PostToolUse` | requesting agent, tool, input summary, `result=allowed`. If there is no `answer:` by the time that agent ends, show "not run (denied?)" |
 | `call:` / `start:` / `stop:` | subagent-log.py | agent_type, agent_id, work unit (`unit=`), model (expected and actual), effort, isolation, tokens, time, first line of the result, MISMATCH, how it ended (`end=ok|partial|error`). Consecutive FAILs count verifier lines whose `result=` starts with `Verdict: FAIL` and restart when the rev changes; worker stops count per (rev, `unit=`) |
 | `revision:` | run-log.py | rev number, what changed, archive folder. `before=G1b` means a plan rewrite before approval (rev unchanged). A `state=pending` line and the `state=done` line with the same rev merge into one revision |

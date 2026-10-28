@@ -122,6 +122,29 @@ class EventsTest(unittest.TestCase):
         self.assertEqual((e.revs[1]['state'], e.revs[1]['back']), ('done', 3))
         self.assertEqual([x['r'] for x in e.log if x['tx'].startswith('plan rewrite')], [0])
 
+    def test_delegated_approval_items(self):
+        e = synth('2026-10-29 04:00:01 step: n=1 name=Intake rev=0',
+                  '2026-10-29 04:00:02 delegate: state=on how=flag',
+                  '2026-10-29 04:06:10 ask: gate=G1a q="Scope?" rec=Confirm',
+                  '2026-10-29 04:06:10 answer: gate=G1a choice=Confirm by=L1',
+                  '2026-10-29 04:07:00 ask: gate=G1b q="Plan?" rec=Approve',
+                  '2026-10-29 04:07:05 answer: gate=G1b choice=Approve',
+                  '2026-10-29 04:09:00 delegate: state=off how=person')
+        tx = [x['tx'] for x in e.log]
+        self.assertIn('delegated approval on (flag)', tx)
+        self.assertIn('delegated approval off (person)', tx)
+        subs = {x['tx']: x['sub'] for x in e.log if x['k'] == 'popup'}
+        self.assertEqual(subs, {'G1a Scope?': 'Confirm · answered by L1', 'G1b Plan?': 'Approve'})
+
+    def test_profile_and_plan_edit_items(self):
+        e = synth('2026-10-29 03:12:40 profile: from=dev to=general back=2 archive=archive/a',
+                  '2026-10-29 03:13:00 profile: from=research to=dev back=- archive=-',
+                  '2026-10-29 03:14:00 fix: what="Plan Review NIT plan.md:41" files=plan.md before=G1b archive=archive/b',
+                  '2026-10-29 03:15:00 fix: what=plain')
+        self.assertEqual([x['tx'] for x in e.log],
+                         ['profile dev → general · back to ② Plan', 'profile research → dev',
+                          'plan edit by L1 · Plan Review NIT plan.md:41'])
+
     def test_cost_usd(self):
         self.assertEqual(ev('claude-sessions', '261024-cli-json-output').cost_usd, '2.41')
 

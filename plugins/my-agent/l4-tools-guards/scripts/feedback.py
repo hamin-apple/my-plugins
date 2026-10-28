@@ -9,7 +9,7 @@ usage: feedback.py add L<1-4> <task-id> "<text>"   append `- [open] L<n> <YYYY-M
                                                    as `- [done] … → <what fixed it>`
 File format: `# my-agent feedback`, `## Open`, `## Done`; one `- [open|done] L<1-4> <YYYY-MM-DD> <task-id>: <text>`
 line per item. $MA_FEEDBACK_FILE overrides the file. Any form ends with `--data-dir <folder>` (the data folder; default: the
-setting, else ~/my-agent); it is taken only as the last two arguments. Exit 0 done, 2 bad arguments.
+setting, else ~/dev/my-agent); it is taken only as the last two arguments. Exit 0 done, 2 bad arguments.
 """
 import datetime
 import re

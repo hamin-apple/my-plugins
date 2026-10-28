@@ -222,6 +222,128 @@ class SkillMdTest(unittest.TestCase):
             git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qam', 'other again')
             self.assertEqual(run(), before)
 
+    # --- Plan Review rounds, L1 plan edits, profile change (task 261029-review-loop-l1-rules, u4) ---
+    PLAN = L1 / 'phases' / 'plan.md'
+
+    def plan_step4(self):
+        plan = self.PLAN.read_text(encoding='utf-8')
+        return plan[plan.index('## 4. Plan Review'):plan.index('## G1b plan approval')]
+
+    def test_nit_only_applied_without_popup(self):
+        """Criterion 2: NIT only -> applied without a popup, one `## Decisions` line each, then G1b."""
+        step = self.plan_step4()
+        self.assertIn('NIT only', step)
+        self.assertIn('without a popup', step)
+        self.assertIn('- <severity> <path>:<line> <summary> → applied by L1 | applied by architect | declined', step)
+
+    def test_no_plan_review_round_after_ready(self):
+        """Criterion 1: READY FOR APPROVAL never leads to another Plan Review round; only REVISE is judged again."""
+        step = self.plan_step4()
+        self.assertIn('never another Plan Review round', step)
+        self.assertIn('third `REVISE`', step)
+        self.assertIn('Apply all (Recommended)', step)
+        self.assertIn('whole list (NITs included)', step)
+
+    def test_l1_plan_edit_rules(self):
+        """Criterion 3: small plan.md edits by L1 before G1b, recorded as `fix ... before=G1b` with an archive."""
+        step = self.plan_step4()
+        self.assertIn('before=G1b archive=', step)
+        plan = self.PLAN.read_text(encoding='utf-8')
+        g1b = plan[plan.index('## G1b plan approval'):]
+        self.assertIn('Applied after Plan Review', g1b)
+        self.assertIn('small', g1b[g1b.index('**Request changes:**'):])
+        row = next(l for l in self.text.splitlines() if l.startswith('| L1 |'))
+        self.assertIn('plan.md', row)
+        section = self.text[self.text.index('## In-flight revision'):]
+        self.assertIn('L1 edit', section)
+        self.assertIn('Plan Review again only after a BLOCKER fix', section)
+        self.assertIn('| Plan edit by L1 before approval', self.text)
+
+    def test_profile_label_from_profile_line(self):
+        """Criterion 5: the label is (set by you) also when the run-log has a `profile` line."""
+        intake = self.text[self.text.index('## Intake'):self.text.index('## status')]
+        self.assertIn('the run-log has a `profile` line', intake)
+        self.assertIn('keeps `--dev` as its first word', intake)
+        self.assertIn('Profile change at the first gate', intake)
+
+    def test_profile_change_procedure(self):
+        section = self.text[self.text.index('## In-flight revision'):]
+        bullet = section[section.index('**Profile change at the first gate'):]
+        for word in ('-profile/', '`Request:` is left as written', 'scope summary', 'back=', '`phase:`',
+                     'Keep <current profile> (Recommended)', 'new task (`Follows:`)',
+                     'Split into a new task (Recommended)'):
+            self.assertIn(word, bullet, word)
+        for path in (L1 / 'phases' / 'define.md', self.PLAN):
+            self.assertIn('Profile change at the first gate', path.read_text(encoding='utf-8'), path.name)
+
+    def test_profile_templates_use_known_kinds(self):
+        kinds = run_log_kinds()
+        found = [a for n, a in self.templates() if a.startswith(('profile ', 'fix '))]
+        self.assertTrue(any(a.startswith('profile from=') for a in found))
+        self.assertTrue(any('before=G1b' in a for a in found))
+        self.assertLessEqual({'profile', 'fix'}, kinds)
+
+    def test_auto_flag_rules(self):
+        """Criterion 6: `--auto` rules in ## Arguments and Intake."""
+        args = self.text[self.text.index('## Arguments'):self.text.index('## Intake')]
+        for word in ('--auto', '`--Auto`', 'twice', 'either order', 'drops every flag, `--auto` included',
+                     'among the leading flags', 'keeps the leading flags'):
+            self.assertIn(word, args, word)
+        intake = self.text[self.text.index('## Intake'):self.text.index('## status')]
+        self.assertIn('delegate state=on how=flag', intake)
+        self.assertIn('Delegated approval: on (--auto)', intake)
+        self.assertIn('5 lines or fewer', intake)
+        self.assertNotIn('4 lines or fewer', intake)
+        self.assertIn('item 1–5', intake[intake.index('Delegation covers'):])
+
+    def test_delegated_approval_core_rules(self):
+        """Criterion 6: never G2, G3, E, the third-REVISE G1b popup or a popup without a recommendation; state from the last line."""
+        head = self.text[:self.text.index('## Arguments')]
+        sec = head[head.index('### Delegated approval'):]
+        sec = sec[:sec.index('\n### ', 5)] if '\n### ' in sec[5:] else sec
+        for word in ('G2', 'G3', 'E', 'third `REVISE`', 'without a recommended choice', 'by=L1',
+                     '(answered by L1)', 'last `delegate` line', 'Turn on (Recommended)', 'Keep asking me',
+                     'delegate state=off how=person', 'delegate state=off how=end'):
+            self.assertIn(word, sec, word)
+        self.assertLess(self.text.index('### Delegated approval'), CORE_CHARS)
+
+    def test_loop_cap_section(self):
+        """Criterion 9: a 5-round cap per loop; the lower caps stay."""
+        self.assertIn('## Delegated approval details', self.text)
+        sec = self.text[self.text.index('## Delegated approval details'):self.text.index('## Check before anything leaves')]
+        for word in ('a round is', '6th round', 'E answer', 'third `REVISE`', '3 Verify FAILs',
+                     'Plan Review `REVISE`', 'Review BLOCKER', 'NIT'):
+            self.assertIn(word, sec, word)
+        self.assertLess(self.text.index('## Failure handling'), self.text.index('## Delegated approval details'))
+
+    def test_pointers_in_phase_files(self):
+        plan = self.PLAN.read_text(encoding='utf-8')
+        self.assertIn('Delegated approval', plan[plan.index('third `REVISE`'):][:400])
+        accept = (L1 / 'phases' / 'accept.md').read_text(encoding='utf-8')
+        self.assertIn('delegate state=off how=end', accept)
+        self.assertIn('always to the person', accept)
+        abort = self.text[self.text.index('## Abort'):self.text.index('## Recorder rules')]
+        self.assertIn('delegate state=off how=end', abort)
+
+    def test_delegate_templates_run(self):
+        """Recorder rows for `delegate` and `answer ... by=L1` exist and run (test_run_log_templates_run executes them)."""
+        found = [a for n, a in self.templates()]
+        self.assertTrue(any(a.startswith('delegate state=on') for a in found))
+        self.assertTrue(any(a.startswith('delegate state=off') for a in found))
+        self.assertTrue(any(a.startswith('answer') and 'by=L1' in a for a in found))
+        self.assertIn('delegate', run_log_kinds())
+
+    def test_core_rules_within_limit(self):
+        """Procedures sit after ## Arguments; the core rules (up to there) stay inside the first CORE_CHARS characters."""
+        self.assertLess(self.text.index('## Arguments'), CORE_CHARS)
+        self.assertLess(self.text.index('### Phase files'), CORE_CHARS)
+
+    def test_working_files_in_english(self):
+        """Criterion 4: working files in English; the person sees their own language (L1 translates when it shows one)."""
+        rules = self.text[self.text.index('### Question rules'):self.text.index('## Arguments')]
+        for word in ('`scope.md`', '`## Decisions`', 'in English', 'translates a working file when it shows it'):
+            self.assertIn(word, rules, word)
+
     # --- data folder (task 261028-data-dir-config, u3) ---
     DATA_SCRIPTS = ('run-log', 'usage-snapshot', 'gate-report', 'feedback', 'monitor-up')
     MONITOR_SKILL = REPO / 'skills' / 'monitor' / 'SKILL.md'

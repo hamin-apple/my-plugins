@@ -72,6 +72,23 @@ if let i = args.firstIndex(of: "--list-frame") {
     exit(0)
 }
 
+if let i = args.firstIndex(of: "--comp-frame") {
+    var rest = Array(args[(i + 1)...])
+    var size: CGSize?
+    if let f = rest.firstIndex(of: "--features") {
+        guard f + 1 < rest.count, let r = parseRect("0,0," + rest[f + 1]) else { usageExit("--comp-frame: --features needs <w,h>") }
+        size = r.size
+        rest.removeSubrange(f...f + 1)
+    }
+    let screens = rest.dropFirst().map(parseRect)
+    guard rest.count >= 2, rest[0] == "-" || parseRect(rest[0]) != nil, !screens.contains(where: { $0 == nil }) else {
+        usageExit("--comp-frame needs <x,y,w,h|-> <x,y,w,h>... [--features <w,h>]: the saved frame (- for none), then one or more screens")
+    }
+    let r = compOpenFrame(saved: parseRect(rest[0]), size: size, screens: screens.map { $0! })
+    print([r.minX, r.minY, r.width, r.height].map { String(Int($0.rounded())) }.joined(separator: ","))
+    exit(0)
+}
+
 if args.contains("--print-palette") {
     for p in statusPalette { print("\(p.tone.rawValue)\t\(p.light)\t\(p.dark)") }
     exit(0)

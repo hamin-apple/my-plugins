@@ -121,6 +121,24 @@ class AgentsTest(unittest.TestCase):
                     self.assertIn(word, body)
                 self.assertNotIn('my-dev', body)
 
+    def test_working_files_in_english(self):
+        """Criterion 4: every agent writes working files and reports in English; the writer and coder name the deliverable."""
+        rule = 'Write working files and reports in English; keep the headings and marker lines of the file formats as they are.'
+        for rel in MANIFEST:
+            fm, body = split(REPO / rel)
+            with self.subTest(agent=fm['name']):
+                self.assertIn(rule, body)
+                self.assertNotIn('language of the request in `intake.md`; keep', body)
+        writer = split(REPO / 'l3-workers' / 'agents' / 'writer.md')[1]
+        self.assertIn('`work/` notes in English', writer)
+        self.assertIn('deliverable in the language of the request in `intake.md`, even when it sits under `work/`', writer)
+        self.assertIn('a document a single writer unit produces (no combining step)', writer)
+        self.assertIn('translate the claim faithfully and keep the source and the quote as they are', writer)
+        coder = split(REPO / 'l3-workers' / 'agents' / 'coder.md')[1]
+        self.assertIn('Text inside the deliverable follows the request\'s language unless the project\'s own instructions fix one', coder)
+        gate = split(REPO / 'l2-design-judge' / 'agents' / 'gate-analyst.md')[1]
+        self.assertIn('`gate-report.md` in English', gate)
+
     def test_judges_write_their_own_file(self):
         """Live run 2026-10-25: a reviewer returned its verdict instead of writing review.md, reading a harness rule
         against report files as covering it. Each judge must be told its file is the deliverable."""

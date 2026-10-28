@@ -19,5 +19,6 @@ Step 1 Intake is the "Intake" procedure in SKILL.md. This file starts at step 2.
    - Profiles with G1a: write `scope.md` (`## Completion criteria` as a numbered list `1.`, `2.`), and record before and after the popup.
      - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1a q="Scope confirmation: <task-id>" rec="Confirm" --data-dir "<data folder>"`
      - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1a choice="<Confirm/Revise/Abort>" --data-dir "<data folder>"`
+     - On `Revise` with a profile change, follow SKILL.md "Profile change at the first gate".
      - On Confirm, write `Confirmed <YYYY-MM-DD HH:MM>` in `## Confirmation` of `scope.md`.
 5. Change `phase:` in `.active` to `2` and read `plan.md` (the phase file).

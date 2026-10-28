@@ -6,7 +6,7 @@ usage: gate-report.py tally [--cwd DIR] [--data-dir DIR]   print the decision ta
        gate-report.py copy [--cwd DIR] [--data-dir DIR]    copy <task>/gate-report.md to the report folder as <task-id>.md
                                           (-2, -3 … when the name is taken; the folder is made if missing)
 $MA_GATE_REPORT_DIR sets the report folder (default <data folder>/gate-report;
-the data folder is $MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/my-agent).
+the data folder is $MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/my-agent).
 tally exit: 0 printed (also with no decisions), 1 no active task, 2 bad arguments,
             3 gate-tally.md could not be written (the cause is printed).
 copy exit: 0 copied, 1 no active task or no gate-report.md, 2 bad arguments,
@@ -71,7 +71,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('command', choices=('tally', 'copy'))
     ap.add_argument('--cwd', default=os.getcwd())
-    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/my-agent)')
+    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/my-agent)')
     args = ap.parse_args(argv)   # argparse exits 2 on bad arguments
     active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir))
     if active is None:

@@ -410,8 +410,8 @@ class MenubarTest(unittest.TestCase):
 
     def test_default_folder_is_home_my_agent_and_tilde_expands(self):
         home = self.dir / 'home'
-        (home / 'my-agent').mkdir(parents=True)
-        (home / 'my-agent' / 'monitor-config.json').write_text('{"browser": "chrome"}')
+        (home / 'dev' / 'my-agent').mkdir(parents=True)
+        (home / 'dev' / 'my-agent' / 'monitor-config.json').write_text('{"browser": "chrome"}')
         for setting, expect in (('', [False, False, True]), ('~/nowhere', [True, False, False])):
             with self.subTest(setting=setting):
                 env = self.clean_env(HOME=str(home))
@@ -456,7 +456,7 @@ class MenubarTest(unittest.TestCase):
         r, plist = self.run_login_item('install')
         home = self.dir / 'home'
         self.assertEqual(plistlib.loads(plist.read_bytes())['EnvironmentVariables']['CLAUDE_PLUGIN_OPTION_DATA_DIR'],
-                         str(home / 'my-agent'))
+                         str(home / 'dev' / 'my-agent'))
         r, plist = self.run_login_item('install', '~/dev/agent-data')
         self.assertEqual(plistlib.loads(plist.read_bytes())['EnvironmentVariables']['CLAUDE_PLUGIN_OPTION_DATA_DIR'],
                          str(home / 'dev/agent-data'))

@@ -19,7 +19,7 @@ Research one sub-question on the web and write one note with sources.
 - Do not read or write files outside the scope. Read only your own task folder (`docs/agent/<task-id>/`), and write only the note path under `work/` that L1 gives. If blocked, do not work around it; report it.
 - Do not call other agents.
 - Do not put task folder content or personal information into web addresses.
-- Write prose in the language of the request in `intake.md`; keep the headings and marker lines of the file formats in English.
+- Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 
 ## Input
 

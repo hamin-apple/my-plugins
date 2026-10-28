@@ -8,7 +8,7 @@ from helpers import L4, make_task, parse, run_script
 
 SCRIPT = L4 / 'scripts' / 'gate-report.py'
 TASK = '261025-probe-task'
-DEFAULT_COPY = Path.home() / 'my-agent'
+DEFAULT_COPY = Path.home() / 'dev' / 'my-agent'
 
 
 class GateReportTest(unittest.TestCase):
@@ -104,6 +104,33 @@ class GateReportTest(unittest.TestCase):
                     '| In-flight revisions | 1 |',
                     '| Calls raised to opus | 1 (retries and explicit calls are not told apart) |'):
             self.assertIn(row, out)
+
+    def test_delegated_answer_note_and_new_rows(self):
+        out = self.tally(
+            '2026-10-29 04:00:01 delegate: state=on how=flag',
+            '2026-10-29 04:06:10 ask: gate=G1a q="Scope?" rec=Confirm',
+            '2026-10-29 04:06:10 answer: gate=G1a choice=Confirm by=L1',
+            '2026-10-29 04:07:00 ask: gate=G3 q="Accept?" rec=Commit',
+            '2026-10-29 04:07:30 answer: gate=G3 choice=Commit',
+            '2026-10-29 04:08:00 fix: what="Plan Review NIT" files=plan.md before=G1b archive=a',
+            '2026-10-29 04:08:30 fix: what=x',
+            '2026-10-29 04:09:00 profile: from=dev to=general back=2 archive=a',
+            '2026-10-29 04:10:00 delegate: state=off how=end')
+        rows = self.rows(out)
+        self.assertEqual(rows[0][1:], ['G1a', 'Scope?', 'Confirm', 'Confirm', 'yes', 'answered by L1'])
+        self.assertEqual(rows[1][6], '')
+        for row in ('| Delegated answers | 1 |', '| Plan edits by L1 before approval | 1 |', '| L1 small fixes | 1 |',
+                    '| Delegated approval | 04:00 on (flag), 04:10 off (end) |',
+                    '| Profile changes | 1 (dev → general) |'):
+            self.assertIn(row, out)
+
+    def test_old_run_log_has_no_new_rows(self):
+        out = self.tally('2026-10-26 23:00:09 fix: what=x', '2026-10-26 23:00:10 ask: gate=G1a q=Q rec=A',
+                         '2026-10-26 23:00:11 answer: gate=G1a choice=A')
+        for word in ('Delegated', 'Profile changes', 'Plan edits by L1'):
+            self.assertNotIn(word, out)
+        self.assertIn('| L1 small fixes | 1 |', out)
+        self.assertEqual(self.rows(out)[0][1:], ['G1a', 'Q', 'A', 'A', 'yes', ''])
 
     def test_cost_stretches_and_tokens(self):
         out = self.tally(
@@ -246,7 +273,7 @@ class GateReportTest(unittest.TestCase):
             for k in names[:3]:
                 os.environ.pop(k, None)
             os.environ['HOME'] = str(self.root)
-            self.assertEqual(ma_gate_report.report_dir(), self.root / 'my-agent/gate-report')
+            self.assertEqual(ma_gate_report.report_dir(), self.root / 'dev/my-agent/gate-report')
             os.environ['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = str(self.root / 'X')
             self.assertEqual(ma_gate_report.report_dir(), self.root / 'X/gate-report')
             os.environ['MA_GATE_REPORT_DIR'] = str(self.reports)

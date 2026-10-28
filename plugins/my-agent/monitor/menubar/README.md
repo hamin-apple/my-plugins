@@ -31,11 +31,12 @@ A window with a thin title-less header: a `List | Detail` switch and a pin butto
 - The filter `All | Running | Done | Stopped` sits under the header. A task with no status shows only under All. With the server off the list shows `Monitor server is off`; with no match it shows `No tasks` or `No done tasks` and so on.
 - Clicking a line switches the same window to **Detail** with that task selected. Clicking the same line again selects it again.
 - **Detail** (default about 1000x700) is the web monitor itself in a web view, so it looks the same as in the browser. Choosing Detail with the switch keeps the task already shown. With the server off it shows `Monitor server is off`; when the server comes back (even on another port) the page is loaded again. The web state of Detail (selection, scroll) is not kept across app restarts; only the frame is.
+- **Components window:** in Detail, `4 · Log`, the button `↗ Components` opens one extra window, "Components · my-agent" (first time 560x640), that follows the replay. Clicking the button again brings it to front. It floats above other apps while the main window is pinned and stops floating when unpinned. Its size and position are remembered across restarts (key `frame.components`). Closing it, or closing the main window, closes it; the next click opens it again. In the browser the page opens its own popup as before.
 - **Pin** keeps the window above other apps' windows; unpinned it is a normal window.
 - The frame is remembered separately for List (position and width) and Detail (position and size). Switching mode moves to that mode's frame. A saved frame that is off every connected screen is moved back inside the visible screen, and one larger than the screen is shrunk to it.
 - The list refreshes every 5 s, in the same poll as the menu, with the same server lookup (`monitor.json`, then ports 8765 to 8775).
 
-Only screen settings are stored, in the defaults domain `my-agent.monitor-menubar`: `mode`, `pinned`, `frame.list`, `frame.detail`. Task data is never written. Check them with `defaults read my-agent.monitor-menubar`.
+Only screen settings are stored, in the defaults domain `my-agent.monitor-menubar`: `mode`, `pinned`, `frame.list`, `frame.detail`, `frame.components`. Task data is never written. Check them with `defaults read my-agent.monitor-menubar`.
 
 ### Menu (right click)
 
@@ -82,12 +83,12 @@ menubar/build/my-agent-menubar --print-detail loaded=8765 port=8765 applied=1 se
 ## Login item
 
 ```sh
-sh menubar/login-item.sh install [<data folder>]   # start at login (folder default ~/my-agent)
+sh menubar/login-item.sh install [<data folder>]   # start at login (folder default ~/dev/my-agent)
 sh menubar/login-item.sh status      # loaded / not loaded
 sh menubar/login-item.sh uninstall   # stop starting at login
 ```
 
-`install` and `uninstall` write outside the repository: `~/Library/LaunchAgents/my-agent.monitor-menubar.plist` (a launchd user agent, `RunAtLoad`, no `KeepAlive`). `install` needs a build first and loads the agent right away. The app reads the data folder from `MA_TASKS_DIR`, then `CLAUDE_PLUGIN_OPTION_DATA_DIR`, then `~/my-agent`; a login item has no plugin environment, so `install` writes the folder (a leading `~` is expanded) into the plist as `CLAUDE_PLUGIN_OPTION_DATA_DIR`, and the `monitor-up.py` the app starts inherits it. Use the same folder as the my-agent `data_dir` setting. After changing that setting, run `install <new folder>` again.
+`install` and `uninstall` write outside the repository: `~/Library/LaunchAgents/my-agent.monitor-menubar.plist` (a launchd user agent, `RunAtLoad`, no `KeepAlive`). `install` needs a build first and loads the agent right away. The app reads the data folder from `MA_TASKS_DIR`, then `CLAUDE_PLUGIN_OPTION_DATA_DIR`, then `~/dev/my-agent`; a login item has no plugin environment, so `install` writes the folder (a leading `~` is expanded) into the plist as `CLAUDE_PLUGIN_OPTION_DATA_DIR`, and the `monitor-up.py` the app starts inherits it. Use the same folder as the my-agent `data_dir` setting. After changing that setting, run `install <new folder>` again.
 
 ## Safari permission
 

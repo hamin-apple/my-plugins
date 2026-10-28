@@ -1,7 +1,7 @@
 ---
 name: my-agent
 description: Use when a request needs several steps — implementing a feature, fixing a bug, or refactoring across files; researching a topic into a note; or producing a multi-part document. Do not use for one-line fixes, typo corrections, quick factual answers, or questions about how the code works.
-argument-hint: '[--general|--research|--dev] <request> | continue | status [all] | define|plan|build|accept'
+argument-hint: '[--auto] [--general|--research|--dev] <request> | continue | status [all] | define|plan|build|accept'
 model: opus
 ---
 
@@ -13,7 +13,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 
 ### Question rules
 
-- Speak to the person in the language of their request (popup questions and choices, reports, prose for them). Popup labels in the phase and profile files are English; show them in that language with the same meaning, order and `(Recommended)` position, and record `rec=`/`choice=` as shown. File-format headings and marker lines (`## Completion criteria`, `Work unit: u1`, `Status:` …) stay in English.
+- Speak to the person in the language of their request (popup questions and choices, reports, prose for them). Write `scope.md`, the `## Decisions` lines and the scope summary in English; L1 translates a working file when it shows it; everything shown to the person stays in the request's language. Popup labels in the phase and profile files are English; show them in that language with the same meaning, order and `(Recommended)` position, and record `rec=`/`choice=` as shown. File-format headings and marker lines (`## Completion criteria`, `Work unit: u1`, `Status:` …) stay in English.
 - Ask the person **everything** through an `AskUserQuestion` popup, never in prose. If the person asks back in prose, answer, then ask the same decision again in a popup.
 - 2–4 choices; put the recommended one first with `(Recommended)`.
 - For a popup written in a phase or profile file, use the choices as written (meaning, order, `(Recommended)` position; wording in the person's language, rule above). If another choice seems better, do not change them; give the reason in one line in the question body.
@@ -33,11 +33,19 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 - Before G1b approval, delegate only to `my-agent:explorer`, `my-agent:architect`, `my-agent:plan-reviewer`, and write nothing outside the task folder (`docs/agent/<task-id>/`). The plugin hook `plan-approved-check.py` blocks it in the `.active` session while `plan.md` has no approval line. If blocked, do not work around it; go to G1b.
 - At G2, never recommend "Allow for the session". Allow risky actions one at a time.
 
+### Delegated approval
+
+- Start: the `--auto` flag, or a message like "go ahead without asking me", confirmed once with the popup `Turn on (Recommended)` / `Keep asking me`. The state is the last `delegate` line in the run-log (also after compaction or `continue`).
+- While on, L1 answers G1a, G1b, findings popups and other non-gate popups with the recommended choice: write the `ask` line, then `answer … by=L1`, and show one chat line `<question> → <choice> (answered by L1)`.
+- Never answered by L1: G2, G3, E, the G1b popup after the third `REVISE`, a popup without a recommended choice, the Intake item 1–5 popups and the flag popups. They go to the person.
+- A message that takes it back ("stop deciding for me") → `delegate state=off how=person`. G3 acceptance or Abort → `delegate state=off how=end`.
+- Details (a message while a popup is pending, the loop cap): "Delegated approval details" below.
+
 ### Levels
 
 | Level | Who | Does | Does not |
 |---|---|---|---|
-| L1 | main session (this skill) | runs phases, delegates, merges, asks all questions, records | make deliverables (code, notes, drafts, plans) itself. Only exception: small fixes a judgment pointed out (2 files or fewer, about 10 lines) |
+| L1 | main session (this skill) | runs phases, delegates, merges, asks all questions, records | make deliverables (code, notes, drafts, plans) itself. Only exception: small fixes a judgment pointed out (2 files or fewer, about 10 lines), and small `plan.md` edits before G1b (Plan Review findings, G1b `Request changes`) |
 | L2 | architect · plan-reviewer · verifier · reviewer · gate-analyst | plans, judges, interprets decisions | change deliverables, delegate further |
 | L3 | explorer · researcher · writer · coder | the one work unit assigned | touch files outside the scope, delegate further |
 | L4 | tools·MCP · hooks · permission rules · scripts | run, record, block | judge |
@@ -57,7 +65,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 
 ### Change requests
 
-- If a message before G3 acceptance asks to change the scope, plan or deliverable, do not fix or delegate at once; follow "In-flight revision" below (after G1b, start with the kind popup). When you have architect rewrite `plan.md` before G1b approval (Request changes, `REVISE`, applying findings, `Plan change`), also archive per "Rewrite before approval" in that section, write a `revision` line, then delegate.
+- If a message before G3 acceptance asks to change the scope, plan or deliverable, do not fix or delegate at once; follow "In-flight revision" below (after G1b, start with the kind popup). When you have architect rewrite `plan.md` before G1b approval (Request changes, `REVISE`, applying findings, `Plan change`), also archive per "Rewrite before approval" in that section, write a `revision` line, then delegate (a small change can be an L1 edit instead, see that section).
 
 ### Phase files
 
@@ -76,18 +84,20 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 |---|---|
 | `/my-agent <request>` | Starts a new task from Intake. |
 | `/my-agent --general` · `--research` · `--dev` `<request>` | Starts a new task with that profile. The Router does not pick one (Intake item 3). |
+| `/my-agent --auto <request>` · `--auto --dev <request>` | Starts a new task with delegated approval on (see "Delegated approval"). `--auto` can be alone or with one profile flag, in either order. |
 | `/my-agent continue` | Resumes the task `.active` points to, from its phase. |
 | `/my-agent status` / `status all` | Shows the running task and the 4 most recent tasks (`all`: every task). |
 | `/my-agent define` · `plan` · `build` · `accept` | Reruns that phase. After G1b approval, define·plan are handled as "In-flight revision", and build·accept the same as G3 "Rework". |
 
 If called with no argument, ask in a popup: `New task (Recommended)` / `continue` / `status`.
 
-**Profile flag:** Check the first word of the argument before Intake item 1. If it starts with `--`, it is a profile flag; a `--dev` later in the request is part of the request text. The `--dev` git check is not made here; it happens in Intake item 3, after the task location is set.
+**Flags:** Check the leading words of the argument before Intake item 1. Leading words that start with `--` are flags (`--auto` and the profile flags); a `--dev` or `--auto` later in the request is part of the request text. The `--dev` git check is not made here; it happens in Intake item 3, after the task location is set.
 
-- Valid: exactly one of `--general`, `--research`, `--dev` (lowercase), followed by a request. The new task uses that profile (Intake item 3).
-- Invalid: a name that does not exist (`--foo`), a different case (`--Dev`), two flags, or a flag before `continue`, `status` or a phase name. Show the valid flags and popup: `Let the Router pick (Recommended)` / `Abort`. `Let the Router pick` drops the flag and treats the rest as if it had been called without one (`continue` runs `continue`; an empty rest shows the no-argument popup).
-- A valid flag with no request: popup with the question "Type the request in the Other field": `Type the request in Other (Recommended)` / `Abort`. Read the request from the Other field (as in the `Other path` of Intake item 2), then start the new task with that profile.
+- Valid: exactly one of `--general`, `--research`, `--dev` (lowercase), `--auto` alone, or `--auto` with one profile flag in either order, followed by a request. The new task uses that profile (Intake item 3); `--auto` turns delegated approval on (Intake item 10).
+- Invalid: a name that does not exist (`--foo`), a different case (`--Dev`, `--Auto`), two profile flags, `--auto` twice, or a flag before `continue`, `status` or a phase name. Show the valid flags and popup: `Let the Router pick (Recommended)` / `Abort`. `Let the Router pick` drops every flag, `--auto` included, and treats the rest as if it had been called without one (`continue` runs `continue`; an empty rest shows the no-argument popup). Delegation can still be turned on later by a message.
+- Valid flags with no request: popup with the question "Type the request in the Other field": `Type the request in Other (Recommended)` / `Abort`. Read the request from the Other field (as in the `Other path` of Intake item 2), then start the new task with those flags.
 - In these three popups, `Abort` stops the call and creates nothing.
+- `Request:` keeps the leading flags as written. The label rule looks for a profile flag among the leading flags.
 - Record these popups only when a new task starts, in Intake item 10 together with the item 1–5 popups, as `ask gate=Q … rec=…` / `answer gate=Q …` lines. Always give `rec=`; do not put backticks or `$(` in values; do not start the `q=` value with `--` (for example `q="dev flag outside a git repository"`). After `Let the Router pick` leads to `continue` or `status`, write no `ask`/`answer` lines.
 
 ## Intake (step 1, Router)
@@ -99,7 +109,7 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
    - If run inside a git repository, it is that repository's root (`git rev-parse --show-toplevel`). Do not ask.
    - Otherwise, popup every time: `<data folder> (Recommended)` / `Current folder` / `Other path`. For `Other path`, show one more popup that asks for the path in the Other field.
    - The task folder is `<task location>/docs/agent/<task-id>/`.
-3. **Profile:** If the call has a valid profile flag (Arguments), use that profile; the Router does not pick. If the flag is `--dev` and the task location is not a git repository, show the reason and popup: `Proceed as general (Recommended)` / `Abort` (`Abort` stops the call and creates nothing). After `Proceed as general`, `Request:` in `intake.md` keeps `--dev` as its first word while `Profile:` is general, and the label is `(set by you)` because the person chose general; this is intended. Without a flag, the Router picks it from the request and does not ask. Show it in the Intake report and the first gate popup with `(set by you)` or `(Router)` (change it if the person picks a revision). To tell which, check whether the first word of `Request:` in `intake.md` is a valid profile flag: if so `(set by you)`, otherwise `(Router)`; this holds after compaction or `continue` too. The rules below are for the Router's pick:
+3. **Profile:** If the call has a valid profile flag (Arguments), use that profile; the Router does not pick. If the flag is `--dev` and the task location is not a git repository, show the reason and popup: `Proceed as general (Recommended)` / `Abort` (`Abort` stops the call and creates nothing). After `Proceed as general`, `Request:` in `intake.md` keeps `--dev` as its first word while `Profile:` is general, and the label is `(set by you)` because the person chose general; this is intended. Without a flag, the Router picks it from the request and does not ask. Show it in the Intake report and the first gate popup with `(set by you)` or `(Router)` (change it if the person picks a revision, see "Profile change at the first gate"). To tell which, `(set by you)` if a profile flag is among the leading flags of `Request:` in `intake.md` or the run-log has a `profile` line, otherwise `(Router)`; this holds after compaction or `continue` too. The rules below are for the Router's pick:
    - `dev`: requests that change code in a git repository (feature, bug fix, refactoring). The deliverable is a commit. If the task location is not a git repository, do not pick `dev`; pick `general` and write the reason in the Intake report.
    - `research`: requests to research a topic into a note or report with sources (mainly web research).
    - `general`: any other multi-step task.
@@ -116,12 +126,12 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
    Location: <task location>
    Profile: <general | research | dev>
    Task: <task-id>
-   Request: <the request as written, one line; keep a valid profile flag as its first word, drop an invalid flag the person let the Router replace>
+   Request: <the request as written, one line; keep the leading valid flags as written, drop invalid flags the person let the Router replace>
    ```
 
    For a follow-up task, add `Follows: <previous task ID>`.
-10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID> --data-dir "<data folder>"`. Record the profile-flag popups (Arguments) and the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist).
-11. **Report:** Show the task ID, task location, profile (with `(set by you)` or `(Router)`) and monitor line in 4 lines or fewer, then go to step 2 in `define.md`.
+10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID> --data-dir "<data folder>"`. Record the profile-flag popups (Arguments) and the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist). With `--auto`, then write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=flag --data-dir "<data folder>"`. Delegation covers popups after that line; the item 1–5 popups and the flag popups go to the person.
+11. **Report:** Show the task ID, task location, profile (with `(set by you)` or `(Router)`) and monitor line, plus the line `Delegated approval: on (--auto)` only when it is on, in 5 lines or fewer, then go to step 2 in `define.md`.
 
 ## status
 
@@ -147,7 +157,7 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
 When `Abort` was picked in a popup, or Intake decided to abort the previous task.
 
 1. Start no new delegation. Wait until background subagents finish; stop a workflow with TaskStop.
-2. Change `intake.md` to `Status: aborted <YYYY-MM-DD HH:MM> <reason>` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" abort why="<reason>" --data-dir "<data folder>"`.
+2. If delegated approval is on, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=end --data-dir "<data folder>"`. Change `intake.md` to `Status: aborted <YYYY-MM-DD HH:MM> <reason>` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" abort why="<reason>" --data-dir "<data folder>"`.
    Then run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/usage-snapshot.py" --data-dir "<data folder>"` (saves the main session's tokens per step to `main-usage.json`; on exit 3, state the printed cause in one line and go on).
 3. Delete `.active`, and if `<data folder>/active-index.json` has a line for this task location, delete only that line.
 4. Leave the task folder as is. Report the leftover worktrees and the list of uncommitted changes this task left in the main tree.
@@ -168,6 +178,11 @@ The run-log is `run-log.md` in the task folder, and only `run-log.py` writes its
 | Start of an in-flight revision (Revise this task) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<new rev> why="<what changed>" archive=<archive folder> to=<phase to go back to, 1 or 2> invalidated=<judgment files to delete, comma-separated> keep="<what was kept>" state=pending --data-dir "<data folder>"` |
 | In-flight revision cleanup done | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<new rev> state=done --data-dir "<data folder>"` |
 | Rewrite before approval (architect rewrites before G1b) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<current rev> before=G1b why="<what changed>" archive=<archive folder> --data-dir "<data folder>"` |
+| Plan edit by L1 before approval (small change: Plan Review finding or G1b `Request changes`) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="<finding or request>" files=plan.md before=G1b archive=<archive folder> --data-dir "<data folder>"` |
+| Delegated approval starts (message) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=message --data-dir "<data folder>"` (by `--auto`: `how=flag`, Intake item 10) |
+| Delegated approval ends | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=<person or end> --data-dir "<data folder>"` (`person`: take-back message; `end`: G3 acceptance or Abort) |
+| Popup answered by L1 (delegated approval) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<same value> choice="<recommended choice>" by=L1 --data-dir "<data folder>"` (an `answer` line without `by=` is the person's) |
+| Profile change at the first gate | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" profile from=<old> to=<new> back=<1, 2 or -> archive=<archive folder or -> --data-dir "<data folder>"` |
 | Adjust within approved scope | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="Scope change: <content>" files=plan.md --data-dir "<data folder>"` |
 | A background result becomes stale in a revision | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" stale id=<agent_id> rev=<new rev> --data-dir "<data folder>"` |
 | Execute start (dev profile) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" base commit=<git rev-parse HEAD> dirty="<git status --porcelain summary>" --data-dir "<data folder>"` |
@@ -198,6 +213,12 @@ Read the lines the command prints:
 | Verify FAIL 3 times in a row | E: `Keep fixing` / `Change scope·criteria` / `Abort` |
 | A workflow ends as completed | Do not treat it as success until you check its "could not handle" list |
 
+## Delegated approval details
+
+- **Message while a popup is pending:** a message that asks for delegation ("go ahead without asking me"), typed in the Other field or sent apart, is recorded as the answer first (`other=1`), then the confirm popup `Turn on (Recommended)` / `Keep asking me` is shown to the person (`delegate state=on how=message`), and the pending decision is asked again (answered by L1 if on). A take-back message writes `delegate state=off how=person`, and the next popup goes to the person. Delegation stays on after an E answer and after `continue`.
+- **Loop cap:** a round is one judgment that sends work back for a fix: Plan Review `REVISE`, Verify FAIL → Execute, Review BLOCKER → fix, NIT fix rounds. Count rounds of the same loop since the latest `delegate state=on` line or E answer. Before a 6th round of the same loop, go to E (`ask gate=E q="Delegated approval: 5 <loop> rounds reached" rec="Give direction"`, to the person). After an E answer the count restarts.
+- The lower caps still apply: the third `REVISE` goes to the G1b popup for the person (the popup is unchanged), and 3 Verify FAILs in a row go to E.
+
 ## Check before anything leaves
 
 Right before a deliverable leaves the task folder, scan it for secret patterns: publishing a prototype artifact, copying the deliverable after G3, copying `gate-report.md` in the retrospective, committing (dev profile, or a project that chose to commit `docs/agent/`).
@@ -210,7 +231,15 @@ Right before a deliverable leaves the task folder, scan it for secret patterns: 
 
 The record of revisions is the run-log's `revision` lines. `## Revisions` at the very end of `plan.md` (after `## Approval`) is a secondary record for people to read; when architect rewrites `plan.md`, it carries the section over as is (scope-guard blocks writes that delete or change those lines). Below, "current rev" is the last `rev=` in the run-log `revision` lines (0 if none). "Archive" means copying the whole task folder (except `archive/`) to `archive/<name>/` with `cp -pR` and comparing all of it with `cmp`. If the comparison differs, stop and report. Use absolute paths without `cd` for `mkdir`·`cp` (before approval, the G1b hook blocks a relative path after `cd`, as it may point outside the task folder). Get the time in the name by running `date +%y%m%d-%H%M%S` first.
 
-- **Rewrite before approval** (every case where architect rewrites `plan.md` before G1b approval: G1b `Request changes`, Plan Review `REVISE`, applying Plan Review findings, prototype popup `Plan change`): Do not ask the kind. Before handing it back to architect, archive to `archive/<time>-rev<current rev>-draft/` and write a `revision rev=<current rev> before=G1b why=… archive=…` line. The rev does not go up, and nothing is written to `## Revisions`. If the request changes the confirmed scope (`scope.md`), it is `Revise this task` below.
+- **Rewrite before approval** (every case where architect rewrites `plan.md` before G1b approval: G1b `Request changes`, Plan Review `REVISE`, applying Plan Review findings, prototype popup `Plan change`): Do not ask the kind. Before handing it back to architect, archive to `archive/<time>-rev<current rev>-draft/` and write a `revision rev=<current rev> before=G1b why=… archive=…` line; if L1 edits it itself instead, the same archive but a `fix` line (see the variant below). The rev does not go up, and nothing is written to `## Revisions`. If the request changes the confirmed scope (`scope.md`), it is `Revise this task` below.
+  - **L1 edit variant:** a small change (level-table size: 2 task files or fewer, about 10 lines) can be made by L1 with Edit instead. Same archive, but write a `fix … files=plan.md before=G1b archive=…` line instead of `revision`. Plan Review again only after a BLOCKER fix, never after `READY FOR APPROVAL`. A NIT that turns out larger goes to architect.
+- **Profile change at the first gate** (G1a, or G1b in the general profile and the dev small task): allowed until that gate's approval line. Procedure:
+  1. To dev outside a git repository: refuse ("The dev profile needs a git repository; this task location is not one.") and popup `Keep <current profile> (Recommended)` / `Abort`; nothing changes.
+  2. Archive to `archive/<time>-rev<current rev>-profile/` (the rev does not go up).
+  3. Update `Profile:` in `intake.md`; `Request:` is left as written. The label is then `(set by you)` because of the `profile` run-log line.
+  4. Convert. To general: archive and remove `scope.md`; its purpose, numbered criteria (same numbers), non-goals and deliverable location go to architect as the scope summary at the top of `plan.md`; back to ② Plan (`back=2`). From general: write `scope.md` from `## Scope summary` and `## Completion criteria`, ask only the dev or research Scope items still missing, archive and remove `plan.md`, run explorer again only if `explore.md` lacks check commands; back to ① Define (`back=1`), then G1a. Before `scope.md` exists nothing is rolled back (`back=-`, `archive=-`) and the interview goes on with the new profile's items.
+  5. Write the `profile` line (Recorder rules), change `phase:` in `.active`, and tell the person in one line.
+  - After G1b approval a profile change is a new task (`Follows:`); offer `Split into a new task (Recommended)` in the kind popup below.
 
 When a message that looks like a revision arrives after G1b approval, first ask its kind in a popup: `Revise this task` / `Adjust within approved scope` / `Split into a new task` / `Cancel` (put the one that fits first, with `(Recommended)`).
 

@@ -40,6 +40,8 @@ claude plugin install my-agent@my-plugins
 | L3 | `explorer` · `researcher` · `writer` · `coder`: 맡은 작업 하나 |
 | L4 | 도구·MCP · hook · 권한 규칙 · 스크립트: 실행, 기록과 차단 |
 
+레벨별 구성 요소, 각 구성의 역할과 권한, 단계와 게이트, 작업 파일마다의 형식까지 전체 구조는 한 페이지 `docs/index.html`(GitHub Pages용)에 있습니다. `python3 tools/build-docs.py`가 플러그인 파일에서 만들며, 플러그인 파일을 고친 뒤 다시 실행합니다.
+
 | 명령 | 하는 일 |
 |---|---|
 | `/my-agent <요청>` | 새 작업을 시작합니다. |
@@ -68,5 +70,8 @@ claude plugin uninstall my-agent@my-plugins
 - `CLAUDE.md`: 개발용 안내(폴더 역할, 테스트 명령, 버전 규칙)
 - `.claude-plugin/marketplace.json`: 플러그인 목록
 - `plugins/<이름>/`: 플러그인. 설치하면 이 폴더만 복사됩니다.
+- `tools/build-docs.py`, `tools/docs-template.html`: my-agent 아키텍처 페이지를 만듭니다
+- `docs/index.html`: 아키텍처 페이지(생성물, GitHub Pages 소스 `main` · `/docs`)
+- `tests/`: `tools/` 테스트
 - `docs/handoff/`: 다른 환경에서 이어 할 작업의 handoff 문서
 - `docs/agent/`: 이 저장소에서 돌린 my-agent 작업 기록. git에서 제외됩니다.

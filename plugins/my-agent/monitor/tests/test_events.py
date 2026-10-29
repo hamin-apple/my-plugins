@@ -122,6 +122,29 @@ class EventsTest(unittest.TestCase):
         self.assertEqual((e.revs[1]['state'], e.revs[1]['back']), ('done', 3))
         self.assertEqual([x['r'] for x in e.log if x['tx'].startswith('plan rewrite')], [0])
 
+    def test_two_questions_one_popup(self):
+        e = synth('2026-10-30 10:00:00 step: n=1 name=Intake rev=0',
+                  '2026-10-30 10:00:01 ask: gate=Q q=A qn=1',
+                  '2026-10-30 10:00:01 ask: gate=Q q=B qn=2',
+                  '2026-10-30 10:00:09 answer: gate=Q choice=two qn=2')
+        self.assertEqual(e.gates['Q'], 'wait')
+        e = synth('2026-10-30 10:00:00 step: n=1 name=Intake rev=0',
+                  '2026-10-30 10:00:01 ask: gate=Q q=A qn=1',
+                  '2026-10-30 10:00:01 ask: gate=Q q=B qn=2',
+                  '2026-10-30 10:00:09 answer: gate=Q choice=two qn=2',
+                  '2026-10-30 10:00:10 answer: gate=Q choice=one qn=1')
+        self.assertNotIn('Q', e.gates)
+        self.assertIsNone(e.waiting)
+        subs = {x['tx']: x['sub'] for x in e.log if x['k'] == 'popup'}
+        self.assertEqual(subs, {'Q A': 'one', 'Q B': 'two'})
+
+    def test_old_asks_without_qn(self):
+        e = synth('2026-10-30 10:00:01 ask: gate=Q q=A', '2026-10-30 10:00:02 ask: gate=Q q=B',
+                  '2026-10-30 10:00:09 answer: gate=Q choice=two')
+        subs = {x['tx']: x['sub'] for x in e.log if x['k'] == 'popup'}
+        self.assertEqual(subs, {'Q A': None, 'Q B': 'two'})
+        self.assertEqual(e.waiting, None)
+
     def test_delegated_approval_items(self):
         e = synth('2026-10-29 04:00:01 step: n=1 name=Intake rev=0',
                   '2026-10-29 04:00:02 delegate: state=on how=flag',

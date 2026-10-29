@@ -9,6 +9,11 @@ On step lines (and any line given --model), model= is the model of the session
 transcript's last main-chain reply (F13: the skill's `model:` holds for one
 turn), else --model; it is checked against the configured main model (opus, P9)
 and a main-session MISMATCH is printed once per task and model.
+`ask` and `answer` lines get session= the same way. `cost` takes no value from the command line (usd= or
+session= is refused): it reads `cost_usd` from the statusline file `<session>.json` in $MA_STATUSLINE_DIR (default
+~/.cache/claude-sessions/statusline), session from .active first, else $CLAUDE_CODE_SESSION_ID. A missing or
+unreadable file prints `run-log: no cost line (<reason>)` and writes nothing (exit 0); a value below the previous
+`cost:` line of that session gets reset=1.
 Prints the line, then one MISMATCH line per subagent stop: line with
 mismatch=1 written since the previous L1 line, and PARTIAL lines (with unit=)
 for workers the sweep closed. Unreadable record lines are named on stderr.
@@ -16,6 +21,8 @@ for workers the sweep closed. Unreadable record lines are named on stderr.
 outside git. Exit 0 written, 1 no active task, 2 bad arguments.
 """
 import argparse
+import json
+import math
 import os
 import re
 import sys
@@ -31,6 +38,24 @@ import ma_subagent  # noqa: E402
 KINDS = ('step', 'ask', 'answer', 'revision', 'cost', 'stale', 'base', 'abort', 'deliver', 'resume',
          'rules-changed', 'merge', 'fix', 'delegate', 'profile')
 MAIN_MODEL = 'opus'
+
+
+def statusline_cost(session):
+    """(cost_usd, None) from the session's statusline file, else (None, reason)."""
+    if not session or re.search(r'[/\\\0]', session) or session in ('.', '..'):
+        return None, 'no session id'
+    base = os.environ.get('MA_STATUSLINE_DIR') or os.path.expanduser('~/.cache/claude-sessions/statusline')
+    path = Path(base) / f'{session}.json'
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except FileNotFoundError:
+        return None, f'{path} is missing'
+    except (OSError, ValueError) as exc:
+        return None, f'{path} is unreadable: {type(exc).__name__}'
+    value = data.get('cost_usd') if isinstance(data, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return None, f'{path} has no cost_usd number'
+    return value, None
 
 
 def subagent_mismatches(lines) -> list:
@@ -68,6 +93,9 @@ def main(argv=None) -> int:
         print('run-log: step needs n= and name=', file=sys.stderr)
         return 2
     fields_d = dict(fields)
+    if args.kind == 'cost' and keys & {'usd', 'session'}:
+        print('run-log: cost takes no usd= or session=; it reads the statusline file', file=sys.stderr)
+        return 2
     if args.kind == 'delegate' and fields_d.get('state') not in ma_schema.DELEGATE_STATES:
         print('run-log: delegate needs state=on|off', file=sys.stderr)
         return 2
@@ -90,6 +118,22 @@ def main(argv=None) -> int:
             fields.append(('rev', revs[-1] if revs else '0'))
         if 'session' not in keys:
             fields.append(('session', os.environ.get('CLAUDE_CODE_SESSION_ID') or active.session or None))
+    if args.kind in ('ask', 'answer') and 'session' not in keys:
+        sid = os.environ.get('CLAUDE_CODE_SESSION_ID') or active.session
+        if sid:
+            fields.append(('session', sid))
+    if args.kind == 'cost':
+        sid = active.session or os.environ.get('CLAUDE_CODE_SESSION_ID')
+        usd, why = statusline_cost(sid)
+        if why:
+            print(f'run-log: no cost line ({why})')
+            return 0
+        prev = [f.get('usd') for k, f in lines if k == 'cost' and f.get('session') == sid]
+        try:
+            lower = bool(prev) and usd < float(prev[-1])
+        except (TypeError, ValueError):
+            lower = False
+        fields += [('session', sid), ('usd', usd)] + ([('reset', '1')] if lower else [])
     session = dict(fields).get('session') or os.environ.get('CLAUDE_CODE_SESSION_ID') or active.session
     try:
         model = (ma_subagent.main_model(session) if args.kind == 'step' or args.model else None) or args.model

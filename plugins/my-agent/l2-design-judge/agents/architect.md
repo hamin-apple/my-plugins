@@ -29,9 +29,9 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
 
 ## `plan.md` sections (in this order, all required)
 
-1. `## Scope summary` (general profile only): purpose, non-goals, deliverable location.
+1. `## Scope summary` (general profile only): purpose, non-goals, deliverable location (an absolute path (no `~`, no relative path)).
 2. `## Completion criteria` (general profile only): a numbered list `1.`, `2.`. Other profiles use the numbers in `scope.md` as is.
-3. `## Work units`: for each unit, a `### u<n> <name>` heading (`u1`, `u2` …, unique within the plan), and under it `- ` lines with the agent that takes it (`my-agent:researcher`·`writer`·`coder`), files to read, files to change or the result path (`docs/agent/<task-id>/work/…`), the parallel group (`group 1`, `group 2` …), the matching completion criterion number, and `- Status: pending` (when rewriting, a unit whose result `## Existing work` keeps as is gets `- Status: done`). L1 calls workers by this ID and the run-log records it as `unit=`.
+3. `## Work units`: for each unit, a `### u<n> <name>` heading (`u1`, `u2` …, unique within the plan), and under it `- ` lines with the agent that takes it (`my-agent:researcher`·`writer`·`coder`), files to read, and for a coder the files to change, or for a writer or researcher the result path (`docs/agent/<task-id>/work/…`), the parallel group (`group 1`, `group 2` …), the matching completion criterion number, and `- Status: pending` (when rewriting, a unit whose result `## Existing work` keeps as is gets `- Status: done`). L1 calls workers by this ID and the run-log records it as `unit=`.
    - When rewriting, units you keep or revise keep their old ID; new units get the next unused number. Never reuse the ID of a discarded unit.
    - In the general and research profiles, writer and researcher result paths are always under `docs/agent/<task-id>/work/`. L1 copies them to the deliverable location (final location) in the scope summary after G3. Do not list the final location as a file to change. scope-guard blocks that write.
    - Units in the same parallel group must not change the same files. If they overlap, split them into different groups.
@@ -63,7 +63,8 @@ If `## Revisions` exists, leave it at the very end as is (rule above).
 ### Dev (dev)
 
 - A work unit is one piece of code. For each unit, write the files to change, the tests to add, the matching completion criterion number, and the check commands (tests, lint, from `explore.md`).
-- Use a worktree only for the first parallel group (L1 passes `isolation: "worktree"` when it calls). Later groups run in order on the main tree. If `explore.md` says there are uncommitted changes, use no parallel groups and put everything in order.
+- Use a worktree only for the first parallel group (L1 passes `isolation: "worktree"` when it calls). Later groups run in order on the main tree. If `explore.md` says there are uncommitted changes, use no parallel groups and put everything in order. Here and in the Execute popup, count only real uncommitted work, not `- Derived:` files; derived files alone do not force one sequence.
+- When a work unit adds or renames an agent, skill or hook of a loaded plugin, add a `- Plugin reload: needed (<what>)` line to that unit. L1 reports it at G1b.
 - A small task (if `plan.md` has the 5-line summary L1 put at the top) is one work unit.
 - The mock-up is an example of the behavior after the change (command output, screen layout, API response). Both the normal case and the exception cases.
 

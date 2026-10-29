@@ -116,12 +116,31 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.verdicts(verify='Verdict: FAIL\n', review='BLOCKER 3\n')
         work, out = f'docs/agent/{TASK}/work/final.md', f'docs/agent/{TASK}/deliverable/final.md'
         self.assertDenied(self.bash(f'cp {work} {out}'))
-        self.assertDenied(self.bash(f'cat {work} > notes/final.md'))
         self.assertDenied(self.tool('Write', {'file_path': str(self.L / out), 'content': 'f'}))
         self.assertDenied(self.bash(f'cp DOCS/agent/{TASK}/work/final.md ~/notes/'))
         self.verdicts()
         self.assertPassed(self.tool('Write', {'file_path': str(self.L / out), 'content': 'f'}))
         self.assertPassed(self.tool('Write', {'file_path': str(self.L / 'src/a.py'), 'content': 'x'}))
+
+    def test_read_only_forms_are_not_a_deliver(self):
+        self.file(self.T / 'work' / 'x.md', 'x', 0)
+        T = f'docs/agent/{TASK}'
+        self.assertPassed(self.bash(f'cat {T}/work/x.md > {self.root}/out/y.md'))
+        self.assertPassed(self.bash(f'cat {T}/work/x.md | tee {self.root}/out/y.md'))
+
+    def test_copy_forms_are_a_deliver(self):
+        self.file(self.T / 'work' / 'f', 'f', 0)
+        T = f'docs/agent/{TASK}'
+        self.assertDenied(self.bash(f'cp {T}/work/f ~/out'))
+        self.assertDenied(self.bash(f'cd {T} && cp work/f ~/out'))
+        self.assertDenied(self.bash(f'mv {T}/work/f {self.root}/out'))
+        self.verdicts()
+        self.assertPassed(self.bash(f'cd {T} && cp work/f ~/out'))
+
+    def test_write_into_deliverable_is_a_deliver(self):
+        self.assertDenied(self.bash(f'echo x > docs/agent/{TASK}/deliverable/a.md'))
+        self.verdicts()
+        self.assertPassed(self.bash(f'echo x > docs/agent/{TASK}/deliverable/a.md'))
 
     def test_second_deliver_copy_not_blocked_by_first(self):
         self.file(self.T / 'work' / 'a.md', 'a', 0)
@@ -138,7 +157,9 @@ class VerdictFreshCheckTest(unittest.TestCase):
     def test_unparsed_git_says_why(self):
         # live run: L1 logged HEAD with "$(git rev-parse HEAD)" during Execute and got the verify.md message
         self.file(self.L / 'src/a.py', 'x', 0)
-        r = self.bash('echo "HEAD=$(git rev-parse HEAD)" && git status --porcelain')
+        # no `git ... commit` shape in it: not a possible commit any more (2026-10-30, criterion 3)
+        self.assertPassed(self.bash('echo "HEAD=$(git rev-parse HEAD)" && git status --porcelain'))
+        r = self.bash('echo "HEAD=$(git rev-parse HEAD)" && git commit -m "$(cat <<\'EOF\'\nfeat: x\nEOF\n)"')
         self.assertDenied(r)
         why = json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason']
         self.assertIn('cannot tell whether this is a git commit', why)

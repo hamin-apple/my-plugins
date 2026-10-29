@@ -1,4 +1,5 @@
 """lib/ma_bash: which paths a Bash command writes, reads, or copies from (architecture 4.4 "what is blocked")."""
+import os
 import unittest
 from pathlib import Path
 
@@ -81,7 +82,8 @@ class FinalReviewGapsTest(unittest.TestCase):
         self.assertEqual(ma_bash.write_targets('cat <<< x\nrm -rf src', CWD), [P('/p/src')])
 
     def test_cd_is_followed(self):
-        self.assertEqual(sorted(ma_bash.write_targets('cd src && touch docs/agent/x', CWD)),
+        self.assertEqual(ma_bash.write_targets('cd src && touch docs/agent/x', CWD), [P('/p/src/docs/agent/x')])
+        self.assertEqual(sorted(ma_bash.write_targets('cd src; touch docs/agent/x', CWD)),
                          sorted([P('/p/docs/agent/x'), P('/p/src/docs/agent/x')]))
         self.assertIn(P('/p/docs/agent/t/review.md'),
                       ma_bash.write_targets('cd docs && echo "BLOCKER 0" > agent/t/review.md', CWD))
@@ -110,6 +112,133 @@ class FinalReviewGapsTest(unittest.TestCase):
                 self.assertFalse(ma_bash.git_mutates(cmd))
 
 
+class SingleQuoteTest(unittest.TestCase):
+    """Criterion 1: single-quoted `$(` and backticks are literal; unquoted and double-quoted ones stay unknown."""
+
+    def test_single_quoted_substitution_is_text(self):
+        for cmd in ["grep -rn 'foo$(bar' src/", "grep -n 'a`b' src/a.py", "grep -rn '\\$(x)' src/"]:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.write_targets(cmd, CWD), [])
+                self.assertIn(P('/p/src'), ma_bash.read_paths(cmd, CWD) + [P('/p/src')])
+        self.assertEqual(ma_bash.read_paths("grep -rn 'x$(y)' src/", CWD), [P('/p/src')])
+        self.assertEqual(ma_bash.write_targets("grep 'x`y`' a > out.txt", CWD), [P('/p/out.txt')])
+
+    def test_other_substitution_is_unknown(self):
+        for cmd in ['echo "$(date)"', 'echo $(date)', 'echo `date`', 'echo "`date`"', "echo 'a' $(date)",
+                    'echo "it\'s" $(date)', 'echo x | grep "$(cat f)"']:
+            with self.subTest(cmd=cmd):
+                self.assertIsNone(ma_bash.write_targets(cmd, CWD))
+                self.assertIsNone(ma_bash.read_paths(cmd, CWD))
+
+    def test_nested_shell_strings_stay_unknown(self):
+        self.assertIsNone(ma_bash.write_targets("bash -c 'echo $(date)'", CWD))
+        self.assertIsNone(ma_bash.write_targets("eval 'rm `x`'", CWD))
+        self.assertEqual(ma_bash.write_targets("bash -c 'grep \"a\" f'", CWD), [])
+
+
+class HeredocTest(unittest.TestCase):
+    """Criterion 2: any delimiter word closes at its matching line; the body is not read as commands."""
+
+    def test_delimiter_words(self):
+        for delim in ['EOF.txt', 'END-EXPLORE', "'EOF-1'", '"EOF.txt"', 'EOF', 'E1']:
+            word = delim.strip('\'"')
+            cmd = f'cat > f.txt <<{delim}\nrm -rf /\ngit commit -m x\n{word}\nls'
+            with self.subTest(delim=delim):
+                self.assertEqual(ma_bash.write_targets(cmd, CWD), [P('/p/f.txt')])
+                self.assertEqual(ma_bash.git_subcommands(cmd), [])
+        self.assertEqual(ma_bash.write_targets('cat <<-EOF.txt\n\trm x\n\tEOF.txt', CWD), [])
+
+    def test_unclosed_still_fails_closed(self):
+        for cmd in ["cat <<'EOF-1'\nbody", 'cat <<EOF.txt\nbody\nEOF']:
+            with self.subTest(cmd=cmd):
+                self.assertIsNone(ma_bash.write_targets(cmd, CWD))
+        self.assertEqual(ma_bash.git_subcommands("cat <<'EOF-1'\nbody"), [])
+
+    def test_body_after_quoted_delimiter_not_commands(self):
+        self.assertEqual(ma_bash.git_subcommands("cat <<'EOF-1'\ngit commit -m x\nEOF-1"), [])
+        self.assertEqual(ma_bash.git_subcommands("cat <<'EOF-1' && git add a\nx\nEOF-1"), ['add'])
+
+
+class HeredocExpansionTest(unittest.TestCase):
+    """An unquoted heredoc expands its body in the current shell; a quoted one is literal."""
+
+    def test_substitution_in_unquoted_body_is_unknown(self):
+        for cmd in ['cat <<EOF\n$(rm x)\nEOF', 'cat <<EOF\n`rm x`\nEOF', 'cat <<-EOF\n\t$(rm x)\n\tEOF',
+                    'cat <<EOF\nok\nEOF\ncat <<EOF2\n$(rm x)\nEOF2']:
+            with self.subTest(cmd=cmd):
+                self.assertIsNone(ma_bash.write_targets(cmd, CWD))
+                self.assertIsNone(ma_bash.read_paths(cmd, CWD))
+
+    def test_quoted_delimiters_keep_the_body_literal(self):
+        for delim in ["'EOF'", '"EOF"', '\\EOF']:
+            cmd = f'cat <<{delim}\n$(rm x) `rm x` ${{D:=/etc}}\nEOF'
+            with self.subTest(delim=delim):
+                self.assertEqual(ma_bash.write_targets(cmd, CWD), [])
+
+    def test_commit_with_heredoc_still_unparsed(self):
+        for cmd in ['git commit -m "$(cat <<\'EOF\'\nfeat\nEOF\n)"', 'git commit -m "$(cat <<EOF\nfeat $x\nEOF\n)"',
+                    'git commit -m "$(cat <<EOF\nfeat\nEOF\n)"']:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.git_subcommands(cmd), ['?'])
+
+
+class CdTest(unittest.TestCase):
+    """Criterion 4: `cd x &&` resolves against x only; anything else keeps the old folder as well."""
+
+    def test_and_chain(self):
+        self.assertEqual(ma_bash.write_targets('cd x && touch f', CWD), [P('/p/x/f')])
+        self.assertEqual(ma_bash.write_targets('cd x && cd y && touch f', CWD), [P('/p/x/y/f')])
+        self.assertEqual(ma_bash.write_targets('cd x && ( touch f )', CWD), [P('/p/x/f')])
+        self.assertEqual(ma_bash.write_targets('cd x && bash -c "touch f"', CWD), [P('/p/x/f')])
+
+    def test_not_replaced(self):
+        both = sorted([P('/p/f'), P('/p/x/f')])
+        for cmd in ['cd x; touch f', 'cd x || touch f', 'cd x\ntouch f', '( cd x && touch f ); touch f',
+                    'cd x & touch f', 'cd x | touch f', 'false || cd x && touch f', 'if true; then cd x && true; fi; touch f']:
+            with self.subTest(cmd=cmd):
+                self.assertTrue(set(both) <= set(ma_bash.write_targets(cmd, CWD)))
+        self.assertEqual(sorted(ma_bash.write_targets('cd x; touch f', CWD)), both)
+        self.assertEqual(sorted(ma_bash.write_targets('cd x || touch f', CWD)), both)
+
+    def test_after_the_and_chain_both_folders(self):
+        both = sorted([P('/p/f'), P('/p/x/f')])
+        for cmd in ['cd x && true; touch f', 'cd x && true || touch f', 'cd x && true\ntouch f',
+                    'cd x && true & touch f']:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(sorted(ma_bash.write_targets(cmd, CWD)), both)
+
+    def test_unknown_stays_unknown(self):
+        self.assertIsNone(ma_bash.write_targets('cd "$D" && touch f', CWD))
+        self.assertIsNone(ma_bash.write_targets('cd - && touch f', CWD))
+
+    def test_read_paths_follow_the_same_rule(self):
+        self.assertEqual(ma_bash.read_paths('cd x && cat a/b', CWD), [P('/p/x/a/b')])
+        self.assertEqual(sorted(ma_bash.read_paths('cd x; cat a/b', CWD)), sorted([P('/p/a/b'), P('/p/x/a/b')]))
+
+
+class VariableTest(unittest.TestCase):
+    """A path with a variable is unknown, even after `NAME=literal` (no variable is followed)."""
+
+    def test_assigned_variable_paths_are_unknown(self):
+        for cmd in ['D=/x/y; cat $D/f', 'D=/x/y\ncat ${D}/f', 'D=/tmp/x/d; cat $D/f', 'D=~/x; cat $D/f',
+                    'D=..; cat $D/f', 'D=/x; cat "${D}/f"', "D='/tmp/x/d'; cat $D/f"]:
+            with self.subTest(cmd=cmd):
+                self.assertIsNone(ma_bash.read_paths(cmd, CWD))
+        for cmd in ['D=/tmp/x/d; echo hi > $D/f', "D='/tmp/x/d'; echo hi > $D/f", 'D=/x/y && echo hi > $D/f',
+                    'D=/x/y; echo hi > "$D/f"', 'D=/x; E=/y; rm $D/a $E/b', 'D=/x; ls; cd $D && touch f',
+                    'D=/a && echo hi > ${D}/f']:
+            with self.subTest(cmd=cmd):
+                self.assertIsNone(ma_bash.write_targets(cmd, CWD))
+
+    def test_single_quoted_dollar_stays_unknown(self):
+        self.assertIsNone(ma_bash.read_paths("D=/x/y; cat '$D/f'", CWD))
+
+    def test_hash_inside_a_word_is_not_a_comment(self):
+        self.assertEqual(ma_bash.write_targets('echo ${#D}; rm /etc/x', CWD), [P('/etc/x')])
+        self.assertEqual(ma_bash.write_targets('echo a#b; rm /etc/x', CWD), [P('/etc/x')])
+        self.assertEqual(ma_bash.write_targets('echo a # b; rm /etc/x', CWD), [])
+
+
 class ReadPathsTest(unittest.TestCase):
     def test_read_paths(self):
         self.assertIn(Path.home() / '.ssh/id_rsa', ma_bash.read_paths('cat ~/.ssh/id_rsa', CWD))
@@ -132,12 +261,38 @@ class CopySourcesTest(unittest.TestCase):
         self.assertEqual(ma_bash.copy_sources('mv a b c/', CWD), [P('/p/a'), P('/p/b')])
         self.assertEqual(ma_bash.copy_sources('ls a', CWD), [])
 
+    def test_copy_sources_follow_cd(self):
+        self.assertEqual(ma_bash.copy_sources('cd T && cp work/f ~/out', CWD), [P('/p/T/work/f')])
+        self.assertEqual(sorted(ma_bash.copy_sources('cd T; cp work/f ~/out', CWD)),
+                         sorted([P('/p/work/f'), P('/p/T/work/f')]))
+        self.assertEqual(ma_bash.copy_sources('cd "$D" && cp work/f ~/out', CWD), [P('/p/work/f')])
+        self.assertEqual(ma_bash.copy_sources('D=/t; cp $D/f ~/out', CWD), [])     # a variable path is unknown
+
 
 class GitSubcommandsTest(unittest.TestCase):
     def test_git_subcommands(self):
         self.assertEqual(ma_bash.git_subcommands('git add a && git -C x commit -m "m"; ls'), ['add', 'commit'])
         self.assertEqual(ma_bash.git_subcommands('echo "git commit"'), [])
         self.assertEqual(ma_bash.git_subcommands('git "unterminated'), ['?'])
+
+    def test_split_words_still_have_the_shape(self):
+        for cmd in ['git "c"ommit -m "$(x)"', "git 'com'mit -m \"$(x)\"", 'git co\\\nmmit -m "$(x)"',
+                    '"g"it commit -m "$(x)"', 'g\\\nit commit -m "$(x)"', 'git comm\\it -m "$(x)"']:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.git_subcommands(cmd), ['?'])
+
+    def test_unparsed_text_is_a_commit_only_with_the_shape(self):
+        for cmd in ['echo git is a word "unclosed', 'echo "HEAD=$(git rev-parse HEAD)" && git status --porcelain',
+                    'echo "$(git log)" ; echo commit', 'git status; echo "$(x)" commit', 'echo `date`; git status',
+                    'echo "it is git" "$(x)" ; commit', 'ls "$(x)" | git log']:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.git_subcommands(cmd), [])
+        self.assertEqual(ma_bash.git_subcommands('git -c a="x;y" commit'), ['commit'])   # parses; commit counts
+        for cmd in ['git -C x commit -m "unclosed', 'git -C "$(a && b)" commit -m y', 'git "unclosed',
+                    'git commit -m "$(cat <<\'EOF\'\nfeat\nEOF\n)"', 'x=$(a); git -C x commit -m m',
+                    'git -C "$(a; b" commit', 'echo hi && git `x` commit', '(git commit -m "$(x)")']:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.git_subcommands(cmd), ['?'])
 
 
 class GitMutatesTest(unittest.TestCase):

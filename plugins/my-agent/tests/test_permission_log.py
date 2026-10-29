@@ -92,6 +92,25 @@ class PermissionLogTest(unittest.TestCase):
                           'tool_input': {'questions': [{'question': 'q?'}]}})
         self.assertEqual(log_lines(self.task), before)
 
+    def test_other_session_writes_nothing(self):
+        """Criterion 9: PermissionRequest input carries session_id (hooks reference); another session is not this task's."""
+        self.ask(session_id='s-other')
+        self.hook('answer', {'hook_event_name': 'PostToolUse', 'session_id': 's-other', 'tool_name': 'Bash',
+                             'tool_input': {'command': CMD}, 'tool_response': {}})
+        self.assertEqual(log_lines(self.task), [])
+
+    def test_same_session_records_session(self):
+        self.ask(session_id='s-test')
+        self.assertEqual(parse(log_lines(self.task)[-1])['session'], 's-test')
+        self.hook('answer', {'hook_event_name': 'PostToolUse', 'session_id': 's-test', 'tool_name': 'Bash',
+                             'tool_input': {'command': CMD}, 'tool_response': {}})
+        f = parse(log_lines(self.task)[-1])
+        self.assertEqual((f['result'], f['session']), ('allowed', 's-test'))
+
+    def test_missing_session_records_as_before(self):
+        self.ask()
+        self.assertNotIn('session', parse(log_lines(self.task)[-1]))
+
     def test_bad_stdin(self):
         r = run_hook('permission-log.py', 'ask', '{oops', self.root, env=self.env)
         self.assertEqual((r.returncode, r.stdout), (0, ''))

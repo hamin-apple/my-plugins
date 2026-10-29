@@ -54,7 +54,7 @@ def build_events(lines) -> Events:
     phases_seen = set()
     calls = {}        # agent -> [unpaired items]
     by_id = {}        # agent id -> item
-    asks = {}         # gate -> open popup item (G1a/G1b/G3/E)
+    asks = {}         # (gate, qn or None) -> open popup item (G1a/G1b/G3/E/Q); one per question of a popup
     g2_open = []      # open G2 popup items
     revs, back_wanted = [], None
     verdicts = []     # True per FAIL; None marks a revision, which starts the count again (D5)
@@ -130,7 +130,7 @@ def build_events(lines) -> Events:
                 g2_open.append(item(l, 'popup', 'perms', f"G2 {f.get('q', '')}".strip(), sub=None,
                                     id=f.get('id'), tool=f.get('tool'), agent=f.get('agent')))
             elif gate:
-                asks[gate] = item(l, 'popup', 'gatekeeper', f"{gate} {f.get('q', '')}".strip(), sub=None)
+                asks[(gate, f.get('qn'))] = item(l, 'popup', 'gatekeeper', f"{gate} {f.get('q', '')}".strip(), sub=None)
         elif l.kind == 'answer':
             gate = f.get('gate')
             if gate == 'G2':
@@ -139,11 +139,14 @@ def build_events(lines) -> Events:
                         g['sub'] = f.get('result') or f.get('choice')
                         break
                 e.answered['G2'] = f.get('result') or f.get('choice')
-            elif gate in asks:
+            elif any(g == gate for g, _ in asks):
+                key = (gate, f.get('qn'))     # no qn on the answer: the latest open ask of the gate
+                if key not in asks:
+                    key = [k for k in asks if k[0] == gate][-1]
                 sub = f.get('choice')
                 if f.get('by') == ma_schema.ANSWERED_BY_L1:
                     sub = f'{sub} · answered by L1'
-                asks.pop(gate)['sub'] = sub
+                asks.pop(key)['sub'] = sub
                 e.answered[gate] = f.get('choice')
         elif l.kind == 'revision':
             n = _int(f.get('rev'))
@@ -186,13 +189,13 @@ def build_events(lines) -> Events:
         elif l.kind == 'abort':
             item(l, 'phase', 'recorder', f"abort · {f.get('why', '')}".rstrip(' ·'))
 
-    for gate in asks:
+    for gate, _ in asks:
         e.gates[gate] = 'wait'
     if 'G2' in e.answered:
         e.gates['G2'] = 'ok'
     pending_g2 = [g for g in g2_open if g['sub'] is None]
     if asks:
-        gate, it = max(asks.items(), key=lambda x: x[1]['ts'])
+        (gate, _), it = max(reversed(list(asks.items())), key=lambda x: x[1]['ts'])
         e.waiting = {'gate': gate, 'q': it['tx'][len(gate) + 1:]}
     elif pending_g2:
         e.waiting = {'gate': 'G2', 'q': pending_g2[-1]['tx'][3:]}

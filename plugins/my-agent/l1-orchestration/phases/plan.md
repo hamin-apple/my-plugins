@@ -32,7 +32,7 @@
 
 ## G1b plan approval
 
-1. **Paste into the chat:** the full `## Mock-up` (no summary), the flow diagram if any, a summary of the work units, `## Estimate`, the task ID. In the general profile, also `## Scope summary` and `## Completion criteria`. Mark parts that change because of the judgment, and list the findings applied after Plan Review ("Applied after Plan Review: 2 NIT (plan.md:41, plan.md:77)").
+1. **Paste into the chat:** the full `## Mock-up` (no summary), the flow diagram if any, a summary of the work units, `## Estimate`, the task ID. In the general profile, also `## Scope summary` and `## Completion criteria`. Mark parts that change because of the judgment, and list the findings applied after Plan Review ("Applied after Plan Review: 2 NIT (plan.md:41, plan.md:77)"). If a work unit has a `- Plugin reload: needed (<what>)` line, tell the person that `/reload-plugins` (or a new session) is needed after that unit.
 2. If `## Prototype` is "needed", popup: `Make a prototype (Recommended)` / `Mock-up is enough` / `Plan change`.
    - `Plan change` is the same as item 5, Request changes.
    - To make one, add a `Prototype: requested` line inside the `plan.md` `## Prototype` section with Edit and hand `docs/agent/<task-id>/prototype/index.html` to `my-agent:writer` (per `artifact-design`).

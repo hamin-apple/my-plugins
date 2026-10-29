@@ -57,6 +57,15 @@ class SkillMdTest(unittest.TestCase):
         plan = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
         self.assertIn('without command substitution', plan)
 
+    def test_intake_active_time_without_substitution(self):
+        """Criterion 7: Intake item 6 gets the time first with `date`, then writes `.active` with the Write tool, no `$(`."""
+        intake = self.text[self.text.index('## Intake'):self.text.index('## status')]
+        item = next(l for l in intake.splitlines() if l.startswith('6. **`.active` and index:**'))
+        self.assertNotIn('$(', item)
+        self.assertIn("Run `date '+%Y-%m-%d %H:%M'` first", item)
+        self.assertIn('Write tool', item)
+        self.assertIn('without command substitution', item)
+
     def test_no_substitution_in_git_commands(self):
         """Live run: `echo "HEAD=$(git rev-parse HEAD)"` during Execute was blocked by the verdict hook."""
         self.assertIn('the verdict hook cannot tell whether it is a commit', self.text)
@@ -71,6 +80,10 @@ class SkillMdTest(unittest.TestCase):
 
     def test_under_500_lines(self):
         self.assertLess(len(self.text.splitlines()), 500)
+
+    def test_continue_keeps_coder_unit_with_end_ok(self):
+        text = SKILL.read_text(encoding='utf-8')
+        self.assertIn("`end=ok` and, for a writer or researcher unit, its result file exists, set it to `done` (a coder unit has no result file)", text)
 
     def test_core_rules_up_front(self):
         head = self.text[:CORE_CHARS]
@@ -136,6 +149,12 @@ class SkillMdTest(unittest.TestCase):
     def test_other_marker_rule(self):
         self.assertIn('if the answer was typed in (Other), add `other=1` at the end', self.text)
         self.assertIn('rec=-', self.text)
+        for marker in ('prose=1', 'pre=1', 'qn=1'):
+            self.assertIn(marker, self.text)
+
+    def test_cost_row_takes_no_value(self):
+        self.assertIn('run-log.py" cost --data-dir "<data folder>"', self.text)
+        self.assertNotIn('usd=<cost_usd>', self.text)
 
     def test_rec_template_runs_as_written(self):
         found = [a for n, a in self.templates() if a.startswith('ask') and 'rec=' in a]

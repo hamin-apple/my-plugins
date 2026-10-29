@@ -7,7 +7,9 @@ ask     PermissionRequest: `ask: gate=G2 agent= id= tool= q=` just before Claude
 answer  PostToolUse: `answer: gate=G2 id= result=allowed`, only when this call is the newest
         unanswered G2 ask (same tool and q). A denial has no event and is not recorded.
 
-Writes nothing when no `.active` is found. Always exits 0 with no output.
+Both lines carry `session=<session_id>` when the input has it. Writes nothing when no `.active` is found, or
+when the input's `session_id` differs from `.active` `session:` (another session of the same repo, ma_active.owns).
+Always exits 0 with no output.
 """
 import json
 import os
@@ -63,6 +65,11 @@ def open_asks(lines):
 NOT_G2 = {'AskUserQuestion'}   # a question popup also raises PermissionRequest; L1 logs it as its own gate
 
 
+def session_field(inp):
+    sid = inp.get('session_id')
+    return [('session', sid)] if isinstance(sid, str) and sid else []
+
+
 def do_ask(inp, active):
     tool = inp.get('tool_name') or '-'
     if tool in NOT_G2:
@@ -73,7 +80,7 @@ def do_ask(inp, active):
         agent, agent_id = guess if guess else ('main', None)
     ma_logline.append(active.log, ma_logline.format_line('ask', [
         ('gate', 'G2'), ('agent', agent or 'main'), ('id', agent_id), ('tool', tool),
-        ('q', summary(tool, inp.get('tool_input')))]))
+        ('q', summary(tool, inp.get('tool_input')))] + session_field(inp)))
 
 
 def do_answer(inp, active):
@@ -84,7 +91,7 @@ def do_answer(inp, active):
     tool = inp.get('tool_name') or '-'
     if newest.get('tool') == tool and newest.get('q') == summary(tool, inp.get('tool_input')):
         ma_logline.append(active.log, ma_logline.format_line('answer', [
-            ('gate', 'G2'), ('id', newest.get('id') or None), ('result', 'allowed')]))
+            ('gate', 'G2'), ('id', newest.get('id') or None), ('result', 'allowed')] + session_field(inp)))
 
 
 def main(argv) -> int:
@@ -94,7 +101,7 @@ def main(argv) -> int:
         if not isinstance(inp, dict):
             return 0
         active = ma_active.find_active(inp.get('cwd') or os.getcwd())
-        if active is None:
+        if active is None or not ma_active.owns(active, inp):
             return 0
         {'ask': do_ask, 'answer': do_answer}[argv[1] if len(argv) > 1 else ''](inp, active)
     except BaseException as exc:   # a record hook never fails the session

@@ -1,8 +1,8 @@
 """What a Bash command line writes, reads, or copies from (architecture 4.4 "what is blocked", 4.5 "Bash for L2 judges",
 4.12 "limiting read paths too"). Best effort by design: a write it cannot see (`python -c`, a script) is the accepted
 risk of 4.4 "remaining risk"; the forms it knows are pinned case by case in tests/test_bash.py. What it cannot follow
-(command substitution, a heredoc left open, a `cd` to a variable, a symlink made and written through in one command)
-fails closed: None.
+(command substitution outside single quotes, a heredoc left open, a `cd` to a variable, a symlink made and written
+through in one command) fails closed: None.
 """
 import os
 import re
@@ -11,8 +11,10 @@ from pathlib import Path
 from typing import List, NamedTuple, Optional
 
 OPS = ';&|()<>\n'
-HEREDOC = re.compile(r"(?<!<)<<(?!<)-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
-SUBST = re.compile(r'`|\$\(')
+HEREDOC = re.compile(r'(?<!<)<<(?!<)-?[ \t]*')
+SEP_PIECE = re.compile(r'&&|\|\||\|&|;;|[;&|()\n]')
+COMPOUND = {'if', 'then', 'else', 'elif', 'while', 'until', 'do', 'for', 'case', 'select', 'function', '{'}
+PIPE = {'|', '|&'}
 VAR_PATH_NOT = re.compile(r'://|^[sy]/|[\^\\|()<>"\'`]')
 ASSIGN = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*=')
 NOT_PATH = re.compile(r'[\^$\\|(){}<>"\'`]|://|^[sy]/')
@@ -39,31 +41,93 @@ class Simple(NamedTuple):
     xargs: bool            # run through xargs: its arguments come from stdin
     redirects: List[str]   # output redirect targets, /dev/null and fd duplications left out
     inputs: List[str]      # input redirect files
+    sep: str = ''          # the top-level separator before it ('' at the start, `&&`, `;`…)
+    after: str = ''        # the separator after it
+    top: bool = False      # runs at the top level: not in `( )`, a pipeline, the background, a compound command
+    orl: bool = False      # a top-level `||` came before it in the same and-or list
+
+
+def _delimiters(line: str) -> List[tuple]:
+    """(word, quoted) for every `<<` / `<<-` on `line`, quotes and backslashes removed from the word (any shell word:
+    `EOF.txt`, `'EOF-1'`); `quoted` when the body is literal text (any quote or backslash in the delimiter)."""
+    out = []
+    for m in HEREDOC.finditer(line):
+        j, word, quoted = m.end(), [], False
+        while j < len(line) and line[j] not in ' \t\n;&|()<>':
+            c = line[j]
+            quoted = quoted or c in '\'"\\'
+            if c in '\'"':
+                k = line.find(c, j + 1)
+                k = len(line) if k < 0 else k
+                word.append(line[j + 1:k])
+                j = k + 1
+            elif c == '\\' and j + 1 < len(line):
+                word.append(line[j + 1])
+                j += 2
+            else:
+                word.append(c)
+                j += 1
+        if word:
+            out.append((''.join(word), quoted))
+    return out
 
 
 def _strip_heredocs(cmd: str) -> str:
-    """`cmd` without heredoc bodies; ValueError when a heredoc is never closed (`echo "<<EOF"` would hide the rest)."""
+    """`cmd` without heredoc bodies; ValueError when a heredoc is never closed (`echo "<<EOF"` would hide the rest)
+    or when the body of an unquoted heredoc (expanded by the shell) has `$(` or a backtick."""
     out, waiting = [], []
     for line in cmd.split('\n'):
         if waiting:
-            if line.strip() == waiting[0]:
+            if line.strip() == waiting[0][0]:
                 waiting.pop(0)
+            elif not waiting[0][1] and ('`' in line or '$(' in line):
+                raise ValueError('command substitution')
             continue
         out.append(line)
-        waiting = [m.group(2) for m in HEREDOC.finditer(line)]
+        waiting = _delimiters(line)
     if waiting:
         raise ValueError('heredoc not closed')
     return '\n'.join(out)
 
 
+def _scan(text: str) -> str:
+    """Quote-aware pass over `text` (heredocs already stripped): ValueError('command substitution') for `$(` or a
+    backtick outside single quotes (unquoted or inside double quotes; `\\$(` is text). Comments are blanked; quotes and
+    escapes are left for shlex."""
+    out, i, n, quote = [], 0, len(text), None
+    while i < n:
+        c = text[i]
+        if quote == "'":
+            if c == "'":
+                quote = None
+        elif c == '\\' and i + 1 < n:
+            out.append(c)
+            i += 1
+            c = text[i]
+        elif c == '`' or (c == '$' and text[i + 1:i + 2] == '('):
+            raise ValueError('command substitution')
+        elif quote == '"':
+            if c == '"':
+                quote = None
+        elif c in '\'"':
+            quote = c
+        elif c == '#' and (i == 0 or text[i - 1] in ' \t\n;&|()<>'):
+            j = text.find('\n', i)
+            j = n if j < 0 else j
+            out.append(' ' * (j - i))        # a comment at a word start; a `#` inside a word (`${#D}`) is plain text
+            i = j
+            continue
+        out.append(c)
+        i += 1
+    return ''.join(out)
+
+
 def _tokens(cmd: str) -> List[str]:
-    lex = shlex.shlex(_strip_heredocs(cmd), posix=True, punctuation_chars=OPS)
+    lex = shlex.shlex(_scan(_strip_heredocs(cmd)), posix=True, punctuation_chars=OPS)
     lex.whitespace = ' \t\r'
     lex.whitespace_split = True
-    toks = list(lex)
-    if any(SUBST.search(tok) for tok in toks):
-        raise ValueError('command substitution')
-    return toks
+    lex.commenters = ''
+    return list(lex)
 
 
 def _is_op(tok: str) -> bool:
@@ -87,21 +151,31 @@ def _inner(c: 'Simple') -> Optional[str]:
 
 def _commands(cmd: str, depth: int = 0) -> List[Simple]:
     """Simple commands of `cmd`, with `bash -c` and `eval` strings parsed in place; raises ValueError when it
-    does not tokenize (an open quote, command substitution, an open heredoc) or nests too deep."""
+    does not tokenize (an open quote, command substitution, an open heredoc) or nests too deep. Each carries where
+    it sits (`sep`, `after`, `top`, `orl`) for the `cd` rule."""
     if depth > 3:
         raise ValueError('nested shells too deep')
     toks, out = _tokens(cmd), []
-    words, redirects, inputs = [], [], []
+    words, raw, redirects, inputs = [], [], [], []
+    paren, sep, orl, compound = 0, '', False, False
 
-    def flush():
-        if words or redirects or inputs:
-            s = _simple(words, redirects, inputs)
-            inner = _inner(s)
-            if inner is None:
-                out.append(s)
-            else:
-                out.append(Simple(s.words[:1], s.xargs, s.redirects, s.inputs))
-                out.extend(_commands(inner, depth + 1))
+    def flush(after):
+        nonlocal compound
+        if not (words or redirects or inputs):
+            return
+        s = _simple(words, redirects, inputs)
+        if raw and (raw[1] if raw[0] == '!' and len(raw) > 1 else raw[0]) in COMPOUND:
+            compound = True
+        top = (depth == 0 and paren == 0 and not compound and sep not in PIPE
+               and after not in PIPE and after != '&')
+        s = s._replace(sep=sep, after=after, top=top, orl=orl)
+        inner = _inner(s)
+        if inner is None:
+            out.append(s)
+        else:
+            out.append(s._replace(words=s.words[:1]))
+            out.extend(c._replace(sep=sep, after=after, top=False, orl=orl)
+                       for c in _commands(inner, depth + 1))
 
     i = 0
     while i < len(toks):
@@ -111,6 +185,7 @@ def _commands(cmd: str, depth: int = 0) -> List[Simple]:
             i += 2 if target is not None else 1
             if words and words[-1].isdigit():
                 words.pop()          # the fd number of `2>`
+                raw.pop()
             if target is None:
                 continue
             if '>' in t:
@@ -121,12 +196,27 @@ def _commands(cmd: str, depth: int = 0) -> List[Simple]:
                 inputs.append(target)
             continue
         if _is_op(t):
-            flush()
-            words, redirects, inputs = [], [], []
+            first = True
+            for piece in SEP_PIECE.findall(t):
+                if first:
+                    flush(piece)
+                    words, raw, redirects, inputs = [], [], [], []
+                    first = False
+                if piece == '(':
+                    paren += 1
+                elif piece == ')':
+                    paren = max(0, paren - 1)
+                elif paren == 0:
+                    sep = piece
+                    if piece == '||':
+                        orl = True
+                    elif piece in (';', '\n', '&'):
+                        orl = False
         else:
             words.append(t)
+            raw.append(t)
         i += 1
-    flush()
+    flush('')
     return out
 
 
@@ -254,15 +344,23 @@ def _writes(c: Simple) -> Optional[List[str]]:
 
 
 def _walk(cmd: str, cwd: Path):
-    """(simple command, every folder it may run in) in order: a literal `cd`/`pushd` adds its target to the
-    folders (`&&`, `||` and subshells decide whether it applies, so all are kept). None when a `cd` goes to a
-    folder it cannot name (`$VAR`, `-`) or `cmd` does not tokenize."""
+    """(simple command, every folder it may run in) in order. A literal `cd`/`pushd` joined to what follows by `&&`
+    only (at the top level, not after a `||`) replaces the folder for those commands; after the first other separator
+    the folders are the start and every folder reached, because the `cd` may have failed. Any other `cd` (`cd x; cmd`,
+    `cd x || cmd`, in `( )`) adds its target to the folders. None when a `cd` goes to a folder it cannot name
+    (`$VAR`, `-`) or `cmd` does not tokenize."""
     try:
         cmds = _commands(cmd)
     except ValueError:
         return None
-    cwds, out = [Path(cwd)], []
+    return _follow(cmds, cwd)
+
+
+def _follow(cmds: List[Simple], cwd: Path):
+    cwds, every, joined, out = [Path(cwd)], [Path(cwd)], False, []
     for c in cmds:
+        if joined and c.sep != '&&':
+            cwds, joined = list(every), False
         out.append((c, list(cwds)))
         if c.words and c.words[0] in CD:
             args = _positional(c.words[1:])
@@ -272,7 +370,11 @@ def _walk(cmd: str, cwd: Path):
             new = [_path(target, d) for d in cwds]
             if None in new:
                 return None
-            cwds += [n for n in new if n not in cwds]
+            if c.top and c.after == '&&' and not c.orl and c.sep in ('', ';', '\n', '&&'):
+                cwds, joined = [n for i, n in enumerate(new) if n not in new[:i]], True
+            else:
+                cwds += [n for n in new if n not in cwds]
+            every += [n for n in new if n not in every]
     return out
 
 
@@ -352,18 +454,17 @@ def read_paths(cmd: str, cwd: Path) -> Optional[List[Path]]:
 
 
 def copy_sources(cmd: str, cwd: Path) -> List[Path]:
-    """Source arguments of every cp, mv or rsync in `cmd` (all positional arguments but the last)."""
+    """Source arguments of every cp, mv or rsync in `cmd` (all positional arguments but the last), relative ones
+    resolved against the folders a `cd` gives (same rule as `_walk`; a `cd` it cannot name leaves `cwd`)."""
     try:
         cmds = _commands(cmd)
     except ValueError:
         return []
     out = []
-    for c in cmds:
+    for c, cwds in _follow(cmds, cwd) or [(c, [Path(cwd)]) for c in cmds]:
         if c.words and os.path.basename(c.words[0]) in COPY:
             for a in _positional(c.words[1:])[:-1]:
-                p = _path(a, cwd)
-                if p is not None:
-                    out.append(p)
+                out += _resolve_all(a, cwds) or []
     return out
 
 
@@ -419,11 +520,71 @@ def http_sends(cmd: str) -> Optional[bool]:
     return False
 
 
+def _unquote(seg: str) -> str:
+    """`seg` as the shell reads its words: backslash-newline gone, escapes and quotes removed (`g"i"t co\\mmit`)."""
+    return re.sub(r'[\'"]', '', re.sub(r'\\(.)', r'\1', seg.replace('\\\n', ''), flags=re.S))
+
+
+def _git_commit_shape(text: str) -> bool:
+    """Whether `text` has `git … commit` inside one simple command. Separators inside quotes, backticks and
+    `$( … )` do not end the command; an unbalanced quote or `$(` runs to the end of the text."""
+    segs, cur, stack, i, n = [], [], [], 0, len(text)
+    while i < n:
+        c = text[i]
+        top = stack[-1] if stack else None
+        if top in ("'", '`'):
+            if c == '\\' and top == '`' and i + 1 < n:
+                cur.append(c)
+                i += 1
+                c = text[i]
+            elif c == top:
+                stack.pop()
+            cur.append(c)
+            i += 1
+            continue
+        if c == '\\' and i + 1 < n:
+            cur.append(text[i:i + 2])
+            i += 2
+            continue
+        if c == '$' and text[i + 1:i + 2] == '(':
+            stack.append('(')
+            cur.append('$(')
+            i += 2
+            continue
+        if c in '\'"`':
+            if c == top:
+                stack.pop()
+            elif not (top == '"' and c != '"'):
+                stack.append(c)
+        elif top == '(':
+            if c == '(':
+                stack.append('(')
+            elif c == ')':
+                stack.pop()
+        elif top is None and c in ';&|\n()':
+            segs.append(''.join(cur))
+            cur = []
+            i += 1
+            continue
+        cur.append(c)
+        i += 1
+    segs = [_unquote(seg) for seg in segs + [''.join(cur)]]
+    if any(re.search(r'\bgit\b.*\bcommit\b', seg, re.S) for seg in segs):
+        return True
+    # git as the command word with a quote or `$(` left open: what follows may be `commit`
+    return bool(stack) and bool(re.match(r'\s*(?:\w+=\S*\s+)*git\b', segs[-1]))
+
+
 def git_subcommands(cmd: str) -> List[str]:
-    """The subcommand of every git in `cmd`, in order; ['?'] when `cmd` does not tokenize and has the word git."""
+    """The subcommand of every git in `cmd`, in order; ['?'] when `cmd` does not tokenize and has the shape
+    `git … commit` in one simple command."""
     try:
         cmds = _commands(cmd)
     except ValueError:
-        return ['?'] if re.search(r'\bgit\b', cmd) else []
+        try:
+            text = _strip_heredocs(cmd)
+        except ValueError:
+            text = cmd
+        return ['?'] if _git_commit_shape(text) else []
     subs = [_git_sub(c.words[1:])[0] for c in cmds if c.words and os.path.basename(c.words[0]) == 'git']
     return [s for s in subs if s is not None]

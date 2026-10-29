@@ -14,6 +14,7 @@ import ma_schema
 NO_REC = '(not recorded)'
 SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustment (B3), not a fix
 NOTE_BY_L1 = 'answered by L1'
+PLAN_REVIEWER = 'my-agent:plan-reviewer'   # the `agent=` value subagent-log.py writes on `start:` lines
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
 
 
@@ -45,40 +46,62 @@ def _bare(label):
     return RECOMMENDED.sub('', label) if isinstance(label, str) else label
 
 
-def decisions(lines) -> list:
-    """Rows [gate, question, rec, choice, picked, note] from the L1 ask/answer lines, paired per gate in order.
+def _find(table, key):
+    """The key's own entry, else the latest entry of the same gate whose session and qn do not contradict it
+    (a line without `session=` or `qn=`, as in an old run-log, matches any)."""
+    if key in table:
+        return key
+    same = [k for k in table if k[0] == key[0] and all(a is None or b is None or a == b for a, b in zip(k[1:], key[1:]))]
+    return same[-1] if same else None
 
-    An ask without an answer, an answer without an ask and a second answer to one ask are all kept, with a note."""
+
+def decisions(lines) -> list:
+    """Rows [gate, question, rec, choice, picked, note] from the L1 ask/answer lines, paired on (gate, session, qn).
+
+    Each part of the key is taken from the line when present; lines without `session=` and `qn=` pair per gate in
+    order. An ask without an answer, an answer without an ask and a second answer to one ask are all kept, with a
+    note."""
     rows, pending, last_ask, after_answer = [], {}, {}, {}
     for _, kind, f in lines:
         if kind not in ('ask', 'answer') or ma_logline.is_hook_line(kind, f):
             continue
         gate = f.get('gate') or '?'
+        key = (gate, f.get('session'), f.get('qn'))
         if kind == 'ask':
             rec = _bare(f.get('rec'))
             shown = NO_REC if rec is None else ('none' if rec == '-' else rec)
             row = [gate, f.get('q', '-'), shown, '-', 'unknown', 'no answer']
             rows.append(row)
-            pending[gate], last_ask[gate], after_answer[gate] = (row, rec), (row[1], shown, rec), False
+            pending[key], last_ask[key], after_answer[key] = (row, rec), (row[1], shown, rec), False
             continue
         choice = _bare(f.get('choice', '-'))
-        if gate in pending:
-            row, rec = pending.pop(gate)
+        hit = _find(pending, key)
+        if hit is not None:
+            row, rec = pending.pop(hit)
             note = ''
+            done = hit
         else:
-            twice = after_answer.get(gate) and gate in last_ask
-            q, shown, rec = last_ask[gate] if twice else ('-', NO_REC, None)
+            done = _find(last_ask, key)
+            twice = done is not None and after_answer.get(done)
+            q, shown, rec = last_ask[done] if twice else ('-', NO_REC, None)
             note = 'answered twice' if twice else 'answer only'
             row = [gate, q, shown, '-', 'unknown', note]
             rows.append(row)
+            done = done if twice else key
         if f.get('by') == ma_schema.ANSWERED_BY_L1:
             note = f'{note}; {NOTE_BY_L1}' if note else NOTE_BY_L1
         row[3], row[5] = choice, note
-        if f.get('other') == '1':
+        if f.get('by') == ma_schema.ANSWERED_BY_L1:
+            row[4] = 'delegated'
+        elif f.get('pre') == '1':
+            row[4] = 'in advance'
+        elif f.get('prose') == '1':
+            row[4] = 'prose reply'
+        elif f.get('other') == '1':
             row[4] = 'typed (Other)'
         elif rec not in (None, '-'):
             row[4] = 'yes' if choice == rec else 'no'
-        after_answer[gate] = True
+        after_answer[done] = True
     return rows
 
 
@@ -145,7 +168,7 @@ def tally_text(lines) -> str:
     revs = len({f.get('rev') for k, f in kinds if k == 'revision' and not f.get('before') and f.get('rev')})
     out += ['', '## Metrics', '| Item | Value |', '|---|---|',
             f"| Verify runs | {count('step', name='Verify')} |",
-            f"| Plan Review runs | {count('step', name='Plan-Review')} |",
+            f"| Plan Review runs | {count('start', agent=PLAN_REVIEWER)} |",
             f"| Subagents | {count('start')} |",
             f'| Model mismatches | {main + sub} (main session {main} · by step lines, subagents {sub}) |',
             f'| L1 small fixes | {fixes} |',

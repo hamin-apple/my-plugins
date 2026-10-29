@@ -52,6 +52,74 @@ class RunLogTest(unittest.TestCase):
         self.assertEqual(ev.answered['G1b'], 'Approve')
         self.assertNotEqual(ev.gates.get('G1b'), 'wait')
 
+    def test_ask_answer_get_session(self):
+        self.run_log('ask', 'gate=G3', 'q=x')
+        self.run_log('answer', 'gate=G3', 'choice=Accept')
+        self.assertEqual([parse(l)['session'] for l in log_lines(self.task)], ['s-9', 's-9'])
+        self.run_log('ask', 'gate=G3', 'q=x', env={'CLAUDE_CODE_SESSION_ID': ''})
+        self.assertEqual(parse(log_lines(self.task)[-1])['session'], 's-active')
+        self.run_log('answer', 'gate=G3', 'choice=Accept', 'session=given')
+        self.assertEqual(parse(log_lines(self.task)[-1])['session'], 'given')
+
+    def test_qn_prose_pre_pass_through(self):
+        self.run_log('ask', 'gate=Q', 'qn=2', 'q=x', 'rec=-')
+        self.run_log('answer', 'gate=Q', 'qn=2', 'choice=a', 'prose=1')
+        self.run_log('answer', 'gate=Q', 'choice=b', 'pre=1')
+        a, b, c = (parse(l) for l in log_lines(self.task))
+        self.assertEqual(a['qn'], '2')
+        self.assertEqual((b['qn'], b['prose']), ('2', '1'))
+        self.assertEqual(c['pre'], '1')
+
+    def statusline(self, name, text):
+        d = self.root / 'statusline'
+        d.mkdir(exist_ok=True)
+        (d / f'{name}.json').write_text(text)
+        return {'MA_STATUSLINE_DIR': str(d)}
+
+    def test_cost_reads_statusline_file(self):
+        env = self.statusline('s-active', '{"cost_usd": 1.25}')
+        r = self.run_log('cost', env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        f = parse(log_lines(self.task)[-1])
+        self.assertEqual((f['session'], f['usd']), ('s-active', '1.25'))
+        self.assertNotIn('reset', f)
+
+    def test_cost_session_from_env_without_active_session(self):
+        make_task(self.root, session='')
+        env = self.statusline('s-9', '{"cost_usd": 2}')
+        self.assertEqual(self.run_log('cost', env=env).returncode, 0)
+        self.assertEqual(parse(log_lines(self.task)[-1])['session'], 's-9')
+
+    def test_cost_reset_when_lower(self):
+        env = self.statusline('s-active', '{"cost_usd": 3.0}')
+        self.run_log('cost', env=env)
+        self.statusline('s-active', '{"cost_usd": 0.5}')
+        self.run_log('cost', env=env)
+        f = parse(log_lines(self.task)[-1])
+        self.assertEqual((f['usd'], f['reset']), ('0.5', '1'))
+        self.statusline('s-active', '{"cost_usd": 0.7}')
+        self.run_log('cost', env=env)
+        self.assertNotIn('reset', parse(log_lines(self.task)[-1]))
+
+    def test_cost_skips_missing_and_bad_file(self):
+        env = {'MA_STATUSLINE_DIR': str(self.root / 'nodir')}
+        r = self.run_log('cost', env=env)
+        self.assertEqual(r.returncode, 0)
+        self.assertIn('run-log: no cost line (', r.stdout)
+        for text in ('{oops', '{"cost_usd": "x"}', '{}', '[1]', '{"cost_usd": true}'):
+            r = self.run_log('cost', env=self.statusline('s-active', text))
+            self.assertEqual(r.returncode, 0, text)
+            self.assertIn('run-log: no cost line (', r.stdout, text)
+        self.assertEqual(log_lines(self.task), [])
+
+    def test_cost_rejects_typed_values(self):
+        env = self.statusline('s-active', '{"cost_usd": 1}')
+        for arg in ('usd=5', 'session=s-x'):
+            r = self.run_log('cost', arg, env=env)
+            self.assertEqual(r.returncode, 2, arg)
+            self.assertEqual(len(r.stderr.strip().splitlines()), 1)
+        self.assertEqual(log_lines(self.task), [])
+
     def test_value_with_quotes(self):
         self.run_log('fix', 'what=say "hi" \\ there')
         self.assertEqual(parse(log_lines(self.task)[-1])['what'], 'say "hi" \\ there')

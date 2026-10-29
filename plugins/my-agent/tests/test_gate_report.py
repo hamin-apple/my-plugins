@@ -86,7 +86,8 @@ class GateReportTest(unittest.TestCase):
         out = self.tally(
             '2026-10-26 23:00:00 step: n=7 name=Verify model=claude-opus-4-8 session=s1',
             '2026-10-26 23:00:01 step: n=7 name=Verify model=claude-sonnet-5-5 session=s1',
-            '2026-10-26 23:00:02 step: n=4 name=Plan-Review model=- session=s1',
+            '2026-10-26 23:00:02 start: agent=my-agent:plan-reviewer id=p1 configured=opus',
+            '2026-10-26 23:00:02 start: agent=my-agent:plan-reviewer id=p2 configured=opus',
             '2026-10-26 23:00:03 call: agent=my-agent:coder model=opus effort=-',
             '2026-10-26 23:00:04 call: agent=my-agent:coder model=- effort=-',
             '2026-10-26 23:00:05 start: agent=my-agent:coder id=a1 configured=sonnet',
@@ -98,7 +99,7 @@ class GateReportTest(unittest.TestCase):
             '2026-10-26 23:00:12 revision: rev=0 before=G1b why=x archive=a',
             '2026-10-26 23:00:13 revision: rev=1 why=x archive=b state=pending',
             '2026-10-26 23:00:14 revision: rev=1 state=done')
-        for row in ('| Verify runs | 2 |', '| Plan Review runs | 1 |', '| Subagents | 2 |',
+        for row in ('| Verify runs | 2 |', '| Plan Review runs | 2 |', '| Subagents | 4 |',
                     '| Model mismatches | 2 (main session 1 · by step lines, subagents 1) |',
                     '| L1 small fixes | 2 |', '| Adjustments within the approved scope | 1 |', '| Plan rewrites before approval | 1 |',
                     '| In-flight revisions | 1 |',
@@ -117,12 +118,63 @@ class GateReportTest(unittest.TestCase):
             '2026-10-29 04:09:00 profile: from=dev to=general back=2 archive=a',
             '2026-10-29 04:10:00 delegate: state=off how=end')
         rows = self.rows(out)
-        self.assertEqual(rows[0][1:], ['G1a', 'Scope?', 'Confirm', 'Confirm', 'yes', 'answered by L1'])
+        self.assertEqual(rows[0][1:], ['G1a', 'Scope?', 'Confirm', 'Confirm', 'delegated', 'answered by L1'])
         self.assertEqual(rows[1][6], '')
         for row in ('| Delegated answers | 1 |', '| Plan edits by L1 before approval | 1 |', '| L1 small fixes | 1 |',
                     '| Delegated approval | 04:00 on (flag), 04:10 off (end) |',
                     '| Profile changes | 1 (dev → general) |'):
             self.assertIn(row, out)
+
+    def test_two_questions_one_popup(self):
+        out = self.tally(
+            '2026-10-30 10:00:00 ask: gate=Q q=A rec=x session=s1 qn=1',
+            '2026-10-30 10:00:00 ask: gate=Q q=B rec=y session=s1 qn=2',
+            '2026-10-30 10:01:00 answer: gate=Q choice=y session=s1 qn=2',
+            '2026-10-30 10:01:01 answer: gate=Q choice=z session=s1 qn=1')
+        self.assertEqual(self.rows(out), [['1', 'Q', 'A', 'x', 'z', 'no', ''], ['2', 'Q', 'B', 'y', 'y', 'yes', '']])
+        out = self.tally(
+            '2026-10-30 10:00:00 ask: gate=Q q=A rec=x session=s1 qn=1',
+            '2026-10-30 10:00:00 ask: gate=Q q=B rec=y session=s1 qn=2',
+            '2026-10-30 10:01:00 answer: gate=Q choice=x session=s1 qn=1')
+        self.assertEqual(self.rows(out), [['1', 'Q', 'A', 'x', 'x', 'yes', ''], ['2', 'Q', 'B', 'y', '-', 'unknown', 'no answer']])
+
+    def test_answered_twice_per_key(self):
+        out = self.tally(
+            '2026-10-30 10:00:00 ask: gate=Q q=A rec=x session=s1 qn=1',
+            '2026-10-30 10:00:00 ask: gate=Q q=B rec=y session=s1 qn=2',
+            '2026-10-30 10:01:00 answer: gate=Q choice=x session=s1 qn=1',
+            '2026-10-30 10:01:01 answer: gate=Q choice=x session=s1 qn=1',
+            '2026-10-30 10:01:02 answer: gate=Q choice=y session=s1 qn=2')
+        notes = [r[6] for r in self.rows(out)]
+        self.assertEqual(notes, ['', '', 'answered twice'])
+
+    def test_sessions_interleaved_at_one_gate(self):
+        out = self.tally(
+            '2026-10-30 10:00:00 ask: gate=G3 q=A rec=x session=s1',
+            '2026-10-30 10:00:01 ask: gate=G3 q=B rec=y session=s2',
+            '2026-10-30 10:01:00 answer: gate=G3 choice=y session=s2',
+            '2026-10-30 10:01:01 answer: gate=G3 choice=q session=s1')
+        self.assertEqual(self.rows(out), [['1', 'G3', 'A', 'x', 'q', 'no', ''], ['2', 'G3', 'B', 'y', 'y', 'yes', '']])
+
+    def test_pre_prose_delegated_rows(self):
+        out = self.tally(
+            '2026-10-30 10:00:00 ask: gate=Q q=A rec=x',
+            '2026-10-30 10:00:01 answer: gate=Q choice=x pre=1',
+            '2026-10-30 10:00:02 ask: gate=Q q=B rec=y',
+            '2026-10-30 10:00:03 answer: gate=Q choice=y prose=1',
+            '2026-10-30 10:00:04 ask: gate=Q q=C rec=y',
+            '2026-10-30 10:00:05 answer: gate=Q choice=y by=L1',
+            '2026-10-30 10:00:06 ask: gate=Q q=D rec=y',
+            '2026-10-30 10:00:07 answer: gate=Q choice=w other=1')
+        self.assertEqual([r[5] for r in self.rows(out)], ['in advance', 'prose reply', 'delegated', 'typed (Other)'])
+
+    def test_plan_review_runs_from_start_lines(self):
+        out = self.tally('2026-10-30 10:00:00 start: agent=my-agent:plan-reviewer id=p1 configured=opus',
+                         '2026-10-30 10:00:09 start: agent=my-agent:plan-reviewer id=p2 configured=opus',
+                         '2026-10-30 10:00:10 start: agent=my-agent:coder id=c1 configured=sonnet')
+        self.assertIn('| Plan Review runs | 2 |', out)
+        out = self.tally('2026-10-30 10:00:00 step: n=4 name=Plan-Review model=- session=s1')
+        self.assertIn('| Plan Review runs | 0 |', out)
 
     def test_old_run_log_has_no_new_rows(self):
         out = self.tally('2026-10-26 23:00:09 fix: what=x', '2026-10-26 23:00:10 ask: gate=G1a q=Q rec=A',

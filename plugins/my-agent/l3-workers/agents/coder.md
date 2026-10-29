@@ -20,13 +20,16 @@ Implement one work unit of the plan. Write the test first, see it fail, then imp
 - Do not commit. Do not use commands that change git state, such as `git add`, `git commit`, `git checkout`, `git stash`. L1 commits after G3.
 - Install packages only when the work unit says so (a permission prompt appears).
 - Do not call other agents.
+- Stop every process you start (servers, watchers, background jobs) before the final report.
+- Use no port from 8765 to 8775 (the monitor's range).
+- Write no shared state outside your worktree (or the main tree when you run there): no global config, home-folder files or shared temp folders.
 - Follow the surrounding code's names, comment density and style.
 - Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 - Write working notes in English. Text inside the deliverable follows the request's language unless the project's own instructions fix one.
 
 ## Input
 
-The `plan.md` path and the work unit ID and name, the files to read, the files to change, the completion criterion number, and the check commands. When taking a unit again: the list of failed criteria or the stop report, and the merge conflict details. The first line of the prompt is `Work unit: u<n> <name>` (L1 adds it so the run-log records the unit).
+The `plan.md` path and the work unit ID and name, the files to read, the files to change (no result path; your final report is the result), the completion criterion number, and the check commands. When taking a unit again: the list of failed criteria or the stop report, and the merge conflict details. The first line of the prompt is `Work unit: u<n> <name>` (L1 adds it so the run-log records the unit).
 
 ## Order
 
@@ -37,7 +40,7 @@ The `plan.md` path and the work unit ID and name, the files to read, the files t
 
 ## When done
 
-The first line of the last message is `DONE` or `PARTIAL <reason>`. Below it:
+You write no result file. The first line of the last message is `DONE` or `PARTIAL <reason>`. Below it:
 
 - The list of changed files
 - The commands run and their results (number passed, number failed) — with names if anything failed

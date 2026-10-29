@@ -6,7 +6,7 @@ Multi-step tasks that fit neither the research nor the dev profile. On the norma
 
 | Step | General profile |
 |---|---|
-| 2 Explore → Scope | Ask: purpose, completion criteria, non-goals, deliverable location. If the request covers all of them, skip the interview. Do not ask G1a separately. Write the deliverable location in the scope summary as one line ``- Deliverable location: `<path>` ``. After approval, the hook asks about writes outside the task location that fall outside this path. |
+| 2 Explore → Scope | Ask: purpose, completion criteria, non-goals, deliverable location. If the request covers all of them, skip the interview. Do not ask G1a separately. Write the deliverable location in the scope summary as one line ``- Deliverable location: `<path>` ``, an absolute path (no `~`, no relative path). After approval, the hook asks about writes outside the task location that fall outside this path. |
 | 3 Plan | Put the scope summary and `## Completion criteria` at the top of `plan.md`. The mock-up is a sample of the deliverable (e.g. the first few rows of a table, a document's outline and a sample paragraph). |
 | 4 Plan Review | May be skipped if the work units change fewer than 3 files in total. If skipped, record the reason in `plan-review.md`. Findings are handled as in `plan.md` step 4. |
 | G1b | Approve the scope summary and the plan at once. It is the first gate, so show the task ID with it. |

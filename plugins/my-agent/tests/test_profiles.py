@@ -15,12 +15,33 @@ class ProfilesTest(unittest.TestCase):
         for name in ('general', 'research', 'dev'):
             self.assertTrue((PROFILES / f'{name}.md').is_file(), name)
 
+    def test_derived_files_and_absolute_paths(self):
+        for name in ('build', 'dev'):
+            path = (REPO / 'l1-orchestration' / 'phases' / 'build.md') if name == 'build' else PROFILES / 'dev.md'
+            self.assertIn('derived files', path.read_text(encoding='utf-8'), name)
+        for name, phrase in (('general', 'absolute path'), ('research', 'absolute path')):
+            self.assertIn(phrase, (PROFILES / f'{name}.md').read_text(encoding='utf-8'), name)
+
     def test_router_names_every_profile(self):
         text = SKILL.read_text(encoding='utf-8')
         for name in ('general', 'research', 'dev'):
             self.assertIn(f'${{CLAUDE_SKILL_DIR}}/l1-orchestration/profiles/{name}.md', text)
             self.assertRegex(text, rf'`{name}`')
         self.assertIn('Profile: <', text)
+
+    def test_build_passes_result_path_only_to_writer_and_researcher(self):
+        build = (REPO / 'l1-orchestration' / 'phases' / 'build.md').read_text(encoding='utf-8')
+        self.assertIn('for a writer or researcher unit the result path', build)
+        self.assertIn('A coder unit gets the files to change, not a result path', build)
+        self.assertIn('`end=ok`', build)
+
+    def test_build_workflow_result_rules_limit_result_files_to_writer_and_researcher(self):
+        build = (REPO / 'l1-orchestration' / 'phases' / 'build.md').read_text(encoding='utf-8')
+        rules = build.split('## Workflow rules')[1].split('## 6. Merge')[0]
+        self.assertIn('Result files (writer and researcher units only) go to `work/`', rules)
+        self.assertIn('a coder unit has no result file', rules)
+        self.assertIn('missing result files of writer and researcher units', rules)
+        self.assertIn('`end=ok`', rules)
 
     def test_research_rules_present(self):
         text = (PROFILES / 'research.md').read_text(encoding='utf-8')
@@ -108,6 +129,17 @@ class ProfilesTest(unittest.TestCase):
                 self.assertIn('Not skipped (except for a small task)', row)
             else:
                 self.assertIn('`plan.md` step 4', row)
+
+
+    def test_merge_copies_new_files_before_apply(self):
+        """Criterion 15: new files are copied before `git apply`, then the worktree is removed."""
+        dev = (PROFILES / 'dev.md').read_text(encoding='utf-8')
+        row = next(l for l in dev.splitlines() if l.startswith('| 6 Merge'))
+        a = row.index('ls-files --others --exclude-standard')
+        b = row.index('git apply')
+        c = row.index('git worktree remove')
+        self.assertLess(a, b)
+        self.assertLess(b, c)
 
 
 if __name__ == '__main__':

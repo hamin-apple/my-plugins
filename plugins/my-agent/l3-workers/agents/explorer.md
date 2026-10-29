@@ -39,8 +39,10 @@ DONE | PARTIAL <reason>
 - <test, lint and build commands, and where you found them>
 ## Uncommitted changes
 - <summary of git status --porcelain, or none>
+- Derived: <derived files, or none>
 ## Unverified
 ```
 
 - The first line is `DONE` or `PARTIAL <reason>`. `DONE` if you found everything you were asked to find out.
+- Real uncommitted work (changes a person made) goes on the plain lines under `## Uncommitted changes`. Derived files (for example `*.pyc`, `__pycache__/`, build outputs) go on their own `- Derived: …` line, never mixed into the plain lines.
 - Give every fact `path:line` evidence. Write guesses only under `## Unverified`.

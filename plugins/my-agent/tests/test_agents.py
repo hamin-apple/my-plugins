@@ -63,6 +63,18 @@ def split(path):
 
 
 class AgentsTest(unittest.TestCase):
+    def test_coder_process_hygiene(self):
+        """Criterion 16: coder stops what it starts, avoids the monitor's ports and shared state."""
+        coder = (REPO / 'l3-workers' / 'agents' / 'coder.md').read_text(encoding='utf-8')
+        self.assertIn('Stop every process you start', coder)
+        self.assertIn('Use no port from 8765 to 8775', coder)
+        self.assertIn('Write no shared state outside your worktree', coder)
+
+    def test_coder_has_no_result_path(self):
+        coder = (REPO / 'l3-workers' / 'agents' / 'coder.md').read_text(encoding='utf-8')
+        self.assertIn('no result path', coder)
+        self.assertIn('You write no result file', coder)
+
     def test_manifest_lists_all_nine(self):
         manifest = json.loads((REPO / '.claude-plugin' / 'plugin.json').read_text())
         self.assertEqual(manifest['agents'], MANIFEST)
@@ -173,6 +185,17 @@ class AgentsTest(unittest.TestCase):
         self.assertIn('L1 saves it as is to `explore.md`', define)
         plan = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
         self.assertIn('## Reference files', plan)
+
+    def test_derived_files_reload_notice_absolute_path(self):
+        explorer = (REPO / 'l3-workers' / 'agents' / 'explorer.md').read_text(encoding='utf-8')
+        self.assertIn('- Derived: ', explorer)
+        arch = (REPO / 'l2-design-judge' / 'agents' / 'architect.md').read_text(encoding='utf-8')
+        self.assertIn('count only real uncommitted work, not `- Derived:` files', arch)
+        self.assertIn('- Plugin reload: needed (<what>)', arch)
+        self.assertIn('absolute path (no `~`, no relative path)', arch)
+        plan = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
+        self.assertIn('`/reload-plugins`', plan)
+        self.assertIn('Plugin reload: needed', plan)
 
 
 if __name__ == '__main__':

@@ -7,8 +7,9 @@ the input) passes; no task found passes (a `.active` without `task:` warns, befo
 whose `session:` differs from the input `session_id` (both set) passes.
 
 Applies while a task is active, to a `git commit` and to the G3 deliver: any write into the task folder's
-`deliverable/` (the default save place, accept.md), and a Bash command that reads or copies from the task folder and
-writes outside `<location>/docs/agent/`. It needs `verify.md` starting `Verdict: ALL PASS` and `review.md` starting
+`deliverable/` (the default save place, accept.md), and a Bash cp, mv or rsync from the task folder to a place outside
+`<location>/docs/agent/` (other copy forms and plain reads do not count). It needs `verify.md` starting
+`Verdict: ALL PASS` and `review.md` starting
 `BLOCKER 0`, both no older than the newest changed file: git changes outside `docs/agent/`, plus the task folder's
 `work/` (and `deliverable/` when the deliver leaves the task folder; a copy into `deliverable/` does not count the
 copies made just before it). A `verify.md` older than a change is accepted when `review.md` is newer than every change
@@ -102,8 +103,7 @@ def applies(tool: str, ti: dict, cwd: Path, active):
     if any(s in ('commit', '?') for s in ma_bash.git_subcommands(cmd)):
         return True
     targets = ma_bash.write_targets(cmd, cwd)
-    sources = ma_bash.copy_sources(cmd, cwd) + (ma_bash.read_paths(cmd, cwd) or [])
-    from_task = any(under(s, T) for s in sources)
+    from_task = any(under(s, T) for s in ma_bash.copy_sources(cmd, cwd))   # cp, mv, rsync sources only
     if targets is None:
         return True if from_task else None
     if from_task and any(not under(t, agent) for t in targets):

@@ -283,10 +283,10 @@ class MenubarTest(unittest.TestCase):
     def test_list_frame(self):
         s = '0,0,1512,944'
         saved = '1180,220,300,640'
-        self.assertEqual(self.list_frame(saved, '12', s), '1180,336,300,524 fit')
+        self.assertEqual(self.list_frame(saved, '12', s), '1180,526,300,334 scroll')
         self.assertEqual(self.list_frame(saved, '3', s), '1180,678,300,182 fit')
         self.assertEqual(self.list_frame(saved, '0', s), '1180,748,300,112 fit')
-        self.assertEqual(self.list_frame(saved, '30', s), '1180,0,300,860 scroll')
+        self.assertEqual(self.list_frame(saved, '30', s), '1180,526,300,334 scroll')
         self.assertEqual(self.list_frame('100,700,300,640', '3', s), '100,762,300,182 fit')
         self.assertEqual(self.list_frame('3000,220,300,640', '3', s), '1212,678,300,182 fit')
         self.assertEqual(self.list_frame('1700,300,400,500', '2', s, '1512,0,1920,1080'), '1700,656,400,144 fit')
@@ -297,11 +297,44 @@ class MenubarTest(unittest.TestCase):
 
     def test_list_frame_height_formula(self):
         s = '0,0,1512,944'
-        for n in range(6):
+        for n in range(13):
             with self.subTest(rows=n):
-                x, y, w, h = map(int, self.list_frame('10,300,300,640', str(n), s).split()[0].split(','))
-                self.assertEqual(h, 112 if n == 0 else 68 + n * 38)
+                out = self.list_frame('10,300,300,640', str(n), s)
+                x, y, w, h = map(int, out.split()[0].split(','))
+                self.assertEqual(h, 112 if n == 0 else 68 + min(n, 7) * 38)
                 self.assertEqual(y + h, 940)
+                self.assertEqual(out.split()[1], 'fit' if n <= 7 else 'scroll')
+
+    def test_list_frame_cap(self):
+        s = '0,0,1512,944'
+        a = '1180,220,300,640'
+        self.assertEqual(self.list_frame(a, '3', s), '1180,678,300,182 fit')
+        self.assertEqual(self.list_frame(a, '7', s), '1180,526,300,334 fit')
+        self.assertEqual(self.list_frame(a, '8', s), '1180,526,300,334 scroll')
+        self.assertEqual(self.list_frame(a, '12', s), '1180,526,300,334 scroll')
+
+    def test_list_frame_cap_short_screen(self):
+        s = '0,0,1512,300'
+        a = '1180,220,300,640'
+        self.assertEqual(self.list_frame(a, '12', s), '1180,0,300,300 scroll')
+        self.assertEqual(self.list_frame(a, '7', s), '1180,0,300,300 scroll')
+        self.assertEqual(self.list_frame(a, '5', s), '1180,42,300,258 fit')
+
+    def test_list_prints_every_row_beyond_cap(self):
+        tasks = [{'id': f'r{i}', 'key': f'k/r{i}', 'status': 'running', 'step': 5, 'elapsed': 10} for i in (1, 2, 3)]
+        tasks += [{'id': f'd{i}', 'key': f'k/d{i}', 'status': 'done', 'step': 8, 'elapsed': 100} for i in range(1, 10)]
+        tasks.insert(0, tasks.pop(3))  # a done task first in server order; running must still come first
+        port = self.stub(tasks)
+        lines = self.print_list(port)
+        self.assertEqual(lines[0], 'list: 12')
+        ids = [l.split('\t')[1] for l in lines[1:]]
+        self.assertEqual(ids, ['r1', 'r2', 'r3'] + [f'd{i}' for i in range(1, 10)])
+        lines = self.print_list(port, '--filter', 'done')
+        self.assertEqual(lines[0], 'list: 9')
+        self.assertEqual([l.split('\t')[1] for l in lines[1:]], [f'd{i}' for i in range(1, 10)])
+        lines = self.print_list(self.stub(tasks[:7]))
+        self.assertEqual(lines[0], 'list: 7')
+        self.assertEqual(len(lines), 8)
 
     def test_list_frame_bad_input(self):
         for argv in ([], ['1,2,3,4'], ['1,2,3,4', '3'], ['1,2,3,4', '-1', '0,0,100,100'],

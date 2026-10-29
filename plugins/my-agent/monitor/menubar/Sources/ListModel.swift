@@ -110,6 +110,7 @@ enum ListMetrics {
     static let header: CGFloat = 36       // header row + divider
     static let filterBar: CGFloat = 32    // filter row + divider
     static let row: CGFloat = 38          // one task row
+    static let maxRows = 7                // the List window grows to at most this many rows; more rows scroll
     static let notice: CGFloat = 44       // one notice line (no tasks, no match, server off)
     static let minWidth: CGFloat = 260
     static let defaultWidth: CGFloat = 300
@@ -124,12 +125,14 @@ func visibleRowCount(_ state: ListState, filter: ListFilter) -> Int {
 }
 
 func listContentHeight(rows: Int) -> CGFloat {
-    ListMetrics.header + ListMetrics.filterBar + (rows <= 0 ? ListMetrics.notice : CGFloat(rows) * ListMetrics.row)
+    let body = rows <= 0 ? ListMetrics.notice : CGFloat(min(rows, ListMetrics.maxRows)) * ListMetrics.row
+    return ListMetrics.header + ListMetrics.filterBar + body
 }
 
 /// The List window frame for `rows` rows. Only the top edge, x and width of `anchor` count; its height is dropped.
 /// The top edge stays unless it is above the screen or so near the screen bottom that header, filter and one row
-/// would not fit. Taller than the screen: cut at the screen bottom (scrolls). Screens are visibleFrames.
+/// would not fit. Taller than the screen: cut at the screen bottom (scrolls). More than `ListMetrics.maxRows` rows:
+/// the height stops at that many rows and `scrolls` is true. Screens are visibleFrames.
 func listFrame(anchor: CGRect, rows: Int, screens: [CGRect]) -> (frame: CGRect, scrolls: Bool) {
     let want = listContentHeight(rows: rows)
     var top = anchor.maxY
@@ -150,7 +153,7 @@ func listFrame(anchor: CGRect, rows: Int, screens: [CGRect]) -> (frame: CGRect, 
     let floor = min(want, ListMetrics.header + ListMetrics.filterBar + ListMetrics.row)
     if top - screen.minY < floor { top = screen.minY + floor }
     let h = min(want, top - screen.minY)
-    return (CGRect(x: x, y: top - h, width: w, height: h), h < want)
+    return (CGRect(x: x, y: top - h, width: w, height: h), rows > ListMetrics.maxRows || h < want)
 }
 
 // MARK: status tones (colors are in statusPalette, the only native place for the values)

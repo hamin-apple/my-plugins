@@ -64,9 +64,23 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v036(self):
+    def test_status_line_starts_with_v037(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.36 ('), line[:60])
+        self.assertTrue(line.startswith('- Status: design draft v0.37 ('), line[:60])
+
+    def test_cost_only_texts(self):
+        lines = self.text.splitlines()
+        g3 = [x for x in lines if x.startswith('| **G3 Final acceptance**')]
+        self.assertEqual(len(g3), 1)
+        self.assertIn('cost (reference, 4.8)', g3[0])
+        self.assertNotIn('tokens and cost', g3[0])
+        deliver = [x for x in lines if x.startswith('[Deliver] (chat)')]
+        self.assertEqual(len(deliver), 1)
+        self.assertNotIn('tokens', deliver[0])
+        snap = [x for x in lines if x.startswith('- **Usage snapshot:**')]
+        self.assertEqual(len(snap), 1)
+        self.assertIn('≈ $', snap[0])
+        self.assertIn('ma_prices', self.section('**Price table**', '\n**'))
 
     def test_status_line_plugin_version_matches_plugin_json(self):
         line = self.text.splitlines()[3]

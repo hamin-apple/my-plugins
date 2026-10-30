@@ -613,33 +613,33 @@ function rstate(t, R, n) {
 function stats(t, R) {
   if (R === undefined) R = latestRev(t);
   const steps = {};
-  for (let n = 1; n <= 8; n++) steps[n] = { tok: 0, min: 0, cost: 0, agents: 0, start: null, end: null };
+  for (let n = 1; n <= 8; n++) steps[n] = { min: 0, cost: 0, agents: 0, start: null, end: null };
   const evs = R === 'all' ? t.log : t.log.filter(e => rOf(e) === R);
   evs.forEach(e => { const s = steps[e.s]; if (!s) return; if (!s.start) s.start = e.t;
-    if (e.k === 'agent' && !e.live) { s.tok += num(e.tok); s.cost += num(e.c); s.agents++; } else if (e.k === 'agent') s.agents++; });
-  if (R !== 'all') Object.entries(mainOf(t, R)).forEach(([n, [tk, c]]) => { steps[n].tok += tk; steps[n].cost += c; });
+    if (e.k === 'agent' && !e.live) { s.cost += num(e.c); s.agents++; } else if (e.k === 'agent') s.agents++; });
+  if (R !== 'all') Object.entries(mainOf(t, R)).forEach(([n, c]) => { steps[n].cost += num(c); });
   const started = Object.keys(steps).map(Number).filter(n => steps[n].start);
   started.forEach((n, i) => { const nx = started[i + 1]; const end = nx ? steps[nx].start : revEnd(t, R);
     steps[n].end = end; steps[n].min = dm(steps[n].start, end); });
   const models = {};
-  const addM = (m, tok, min, cost, call) => { const r = models[m] = models[m] || { calls: 0, tok: 0, min: 0, cost: 0, live: 0 };
-    r.tok += tok; r.min += min; r.cost += cost; r.calls += call; };
-  evs.filter(e => e.k === 'agent').forEach(e => { if (e.live) { (models[e.model] = models[e.model] || { calls:0, tok:0, min:0, cost:0, live:0 }).live++; models[e.model].calls++; }
-    else addM(modelOf(e), num(e.tok), num(e.dur), num(e.c), 1); });
-  const mt = Object.values(mainOf(t, R)).reduce((a, [tk, c]) => [a[0] + tk, a[1] + c], [0, 0]);
-  models[L('opus · main', 'opus · main')] = { calls: 0, tok: mt[0], min: evs.length ? dm(evs[0].t, revEnd(t, R)) : 0, cost: mt[1], live: t.status === 'running' ? 1 : 0, main: true, nil: !hasMain(t) };
+  const addM = (m, min, cost, call, priced) => { const r = models[m] = models[m] || { calls: 0, min: 0, cost: 0, live: 0, done: 0, priced: 0 };
+    r.min += min; r.cost += cost; r.calls += call; r.done += 1; if (priced) r.priced += 1; };
+  evs.filter(e => e.k === 'agent').forEach(e => { if (e.live) { (models[e.model] = models[e.model] || { calls: 0, min: 0, cost: 0, live: 0, done: 0, priced: 0 }).live++; models[e.model].calls++; }
+    else addM(modelOf(e), num(e.dur), num(e.c), 1, e.c != null); });
+  const mv = Object.values(mainOf(t, R)); const mt = mv.reduce((a, c) => a + num(c), 0);
+  models[L('opus · main', 'opus · main')] = { calls: 0, min: evs.length ? dm(evs[0].t, revEnd(t, R)) : 0, cost: mt, live: t.status === 'running' ? 1 : 0, done: mv.length, priced: mv.filter(c => c != null).length, main: true, nil: !hasMain(t) };
   return { steps, models };
 }
 const money = c => c == null ? '–' : '$' + (+c).toFixed(2);
 const isMM = e => e.k === 'agent' && !e.live && e.actual && e.model && e.actual.split(' ')[0] !== e.model.split(' ')[0];
 const mmTag = e => isMM(e) ? ` <span class="mm-tag">MISMATCH ${esc(e.model)}→${esc(e.actual)}</span>` : '';
-/* count-up: <span class="num" data-cu="key" data-v="123" data-f="k|$|n"> */
+/* count-up: <span class="num" data-cu="key" data-v="123" data-f="$|n"> */
 const CU = new Map();
-const cu = (key, v, f) => `<span class="num" data-cu="${key}" data-v="${v}" data-f="${f}">${f === '$' ? money(CU.get(key) ?? 0) : Math.round(CU.get(key) ?? 0) + (f === 'k' ? 'k' : '')}</span>`;
+const cu = (key, v, f) => `<span class="num" data-cu="${key}" data-v="${v}" data-f="${f}">${f === '$' ? money(CU.get(key) ?? 0) : Math.round(CU.get(key) ?? 0)}</span>`;
 function runCountUps() {
   document.querySelectorAll('[data-cu]').forEach(el => {
     const key = el.dataset.cu, to = +el.dataset.v, f = el.dataset.f, from = CU.get(key) ?? 0;
-    const show = v => el.textContent = f === '$' ? money(v) : Math.round(v) + (f === 'k' ? 'k' : '');
+    const show = v => el.textContent = f === '$' ? money(v) : Math.round(v);
     if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) { show(to); CU.set(key, to); return; }
     const t0 = performance.now(), d = 900;
     const tick = now => { const k = Math.min((now - t0) / d, 1), e = 1 - Math.pow(1 - k, 3); show(from + (to - from) * e); if (k < 1) requestAnimationFrame(tick); else CU.set(key, to); };
@@ -673,7 +673,7 @@ function typeLast() {
   requestAnimationFrame(step);
 }
 const mtag = m => { m = m || '–'; return `<span class="mtag ${m.split(' ')[0]}">${esc(m)}</span>`; };
-const bar = (v, max) => `<span class="spark" style="width:${Math.max(2, Math.round(v / max * 60))}px"></span>`;
+const bar = (v, max) => v > 0 ? `<span class="spark" style="width:${Math.max(2, Math.round(v / max * 60))}px"></span>` : '';
 
 const GATE_AFTER = {2:'G1a Scope confirmed',4:'G1b Plan approved',8:'G3 Final acceptance'};
 const GATE_ID = {2:'G1a',4:'G1b',8:'G3'};
@@ -688,7 +688,7 @@ function vsteps(t, S, o) {
       h += `<div class="vs ${ss} ${o.compact ? 'compact' : ''} ${n === o.sel ? 'sel' : ''}" data-${o.key}="${n}">
         <div class="vh"><span class="no">${ss === 'done' ? '✓' : n}</span>
           <span class="nm">${esc(STEP_NAME[n])}${ss === 'cur' && t.status === 'running' ? ` <i class="dot run${t.waiting ? ' wait' : ''}"></i>` : ''}</span>
-          <span class="st">${ss === 'inh' ? L(`from rev${o.R - 1}`, `rev${o.R - 1} 이어받음`) : ss === 'cut' ? `<span style="color:var(--gate)">→ rev${o.R + 1}</span>` : sd.start ? `${t.revs && o.R > 0 && n === t.revs[o.R].back ? '<span style="color:var(--gate)">↺ rev' + o.R + '</span> ' : ''}${fmtMin(sd.min)}${o.stats ? ` · ${sd.tok}k · ${money(sd.cost)}` : ''}` : ''}</span></div></div>`;
+          <span class="st">${ss === 'inh' ? L(`from rev${o.R - 1}`, `rev${o.R - 1} 이어받음`) : ss === 'cut' ? `<span style="color:var(--gate)">→ rev${o.R + 1}</span>` : sd.start ? `${t.revs && o.R > 0 && n === t.revs[o.R].back ? '<span style="color:var(--gate)">↺ rev' + o.R + '</span> ' : ''}${fmtMin(sd.min)}${o.stats ? ` · ${money(sd.cost)}` : ''}` : ''}</span></div></div>`;
       if (GATE_AFTER[n]) h += `<div class="vgate">${esc(GATE_AFTER[n])} ${gl(GATE_ID[n])}</div>`;
     });
   });
@@ -706,12 +706,12 @@ function renderStatus() {
   const t = cur();
   const R = st.rev == null || st.rev > latestRev(t) ? latestRev(t) : st.rev;
   const SR = stats(t, R);
-  const ms = Object.entries(stats(t, 'all').models).sort((a, b) => b[1].tok - a[1].tok);
-  const maxTok = Math.max(1, ...ms.map(([, r]) => r.tok));
-  const tot = ms.reduce((a, [, r]) => [a[0] + r.calls, a[1] + r.tok, a[2] + r.cost], [0, 0, 0]);
-  const modelTab = `<table class="utab"><tr><th>Model</th><th class="n">Calls</th><th class="n">Tokens</th><th class="n">Time</th><th class="n">Cost</th></tr>
-    ${ms.map(([m, r]) => `<tr><td>${mtag(m)}${r.live ? ' <i class="dot run"></i>' : ''}</td><td class="n">${r.main ? '–' : r.calls}</td><td class="n">${r.nil ? '–' : bar(r.tok, maxTok) + r.tok + 'k'}</td><td class="n">${r.nil ? '–' : fmtMin(r.min)}</td><td class="n">${r.nil ? '–' : money(r.cost)}</td></tr>`).join('')}
-    <tr class="sum"><td>Total</td><td class="n">${tot[0]}</td><td class="n">${cu('mt-' + t.id, tot[1], 'k')}</td><td class="n">${fmtMin(t.elapsed)}</td><td class="n">${cu('mc-' + t.id, tot[2], '$')}</td></tr></table>
+  const ms = Object.entries(stats(t, 'all').models).sort((a, b) => b[1].cost - a[1].cost);
+  const maxCost = Math.max(0, ...ms.map(([, r]) => r.cost)) || 1;
+  const tot = ms.reduce((a, [, r]) => [a[0] + r.calls, a[1] + r.cost], [0, 0]);
+  const modelTab = `<table class="utab"><tr><th>Model</th><th class="n">Calls</th><th class="n">Time</th><th class="n">Cost</th></tr>
+    ${ms.map(([m, r]) => `<tr><td>${mtag(m)}${r.live ? ' <i class="dot run"></i>' : ''}</td><td class="n">${r.main ? '–' : r.calls}</td><td class="n">${r.nil ? '–' : fmtMin(r.min)}</td><td class="n">${r.nil || (r.done && !r.priced) ? '–' : bar(r.cost, maxCost) + money(r.cost)}</td></tr>`).join('')}
+    <tr class="sum"><td>Total</td><td class="n">${tot[0]}</td><td class="n">${fmtMin(t.elapsed)}</td><td class="n">${cu('mc-' + t.id, tot[1], '$')}</td></tr></table>
     ${(t.unpriced || []).length ? `<p class="note">${L('Not in prices.json: ', 'prices.json에 없는 모델: ')}${t.unpriced.map(esc).join(', ')}</p>` : ''}
     ${t.log.filter(isMM).map(e => `<p class="note" style="color:var(--gate)">⚠ MISMATCH ${e.t} ${esc(e.tx)}: ${L('configured', '설정')} ${esc(e.model)} → ${L('actual', '실제')} ${esc(e.actual)}</p>`).join('')}`;
   const sel = t.status !== 'done' && R === latestRev(t) ? t.step : 0;
@@ -728,15 +728,14 @@ function renderStatus() {
     <div class="kpi"><div class="kl">Now</div>${nowTile}</div>
     <div class="kpi"><div class="kl">Elapsed</div><div class="kv2">${fmtMin(t.elapsed)}</div><div class="ks">${L('started', '시작')} ${esc(t.started)}</div></div>
     <div class="kpi"><div class="kl">Criteria</div><div class="kv2">${cPass}/${c.total}</div><div class="cells">${cells}</div></div>
-    <div class="kpi"><div class="kl">Tokens</div><div class="kv2">${cu('tok-' + t.id, t.tokens, 'k')}</div><div class="ks">${L('subagents + main session', '서브에이전트 + 메인 세션')}</div></div>
     <div class="kpi"><div class="kl">Escalation (E)</div><div class="kv2 ${eLvl}">${eLvl === 'bad' ? L('▲ E raised', '▲ E 발생') : eLvl === 'warn' ? L('△ Caution', '△ 주의') : L('● Normal', '● 정상')}</div>
       <div class="ks" title="${L('Verify FAILs in a row · slices stopped (limits 3 · 2)', 'Verify 연속 FAIL · slice 중단 (한도 3 · 2)')}">${L(`Verify FAIL ${t.vfail}/3 · slice stops ${t.sstop}/2`, `Verify 연속 FAIL ${t.vfail}/3 · slice 중단 ${t.sstop}/2`)}</div></div>
-    <div class="kpi"><div class="kl">Cost</div><div class="kv2">${cu('mc-' + t.id, tot[2], '$')}</div><div class="ks">${L('estimate', '추정')} · statusline ${t.cost == null ? '–' : cu('cost-' + t.id, +t.cost, '$')}</div></div>
+    <div class="kpi"><div class="kl">Cost</div><div class="kv2">${cu('mc-' + t.id, tot[1], '$')}</div><div class="ks">${L('estimate', '추정')} · statusline ${t.cost == null ? '–' : cu('cost-' + t.id, +t.cost, '$')}</div></div>
   </div>`;
   $('p-status').innerHTML = `<div class="dash">
     <div class="panel2"><div class="p2h"><b>Steps</b><small>${L('click a step to replay it in Log', '누르면 기록에서 그 단계를 재생')}</small></div>${vl}</div>
     <div class="side">${tiles}
-      <div class="now-box"><h4>Models <small style="font-weight:400;color:var(--muted)">${L('tokens × list price, estimate', '토큰 × 정가 추정')}</small></h4>${modelTab}</div></div></div>`;
+      <div class="now-box"><h4>Models <small style="font-weight:400;color:var(--muted)">${L('list price, estimate', '정가 추정')}</small></h4>${modelTab}</div></div></div>`;
 }
 
 /* ---------- 2 Architecture ---------- */
@@ -816,7 +815,7 @@ function timeline(t) {
   const rows = items.map(({ e, label, d: dd }, i) => {
     const s = mins(e.t), d = dd == null ? Math.max(1, mins(t.now) - s) : dd, m = modelOf(e);
     return `<div class="tl-row"><span class="lb" title="${esc(e.tx)}"><span class="lvbadge ${LV_OF(e.a).cls}">${LV_OF(e.a).id}</span> ${esc(label.replace('my-agent:', ''))} <small>${L(`step ${e.s}`, `${e.s}단계`)}</small></span>
-      <div class="tl-track">${bg}<div class="tl-bar ${e.live ? 'live' : ''} ${isMM(e) ? 'mm' : ''}" style="left:${X(s)};width:calc(${(d / W * 100).toFixed(2)}%);--c:${MCOL[m] || 'var(--accent)'};--i:${i}" title="${esc(e.tx)} · ${esc(m)}${(e.effort || EFFORT[e.a]) ? ' · effort ' + (e.effort || EFFORT[e.a]) : ''} · ${e.live ? L('running', '실행 중') : esc(e.tok) + ' · ' + fmtMin(num(e.dur)) + ' · ' + money(e.c)}" data-jump="${t.log.indexOf(e)}"></div></div></div>`;
+      <div class="tl-track">${bg}<div class="tl-bar ${e.live ? 'live' : ''} ${isMM(e) ? 'mm' : ''}" style="left:${X(s)};width:calc(${(d / W * 100).toFixed(2)}%);--c:${MCOL[m] || 'var(--accent)'};--i:${i}" title="${esc(e.tx)} · ${esc(m)}${(e.effort || EFFORT[e.a]) ? ' · effort ' + (e.effort || EFFORT[e.a]) : ''} · ${e.live ? L('running', '실행 중') : fmtMin(num(e.dur)) + ' · ' + money(e.c)}" data-jump="${t.log.indexOf(e)}"></div></div></div>`;
   }).join('');
   const peak = (() => { let mx = 0; for (let m = t0; m <= t1; m++) { const n = items.filter(({ e, d }) => mins(e.t) <= m && m < mins(e.t) + (d == null ? mins(t.now) - mins(e.t) : d)).length; mx = Math.max(mx, n); } return mx; })();
   return `<div class="tl-legend"><span><i style="background:var(--l2)"></i>opus</span><span><i style="background:var(--l3)"></i>sonnet</span><span><i style="background:var(--l1)"></i>haiku</span>
@@ -839,7 +838,7 @@ function replay(t) {
   const files = filesAt(i), before = new Set(filesAt(i - 1).map(f => f.p));
   const mockNow = mocksOf(t).filter(m => m.r === rOf(e) && e.k === 'popup' && e.tx.startsWith('G1b'))[0];
   const done = upto.filter(x => x.k === 'agent' && !x.live);
-  const tokSoFar = done.reduce((a, x) => a + num(x.tok), 0), costSoFar = done.reduce((a, x) => a + num(x.c), 0);
+  const costSoFar = done.reduce((a, x) => a + num(x.c), 0);
   const lv = LV_OF(e.a);
   return `<div class="rp-ctrl"><button data-rp="first">${L('First', '처음')}</button><button data-rp="prev">${L('Prev', '이전')}</button><button data-rp="next" class="primary">${L('Next', '다음')}</button>
       <button data-rp="play">${st.playing ? L('Pause', '멈춤') : L('Auto-play', '자동 재생')}</button>
@@ -849,8 +848,8 @@ function replay(t) {
       <div><div class="console" id="rp-console">${con}</div>
         <div class="rp-card"><b>${esc(e.t)} · ${curStep ?? '–'}. ${esc(STEP_NAME[curStep])}</b> · <span class="lvbadge ${lv.cls}">${lv.id} ${esc(compName(lv, e.a))}</span><br>
           ${esc(e.tx)}${e.sub ? `<br><span class="note">${esc(e.sub)}</span>` : ''}
-          ${e.k === 'agent' && !e.live ? `<br>${mtag(modelOf(e))}${etag(e.a, e.effort)} ${esc(e.tok)} · ${fmtMin(num(e.dur))} · ${money(e.c)} · <span class="res">${esc(e.res)}</span>${mmTag(e)}` : ''}
-          <br><span class="note">${L(`cumulative so far ≈ ${tokSoFar}k tokens · ${money(costSoFar)}`, `이 시점까지 누적 ≈ ${tokSoFar}k 토큰 · ${money(costSoFar)}`)}</span></div>${mockNow ? mockBlock(t, mockNow) : ''}</div>
+          ${e.k === 'agent' && !e.live ? `<br>${mtag(modelOf(e))}${etag(e.a, e.effort)} ${fmtMin(num(e.dur))} · ${money(e.c)} · <span class="res">${esc(e.res)}</span>${mmTag(e)}` : ''}
+          <br><span class="note">${L(`cumulative so far ≈ ${money(costSoFar)}`, `이 시점까지 누적 ≈ ${money(costSoFar)}`)}</span></div>${mockNow ? mockBlock(t, mockNow) : ''}</div>
       <div><div class="fgroup" style="margin-top:0">Task files at this moment</div><div class="ftree">${files.map(f => `<div class="frow"><span class="fn">├ ${before.has(f.p) ? esc(f.p) : `<span class="fnew" data-type="${esc(f.p)}">${esc(f.p)}</span>`}</span><span class="fm">${before.has(f.p) ? esc(f.t) : L('new', '새로 씀')}</span></div>`).join('') || `<p class="note">${L('none', '없음')}</p>`}</div></div>
     </div>`;
 }

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Save the main session's token usage per step to <task>/main-usage.json (architecture 4.8.2 "Task records over time").
+"""Save the main session's token usage per step to <task>/main-usage.json and print its cost at list prices
+(architecture 4.8.2 "Task records over time").
 
 usage: usage-snapshot.py [--cwd DIR] [--data-dir DIR]
                                             the active task of DIR (L1, at the end of a task: accept.md
                                             "Retrospective", SKILL.md "Abort")
        usage-snapshot.py --task-dir DIR     any task folder (archive-tasks.py, or by hand for an older task)
---data-dir is the data folder (its active-index.json finds the task of a run folder outside git).
+--data-dir is the data folder (its active-index.json finds the task of a run folder outside git; its prices.json
+overrides the bundled list prices, as for the monitor).
+Prints `saved: <path> (<n> rows, ≈ $<usd>)`; the cost comes from the shared table `lib/ma_prices.py`.
 The transcripts are read from $MA_CLAUDE_PROJECTS (default ~/.claude/projects). The task is treated as finished:
 the last step window ends 1 second after the last run-log line, as the monitor counts a finished task.
 exit: 0 written, 1 no active task (or the task folder does not exist), 2 bad arguments,
@@ -21,12 +24,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_data  # noqa: E402
+import ma_prices  # noqa: E402
 import ma_subagent  # noqa: E402
 import ma_usage  # noqa: E402
 
 
-def snapshot(task_dir: Path) -> int:
-    code, message = ma_usage.write_snapshot(task_dir, ma_subagent.claude_projects(), datetime.now())
+def snapshot(task_dir: Path, prices: dict) -> int:
+    code, message = ma_usage.write_snapshot(task_dir, ma_subagent.claude_projects(), datetime.now(), prices)
     print(message if code == 0 else f'usage-snapshot: {message}')
     return code
 
@@ -51,7 +55,7 @@ def main(argv=None) -> int:
         if not task_dir.is_dir():
             print(f'usage-snapshot: {task_dir} does not exist')
             return 1
-    return snapshot(task_dir)
+    return snapshot(task_dir, ma_prices.load_prices(ma_prices.prices_file(args.data_dir)))
 
 
 if __name__ == '__main__':

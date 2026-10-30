@@ -40,7 +40,8 @@ The server binds `127.0.0.1` only. The page polls every 2 s.
 
 The data folder is the my-agent plugin setting `data_dir` (default `~/dev/log/my-agent`). Order: `MA_TASKS_DIR`, then the setting, then `~/dev/log/my-agent`; a leading `~` is expanded. `monitor-up.py --data-dir <folder>` takes the setting for the commands the my-agent skill runs, and passes the resolved folder to the server it starts. `monitor.json`, `monitor.log` and `monitor-config.json` sit directly in the data folder. A running server keeps the folder it started with: after changing the folder, run `/my-agent:monitor stop` and start the monitor again.
 
-Main session tokens of a finished task are read from `main-usage.json` in its task folder when it exists (my-agent writes it at the end of a task with `usage-snapshot.py`), because Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days). Without it, they come from the transcript, and turn into `–` once the transcript is gone.
+The main session's usage of a finished task is read from `main-usage.json` in its task folder when it exists (my-agent writes it at the end of a task with `usage-snapshot.py`) and costed with the current `prices.json`, because Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days). Without it, they come from the transcript, and turn into `–` once the transcript is gone.
+The dashboard, Models table, step cards and replay show USD only (no token counts); the raw counts stay in the run-log `stop:` lines and `main-usage.json`.
 Only `docs/agent/*/` is listed. Finished tasks moved to `docs/agent/.archived/` by `l4-tools-guards/scripts/archive-tasks.py` leave the list (architecture 4.8.2 "Task records over time").
 
 Real data needs my-agent v0.19 (run-log `step:` lines, `ask:`/`answer:` lines, G2 hook, token split on `stop:`).
@@ -50,6 +51,7 @@ Older task folders still show, with steps as `–`.
 
 `prices.json` holds USD per 1M tokens, keyed by model-ID prefix (the longest prefix wins):
 `input`, `output`, `cache_write` (5-minute TTL), `cache_read`. Edit it by hand when prices change and set `checked`.
+The table is read through `l4-tools-guards/lib/ma_prices.py`, which `usage-snapshot.py` also uses.
 A model with no row is costed as `–` and listed under the Models table.
 
 ## Test

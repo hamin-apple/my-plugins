@@ -8,7 +8,8 @@ from helpers import make_task, run_hook
 
 NOTICE = ('Unfinished my-agent task `261025-probe-task`, phase `2`. Run `/my-agent continue` before doing anything else. '
           'If `plan.md` has no approval line, do not delegate or write.')
-FORK = 'The original session is running this task. To take it over in this session, run `/my-agent continue`'
+OTHER = ('The original session is running my-agent task 261025-probe-task (phase 2). '
+         'To take it over in this session, run /my-agent continue; otherwise work as usual.')
 
 
 class SessionNoticeTest(unittest.TestCase):
@@ -37,10 +38,31 @@ class SessionNoticeTest(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertEqual(self.context(self.notice(source)), NOTICE)
 
-    def test_notice_fork_other_session(self):
+    def test_other_session_every_source(self):
         make_task(self.root, phase='2', session='s-original')
-        self.assertEqual(self.context(self.notice('fork', session='s-fork')), FORK)
-        self.assertEqual(self.context(self.notice('fork', session='s-original')), NOTICE)
+        for source in ('startup', 'resume', 'clear', 'compact', 'fork'):
+            with self.subTest(source=source):
+                ctx = self.context(self.notice(source, session='s-other'))
+                self.assertEqual(ctx, OTHER)
+                self.assertNotIn('before doing anything else', ctx)
+
+    def test_owner_gets_notice(self):
+        make_task(self.root, phase='2', session='s-original')
+        for source in ('startup', 'fork'):
+            with self.subTest(source=source):
+                self.assertEqual(self.context(self.notice(source, session='s-original')), NOTICE)
+
+    def test_no_marker_session_gets_notice(self):
+        make_task(self.root, phase='2', session='')
+        self.assertEqual(self.context(self.notice('startup', session='s-other')), NOTICE)
+
+    def test_no_input_session_gets_notice(self):
+        make_task(self.root, phase='2', session='s-original')
+        for source in ('startup', 'fork'):
+            with self.subTest(source=source):
+                r = run_hook('session-notice.py', None, {'hook_event_name': 'SessionStart', 'source': source},
+                             self.root, env=self.env)
+                self.assertEqual(self.context(r.stdout), NOTICE)
 
     def test_no_active_notice(self):
         self.assertEqual(self.notice('startup'), '')

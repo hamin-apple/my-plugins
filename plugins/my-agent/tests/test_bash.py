@@ -14,6 +14,11 @@ def P(s):
 
 
 class WriteTargetsTest(unittest.TestCase):
+    def test_read_paths_cd_checks_both_folders(self):
+        got = ma_bash.read_paths('cd sub; cat ../x', CWD)
+        self.assertIn(P('/p/x'), got)   # the cd worked
+        self.assertIn(P('/x'), got)     # the cd failed
+
     def test_bash_write_targets_table(self):
         table = [
             ('ls -la', []),
@@ -332,6 +337,35 @@ class GitMutatesTest(unittest.TestCase):
                     'git stash list', 'git rev-parse HEAD', 'ls'):
             with self.subTest(cmd=cmd):
                 self.assertFalse(ma_bash.git_mutates(cmd))
+
+
+class GitMvTest(unittest.TestCase):
+    def test_targets(self):
+        self.assertEqual(ma_bash.write_targets('git mv a b', CWD), [P('/p/a'), P('/p/b')])
+        self.assertEqual(ma_bash.write_targets('cd src && git mv x y', CWD), [P('/p/src/x'), P('/p/src/y')])
+        self.assertEqual(ma_bash.write_targets('export FOO=1; git mv a b', CWD), [P('/p/a'), P('/p/b')])
+
+    def test_cannot_tell(self):
+        for cmd in ('git mv a', 'git mv -k a b', 'git mv -- a b', 'git mv a b c', 'git mv $A b', 'git -C sub mv a b',
+                    'echo docs/agent | xargs git mv a b', 'GIT_DIR=x git mv a b', 'GIT_WORK_TREE=/x git mv a b',
+                    'env GIT_DIR=x git mv a b', 'env -C dir git mv a b', 'sudo git mv a b',
+                    'export GIT_WORK_TREE=/outside; git mv a b', 'GIT_DIR=/x; git mv a b',
+                    'declare -x GIT_DIR=/x && git mv a b', 'set -a; GIT_DIR=/x; git mv a b',
+                    'typeset GIT_DIR=/x; git mv a b', '. ./env.sh; git mv a b',
+                    'source env.sh && git mv a b'):
+            with self.subTest(cmd=cmd):
+                self.assertIsNone(ma_bash.write_targets(cmd, CWD))
+
+    def test_unchanged(self):
+        self.assertEqual(ma_bash.write_targets('echo x | xargs git status', CWD), [])
+        self.assertTrue(ma_bash.git_mutates('git mv a b'))
+        for cmd in ('git add .', 'git commit -m x', 'git checkout b', 'git reset --hard'):
+            with self.subTest(cmd=cmd):
+                self.assertIsNone(ma_bash.write_targets(cmd, CWD))
+
+    def test_empty_raw_fails_closed(self):
+        c = ma_bash.Simple(['git', 'mv', 'a', 'b'], False, [], [])
+        self.assertIsNone(ma_bash._writes(c))
 
 
 if __name__ == '__main__':

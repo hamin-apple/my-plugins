@@ -47,6 +47,17 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.assertEqual((out['hookEventName'], out['permissionDecision']), ('PreToolUse', 'deny'))
         self.assertIn('G3', out['permissionDecisionReason'])
 
+    PREFIX = 'my-agent verdict gate: '
+    TAIL = '; allow the commit only if it is your own change, not the task\'s'
+
+    def assertAsked(self, r, reason=None):
+        self.assertEqual(r.returncode, 0, r.stderr)
+        out = json.loads(r.stdout)['hookSpecificOutput']
+        self.assertEqual((out['hookEventName'], out['permissionDecision']), ('PreToolUse', 'ask'))
+        if reason is not None:
+            self.assertEqual(out['permissionDecisionReason'], reason)
+        return out['permissionDecisionReason']
+
     def assertPassed(self, r):
         self.assertEqual((r.returncode, r.stdout), (0, ''), r.stderr)
 
@@ -57,13 +68,14 @@ class VerdictFreshCheckTest(unittest.TestCase):
 
     def test_other_session_and_subagent_pass(self):
         self.file(self.L / 'src/a.py', 'x', 0)
-        self.assertDenied(self.bash('git commit -m x'))
+        self.assertAsked(self.bash('git commit -m x'))
         self.assertPassed(self.bash('git commit -m x', session_id='s-other'))
         self.assertPassed(self.bash('git commit -m x', agent_id='ag1'))
 
     def test_commit_without_verdicts_denied(self):
         self.file(self.L / 'src/a.py', 'x', 0)
-        self.assertDenied(self.bash('git add -A && git commit -m "feat: x"'))
+        self.assertAsked(self.bash('git add -A && git commit -m "feat: x"'),
+                         self.PREFIX + 'verify.md does not start with Verdict: ALL PASS' + self.TAIL)
 
     def test_commit_with_fresh_verdicts_passes(self):
         self.file(self.L / 'src/a.py', 'x', 0)
@@ -73,14 +85,19 @@ class VerdictFreshCheckTest(unittest.TestCase):
     def test_wrong_verdict_word_denied(self):
         self.file(self.L / 'src/a.py', 'x', 0)
         self.verdicts(verify='Verdict: FAIL\n')
-        self.assertDenied(self.bash('git commit -m x'))
+        self.assertAsked(self.bash('git commit -m x'), self.PREFIX + 'verify.md does not start with Verdict: ALL PASS' + self.TAIL)
         self.verdicts(review='BLOCKER 1\n')
-        self.assertDenied(self.bash('git commit -m x'))
+        self.assertAsked(self.bash('git commit -m x'), self.PREFIX + 'review.md does not start with BLOCKER 0' + self.TAIL)
 
     def test_change_after_verify_denied(self):
         self.verdicts()
         self.file(self.L / 'src/a.py', 'x', 20)
-        self.assertDenied(self.bash('git commit -m x'))
+        self.assertAsked(self.bash('git commit -m x'), self.PREFIX + 'review.md is older than src/a.py' + self.TAIL)
+
+    def test_verify_older_names_verify(self):
+        self.file(self.L / 'src/a.py', 'x', 20)
+        self.verdicts(verify_at=10, review_at=30)
+        self.assertAsked(self.bash('git commit -m x'), self.PREFIX + 'verify.md is older than src/a.py' + self.TAIL)
 
     def test_task_folder_changes_do_not_count_for_commit(self):
         self.file(self.L / 'src/a.py', 'x', 0)
@@ -93,7 +110,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.verdicts(verify_at=10, review_at=30, review='BLOCKER 0\n\n## Applied after review\n\n- a.py: rename\n')
         self.assertPassed(self.bash('git commit -m x'))
         self.verdicts(verify_at=10, review_at=30)
-        self.assertDenied(self.bash('git commit -m x'))
+        self.assertAsked(self.bash('git commit -m x'))
 
     def test_deliver_copy_checked(self):
         self.file(self.T / 'work' / 'note.md', 'n', 0)
@@ -142,6 +159,62 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.verdicts()
         self.assertPassed(self.bash(f'echo x > docs/agent/{TASK}/deliverable/a.md'))
 
+    def test_copy_of_task_records_is_not_a_deliver(self):
+        T, out = f'docs/agent/{TASK}', self.root / 'out'
+        self.file(self.T / 'review.md', 'BLOCKER 3\n', 0)
+        self.file(self.T / 'run-log.md', 'log', 0)
+        self.file(self.T / 'verify.md', 'Verdict: FAIL\n', 0)
+        self.file(self.T / 'work' / 'a.md', 'a', 20)
+        self.assertPassed(self.bash(f'cp {T}/review.md {out}/backup.md'))
+        self.assertPassed(self.bash(f'cp {T}/run-log.md {out}/'))
+        self.assertPassed(self.bash(f'rsync {T}/verify.md {out}/'))
+
+    def test_copy_from_work_still_denied_with_stale_verdicts(self):
+        T, out = f'docs/agent/{TASK}', self.root / 'out'
+        self.file(self.T / 'review.md', 'BLOCKER 3\n', 0)
+        self.file(self.T / 'work' / 'a.md', 'a', 20)
+        self.assertDenied(self.bash(f'cp {T}/work/a.md {out}/'))
+        self.assertDenied(self.bash(f'cp {T}/work/a.md {T}/review.md {out}/'))
+        self.assertDenied(self.bash(f'cd {T} && cp work/a.md {out}/'))
+
+    def test_compound_commit_and_stale_deliver_is_denied(self):
+        T, out = f'docs/agent/{TASK}', self.root / 'out'
+        self.file(self.T / 'review.md', 'BLOCKER 3\n', 0)
+        self.file(self.T / 'work' / 'a.md', 'a', 20)
+        self.assertDenied(self.bash(f'git commit -m x && cp {T}/work/a.md {out}/'))
+        why = self.assertAsked(self.bash(f'git commit -m x && cp {T}/review.md {out}/'))
+        self.assertIn('verify.md does not start with', why)
+        self.assertAsked(self.bash('git commit -m x'))
+
+    def test_ask_reason_survives_case_different_location(self):
+        self.verdicts(verify_at=10, review_at=10)
+        self.file(self.L / 'src/a.py', 'x', 30)
+        r = self.bash('git commit -m x')
+        self.assertAsked(r)
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            'vfc', str(Path(__file__).resolve().parents[1] / 'l4-tools-guards/hooks/verdict-fresh-check.py'))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        class A:
+            location = Path('/Tmp/Proj')
+        file = Path('/tmp/proj/src/a.py')
+        mod.under = lambda p, q: True          # a case-folding volume: under() says yes, relative_to would raise
+        why = mod.ask_reason(A, ('older', 'verify.md', file), False)
+        self.assertIn('verify.md is older than', why)
+
+    def test_git_mv_work_to_deliverable_checked(self):
+        T = f'docs/agent/{TASK}'
+        self.file(self.T / 'work' / 'a.md', 'a', 0)
+        self.assertDenied(self.bash(f'git mv {T}/work/a.md {T}/deliverable/a.md'))
+        self.verdicts()
+        self.assertPassed(self.bash(f'git mv {T}/work/a.md {T}/deliverable/a.md'))
+
+    def test_commit_still_produces_output(self):
+        self.file(self.L / 'src/a.py', 'x', 0)
+        self.assertNotEqual(self.bash('git commit -m x').stdout, '')
+
     def test_second_deliver_copy_not_blocked_by_first(self):
         self.file(self.T / 'work' / 'a.md', 'a', 0)
         self.file(self.T / 'work' / 'b.md', 'b', 0)
@@ -152,7 +225,10 @@ class VerdictFreshCheckTest(unittest.TestCase):
     def test_substitution_without_git_is_not_a_commit(self):
         self.file(self.L / 'src/a.py', 'x', 0)
         self.assertPassed(self.bash('echo "$(date +%F)"'))
-        self.assertDenied(self.bash('git commit -m "$(cat <<\'EOF\'\nfeat: x\nEOF\n)"'))
+        self.assertAsked(self.bash('git commit -m "$(cat <<\'EOF\'\nfeat: x\nEOF\n)"'),
+                         'my-agent verdict gate: cannot parse the command; allow it only if it is your own commit, not the task\'s')
+        self.verdicts()
+        self.assertPassed(self.bash('git commit -m "$(cat <<\'EOF\'\nfeat: x\nEOF\n)"'))
 
     def test_unparsed_git_says_why(self):
         # live run: L1 logged HEAD with "$(git rev-parse HEAD)" during Execute and got the verify.md message
@@ -160,14 +236,13 @@ class VerdictFreshCheckTest(unittest.TestCase):
         # no `git ... commit` shape in it: not a possible commit any more (2026-10-30, criterion 3)
         self.assertPassed(self.bash('echo "HEAD=$(git rev-parse HEAD)" && git status --porcelain'))
         r = self.bash('echo "HEAD=$(git rev-parse HEAD)" && git commit -m "$(cat <<\'EOF\'\nfeat: x\nEOF\n)"')
-        self.assertDenied(r)
-        why = json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason']
-        self.assertIn('cannot tell whether this is a git commit', why)
+        why = self.assertAsked(r)
+        self.assertIn('cannot parse the command', why)
         self.assertNotIn('verify.md', why)
 
     def test_commit_inside_shell_keywords_checked(self):
         self.file(self.L / 'src/a.py', 'x', 0)
-        self.assertDenied(self.bash('if true; then git commit -m m; fi'))
+        self.assertAsked(self.bash('if true; then git commit -m m; fi'))
 
     def test_non_git_location(self):
         loc = self.root / 'agent-tasks'

@@ -22,7 +22,7 @@ Do this every time you go back to ③ Build for Verify FAIL, Review BLOCKER (whe
 
 1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=8 name=Review-Deliver --model <main session model ID> --data-dir "<data folder>"`
 2. Hand it to `my-agent:reviewer`. Pass: the deliverable path, the `plan.md` path, and the result path `review.md`. The first line of the result is `BLOCKER <count>`.
-3. If there is 1 BLOCKER or more: if it is a small fix (the L1 exception in the SKILL.md level table), L1 fixes it (`fix` line) and gets a new judgment. If only Review was redone, without Verify, add a `## Applied after review` section at the end of the new `review.md` with Edit and list each fix on its own line as `- <what was fixed> (<file>)` (without this section, the hook blocks the G3 save and commit because `verify.md` is older than the change). If it is not a small fix, do "Back to Execute".
+3. If there is 1 BLOCKER or more: if it is a small fix (the L1 exception in the SKILL.md level table), L1 fixes it (`fix` line) and gets a new judgment. If only Review was redone, without Verify, add a `## Applied after review` section at the end of the new `review.md` with Edit and list each fix on its own line as `- <what was fixed> (<file>)` (without this section, the hook blocks the G3 save and asks before the commit because `verify.md` is older than the change). If it is not a small fix, do "Back to Execute".
 4. **G3 report (chat):** summary of the result, list of failures and unhandled items, the diff or the deliverable, tokens used and cost (reference), and **the exact path it will be saved to**.
    - List the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
    - Save location: the deliverable location in `## Scope summary` (or `scope.md`). If none, `deliverable/` in the task folder.
@@ -57,7 +57,7 @@ G3 always goes to the person, even while delegated approval is on.
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G3 choice="<chosen choice>" --data-dir "<data folder>"`
 4. **Commit:**
    - Do SKILL.md "Check before anything leaves" on the files to commit.
-   - `git add <files>`, then `git commit -m "<message>"`. The G2 permission dialog showing once more is a deliberate second check. If the judgments are not fresh, the hook (`verdict-fresh-check.py`) blocks it. If blocked, redo from Verify. Never use `--no-verify`.
+   - `git add <files>`, then `git commit -m "<message>"`. The G2 permission dialog showing once more is a deliberate second check. If the judgments are not fresh, the hook (`verdict-fresh-check.py`) asks (the G2 dialog) and names the stale judgment; do not allow it for the task's commit, redo from Verify. Never use `--no-verify`.
    - Add `Delivered: commit:<short sha>` to `intake.md` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" deliver path=commit:<short sha> --data-dir "<data folder>"`.
    - Change `intake.md` to `Status: done`. If delegated approval is on, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=end --data-dir "<data folder>"`. Do "Retrospective" below, and last of all delete `.active` and this task's line in `<data folder>/active-index.json`.
 5. **Rework** and **Abort** are the same as items 7 and 8 above. On abort, do not revert the changed files; only report their list.

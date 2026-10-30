@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Plugin hook (PreToolUse, every tool): read/write scope of my-agent:* agents
 (architecture 4.5 "read and write path limits", 4.12 "limiting read paths too").
+Every agent except the gate-analyst reads the task location, the data folder, the plugin folder, this session's
+scratchpad, the files listed under `## Reference files` in plan.md and, for the coder, its worktree; the gate-analyst
+reads only gate-tally.md and gate-report.md. Secret files and environment reads are checked first, so no added root
+reaches them.
 
 Runs in every session with the plugin on (F18), so anything whose input has no `my-agent:` agent_type exits 0 before
 the JSON is even parsed. For a my-agent agent: secrets are denied for everyone, reads must stay in the agent's read
-roots, writes in its write roots. The rules start from the agent's level (ma_schema.AGENTS): an L2 agent reads the
-task location, writes only its own file and its Bash only reads; an L3 agent reads the location and writes nothing.
-Roles then widen or narrow that: the verifier and researcher may use the web, the researcher and writer read the
-task folder and write `work/` (writer also `prototype/` and the plan's reference files), the coder writes the
-location or its worktree but not `docs/agent/`, `.git/` or `.claude/` (hooks and settings run in L1's context), and
-the gate-analyst reads only gate-tally.md and gate-report.md. The architect may not add the `Approved` or
+roots, writes in its write roots. The rules start from the agent's level (ma_schema.AGENTS): an L2 agent writes only
+its own file and its Bash only reads; an L3 agent writes nothing. Roles then widen or narrow that: the verifier and
+researcher may use the web, the researcher and writer write `work/` (writer also `prototype/`), the coder writes the
+location or its worktree (also one inside a linked-worktree location) but not `docs/agent/`, `.git/` or `.claude/`
+(hooks and settings run in L1's context), and the gate-analyst reads only gate-tally.md and gate-report.md. The
+architect may not add the `Approved` or
 `Prototype: requested` line L1 writes into plan.md (4.4 G1b) nor drop a `## Revisions` line (4.8.1).
 Paths compare without case (ma_path). Any error → exit 2, so the call is blocked
 (`onFailure: block` covers a crash or timeout).
@@ -25,11 +29,13 @@ from typing import List, NamedTuple, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
+import ma_data  # noqa: E402
 import ma_plan  # noqa: E402
 import ma_schema  # noqa: E402
 from ma_path import same, under  # noqa: E402
 
 HOME = Path.home()
+PLUGIN = Path(__file__).resolve().parents[2]   # the plugin folder (CLAUDE_PLUGIN_ROOT)
 SECRET_DIRS = [HOME / '.ssh', HOME / '.aws', HOME / '.config' / 'gh']
 SECRET_FILES = [HOME / '.netrc']
 OWN_FILE = {'architect': 'plan.md', 'plan-reviewer': 'plan-review.md', 'verifier': 'verify.md',
@@ -75,18 +81,42 @@ def reference_files(plan_md: Path, location: Path) -> List[Path]:
     return out
 
 
+def data_root() -> Path:
+    return ma_data.data_dir().expanduser().resolve()
+
+
+def scratch_base() -> Path:
+    return Path('/tmp').resolve() / f'claude-{os.getuid()}'
+
+
+def in_scratchpad(p: Path, session_id) -> bool:
+    """True when `p` is under this session's scratchpad `<base>/<project slug>/<session_id>/scratchpad`. Any slug
+    matches (it comes from the launch folder, which the hook input does not carry); the session id is unique."""
+    if not isinstance(session_id, str) or session_id in ('', '.', '..') or '/' in session_id or not hasattr(os, 'getuid'):
+        return False
+    try:
+        rel = p.resolve().relative_to(scratch_base())
+    except ValueError:
+        return False
+    return len(rel.parts) >= 3 and rel.parts[1] == session_id and rel.parts[2] == 'scratchpad'
+
+
 def worktree(cwd: Path, location: Path) -> Optional[Path]:
     root = ma_active.git_root(cwd)
-    if root is not None and (root / '.git').is_file() and ma_active.main_worktree(root) == location:
+    if root is None or not (root / '.git').is_file():
+        return None
+    container = ma_active.containing_checkout(root)
+    if ma_active.main_worktree(root) == location or (container is not None and same(container, location)):
         return root
     return None
 
 
 def level_rules(level: str, role: str, active) -> Rules:
     L, T = active.location, active.task_dir
+    read = [L, data_root(), PLUGIN] + reference_files(T / 'plan.md', L)
     if level == 'L2':
-        return Rules([L], [T / OWN_FILE[role]], [], False, False)
-    return Rules([L], [], [], False, False)   # L3
+        return Rules(read, [T / OWN_FILE[role]], [], False, False)
+    return Rules(read, [], [], False, False)   # L3
 
 
 def rules(role: str, active, cwd: Path) -> Optional[Rules]:
@@ -100,13 +130,13 @@ def rules(role: str, active, cwd: Path) -> Optional[Rules]:
     if role == 'verifier':
         return r._replace(web=True)
     if role == 'researcher':
-        return r._replace(read=[T], write=[T / 'work'], web=True)
+        return r._replace(write=[T / 'work'], web=True)
     if role == 'writer':
-        return r._replace(read=[T] + reference_files(T / 'plan.md', L), write=[T / 'work', T / 'prototype'])
+        return r._replace(write=[T / 'work', T / 'prototype'])
     if role == 'coder':
         W = worktree(cwd, L)
         own = W or L
-        return r._replace(write=[own], bash_writes=True,
+        return r._replace(read=r.read + ([W] if W else []), write=[own], bash_writes=True,
                           deny_write=[L / 'docs' / 'agent', L / '.git', L / '.claude', own / 'docs' / 'agent',
                                       own / '.git'] if W is None else [own / 'docs' / 'agent', own / '.git'])
     return r
@@ -134,10 +164,7 @@ def paths_of(tool: str, ti: dict, cwd: Path):
         return [base, glob_base(ti.get('pattern') or '', base)], []
     if tool == 'Bash':
         cmd = ti['command']
-        writes = ma_bash.write_targets(cmd, cwd)
-        if writes is not None and ma_bash.git_mutates(cmd):
-            writes = None
-        return ma_bash.read_paths(cmd, cwd), writes
+        return ma_bash.read_paths(cmd, cwd), ma_bash.write_targets(cmd, cwd)
     return [], []
 
 
@@ -165,7 +192,8 @@ def check(inp: dict, role: str, active) -> Optional[str]:
         if secret(p):
             return f'Secret paths are not read or written: {p}'
     for p in reads:
-        if not any(under(p, root) for root in r.read):
+        if not (any(under(p, root) for root in r.read)
+                or (role != 'gate-analyst' and in_scratchpad(p, inp.get('session_id')))):
             return f'Outside the read scope of {role}: {p}'
     if tool == 'Bash' and role == 'verifier' and ma_bash.http_sends(ti['command']) is not False:
         return 'The verifier\'s curl and wget only fetch (GET) (this option sends data).'

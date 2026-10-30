@@ -320,12 +320,40 @@ def _sed_files(args: List[str]) -> List[str]:
     return pos if script else pos[1:]
 
 
-def _writes(c: Simple) -> Optional[List[str]]:
-    """Raw target words of one simple command, or None when it writes somewhere it cannot name."""
+def _git_mv(args: List[str]) -> Optional[List[str]]:
+    """[src, dst] (raw words) when `args` is exactly `mv <src> <dst>`, else None: a global option before `mv` (`-C dir`
+    re-bases the paths and nothing here follows it), any word starting with `-`, or other than two words."""
+    if len(args) == 3 and args[0] == 'mv' and not any(a.startswith('-') for a in args[1:]):
+        return args[1:]
+    return None
+
+
+def _sets_git_env(raw: List[str]) -> bool:
+    """Whether one simple command (raw words) sets a `GIT_*` variable (bare assignment, export, declare, typeset) or
+    runs `set -a` or sources a file (`source f`, `. f`), which can re-base the paths of a later `git mv`."""
+    if not raw:
+        return False
+    if raw[0] in ('source', '.'):
+        return True
+    if os.path.basename(raw[0]) == 'set':
+        return any(a.startswith('-') and not a.startswith('--') and 'a' in a[1:] for a in raw[1:])
+    return any(w.startswith('GIT_') and ASSIGN.match(w) for w in raw) or (
+        raw[0] in ('export', 'declare', 'typeset') and any(w.startswith('GIT_') for w in raw[1:]))
+
+
+def _writes(c: Simple, before: List[Simple] = ()) -> Optional[List[str]]:
+    """Raw target words of one simple command, or None when it writes somewhere it cannot name. `before` is the
+    simple commands earlier on the command line (they may set `GIT_*`, which re-bases `git mv`)."""
     if not c.words:
         return []
     name, args = os.path.basename(c.words[0]), c.words[1:]
     if name == 'git':
+        mv = _git_mv(args)
+        if mv is not None:
+            if (c.xargs or not c.raw or os.path.basename(c.raw[0]) != 'git'
+                    or any(_sets_git_env(b.raw) for b in before)):
+                return None
+            return mv
         return None if _git_mutating(args) else []
     if name == 'find':
         return None if any(a in FIND_WRITE for a in args) else []
@@ -392,14 +420,15 @@ def _resolve_all(tok: str, cwds: List[Path]) -> Optional[List[Path]]:
 
 def write_targets(cmd: str, cwd: Path) -> Optional[List[Path]]:
     """Absolute paths `cmd` creates, changes or deletes; [] when it writes nothing it knows of;
-    None when it writes but a target cannot be named (git that changes the tree, `$VAR`, xargs, find -delete,
+    None when it writes but a target cannot be named (git that changes the tree, except a plain
+    `git mv <src> <dst>`, `$VAR`, xargs, find -delete,
     a symlink made in the same command as another write, anything `_walk` cannot follow)."""
     walked = _walk(cmd, cwd)
     if walked is None:
         return None
     out, writers, link = [], 0, False
-    for c, cwds in walked:
-        raw = _writes(c)
+    for i, (c, cwds) in enumerate(walked):
+        raw = _writes(c, [w[0] for w in walked[:i]])
         if raw is None:
             return None
         if c.redirects or raw:

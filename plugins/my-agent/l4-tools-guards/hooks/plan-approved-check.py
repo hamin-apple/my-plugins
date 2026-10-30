@@ -6,15 +6,16 @@ Runs in every session where the plugin is on, so it first narrows down: a call f
 the input) passes; no task found passes (a `.active` without `task:` warns, before the session check); a `.active`
 whose `session:` differs from the input `session_id` (both set) passes. Only then the verdict below.
 
-While a task is active and its `plan.md` has no `Approved` line under `## Approval`, deny delegation and writes,
-whatever the phase. Allowed before approval: my-agent:explorer / architect / plan-reviewer (and writer once
+While a task is active and its `plan.md` has no `Approved` line under `## Approval`, deny delegation and ask (the G2
+dialog) for writes, whatever the phase: a write outside the task folder, or a Bash command whose write target cannot be
+told, is the person's call, allowed only for their own request. Allowed before approval: my-agent:explorer / architect / plan-reviewer (and writer once
 `Prototype: requested` is under plan.md's `## Prototype`), and writes under `<location>/docs/agent/` or to the data folder's
 `active-index.json` / `projects.txt` (and `mkdir -p` of the data folder itself, Intake step 7). A `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with a
-warning. Any error → exit 2, so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
+warning. A data-folder write other than those two files is asked like any other outside write. Any error → exit 2, so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
 
 After approval, a write outside the location, the data folder and the result path that plan.md / scope.md
 declare (`- Deliverable location: `…`` or `- Save path: `…``) gets `ask`: auto mode lets such a write through without a
-prompt (probe 2026-10-25). A Bash write whose target cannot be told passes, as before (git commit asks via G2).
+prompt (probe 2026-10-25); the same holds for the ask before approval. A Bash write whose target cannot be told passes, as before (git commit asks via G2).
 The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
 """
 import json
@@ -32,7 +33,10 @@ import ma_schema  # noqa: E402
 from ma_path import same, under  # noqa: E402
 
 BEFORE_APPROVAL = {f'my-agent:{name}' for name in ma_schema.BEFORE_APPROVAL}
-REASON = 'Task {task}: plan.md has no approval line, so delegation and writes are blocked (G1b). {what}'
+PLAN_ASK = ('my-agent plan gate: write outside the task folder ({paths}); '
+            'allow it only if this is your own request, not the task\'s')
+CUT = 120
+REASON = 'Task {task}: plan.md has no approval line, so delegation and workflows are blocked, writes are asked (G1b). {what}'
 ASK = 'Task {task}: a write outside the task location ({paths}). It is not the deliverable location in the scope document, so confirm it.'
 RESULT_LINE = re.compile(r'(?m)^\s*-\s*(?:Deliverable location|Save path)\s*:\s*`([^`]+)`')
 
@@ -76,17 +80,18 @@ def outside_ask(inp: dict, active, tasks_dir: Path):
 
 
 def decide(inp: dict, active, tasks_dir: Path):
-    """Deny reason, or None to let the call through."""
+    """(reason, decision) for a call before approval: decision is 'deny' or 'ask'; (None, None) lets it through."""
     plan_md = active.task_dir / 'plan.md'
     if ma_plan.approved(plan_md):
-        return None
+        return None, None
     tool, ti = inp.get('tool_name'), inp.get('tool_input') or {}
     cwd = Path(inp.get('cwd') or os.getcwd())
-    reason = lambda what: REASON.format(task=active.task, what=what)  # noqa: E731
+    reason = lambda what: (REASON.format(task=active.task, what=what), 'deny')  # noqa: E731
+    ask = lambda slot: (PLAN_ASK.format(paths=slot), 'ask')  # noqa: E731
     if tool == 'Agent':
         agent = ti.get('subagent_type') or ''
         if agent in BEFORE_APPROVAL or (agent == 'my-agent:writer' and ma_plan.prototype_requested(plan_md)):
-            return None
+            return None, None
         return reason(f'Before approval only explorer, architect and plan-reviewer get work (requested: {agent or "-"}).')
     if tool == 'Workflow':
         return reason('No workflow runs before approval.')
@@ -94,14 +99,15 @@ def decide(inp: dict, active, tasks_dir: Path):
         raw = ti.get('file_path') or ti.get('notebook_path') or ''
         p = Path(os.path.expanduser(raw))
         p = (p if p.is_absolute() else cwd / p).resolve()
-        return None if allowed_write(p, active, tasks_dir) else reason(f'Write outside the task folder: {p}')
+        return (None, None) if allowed_write(p, active, tasks_dir) else ask(str(p))
     if tool == 'Bash':
-        targets = ma_bash.write_targets(ti.get('command') or '', cwd)
+        cmd = ti.get('command') or ''
+        targets = ma_bash.write_targets(cmd, cwd)
         if targets is None:
-            return reason('Cannot tell where this command writes (a git change, a variable path, etc.).')
+            return ask(f'cannot tell: {cmd[:CUT]}')
         outside = [str(t) for t in targets if not allowed_write(t, active, tasks_dir)]
-        return reason(f'Write outside the task folder: {", ".join(outside)}') if outside else None
-    return None
+        return ask(', '.join(outside)) if outside else (None, None)
+    return None, None
 
 
 def main() -> int:
@@ -124,7 +130,7 @@ def main() -> int:
             print(json.dumps({'systemMessage': f'my-agent: the task folder {active.task_dir} that .active points to does not exist'},
                              ensure_ascii=False))
             return 0
-        why, decision = decide(inp, active, tasks_dir), 'deny'
+        why, decision = decide(inp, active, tasks_dir)
         if not why and ma_plan.approved(active.task_dir / 'plan.md'):
             why, decision = outside_ask(inp, active, tasks_dir), 'ask'
         if why:

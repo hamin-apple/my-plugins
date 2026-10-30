@@ -1,6 +1,6 @@
 {
   "name": "my-agent",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks",
   "author": {
     "name": "jahoonjin"

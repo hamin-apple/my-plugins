@@ -2,11 +2,13 @@
 
 1. the git root of `cwd` (nearest ancestor with a `.git` entry, file or folder) → `<root>/docs/agent/.active`;
    when that root is a linked worktree (`.git` file, e.g. an isolation:worktree agent in
-   `<main>/.claude/worktrees/agent-<id>`, probe r2) and has no `.active`, the main worktree's `.active`;
+   `<loc>/.claude/worktrees/agent-<id>`, probe r2) and has no `.active`, the `.active` of the checkout that
+   contains it (the nearest ancestor with a `.git` entry of the same repository, main or linked), then the main
+   worktree's `.active`; a root whose `.git` is a folder never looks at parent folders;
    outside any git repo, the nearest of `cwd` and its ancestors with `docs/agent/.active` (a location such as
    the data folder run from itself, which Intake writes no index line for);
 2. `<tasks_dir>/active-index.json` (`{"<run folder>": "<task location>"}`): inside a git repo, only the entry for
-   its root (or main worktree), so a run folder such as ~/dev never reaches the repos below it; outside git, the
+   its root (or containing / main checkout), so a run folder such as ~/dev never reaches the repos below it; outside git, the
    entry for `cwd` or its nearest ancestor.
 
 `.active` is four `key: value` lines: task, phase, session, started (4.7.3).
@@ -16,6 +18,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import ma_data
+import ma_path
 
 
 class Active(NamedTuple):
@@ -82,20 +85,47 @@ def git_root(start: Path):
     return None
 
 
-def main_worktree(root: Path):
-    """The main worktree of a linked worktree `root` (its `.git` is a `gitdir:` file), else None."""
+def common_dir(root: Path):
+    """The repository's common git dir for the checkout `root`: `root/.git` when that is a folder, the `commondir`
+    of the `gitdir:` file when it is a linked worktree, else None."""
+    git = root / '.git'
+    if git.is_dir():
+        return git.resolve()
     try:
-        text = (root / '.git').read_text(encoding='utf-8')
+        text = git.read_text(encoding='utf-8')
     except (OSError, UnicodeDecodeError):
         return None
     if not text.startswith('gitdir:'):
         return None
     gitdir = (root / text[len('gitdir:'):].strip()).resolve()
     try:
-        common = (gitdir / (gitdir / 'commondir').read_text(encoding='utf-8').strip()).resolve()
+        return (gitdir / (gitdir / 'commondir').read_text(encoding='utf-8').strip()).resolve()
     except (OSError, UnicodeDecodeError):
-        common = gitdir.parent.parent if gitdir.parent.name == 'worktrees' else None
+        return gitdir.parent.parent if gitdir.parent.name == 'worktrees' else None
+
+
+def main_worktree(root: Path):
+    """The main worktree of a linked worktree `root` (its `.git` is a `gitdir:` file), else None."""
+    if not (root / '.git').is_file():
+        return None
+    common = common_dir(root)
     return common.parent if common is not None and common.name == '.git' else None
+
+
+def containing_checkout(root: Path):
+    """For a linked worktree `root` (e.g. an isolation:worktree agent in `<loc>/.claude/worktrees/agent-<id>`), the
+    nearest ancestor checkout of the same repository (main or linked), else None. It stops at the first ancestor
+    with a `.git` entry."""
+    if not (root / '.git').is_file():
+        return None
+    common = common_dir(root)
+    if common is None:
+        return None
+    for d in (root.parent, *root.parent.parents):
+        if (d / '.git').exists():
+            other = common_dir(d)
+            return d if other is not None and ma_path.same(other, common) else None
+    return None
 
 
 def find_active(cwd: str, tasks_dir: Path = None, broken: list = None):
@@ -109,11 +139,18 @@ def find_active(cwd: str, tasks_dir: Path = None, broken: list = None):
         found = read_active(root, broken)
         if found:
             return found
-        main = main_worktree(root) if (root / '.git').is_file() else None
+        container = containing_checkout(root)
+        found = read_active(container, broken) if container is not None else None
+        if found:
+            return found
+        main = main_worktree(root)
         found = read_active(main, broken) if main is not None else None
         if found:
             return found
-        candidates = [root] + ([main] if main is not None else [])   # a repo never takes a parent's index entry
+        candidates = []   # a repo never takes a parent's index entry
+        for d in (root, container, main):
+            if d is not None and d not in candidates:
+                candidates.append(d)
     else:
         for d in (start, *start.parents):
             found = read_active(d, broken)

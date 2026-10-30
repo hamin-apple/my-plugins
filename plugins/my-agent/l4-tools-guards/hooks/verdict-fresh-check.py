@@ -6,8 +6,11 @@ Runs in every session where the plugin is on, so it first narrows down: a call f
 the input) passes; no task found passes (a `.active` without `task:` warns, before the session check); a `.active`
 whose `session:` differs from the input `session_id` (both set) passes.
 
+A stale result on a commit (or a command that may be one) gets `ask` (the G2 dialog) naming the judgment; a stale
+deliver stays `deny`, also when the same command line holds a commit.
+
 Applies while a task is active, to a `git commit` and to the G3 deliver: any write into the task folder's
-`deliverable/` (the default save place, accept.md), and a Bash cp, mv or rsync from the task folder to a place outside
+`deliverable/` (the default save place, accept.md), and a Bash cp, mv or rsync from the task folder's `work/` or `deliverable/` to a place outside
 `<location>/docs/agent/` (other copy forms and plain reads do not count). It needs `verify.md` starting
 `Verdict: ALL PASS` and `review.md` starting
 `BLOCKER 0`, both no older than the newest changed file: git changes outside `docs/agent/`, plus the task folder's
@@ -29,9 +32,10 @@ import ma_schema  # noqa: E402
 from ma_path import under  # noqa: E402
 
 REASON = 'Task {task}: {why} Before G3, get Verify ALL PASS and Review BLOCKER 0 again as the latest results.'
-UNPARSED = ('Task {task}: the command has a substitution such as `$(` or backticks, so it cannot tell whether this is a git commit. '
-            'If it is not a commit, split the command and run it again without substitution. If it is a commit, get Verify ALL PASS and '
-            'Review BLOCKER 0 as the latest results before G3.')
+ASK_OLDER = 'my-agent verdict gate: {name} is older than {file}; allow the commit only if it is your own change, not the task\'s'
+ASK_NOT_PASS = ('my-agent verdict gate: {name} does not start with {line}; '
+                'allow the commit only if it is your own change, not the task\'s')
+ASK_UNPARSED = 'my-agent verdict gate: cannot parse the command; allow it only if it is your own commit, not the task\'s'
 
 
 def first_line(path: Path) -> str:
@@ -70,27 +74,50 @@ def changed_files(active, with_deliverable: bool = True) -> list:
     return out
 
 
-def stale_reason(active, changed: list):
+def stale_result(active, changed: list):
+    """None when fresh; else ('not-pass', 'verify.md'|'review.md', pass line) or ('older', 'verify.md'|'review.md', newest file)."""
     verify, review = active.task_dir / 'verify.md', active.task_dir / 'review.md'
     if first_line(verify) != ma_schema.VERIFY_PASS:
-        return f'The first line of verify.md is not `{ma_schema.VERIFY_PASS}`.'
+        return 'not-pass', 'verify.md', ma_schema.VERIFY_PASS
     if first_line(review) != ma_schema.REVIEW_PASS:
-        return f'The first line of review.md is not `{ma_schema.REVIEW_PASS}`.'
-    newest = max((p.stat().st_mtime for p in changed), default=0)
+        return 'not-pass', 'review.md', ma_schema.REVIEW_PASS
+    newest_file = max(changed, key=lambda p: p.stat().st_mtime, default=None)
+    newest = newest_file.stat().st_mtime if newest_file else 0
     if review.stat().st_mtime < newest:
-        return 'A file changed after review.md.'
+        return 'older', 'review.md', newest_file
     if verify.stat().st_mtime < newest:
         try:
             applied = ma_schema.has_section(review.read_text(encoding='utf-8'), ma_schema.APPLIED_AFTER_REVIEW)
         except (OSError, UnicodeDecodeError):
             applied = False
         if not applied:
-            return f'A file changed after verify.md (review.md has no `## {ma_schema.APPLIED_AFTER_REVIEW}`).'
+            return 'older', 'verify.md', newest_file
     return None
 
 
-def applies(tool: str, ti: dict, cwd: Path, active):
-    """None when the call is neither a commit nor a deliver; else whether `deliverable/` counts as changed."""
+def deliver_why(stale) -> str:
+    kind, name, extra = stale
+    if kind == 'not-pass':
+        return f'The first line of {name} is not `{extra}`.'
+    return f'A file changed after {name}.'
+
+
+def ask_reason(active, stale, unparsed: bool) -> str:
+    kind, name, extra = stale
+    if unparsed:
+        return ASK_UNPARSED
+    if kind == 'not-pass':
+        return ASK_NOT_PASS.format(name=name, line=extra)
+    p = Path(extra)
+    try:
+        rel = os.path.relpath(p, active.location) if under(p, active.location) else p
+    except ValueError:
+        rel = p
+    return ASK_OLDER.format(name=name, file=rel)
+
+
+def applies(tool: str, ti: dict, cwd: Path, active, commit: bool = True):
+    """None when the call is neither a commit nor a deliver (`commit=False`: not a deliver); else whether `deliverable/` counts as changed."""
     T, agent = active.task_dir, active.location / 'docs' / 'agent'
     deliverable = T / 'deliverable'
     if tool in ('Edit', 'Write', 'NotebookEdit'):
@@ -100,10 +127,11 @@ def applies(tool: str, ti: dict, cwd: Path, active):
     if tool != 'Bash':
         return None
     cmd = ti.get('command') or ''
-    if any(s in ('commit', '?') for s in ma_bash.git_subcommands(cmd)):
+    if commit and any(s in ('commit', '?') for s in ma_bash.git_subcommands(cmd)):
         return True
     targets = ma_bash.write_targets(cmd, cwd)
-    from_task = any(under(s, T) for s in ma_bash.copy_sources(cmd, cwd))   # cp, mv, rsync sources only
+    from_task = any(under(s, T / 'work') or under(s, deliverable)
+                    for s in ma_bash.copy_sources(cmd, cwd))   # cp, mv, rsync sources only
     if targets is None:
         return True if from_task else None
     if from_task and any(not under(t, agent) for t in targets):
@@ -130,12 +158,15 @@ def main() -> int:
         mode = applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active)
         if mode is None:
             return 0
-        why = stale_reason(active, changed_files(active, mode))
-        if why:
-            unparsed = inp.get('tool_name') == 'Bash' and \
-                '?' in ma_bash.git_subcommands((inp.get('tool_input') or {}).get('command') or '')
-            reason = UNPARSED.format(task=active.task) if unparsed else REASON.format(task=active.task, why=why)
-            print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
+        stale = stale_result(active, changed_files(active, mode))
+        if stale:
+            subs = ma_bash.git_subcommands((inp.get('tool_input') or {}).get('command') or '') \
+                if inp.get('tool_name') == 'Bash' else []
+            if any(x in ('commit', '?') for x in subs) and applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active, commit=False) is None:
+                decision, reason = 'ask', ask_reason(active, stale, '?' in subs)
+            else:
+                decision, reason = 'deny', REASON.format(task=active.task, why=deliver_why(stale))
+            print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
                                                      'permissionDecisionReason': reason}},
                              ensure_ascii=False))
         return 0

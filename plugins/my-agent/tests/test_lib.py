@@ -90,6 +90,49 @@ class FindActiveTest(unittest.TestCase):
         a = ma_active.find_active(str(wt / 'src'), self.tasks)
         self.assertEqual(a.task_dir, task_dir)
 
+    def layout(self):
+        """main/ (.git folder with worktrees/loc and worktrees/agent-x, task A), linked worktree loc/ (task B),
+        isolation worktree loc/.claude/worktrees/agent-x. Returns (task A dir, task B dir, agent-x)."""
+        main = self.root / 'main'
+        task_a = make_task(main, task='261001-task-a')
+        for name in ('loc', 'agent-x'):
+            wd = main / '.git' / 'worktrees' / name
+            wd.mkdir(parents=True)
+            (wd / 'commondir').write_text('../..\n')
+        loc = self.root / 'loc'
+        task_b = make_task(loc, task='261002-task-b', git=False)
+        (loc / '.git').write_text(f"gitdir: {main / '.git' / 'worktrees' / 'loc'}\n")
+        agent = loc / '.claude' / 'worktrees' / 'agent-x'
+        (agent / 'src').mkdir(parents=True)
+        (agent / '.git').write_text(f"gitdir: {main / '.git' / 'worktrees' / 'agent-x'}\n")
+        return task_a, task_b, agent
+
+    def test_isolation_worktree_finds_containing_worktree_task(self):
+        task_a, task_b, agent = self.layout()
+        self.assertEqual(ma_active.find_active(str(agent / 'src'), self.tasks).task_dir, task_b)
+
+    def test_isolation_worktree_falls_back_to_main_task(self):
+        task_a, task_b, agent = self.layout()
+        (self.root / 'loc' / 'docs' / 'agent' / '.active').unlink()
+        self.assertEqual(ma_active.find_active(str(agent / 'src'), self.tasks).task_dir, task_a)
+
+    def test_containing_checkout_of_another_repository_is_ignored(self):
+        task_a, task_b, agent = self.layout()
+        other = self.root / 'other' / '.git' / 'worktrees' / 'loc'
+        other.mkdir(parents=True)
+        (other / 'commondir').write_text('../..\n')
+        (self.root / 'loc' / '.git').write_text(f'gitdir: {other}\n')
+        self.assertEqual(ma_active.find_active(str(agent / 'src'), self.tasks).task_dir, task_a)
+
+    def test_isolation_worktree_index_entry_of_containing_worktree(self):
+        task_a, task_b, agent = self.layout()
+        (self.root / 'main' / 'docs' / 'agent' / '.active').unlink()
+        (self.root / 'loc' / 'docs' / 'agent' / '.active').unlink()
+        store = self.root / 'store'
+        task_c = make_task(store, task='261003-task-c', git=False)
+        (self.tasks / 'active-index.json').write_text(json.dumps({str(self.root / 'loc'): str(store)}))
+        self.assertEqual(ma_active.find_active(str(agent / 'src'), self.tasks).task_dir, task_c)
+
     def test_find_non_git_location(self):
         """A location outside any git repo (e.g. ~/dev/agent-tasks) run from itself writes no index line."""
         task_dir = make_task(self.root / 'agent-tasks', git=False)

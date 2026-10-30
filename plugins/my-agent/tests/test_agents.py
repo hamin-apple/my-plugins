@@ -63,6 +63,15 @@ def split(path):
 
 
 class AgentsTest(unittest.TestCase):
+    def test_read_rule_sentences(self):
+        """The prompts say what scope-guard allows (data folder, plugin folder, scratchpad, reference files)."""
+        for name in ('researcher', 'writer'):
+            text = (REPO / 'l3-workers' / 'agents' / f'{name}.md').read_text(encoding='utf-8')
+            self.assertIn('## Reference files', text, name)
+            self.assertIn('scratchpad', text, name)
+        explorer = (REPO / 'l3-workers' / 'agents' / 'explorer.md').read_text(encoding='utf-8')
+        self.assertIn('data folder', explorer)
+
     def test_coder_process_hygiene(self):
         """Criterion 16: coder stops what it starts, avoids the monitor's ports and shared state."""
         coder = (REPO / 'l3-workers' / 'agents' / 'coder.md').read_text(encoding='utf-8')

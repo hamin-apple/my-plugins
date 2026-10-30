@@ -50,6 +50,28 @@ class SubagentLogTest(unittest.TestCase):
     def last(self):
         return parse(log_lines(self.task)[-1])
 
+    def test_start_and_stop_in_isolation_worktree_go_to_containing_worktree_log(self):
+        main = self.root / 'proj'
+        for name in ('loc', 'agent-x'):
+            wd = main / '.git' / 'worktrees' / name
+            wd.mkdir(parents=True)
+            (wd / 'commondir').write_text('../..\n')
+        loc = self.root / 'loc'
+        task_b = make_task(loc, task='261002-task-b', git=False)
+        (loc / '.git').write_text(f"gitdir: {main / '.git' / 'worktrees' / 'loc'}\n")
+        agent = loc / '.claude' / 'worktrees' / 'agent-x'
+        agent.mkdir(parents=True)
+        (agent / '.git').write_text(f"gitdir: {main / '.git' / 'worktrees' / 'agent-x'}\n")
+        self.hook('start', {'hook_event_name': 'SubagentStart', 'agent_type': 'my-agent:probe-worker',
+                            'agent_id': 'ag9', 'permission_mode': 'auto', 'cwd': str(agent)}, cwd=agent)
+        self.hook('stop', {'hook_event_name': 'SubagentStop', 'agent_type': 'my-agent:probe-worker',
+                           'agent_id': 'ag9', 'agent_transcript_path': str(FIXTURE),
+                           'last_assistant_message': 'DONE\nmore', 'cwd': str(agent)}, cwd=agent)
+        text = '\n'.join(log_lines(task_b))
+        self.assertIn(' start: ', text)
+        self.assertIn(' stop: ', text)
+        self.assertEqual(log_lines(self.task), [])
+
     def test_call_written_for_my_agent(self):
         self.hook('call', CALL)
         line = log_lines(self.task)[-1]

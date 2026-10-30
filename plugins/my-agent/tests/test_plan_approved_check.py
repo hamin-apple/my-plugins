@@ -35,7 +35,17 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertEqual(out['hookEventName'], 'PreToolUse')
         self.assertEqual(out['permissionDecision'], 'deny')
         self.assertIn(TASK, out['permissionDecisionReason'])
-        self.assertIn('G1b', out['permissionDecisionReason'])
+        self.assertIn('delegation and workflows are blocked, writes are asked (G1b)', out['permissionDecisionReason'])
+
+    GATE = 'my-agent plan gate: write outside the task folder ({}); allow it only if this is your own request, not the task\'s'
+
+    def assertAsked(self, r, slot=None):
+        self.assertEqual(r.returncode, 0, r.stderr)
+        out = json.loads(r.stdout)['hookSpecificOutput']
+        self.assertEqual((out['hookEventName'], out['permissionDecision']), ('PreToolUse', 'ask'))
+        if slot is not None:
+            self.assertEqual(out['permissionDecisionReason'], self.GATE.format(slot))
+        return out['permissionDecisionReason']
 
     def assertPassed(self, r):
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -51,9 +61,9 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertPassed(self.hook('Workflow', {'script': 'x'}, cwd=other))
 
     def test_define_phase_blocks_write(self):
-        self.assertDenied(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}))
-        self.assertDenied(self.hook('Write', {'file_path': str(self.proj / 'README.md')}))
-        self.assertDenied(self.hook('NotebookEdit', {'notebook_path': str(self.proj / 'n.ipynb')}))
+        self.assertAsked(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}), str(self.proj / 'src/a.py'))
+        self.assertAsked(self.hook('Write', {'file_path': str(self.proj / 'README.md')}), str(self.proj / 'README.md'))
+        self.assertAsked(self.hook('NotebookEdit', {'notebook_path': str(self.proj / 'n.ipynb')}), str(self.proj / 'n.ipynb'))
 
     def test_define_phase_allows_task_folder_write(self):
         self.assertPassed(self.hook('Write', {'file_path': str(self.task / 'explore.md')}))
@@ -62,10 +72,11 @@ class PlanApprovedCheckTest(unittest.TestCase):
     def test_allows_index_and_projects(self):
         for name in ('active-index.json', 'projects.txt'):
             self.assertPassed(self.hook('Write', {'file_path': str(self.tasks_dir / name)}))
-        self.assertDenied(self.hook('Write', {'file_path': str(self.tasks_dir / 'monitor.json')}))
+        self.assertAsked(self.hook('Write', {'file_path': str(self.tasks_dir / 'monitor.json')}), str(self.tasks_dir / 'monitor.json'))
+        self.assertAsked(self.hook('Write', {'file_path': str(self.tasks_dir / 'feedback.md')}), str(self.tasks_dir / 'feedback.md'))
         projects = self.tasks_dir / 'projects.txt'
         self.assertPassed(self.hook('Bash', {'command': f'mkdir -p {self.tasks_dir} && echo /p >> {projects}'}))
-        self.assertDenied(self.hook('Bash', {'command': f'mkdir -p {self.tasks_dir}/x'}))
+        self.assertAsked(self.hook('Bash', {'command': f'mkdir -p {self.tasks_dir}/x'}), f'{self.tasks_dir}/x')
 
     def test_allowlist(self):
         for agent in ('my-agent:explorer', 'my-agent:architect', 'my-agent:plan-reviewer'):
@@ -89,12 +100,33 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertDenied(self.hook('Workflow', {'script': 'x'}))
 
     def test_bash_patterns(self):
-        self.assertDenied(self.hook('Bash', {'command': 'rm -rf src'}))
-        self.assertDenied(self.hook('Bash', {'command': 'git checkout -- a'}))
-        self.assertDenied(self.hook('Bash', {'command': 'echo x > "$F"'}))
+        self.assertAsked(self.hook('Bash', {'command': 'rm -rf src'}), str(self.proj / 'src'))
+        self.assertAsked(self.hook('Bash', {'command': 'git checkout -- a'}), 'cannot tell: git checkout -- a')
+        self.assertAsked(self.hook('Bash', {'command': 'echo x > "$F"'}), 'cannot tell: echo x > "$F"')
         self.assertPassed(self.hook('Bash', {'command': f'mkdir -p docs/agent/{TASK}/work'}))
         self.assertPassed(self.hook('Bash', {'command': f'echo "{self.proj}" >> {self.tasks_dir}/projects.txt'}))
         self.assertPassed(self.hook('Bash', {'command': 'ls -la && git status --porcelain'}))
+
+    def test_asks_for_outside_writes(self):
+        self.assertAsked(self.hook('Write', {'file_path': '/tmp/x/notes.md'}), str(Path('/tmp/x/notes.md').resolve()))
+        self.assertAsked(self.hook('Bash', {'command': 'git commit -m x'}), 'cannot tell: git commit -m x')
+        self.assertAsked(self.hook('Bash', {'command': 'git add .'}), 'cannot tell: git add .')
+        self.assertAsked(self.hook('Bash', {'command': 'cp a b'}), str(self.proj / 'b'))
+        cmd = 'git commit -m "' + 'x' * 200 + '"'
+        self.assertAsked(self.hook('Bash', {'command': cmd}), 'cannot tell: ' + cmd[:120])
+        why = self.assertAsked(self.hook('Bash', {'command': 'git mv a b'}))
+        self.assertIn(str(self.proj / 'a'), why)
+        self.assertIn(str(self.proj / 'b'), why)
+
+    def test_delegation_stays_denied(self):
+        self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'}))
+        self.assertDenied(self.hook('Workflow', {'script': 'x'}))
+
+    def test_outside_write_from_subagent_or_other_session_passes(self):
+        self.assertPassed(self.hook('Write', {'file_path': '/tmp/x/notes.md'}, agent_id='ag1'))
+        self.assertPassed(self.hook('Write', {'file_path': '/tmp/x/notes.md'}, session_id='s-other'))
+        self.assertPassed(self.hook('Write', {'file_path': str(self.task / 'notes.md')}))
+        self.assertPassed(self.hook('Write', {'file_path': str(self.tasks_dir / 'active-index.json')}))
 
     def test_approved_passes(self):
         self.plan('# Plan\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')
@@ -141,24 +173,25 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertIn(str(sibling), o['permissionDecisionReason'])
 
     def test_report_folder_before_approval_still_denied(self):
-        self.assertDenied(self.hook('Write', {'file_path': str(self.reports / 'x.md'), 'content': 'x'}))
-        self.assertDenied(self.hook('Bash', {'command': f'cp a.md {self.reports}/x.md'}))
+        self.assertAsked(self.hook('Write', {'file_path': str(self.reports / 'x.md'), 'content': 'x'}), str(self.reports / 'x.md'))
+        self.assertAsked(self.hook('Bash', {'command': f'cp a.md {self.reports}/x.md'}), str(self.reports / 'x.md'))
 
     def test_approved_line_elsewhere_does_not_count(self):
         self.plan('# Plan\n\n- Approved 2026-10-25 10:00 G1b\n\n## Approval\n\n## Notes\n')
-        self.assertDenied(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}))
+        self.assertAsked(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}))
 
     def test_cleared_approval_blocks_again(self):
         self.plan('# Plan\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')
         self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}))
         self.plan('# Plan (rev 2)\n\n## Approval\n')
-        self.assertDenied(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}))
+        self.assertAsked(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}))
+        self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'}))
 
     def test_found_via_active_index(self):
         run = self.root / 'elsewhere'
         run.mkdir()
         (self.tasks_dir / 'active-index.json').write_text(json.dumps({str(run): str(self.proj)}))
-        self.assertDenied(self.hook('Write', {'file_path': str(run / 'x.md')}, cwd=run))
+        self.assertAsked(self.hook('Write', {'file_path': str(run / 'x.md')}, cwd=run))
         self.assertPassed(self.hook('Write', {'file_path': str(self.task / 'scope.md')}, cwd=run))
 
     def test_missing_task_folder_warns(self):
@@ -177,18 +210,18 @@ class PlanApprovedCheckTest(unittest.TestCase):
 
     def test_other_session_passes(self):
         self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other'))
-        self.assertDenied(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-test'))
+        self.assertAsked(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-test'))
 
     def test_subagent_call_passes(self):
         self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, agent_id='ag1'))
 
     def test_missing_session_still_applies(self):
         (self.proj / 'docs/agent/.active').write_text(f'task: {TASK}\nphase: 1\nsession: \nstarted: x\n')
-        self.assertDenied(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other'))
+        self.assertAsked(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other'))
         (self.proj / 'docs/agent/.active').write_text(f'task: {TASK}\nphase: 1\nsession: s-test\nstarted: x\n')
         r = run_hook('plan-approved-check.py', None, {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.proj / 'src/a.py')}},
                      self.proj, env=self.env)
-        self.assertDenied(r)
+        self.assertAsked(r)
 
     def test_broken_active_warns_before_session_compare(self):
         (self.proj / 'docs/agent/.active').write_text('phase: 1\nsession: s-test\n')
@@ -209,7 +242,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
         env = self.setting_env(data)
         sib = self.root / 'setting-data-sibling' / 'x.md'
         self.assertPassed(self.hook('Write', {'file_path': str(data / 'projects.txt')}, env=env))
-        self.assertDenied(self.hook('Write', {'file_path': str(sib)}, env=env))
+        self.assertAsked(self.hook('Write', {'file_path': str(sib)}, env=env), str(sib))
         self.plan('# Plan\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')
         r = self.hook('Write', {'file_path': str(data / 'gate-report' / 'x.md')}, env=env)
         self.assertPassed(r)

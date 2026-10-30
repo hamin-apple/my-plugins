@@ -56,9 +56,17 @@ class ArchDocTest(unittest.TestCase):
         a = self.text.index(start)
         return self.text[a:self.text.index(end, a)]
 
-    def test_status_line_starts_with_v035(self):
+    def test_g1b_section_says_ask_for_writes_and_deny_for_delegation(self):
+        a = self.text.index('**G1b hard gate**')
+        sec = self.text[a:self.text.index('- **Block when the hook fails:**', a)]
+        self.assertNotIn('blocks **regardless of phase**', sec)
+        self.assertNotIn('pre-approval write block', sec)
+        self.assertIn('`permissionDecision: ask`', sec)
+        self.assertIn('`permissionDecision: deny`', sec)
+
+    def test_status_line_starts_with_v036(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.35 ('), line[:60])
+        self.assertTrue(line.startswith('- Status: design draft v0.36 ('), line[:60])
 
     def test_status_line_plugin_version_matches_plugin_json(self):
         line = self.text.splitlines()[3]
@@ -85,6 +93,28 @@ class ArchDocTest(unittest.TestCase):
 
     def test_decision_log_has_q23_row(self):
         rows = [l for l in self.text.splitlines() if l.startswith('| Q23 |')]
+        self.assertEqual(len(rows), 1, rows)
+        self.assertIn('2026-10-30', rows[0])
+
+    def test_security_section_names_the_read_roots_and_git_mv(self):
+        section = self.section('### 4.12 ', '## 5. ')
+        for word in ('data folder', 'plugin folder', 'scratchpad', 'git mv'):
+            self.assertIn(word, section)
+        self.assertIn('may be approved without a dialog and without a G2 record', section)
+
+    def test_resume_section_has_the_non_owner_notice(self):
+        section = self.section('### 4.8.2 ', '### 4.9 ')
+        self.assertIn('The original session is running my-agent task <id> (phase <n>). '
+                      'To take it over in this session, run /my-agent continue; otherwise work as usual.', section)
+
+    def test_gate_section_has_the_ask_texts(self):
+        section = self.section('### 4.4 ', '### 4.5 ')
+        for text in ('my-agent plan gate: write outside the task folder', 'my-agent verdict gate:',
+                     'cannot parse the command'):
+            self.assertIn(text, section)
+
+    def test_decision_log_has_q24_row(self):
+        rows = [l for l in self.text.splitlines() if l.startswith('| Q24 |')]
         self.assertEqual(len(rows), 1, rows)
         self.assertIn('2026-10-30', rows[0])
 

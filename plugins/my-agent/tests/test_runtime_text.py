@@ -27,6 +27,26 @@ class RuntimeTextTest(unittest.TestCase):
                 self.assertNotIn(word, text, f'{p.relative_to(REPO)}: {word}')
         self.assertGreater(seen, 20)
 
+    def test_gate_texts_say_ask_or_block(self):
+        skill = (REPO / 'SKILL.md').read_text(encoding='utf-8')
+        plan = (REPO / 'l1-orchestration/phases/plan.md').read_text(encoding='utf-8')
+        accept = (REPO / 'l1-orchestration/phases/accept.md').read_text(encoding='utf-8')
+        for text in (skill, plan, accept):
+            for old in ('blocks them as commands whose write target', 'blocks a relative path after',
+                        'blocks a Bash write containing', 'blocks the G3 save and commit'):
+                self.assertNotIn(old, text)
+
+        def line(text, key):
+            hits = [x for x in text.splitlines() if key in x]
+            self.assertEqual(len(hits), 1, key)
+            return hits[0]
+        self.assertIn('asks (the G2 dialog)', line(skill, 'plan-approved-check.py'))
+        self.assertIn('asks (the G2 dialog)', line(skill, 'the verdict hook cannot tell whether it is a commit'))
+        commit = line(accept, 'git add <files>')
+        self.assertIn('asks (the G2 dialog)', commit)
+        self.assertNotIn('blocks it. If blocked, redo from Verify', commit)
+        self.assertIn('blocks it. If blocked, redo from Verify', line(accept, 'Copy the final version'))
+
 
 if __name__ == '__main__':
     unittest.main()

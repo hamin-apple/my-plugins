@@ -61,6 +61,18 @@ class BuildDocsTest(unittest.TestCase):
         gate = next(a for a in self.data['agents'] if a['id'] == 'gate-analyst')
         self.assertEqual(gate['scope']['write'], ['<task folder>/gate-report.md'])
 
+    def test_scope_has_no_machine_paths(self):
+        for a in self.data['agents']:
+            for key in ('read', 'write', 'denyWrite'):
+                for path in a['scope'][key]:
+                    self.assertNotIn('/Users/', path, a['id'])
+                    self.assertNotIn('/private/', path, a['id'])
+            if a['id'] == 'gate-analyst':
+                self.assertEqual(a['scope']['read'], ['<task folder>/gate-tally.md', '<task folder>/gate-report.md'])
+            else:
+                for root in ('<task location>', '<data folder>', '<plugin folder>'):
+                    self.assertIn(root, a['scope']['read'], a['id'])
+
     def test_missing_heading_stops_the_build(self):
         with self.assertRaises(bd.SourceError):
             bd.cut('# a\n## b\ntext\n', 'no such heading')

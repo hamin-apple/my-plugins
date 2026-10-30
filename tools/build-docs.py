@@ -379,9 +379,10 @@ def scope_guard():
     return mod
 
 
-def show_path(p: Path) -> str:
+def show_path(p: Path, sg) -> str:
     s = str(p)
     s = s.replace(str(TASK), '<task folder>').replace(str(LOC), '<task location>')
+    s = s.replace(str(sg.data_root()), '<data folder>').replace(str(sg.PLUGIN), '<plugin folder>')
     return s
 
 
@@ -389,7 +390,7 @@ def agent_scope(sg, role: str) -> dict:
     class Active:
         location, task_dir = LOC, TASK
     r = sg.rules(role, Active, LOC)
-    uniq = lambda ps: list(dict.fromkeys(show_path(p) for p in ps))   # noqa: E731
+    uniq = lambda ps: list(dict.fromkeys(show_path(p, sg) for p in ps))   # noqa: E731
     return {'read': uniq(r.read), 'write': uniq(r.write), 'denyWrite': uniq(r.deny_write),
             'bashWrites': r.bash_writes, 'web': r.web}
 

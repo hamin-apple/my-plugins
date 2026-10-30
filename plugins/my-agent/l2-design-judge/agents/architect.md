@@ -36,7 +36,7 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
    - In the general and research profiles, writer and researcher result paths are always under `docs/agent/<task-id>/work/`. L1 copies them to the deliverable location (final location) in the scope summary after G3. Do not list the final location as a file to change. scope-guard blocks that write.
    - Units in the same parallel group must not change the same files. If they overlap, split them into different groups.
    - A parallel group that does not use a workflow has 4 units or fewer.
-4. `## Reference files`: files outside the task folder that writer may read, one per line as `` - `relative path` ``. If there are none, `- none`.
+4. `## Reference files`: files outside the task folder that agents may read, one per line as `` - `relative path` ``. If there are none, `- none`.
 5. `## Mock-up`: the first line is `Kind: <kind of example>` (e.g. `CLI input/output`, `note outline + sample paragraph`, `screen layout`), and below it is an example of the deliverable. Show both the normal case and the exception cases written in the scope document, and tag each case with its completion criterion number. It only shows the scope document as an example; it adds no new requirements.
 6. `## Prototype`: `needed` or `not needed` and a one-line reason. `needed` only when a judgment needs to be made by eye, such as a screen layout or a document layout. The `Prototype: requested` line in this section is written only by L1.
 7. `## Estimate`: the number of subagents; if you use a workflow, the number of steps and agents (9 or fewer per workflow). Write no expected tokens.

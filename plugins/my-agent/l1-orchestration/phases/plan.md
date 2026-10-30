@@ -8,7 +8,7 @@
    - `## Scope summary` (general profile): purpose, non-goals, deliverable location
    - `## Completion criteria`: numbered list `1.`, `2.`, each criterion line ending with its check tag (general profile; other profiles have it in `scope.md`)
    - `## Work units`: per unit, a `### u<n> <name>` heading, the agent in charge, the list of files to change, the parallel group, `- Status: pending` (when rewriting, `done` for units whose results `## Existing work` keeps as they are)
-   - `## Reference files`: files outside the task folder that writer may read (scope-guard allows writer's reads by this list)
+   - `## Reference files`: files outside the task folder that agents may read (scope-guard allows every worker's reads by this list)
    - `## Mock-up` (**required**): first line `Kind: <kind>`, then a sample of the deliverable. Both the normal case and the exception cases in the scope, each tagged with its completion criterion number
    - `## Prototype`: needed / not needed, and why
    - `## Estimate`: number of subagents, workflow steps and agent count
@@ -41,6 +41,6 @@
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1b q="Plan approval: <task-id>" rec="Approve" --data-dir "<data folder>"`
    - Popup: `Approve (Recommended)` / `Request changes` / `Abort`
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1b choice="<chosen choice>" --data-dir "<data folder>"`
-4. **Approve:** Write `- Approved <YYYY-MM-DD HH:MM> G1b` under `## Approval`. Get the time first with `date '+%Y-%m-%d %H:%M'`, then write the value with the Edit tool, without command substitution (the G1b hook blocks a Bash write containing `$(…)` as a command whose write target it cannot tell). Change `phase:` in `.active` to `3` and read `build.md`.
+4. **Approve:** Write `- Approved <YYYY-MM-DD HH:MM> G1b` under `## Approval`. Get the time first with `date '+%Y-%m-%d %H:%M'`, then write the value with the Edit tool, without command substitution (the G1b hook asks for a Bash write containing `$(…)` as a command whose write target it cannot tell). Change `phase:` in `.active` to `3` and read `build.md`.
 5. **Request changes:** a small change (SKILL.md level-table size) is an L1 edit of `plan.md`; otherwise architect rewrites. Both follow "Rewrite before approval" in SKILL.md "In-flight revision" (archive, then a `fix … before=G1b` line for an L1 edit or a `revision … before=G1b` line for architect). Go back to item 1; Plan Review runs again only after a BLOCKER fix. In the general profile and the dev small task G1b is the first gate: if the person wants a different profile, follow SKILL.md "Profile change at the first gate". If the request changes the confirmed scope, take Revise this task in that section. Remake the prototype only if the mock-up changed.
 6. **Abort:** the "Abort" procedure in SKILL.md.

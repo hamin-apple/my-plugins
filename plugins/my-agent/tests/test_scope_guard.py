@@ -1,5 +1,6 @@
 """scope-guard.py: per-agent read/write scope for my-agent:* agents (architecture 4.5 "read and write path limits", 4.12)."""
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,8 +22,10 @@ class ScopeGuardTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def hook(self, agent, tool, tool_input, cwd=None):
+    def hook(self, agent, tool, tool_input, cwd=None, session='sess-1'):
         payload = {'hook_event_name': 'PreToolUse', 'tool_name': tool, 'tool_input': tool_input}
+        if session is not None:
+            payload['session_id'] = session
         if agent is not None:
             payload.update(agent_type=agent, agent_id='a1')
         return run_hook('scope-guard.py', None, payload, cwd or self.L, env=self.env)
@@ -71,8 +74,9 @@ class ScopeGuardTest(unittest.TestCase):
             r = self.hook(agent, 'Read', {'file_path': str(self.root / '.env')})
             self.assertEqual((r.returncode, r.stdout), (0, ''), agent)
 
-    def test_researcher_reads_only_task_folder(self):
-        self.assertTrue(self.denied('my-agent:researcher', 'Read', {'file_path': str(self.L / 'src/a.py')}))
+    def test_researcher_reads_location_not_outside(self):
+        self.assertFalse(self.denied('my-agent:researcher', 'Read', {'file_path': str(self.L / 'src/a.py')}))
+        self.assertTrue(self.denied('my-agent:researcher', 'Read', {'file_path': '/Applications/x'}))
         self.assertFalse(self.denied('my-agent:researcher', 'Read', {'file_path': str(self.T / 'work/n.md')}))
         self.assertFalse(self.denied('my-agent:researcher', 'Write', {'file_path': str(self.T / 'work/n.md')}))
         self.assertTrue(self.denied('my-agent:researcher', 'Write', {'file_path': str(self.T / 'plan.md')}))
@@ -132,11 +136,87 @@ class ScopeGuardTest(unittest.TestCase):
     def test_writer_reference_files(self):
         ref = self.L / 'docs' / 'ref.md'
         ref.write_text('r')
-        self.assertTrue(self.denied('my-agent:writer', 'Read', {'file_path': str(ref)}))
+        self.assertTrue(self.denied('my-agent:writer', 'Read', {'file_path': '/Applications/x'}))
         (self.T / 'plan.md').write_text('# Plan\n\n## Reference files\n\n- `docs/ref.md`\n\n## Approval\n')
         self.assertFalse(self.denied('my-agent:writer', 'Read', {'file_path': str(ref)}))
         self.assertFalse(self.denied('my-agent:writer', 'Write', {'file_path': str(self.T / 'prototype/index.html')}))
         self.assertTrue(self.denied('my-agent:writer', 'Write', {'file_path': str(ref)}))
+
+    def scratch(self, sid='sess-1', slug='x-slug'):
+        return Path('/tmp').resolve() / f'claude-{os.getuid()}' / slug / sid / 'scratchpad' / 'n.txt'
+
+    def test_read_roots(self):
+        outside = self.root / 'outside'
+        outside.mkdir()
+        (self.T / 'plan.md').write_text(f'# Plan\n\n## Reference files\n\n- `{outside / "ref.md"}`\n\n## Approval\n')
+        plugin = Path(__file__).resolve().parents[1]
+        data = self.root / 'agent-tasks'
+        ok = [data / 'feedback.md', plugin / 'SKILL.md', self.scratch(), outside / 'ref.md', self.L / 'src' / 'a.py']
+        for agent in ('explorer', 'architect', 'plan-reviewer', 'verifier', 'reviewer', 'coder', 'writer',
+                      'researcher'):
+            for path in ok:
+                with self.subTest(agent=agent, path=str(path)):
+                    self.assertFalse(self.denied(f'my-agent:{agent}', 'Read', {'file_path': str(path)}))
+            with self.subTest(agent=agent, case='denied'):
+                for path in ('/Applications/x', self.scratch('other-id')):
+                    r = self.hook(f'my-agent:{agent}', 'Read', {'file_path': str(path)})
+                    reason = json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason']
+                    self.assertEqual(reason, f'scope-guard: Outside the read scope of {agent}: {Path(path).resolve()}')
+                for sid in (None, ''):
+                    r = self.hook(f'my-agent:{agent}', 'Read', {'file_path': str(self.scratch())}, session=sid)
+                    self.assertIn('Outside the read scope', json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason'])
+                self.assertTrue(self.denied(f'my-agent:{agent}', 'Read', {'file_path': str(self.scratch('..'))}))
+
+    def test_gate_analyst_keeps_two_files(self):
+        a = 'my-agent:gate-analyst'
+        plugin = Path(__file__).resolve().parents[1]
+        for path in (self.root / 'agent-tasks' / 'feedback.md', plugin / 'SKILL.md', self.scratch(),
+                     self.L / 'src' / 'a.py'):
+            self.assertTrue(self.denied(a, 'Read', {'file_path': str(path)}), str(path))
+
+    def test_reference_secret_still_denied(self):
+        outside = self.root / 'outside'
+        outside.mkdir()
+        (self.T / 'plan.md').write_text(f'# Plan\n\n## Reference files\n\n- `~/.ssh/id_rsa`\n- `{outside / ".env"}`\n')
+        for agent in ('researcher', 'writer', 'coder', 'explorer'):
+            for path in (Path.home() / '.ssh' / 'id_rsa', outside / '.env'):
+                reason = json.loads(self.hook(f'my-agent:{agent}', 'Read', {'file_path': str(path)}).stdout)
+                self.assertEqual(reason['hookSpecificOutput']['permissionDecisionReason'],
+                                 f'scope-guard: Secret paths are not read or written: {path}')
+            self.assertEqual(self.reason(f'my-agent:{agent}', 'printenv'),
+                             f'my-agent scope-guard: {agent} may not read the environment (printenv)')
+
+    def test_explorer_bash_reads_data_folder(self):
+        data = self.root / 'agent-tasks'
+        self.assertFalse(self.denied('my-agent:explorer', 'Bash', {'command': f'grep -rn x {data}'}))
+        self.assertFalse(self.denied('my-agent:explorer', 'Bash', {'command': f'cat {data / "feedback.md"}'}))
+
+    def test_relative_and_cd_reads(self):
+        ex = 'my-agent:explorer'
+        (self.L / 'README.md').write_text('r')
+        self.assertFalse(self.denied(ex, 'Bash', {'command': 'cat ../README.md'}, cwd=self.L / 'src'))
+        self.assertFalse(self.denied(ex, 'Bash', {'command': 'cd src && cat ../README.md'}))
+        self.assertEqual(self.reason(ex, 'cat ../../outside.txt'),
+                         f'scope-guard: Outside the read scope of explorer: {(self.L.parent.parent / "outside.txt")}')
+        for cmd in ('cat $D/x', 'cd "$D" && cat x'):
+            self.assertEqual(self.reason(ex, cmd), 'scope-guard: Cannot tell what this command reads (a path built from a variable, command substitution, cd to a variable, etc.).')
+
+    def test_coder_in_worktree_of_linked_location(self):
+        main = self.root / 'main'
+        common = main / '.git'
+        for n in ('loc', 'agent-x'):
+            (common / 'worktrees' / n).mkdir(parents=True)
+            (common / 'worktrees' / n / 'commondir').write_text('../..\n')
+        loc = self.root / 'loc'
+        T = make_task(loc, task=TASK, git=False)
+        (loc / '.git').write_text(f'gitdir: {common / "worktrees" / "loc"}\n')
+        W = loc / '.claude' / 'worktrees' / 'agent-x'
+        (W / 'src').mkdir(parents=True)
+        (W / '.git').write_text(f'gitdir: {common / "worktrees" / "agent-x"}\n')
+        c = 'my-agent:coder'
+        self.assertFalse(self.denied(c, 'Write', {'file_path': str(W / 'src/a.py'), 'content': 'x'}, cwd=W))
+        self.assertFalse(self.denied(c, 'Read', {'file_path': str(W / 'src/a.py')}, cwd=W))
+        self.assertTrue(self.denied(c, 'Write', {'file_path': str(W / '.git/x'), 'content': 'x'}, cwd=W))
 
     def test_coder_worktree_writes(self):
         (self.L / '.git' / 'worktrees' / 'agent-x').mkdir(parents=True)
@@ -264,6 +344,23 @@ class ScopeGuardTest(unittest.TestCase):
     def test_no_active_denies_my_agent(self):
         (self.L / 'docs' / 'agent' / '.active').unlink()
         self.assertTrue(self.denied('my-agent:explorer', 'Read', {'file_path': str(self.L / 'src/a.py')}))
+
+    def test_coder_git_mv(self):
+        coder = 'my-agent:coder'
+        self.assertFalse(self.denied(coder, 'Bash', {'command': 'git mv src/a.py src/b.py'}))
+        self.assertTrue(self.denied(coder, 'Bash', {'command': 'git mv src/a.py /nonexistent-outside/b.py'}))
+        # readable but not writable (the data folder): the write scope is what denies it
+        self.assertIn('Outside the write scope of coder',
+                      self.reason(coder, f'git mv src/a.py {self.root / "agent-tasks" / "b.py"}'))
+        self.assertIn('Outside the write scope of coder', self.reason(coder, 'git mv src/a.py docs/agent/x'))
+        for cmd in ('git mv -f a b', 'git mv a', 'git -C sub mv a b', 'echo docs/agent | xargs git mv src/a.py src/b.py',
+                    'GIT_DIR=x git mv src/a.py src/b.py', 'GIT_WORK_TREE=/x git mv src/a.py src/b.py',
+                    'git add .', 'git commit -m x', 'git checkout b', 'git reset --hard'):
+            with self.subTest(cmd=cmd):
+                self.assertIn('Cannot tell where this command writes', self.reason(coder, cmd))
+
+    def test_verifier_git_mv_only_reads(self):
+        self.assertIn('only reads and checks', self.reason('my-agent:verifier', 'git mv a b'))
 
     def test_script_error_exits_nonzero(self):
         payload = json.dumps({'agent_type': 'my-agent:coder', 'tool_name': 'Read', 'tool_input': 'oops',

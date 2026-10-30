@@ -29,7 +29,7 @@ The `gate-tally.md` path, the result path `gate-report.md`, and the profile writ
 `gate-tally.md` (written by L4 `gate-report.py tally`) has three sections.
 
 - `## Decision table`: `| # | Gate | Question | Recommended | Choice | Picked recommended | Note |`. Picked recommended is `yes` / `no` / `delegated` (answered by L1) / `in advance` / `prose reply` / `typed (Other)` / `unknown`; only `yes` and `no` rows count toward the picked-recommended share; Note marks lines that did not pair up (`no answer`, `answer only`, `answered twice`). If there are no decisions, one line `No decisions …`.
-- `## Metrics`: Verify count, Plan Review count (runs of the plan-reviewer), subagent count, model mismatch count, L1 small fix count, adjustments within the approved scope, plan rewrites before approval, in-flight revisions, calls raised to opus.
+- `## Metrics`: Verify count, Plan Review count (runs of the plan-reviewer), subagent count, model mismatch count, L1 small fix count, adjustments within the approved scope, plan rewrites before approval, in-flight revisions, calls raised to opus, and the `Judge misses` row (a verifier `Verdict: ALL PASS` followed by a G3 `Rework` with no Verify in between).
 - `## Cost and tokens per stretch`: `| Stretch | Steps | Cost USD (approx.) | Subagent tokens |`.
 
 ## `gate-report.md` format

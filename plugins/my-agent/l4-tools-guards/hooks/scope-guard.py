@@ -152,6 +152,10 @@ def check(inp: dict, role: str, active) -> Optional[str]:
         return f'Not a defined my-agent agent: {role}'
     if tool in ('WebFetch', 'WebSearch'):
         return None if r.web else f'{role} does not use the web.'
+    if tool == 'Bash':
+        dumped = ma_bash.env_reads(ti['command'])
+        if dumped:
+            return f'my-agent scope-guard: {role} may not read the environment ({dumped[0]})'
     reads, writes = paths_of(tool, ti, cwd)
     if reads is None:
         return 'Cannot tell what this command reads (a path built from a variable, command substitution, cd to a variable, etc.).'
@@ -212,7 +216,7 @@ def main() -> int:
         why = missing if active is None else check(inp, role, active)
         if why:
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
-                                                     'permissionDecisionReason': f'scope-guard: {why}'}},
+                                                     'permissionDecisionReason': why if why.startswith('my-agent scope-guard:') else f'scope-guard: {why}'}},
                              ensure_ascii=False))
         return 0
     except Exception as e:   # block the call: exit 2 is a blocking error for PreToolUse

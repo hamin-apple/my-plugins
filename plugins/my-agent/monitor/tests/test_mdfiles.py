@@ -26,6 +26,17 @@ class MdFilesTest(unittest.TestCase):
         self.assertEqual(read_verify(HOOKS / 'verify.md'), ['p'] * 5)
         self.assertEqual(read_criteria(WEEKLY / 'plan.md'), 3)
 
+    def test_criteria_with_check_tags(self):
+        import tempfile
+        body = '# Scope\n\n## Completion criteria\n{}\n## Confirmation\n'
+        with tempfile.TemporaryDirectory() as d:
+            a = Path(d) / 'a.md'
+            b = Path(d) / 'b.md'
+            a.write_text(body.format('1. First thing\n2. Second thing\n'), encoding='utf-8')
+            b.write_text(body.format('1. First thing [check: command]\n2. Second thing [check: person]\n'), encoding='utf-8')
+            self.assertEqual(read_criteria(a), 2)
+            self.assertEqual(read_criteria(b), read_criteria(a))
+
     def test_plan_approval(self):
         p = read_plan(CLI / 'plan.md')
         self.assertNotIn('estimate_k', p)

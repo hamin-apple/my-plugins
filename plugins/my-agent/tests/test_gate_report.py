@@ -106,6 +106,39 @@ class GateReportTest(unittest.TestCase):
                     '| Calls raised to opus | 1 (retries and explicit calls are not told apart) |'):
             self.assertIn(row, out)
 
+    def misses(self, *events):
+        """The Judge misses value for events: 'pass', 'fail', 'partial', 'verify' (step), 'rework'."""
+        lines, n = [], 0
+        for ev in events:
+            n += 1
+            t = f'2026-10-30 10:00:{n:02d}'
+            if ev in ('pass', 'fail', 'partial'):
+                result = {'pass': 'Verdict: ALL PASS', 'fail': 'Verdict: FAIL (1 of 3)',
+                          'partial': 'PARTIAL could not run'}[ev]
+                lines += [f'{t} start: agent=my-agent:verifier id=v{n} configured=sonnet',
+                          f'{t} stop: id=v{n} actual=claude-sonnet-5-5 tokens=1 result="{result}"']
+            elif ev == 'verify':
+                lines.append(f'{t} step: n=7 name=Verify model=claude-opus-4-8 session=s1')
+            elif ev == 'rework':
+                lines.append(f'{t} answer: gate=G3 choice="Rework (Recommended)"')
+        out = self.tally(*lines)
+        prefix = '| Judge misses | '
+        row = [l for l in out.splitlines() if l.startswith(prefix)]
+        self.assertEqual(len(row), 1)
+        self.assertIn('| Verify runs |', out.split(prefix)[0])
+        return row[0][len(prefix):].rstrip(' |')
+
+    def test_judge_misses(self):
+        self.assertEqual(self.misses('pass', 'rework'), '1')
+        self.assertEqual(self.misses('pass', 'rework', 'verify', 'pass', 'rework'), '2')
+        self.assertEqual(self.misses('rework'), '0')
+        self.assertEqual(self.misses('pass', 'verify', 'fail', 'rework'), '0')
+        self.assertEqual(self.misses('pass', 'rework', 'rework'), '1')
+        self.assertEqual(self.misses('pass', 'partial', 'rework'), '0')
+        self.assertEqual(self.misses('pass', 'fail', 'rework'), '0')
+        self.assertEqual(self.misses('pass', 'verify', 'rework'), '0')
+        self.assertEqual(self.misses(), '0')
+
     def test_delegated_answer_note_and_new_rows(self):
         out = self.tally(
             '2026-10-29 04:00:01 delegate: state=on how=flag',

@@ -37,6 +37,35 @@ class ScopeGuardTest(unittest.TestCase):
         self.assertTrue(out['permissionDecisionReason'])
         return True
 
+    def reason(self, agent, command):
+        r = self.hook(agent, 'Bash', {'command': command})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason'] if r.stdout else None
+
+    def test_environment_read_denied_with_exact_reason(self):
+        env_cases = [('env', 'env'), ('printenv HOME', 'printenv HOME'),
+                     ('cat /proc/self/environ', 'cat /proc/self/environ'), ('ls; set', 'set'),
+                     ('timeout 5 env | head', 'timeout 5 env')]
+        for agent in ('architect', 'plan-reviewer', 'verifier', 'reviewer', 'explorer', 'coder', 'writer'):
+            for cmd, seg in env_cases:
+                with self.subTest(agent=agent, cmd=cmd):
+                    self.assertEqual(self.reason(f'my-agent:{agent}', cmd),
+                                     f'my-agent scope-guard: {agent} may not read the environment ({seg})')
+        self.assertEqual(self.reason('my-agent:coder', 'cat /nonexistent-outside/x'),
+                         f'scope-guard: Outside the read scope of coder: {Path("/nonexistent-outside/x").resolve()}')
+
+    def test_environment_commands_with_a_command_pass(self):
+        for cmd in ('env -i python3 -V', 'set -e', 'export VAR=x', 'declare -x VAR=1', 'ls $HOME/x'):
+            with self.subTest(cmd=cmd):
+                reason = self.reason('my-agent:coder', cmd)
+                self.assertNotIn('environment', reason or '')
+        for cmd in ('env -i python3 -V', 'set -e', 'export VAR=x'):
+            self.assertFalse(self.denied('my-agent:coder', 'Bash', {'command': cmd}), cmd)
+
+    def test_environment_read_by_l1_is_silent(self):
+        for agent in (None, 'Explore'):
+            self.assertFalse(self.denied(agent, 'Bash', {'command': 'printenv'}), agent)
+
     def test_not_applicable_is_silent(self):
         for agent in (None, 'Explore', 'general-purpose'):
             r = self.hook(agent, 'Read', {'file_path': str(self.root / '.env')})

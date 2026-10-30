@@ -37,6 +37,8 @@ Sources the my-agent design draws on. Local copies live in `docs/ref/`, which is
 | Local copy (`docs/ref/`) | Source |
 |---|---|
 | `effective-context-engineering.md` | [Effective context engineering for AI agents](https://www.anthropic.com/research/effective-context-engineering-for-ai-agents) (Anthropic) |
+| `harness-design-long-running-apps.md` | [Harness design for long-running application development](https://www.anthropic.com/research/harness-design-long-running-apps) (Anthropic) |
+| `managed-agents.md` | [Scaling Managed Agents: Decoupling the brain from the hands](https://www.anthropic.com/research/managed-agents) (Anthropic) |
 
 ## Local only (no public source)
 

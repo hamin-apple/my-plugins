@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>my-agent 한눈에 보기</title>
+<style>
+/* Tokens first. Layout: one 760px column; header, sticky tab bar, one panel at a time, closed 출처 footer. */
+:root {
+  --bg: #f1f3f1;
+  --surface: #fbfcfb;
+  --surface-2: #e6eae7;
+  --fg: #1b2224;
+  --muted: #566267;
+  --line: #c4cdc9;
+  --accent: #0e5a61;
+  --accent-fg: #ffffff;
+  --accent-soft: #d3e6e6;
+  --focus: #b4560a;
+  --lv1-bg: #1b2224; --lv1-fg: #f1f3f1;
+  --lv2-bg: #0e5a61; --lv2-fg: #ffffff;
+  --lv3-bg: #d3e6e6; --lv3-fg: #0b3f44;
+  --lv4-bg: #e6eae7; --lv4-fg: #34403f;
+  --gate-a-bg: #dbe4f3; --gate-a-fg: #1d3763;
+  --gate-b-bg: #f6e0b8; --gate-b-fg: #5a3500;
+  --gate-g-bg: #d3ebd6; --gate-g-fg: #17481f;
+  --gate-r-bg: #f5d5d2; --gate-r-fg: #6d1a14;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121719;
+    --surface: #1a2123;
+    --surface-2: #232c2f;
+    --fg: #e3e8e6;
+    --muted: #96a3a6;
+    --line: #35413f;
+    --accent: #62c3c9;
+    --accent-fg: #0b2326;
+    --accent-soft: #1d3a3d;
+    --focus: #f0a35e;
+    --lv1-bg: #e3e8e6; --lv1-fg: #121719;
+    --lv2-bg: #62c3c9; --lv2-fg: #0b2326;
+    --lv3-bg: #1d3a3d; --lv3-fg: #b9e3e6;
+    --lv4-bg: #2a3437; --lv4-fg: #c4cfcf;
+    --gate-a-bg: #1f2e4a; --gate-a-fg: #bcd0f2;
+    --gate-b-bg: #4a3512; --gate-b-fg: #f3d9a4;
+    --gate-g-bg: #1c3a21; --gate-g-fg: #b8e3bd;
+    --gate-r-bg: #4a1f1b; --gate-r-fg: #f3beb9;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121719;
+  --surface: #1a2123;
+  --surface-2: #232c2f;
+  --fg: #e3e8e6;
+  --muted: #96a3a6;
+  --line: #35413f;
+  --accent: #62c3c9;
+  --accent-fg: #0b2326;
+  --accent-soft: #1d3a3d;
+  --focus: #f0a35e;
+  --lv1-bg: #e3e8e6; --lv1-fg: #121719;
+  --lv2-bg: #62c3c9; --lv2-fg: #0b2326;
+  --lv3-bg: #1d3a3d; --lv3-fg: #b9e3e6;
+  --lv4-bg: #2a3437; --lv4-fg: #c4cfcf;
+  --gate-a-bg: #1f2e4a; --gate-a-fg: #bcd0f2;
+  --gate-b-bg: #4a3512; --gate-b-fg: #f3d9a4;
+  --gate-g-bg: #1c3a21; --gate-g-fg: #b8e3bd;
+  --gate-r-bg: #4a1f1b; --gate-r-fg: #f3beb9;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow-x: hidden;
+}
+.wrap { max-width: 760px; margin: 0 auto; min-width: 0; }
+.mono, code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "D2Coding", monospace; }
+code { font-size: .9em; background: var(--surface-2); padding: 0 4px; border-radius: 2px; overflow-wrap: anywhere; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+[hidden] { display: none !important; }
+p { margin: 0; }
+
+header { padding-bottom: 14px; }
+.title-row { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+h1 { font-size: 24px; line-height: 1.25; margin: 0; letter-spacing: -0.01em; }
+.ver { font-size: 12px; border: 1px solid var(--line); padding: 1px 8px; color: var(--muted); border-radius: 2px; }
+.lede { margin-top: 6px; color: var(--muted); overflow-wrap: anywhere; }
+
+.tabbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg);
+  border-bottom: 2px solid var(--fg);
+  display: flex; gap: 0; overflow-x: auto; scrollbar-width: none;
+  margin-bottom: 16px;
+}
+.tabbar::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 0 0 auto; background: none; border: 0; padding: 10px 14px; font-weight: 600;
+  color: var(--muted); border-bottom: 4px solid transparent; margin-bottom: -2px; white-space: nowrap;
+}
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--fg); }
+
+h2 { font-size: 15px; letter-spacing: 0.02em; color: var(--fg); margin: 0 0 10px; font-weight: 700; }
+h3.sub { font-size: 14px; color: var(--muted); margin: 16px 0 6px; font-weight: 700; }
+
+.chip {
+  display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 0 7px;
+  border-radius: 2px; white-space: nowrap; vertical-align: 1px;
+}
+.lv1 { background: var(--lv1-bg); color: var(--lv1-fg); }
+.lv2 { background: var(--lv2-bg); color: var(--lv2-fg); }
+.lv3 { background: var(--lv3-bg); color: var(--lv3-fg); }
+.lv4 { background: var(--lv4-bg); color: var(--lv4-fg); }
+.ga { background: var(--gate-a-bg); color: var(--gate-a-fg); }
+.gb { background: var(--gate-b-bg); color: var(--gate-b-fg); }
+.gg { background: var(--gate-g-bg); color: var(--gate-g-fg); }
+.gr { background: var(--gate-r-bg); color: var(--gate-r-fg); }
+.kind { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 500; white-space: normal; }
+.axis-tag { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+
+/* disclosure */
+.disc { margin-top: 10px; border-top: 1px solid var(--line); }
+.disc-btn {
+  width: 100%; text-align: left; background: none; border: 0; padding: 10px 0; display: flex; gap: 8px;
+  align-items: baseline; font-weight: 600;
+}
+.disc-btn .mark { display: inline-block; width: 1em; color: var(--accent); transition: transform .15s; flex: 0 0 auto; }
+.disc-btn[aria-expanded="true"] .mark { transform: rotate(90deg); }
+.disc-btn .lab { min-width: 0; }
+.disc-body { padding: 0 0 12px 1.4em; }
+.disc-body > * + * { margin-top: 8px; }
+.disc-body ul { margin: 0; padding-left: 1.1em; }
+.disc-body li + li { margin-top: 4px; }
+.src { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.src b { font-weight: 600; }
+.card { background: var(--surface); border: 1px solid var(--line); padding: 4px 14px 6px; min-width: 0; }
+.card + .card { margin-top: 10px; }
+.card .disc { margin-top: 0; border-top: 0; }
+.note { color: var(--muted); font-size: 13px; margin-top: 8px; overflow-wrap: anywhere; }
+.intro { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+
+/* small tables inside details */
+.mini-box { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); max-width: 100%; }
+table.mini { border-collapse: collapse; min-width: 560px; font-size: 13px; }
+table.mini th, table.mini td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; min-width: 90px; font-weight: 400; position: static; }
+table.mini th { background: var(--surface-2); font-weight: 700; }
+
+/* flow */
+.arrow-line { font-weight: 700; overflow-wrap: anywhere; }
+.track { display: flex; gap: 0; align-items: center; overflow-x: auto; padding: 8px 0 10px; scrollbar-width: thin; }
+.node {
+  flex: 0 0 auto; min-width: 44px; height: 44px; border: 2px solid var(--line); background: var(--surface);
+  font-weight: 700; display: grid; place-items: center; padding: 0 6px; border-radius: 50%; font-size: 13px;
+}
+.node.gate { border-radius: 2px; }
+.node.done { border-color: var(--accent); color: var(--accent); }
+.node[aria-current="step"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.link { flex: 0 0 12px; height: 2px; background: var(--line); }
+.link.done { background: var(--accent); }
+.step-card { background: var(--surface); border: 1px solid var(--line); padding: 14px; min-height: 150px; }
+.step-card .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.step-card h3 { margin: 2px 0 6px; font-size: 18px; }
+.nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.btn { background: var(--surface); border: 1px solid var(--fg); padding: 8px 16px; font-weight: 600; border-radius: 2px; min-height: 40px; }
+.btn.primary { background: var(--fg); color: var(--bg); }
+.btn:disabled { opacity: .4; cursor: default; }
+
+/* accordions */
+.acc { border: 1px solid var(--line); background: var(--surface); }
+.acc + .acc { border-top: 0; }
+.acc-head { width: 100%; text-align: left; background: none; border: 0; padding: 12px 14px; display: flex; gap: 10px; align-items: baseline; font-weight: 700; }
+.acc-head .mark { color: var(--accent); flex: 0 0 1em; transition: transform .15s; }
+.acc-head[aria-expanded="true"] .mark { transform: rotate(90deg); }
+.acc-body { padding: 0 14px 12px 14px; }
+.feat { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+.feat:first-child { border-top: 0; margin-top: 0; }
+.feat .ft { font-weight: 700; }
+.feat .fs { color: var(--muted); font-size: 14px; }
+.feat .disc { margin-top: 2px; border-top: 0; }
+.feat .disc-btn { padding: 4px 0; color: var(--accent); font-size: 14px; }
+
+/* compare */
+.row-ctl { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+.row-ctl .lbl { font-size: 12px; color: var(--muted); font-weight: 700; margin-right: 2px; }
+.pill { background: var(--surface); border: 1px solid var(--line); padding: 5px 12px; border-radius: 2px; min-height: 34px; font-weight: 600; font-size: 14px; }
+.pill[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.axis-name { margin: 2px 0 10px; }
+.axis-name b { font-size: 16px; }
+.axis-name p { color: var(--muted); font-size: 14px; }
+.cmp { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); background: var(--surface); }
+.cmp li { border-top: 1px solid var(--line); }
+.cmp li:first-child { border-top: 0; }
+.cmp .line { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; }
+.cmp .sys { flex: 0 0 38%; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.cmp .sys .chip { display: block; width: max-content; max-width: 100%; margin-top: 2px; font-weight: 500; }
+.cmp .val { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.cmp .more { flex: 0 0 auto; min-width: 36px; min-height: 36px; background: none; border: 1px solid var(--line); border-radius: 2px; color: var(--accent); }
+.cmp .more[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.cmp .srcbox { padding: 0 12px 10px 12px; }
+.cmp li.mine { background: var(--accent-soft); }
+.tbl-toggle { margin-top: 12px; }
+.tbl-box { margin-top: 10px; overflow-x: auto; border: 1px solid var(--line); background: var(--surface); max-width: 100%; }
+table.full { border-collapse: collapse; min-width: 1100px; font-size: 13px; }
+table.full th, table.full td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; min-width: 130px; }
+table.full th { background: var(--surface-2); position: sticky; top: 0; }
+table.full td:first-child, table.full th:first-child { position: sticky; left: 0; background: var(--surface-2); min-width: 110px; font-weight: 700; }
+
+/* diff cards */
+.diffs { display: grid; gap: 10px; margin-top: 10px; }
+.diff { background: var(--surface); border: 1px solid var(--line); padding: 12px 14px 4px; }
+.diff h3 { margin: 6px 0 0; font-size: 16px; }
+.diff .disc { margin-top: 4px; }
+
+footer { margin-top: 28px; border-top: 2px solid var(--fg); padding-top: 4px; }
+footer ol { margin: 8px 0 0; padding-left: 1.8em; font-size: 13px; }
+footer li { margin-top: 4px; overflow-wrap: anywhere; }
+footer .disc { border-top: 0; }
+
+@media (max-width: 480px) {
+  .cmp .sys { flex-basis: 34%; }
+  h1 { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<noscript><p>이 페이지는 스크립트를 켜야 내용이 보입니다. 저장소 안내는 <a href="https://github.com/hamin-apple/my-plugins#readme">GitHub의 README</a>에 있습니다.</p></noscript>
+<div class="wrap">
+  <header>
+    <div class="title-row">
+      <h1>my-agent 한눈에 보기</h1>
+      <span class="ver mono">v0.4.5</span>
+    </div>
+    <p class="lede">사람이 개입하는(HITL) 멀티 에이전트 오케스트레이션 스킬, Claude Code 플러그인 · 버전 0.4.5 (<code>plugins/my-agent/.claude-plugin/plugin.json:3</code>)</p>
+    <nav class="lede" aria-label="페이지 링크"><a href="index.html" hreflang="en" lang="en">English</a> · <a href="architecture.html">아키텍처</a></nav>
+  </header>
+
+  <div class="tabbar" role="tablist" aria-label="섹션">
+    <button class="tab" role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true">개요</button>
+    <button class="tab" role="tab" id="tab-flow" aria-controls="p-flow" aria-selected="false" tabindex="-1">흐름</button>
+    <button class="tab" role="tab" id="tab-features" aria-controls="p-features" aria-selected="false" tabindex="-1">특징</button>
+    <button class="tab" role="tab" id="tab-compare" aria-controls="p-compare" aria-selected="false" tabindex="-1">비교</button>
+    <button class="tab" role="tab" id="tab-diff" aria-controls="p-diff" aria-selected="false" tabindex="-1">차별점</button>
+  </div>
+
+  <main>
+    <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
+      <h2>1. my-agent란?</h2>
+      <div id="ov-list"></div>
+      <div id="ov-note"></div>
+    </section>
+
+    <section id="p-flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
+      <h2>2. 한 작업의 흐름 (general 프로필 예시)</h2>
+      <p class="arrow-line">① 정의 → ② 계획 → G1b 승인 → ③ 실행 → ④ 인수 → G3 승인</p>
+      <div id="flow-note"></div>
+      <div class="track" id="track" role="group" aria-label="단계 선택"></div>
+      <div class="step-card" id="step-card" aria-live="polite"></div>
+      <div class="nav">
+        <button class="btn" type="button" id="prev">◀ 이전</button>
+        <button class="btn primary" type="button" id="next">다음 ▶</button>
+      </div>
+    </section>
+
+    <section id="p-features" role="tabpanel" aria-labelledby="tab-features" hidden>
+      <h2>3. 주제별 특징</h2>
+      <p class="intro" style="margin-bottom:10px">각 특징은 한 줄 요약, 2~4줄의 자세한 내용, 출처 순서입니다.</p>
+      <div id="acc-list"></div>
+    </section>
+
+    <section id="p-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+      <h2>4. 다른 멀티 에이전트 시스템과 비교</h2>
+      <div id="cmp-note"></div>
+      <h3 class="sub">4.1 비교 축 (A1–A7)</h3>
+      <div class="row-ctl" id="axis-ctl" role="group" aria-label="비교 축">
+        <span class="lbl">축</span>
+      </div>
+      <div class="axis-name" id="axis-name"></div>
+      <p class="note">"종류" 열은 축이 아닙니다.</p>
+      <h3 class="sub">4.2 비교표</h3>
+      <p class="intro" style="margin-bottom:10px">각 칸의 윗첨자 번호는 6. 출처의 같은 번호로 이어집니다. <code>문서에 없음</code>은 확인한 문서에서 해당 내용을 찾지 못했다는 뜻이며, 그 번호는 확인한 URL을 가리킵니다.</p>
+      <div class="row-ctl" id="kind-ctl" role="group" aria-label="종류 필터">
+        <span class="lbl">종류</span>
+        <button class="pill" type="button" data-kind="all" aria-pressed="true">전체</button>
+        <button class="pill" type="button" data-kind="cc" aria-pressed="false">Claude Code 기반</button>
+        <button class="pill" type="button" data-kind="gen" aria-pressed="false">범용</button>
+      </div>
+      <ul class="cmp" id="cmp-list"></ul>
+      <button class="btn tbl-toggle" type="button" id="tbl-toggle" aria-expanded="false" aria-controls="tbl-box">전체 표 보기</button>
+      <div class="tbl-box" id="tbl-box" tabindex="0" role="region" aria-label="전체 비교표 (좌우로 스크롤)" hidden></div>
+      <div id="tbl-notes">
+        <p class="note"><code>*</code> 10x-Team: 대체 플러그인이 아닙니다. 공개 저장소(Jaan-Mustafa/10x-Team)에서 문서를 찾았습니다. 별도로 띄운 에이전트가 아니라 한 대화 안에서 역할을 바꿔 가며 일하는 구조이므로, "멀티 에이전트"로 비교하는 데 한계가 있습니다.</p>
+        <p class="note"><code>**</code> AutoGen: 저장소가 보관(archived)되어 Microsoft가 더 이상 관리하지 않으며, 후속으로 Microsoft Agent Framework를 안내합니다.⁵⁷</p>
+        <p class="note">Claude Code 내장 행의 에이전트 팀은 실험 기능이며 기본으로 꺼져 있습니다.⁸</p>
+      </div>
+    </section>
+
+    <section id="p-diff" role="tabpanel" aria-labelledby="tab-diff" hidden>
+      <h2>5. 차별점 요약</h2>
+      <p class="intro">아래는 4.2 표에 적힌 값만으로 말할 수 있는 것입니다. 각 항목 끝에 근거가 된 축과 표 칸을 적었습니다. 다른 시스템도 가진 점은 그대로 밝혔습니다.</p>
+      <div class="diffs" id="diffs"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="disc">
+      <button class="disc-btn" type="button" id="src-btn" aria-expanded="false" aria-controls="src-body"><span class="mark" aria-hidden="true">▸</span><span class="lab">6. 출처</span></button>
+      <div class="disc-body" id="src-body" hidden>
+        <p class="intro">비교표 번호별 출처입니다. my-agent 칸(1~7)은 <code>/Users/jahoonjin/dev/my-plugins</code> 기준 상대 경로입니다. 나머지는 URL이며, <code>문서에 없음</code> 칸은 확인한 URL을 적었습니다. 부차 출처는 (secondary)로 표시했습니다. 1~3장 특징별 출처는 각 항목의 <code>출처:</code> 줄에 있습니다.</p>
+        <ol id="src-list"></ol>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  var uid = 0;
+  /* disclosure: returns a .disc element with a button label and a hidden body */
+  function disc(label, bodyHtml) {
+    var id = 'd' + (++uid);
+    var w = el('div', 'disc');
+    var b = el('button', 'disc-btn', '<span class="mark" aria-hidden="true">▸</span><span class="lab">' + label + '</span>');
+    b.type = 'button';
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-controls', id);
+    var body = el('div', 'disc-body', bodyHtml);
+    body.id = id; body.hidden = true;
+    bindDisc(b, body);
+    w.appendChild(b); w.appendChild(body);
+    return w;
+  }
+  function bindDisc(btn, body) {
+    btn.addEventListener('click', function () {
+      var open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', String(!open));
+      body.hidden = open;
+    });
+  }
+  function src(line) { return '<p class="src"><b>출처:</b> <span class="mono">' + line + '</span></p>'; }
+  var SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  function sup(n) { return String(n).split('').map(function (d) { return SUP.charAt(+d); }).join(''); }
+  function linkify(s) {
+    return s.replace(/https?:\/\/[^\s)]+/g, function (u) {
+      return '<a href="' + u + '" target="_blank" rel="noopener">' + u + '</a>';
+    });
+  }
+
+  bindDisc(document.getElementById('src-btn'), document.getElementById('src-body'));
+
+  /* ---------- tabs ---------- */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  function showTab(id, focus) {
+    tabs.forEach(function (t) {
+      var on = t.id === 'tab-' + id;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    try { localStorage.setItem('my-agent-features-tab', id); } catch (e) {}
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { showTab(t.id.slice(4)); });
+    t.addEventListener('keydown', function (ev) {
+      var n = null;
+      if (ev.key === 'ArrowRight') n = (i + 1) % tabs.length;
+      else if (ev.key === 'ArrowLeft') n = (i - 1 + tabs.length) % tabs.length;
+      else if (ev.key === 'Home') n = 0;
+      else if (ev.key === 'End') n = tabs.length - 1;
+      if (n !== null) { ev.preventDefault(); showTab(tabs[n].id.slice(4), true); }
+    });
+  });
+  try {
+    var saved = localStorage.getItem('my-agent-features-tab');
+    if (saved && document.getElementById('tab-' + saved)) showTab(saved);
+  } catch (e) {}
+
+  /* ---------- 1. overview ---------- */
+  var ovList = document.getElementById('ov-list');
+  var ov = [
+    ['무엇을 하나.',
+     `<p>my-agent는 Claude Code에서 쓰는 멀티 에이전트 작업 플러그인입니다. 여러 단계가 필요한 요청, 곧 기능 구현·버그 수정·여러 파일에 걸친 리팩터링, 주제를 조사해 노트로 만드는 일, 여러 부분으로 된 문서 만들기에 쓰도록 만들어져 있습니다. 한 줄짜리 수정, 오타 고치기, 간단한 사실 질문, 코드가 어떻게 동작하는지 묻는 질문에는 쓰지 않도록 되어 있습니다.</p>` +
+     src('plugins/my-agent/SKILL.md:3')],
+    ['누구를 위한 것인가.',
+     `<p>작업 중 정해진 지점마다 사람이 직접 승인하거나 답하기를 원하는 사용자를 위한 것입니다. 사람에게 묻는 일은 모두 <code>AskUserQuestion</code> 팝업으로 하고, 글로 된 질문은 하지 않습니다. 플러그인 설명도 이를 사람이 개입하는(HITL) 멀티 에이전트 오케스트레이션 스킬이라고 밝힙니다.</p>` +
+     src('plugins/my-agent/SKILL.md:17, plugins/my-agent/.claude-plugin/plugin.json:4')],
+    ['작업 종류에 맞는 3가지 프로필.',
+     `<p>같은 단계 뼈대를 쓰되 일의 종류에 따라 규칙이 달라집니다. <code>dev</code>는 git 저장소의 코드를 바꾸는 일이고 결과물은 커밋입니다. <code>research</code>는 웹 조사를 출처가 달린 노트나 보고서로 만드는 일입니다. <code>general</code>은 그 밖의 여러 단계 작업입니다.</p>` +
+     src('plugins/my-agent/SKILL.md:113, plugins/my-agent/SKILL.md:114, plugins/my-agent/SKILL.md:115')],
+    ['4개 레벨과 메인 세션의 역할.',
+     `<p>일을 4개 레벨로 나눕니다.</p>` +
+     `<div class="mini-box"><table class="mini"><thead><tr><th>레벨</th><th>누가</th><th>하는 일</th><th>하지 않는 일</th></tr></thead><tbody>` +
+     `<tr><td><span class="chip lv1">L1</span></td><td>메인 세션(my-agent 스킬 자신)</td><td>단계를 진행하고, 위임하고, 결과를 합치고, 사람에게 묻고, 기록합니다</td><td>결과물(코드·노트·초안·계획)을 직접 만들지 않습니다. 예외는 판정이 짚은 작은 수정(파일 2개 이하, 약 10줄)과 G1b 전의 작은 <code>plan.md</code> 수정뿐입니다</td></tr>` +
+     `<tr><td><span class="chip lv2">L2</span></td><td>architect · plan-reviewer · verifier · reviewer · gate-analyst</td><td>계획을 세우고, 판정하고, 결정을 해석합니다</td><td>결과물을 바꾸거나 더 아래로 위임하지 않습니다</td></tr>` +
+     `<tr><td><span class="chip lv3">L3</span></td><td>explorer · researcher · writer · coder</td><td>맡은 작업 단위 하나를 합니다</td><td>범위 밖 파일을 건드리거나 더 아래로 위임하지 않습니다</td></tr>` +
+     `<tr><td><span class="chip lv4">L4</span></td><td>도구·MCP · hook · 권한 규칙 · 스크립트</td><td>실행하고, 기록하고, 막습니다</td><td>판단하지 않습니다</td></tr>` +
+     `</tbody></table></div>` +
+     src('plugins/my-agent/SKILL.md:48, plugins/my-agent/SKILL.md:49, plugins/my-agent/SKILL.md:50, plugins/my-agent/SKILL.md:51') +
+     `<p>메인 세션(L1)은 네 가지 일을 맡습니다. 요청을 분류하는 라우터(Router), 단계를 이끌고 위임하는 오케스트레이터(Orchestrator), 모든 질문과 게이트를 지키는 게이트키퍼(Gatekeeper), 기록하는 레코더(Recorder)입니다. 하위 에이전트(서브에이전트)는 사람에게 묻지 못하고 결과 파일과 보고만 돌려줍니다.</p>` +
+     src('plugins/my-agent/SKILL.md:10, plugins/my-agent/SKILL.md:21')],
+    ['왜 4개씩 나눴나.',
+     `<p>설계 문서에 따르면, 사람이 이 시스템의 유지보수에 직접 참여하므로 한 번에 기억하는 단위가 4개 안팎이라는 Cowan의 이론을 구조 전체에 적용했습니다. 레벨 4개, 레벨별 구성 요소 4개, 진행 단계(phase) 4개, 게이트 4종(G1a·G1b를 G1 하나로 세어 G1·G2·G3·E; 3.2에서는 다섯 종류로 나눠 적음), 팝업 선택지 최대 4개입니다. 문서는 이 이론이 사람의 기억에 관한 것이지 에이전트 성능의 근거는 아니라고 밝혀 둡니다.</p>` +
+     src('plugins/my-agent/docs/build-guide/my-agent-architecture.md:16, plugins/my-agent/docs/build-guide/my-agent-architecture.md:20, plugins/my-agent/docs/build-guide/my-agent-architecture.md:138, plugins/my-agent/docs/build-guide/my-agent-architecture.md:139, plugins/my-agent/docs/build-guide/my-agent-architecture.md:140')]
+  ];
+  ov.forEach(function (o) {
+    var c = el('div', 'card');
+    c.appendChild(disc(o[0], o[1]));
+    ovList.appendChild(c);
+  });
+  document.getElementById('ov-note').appendChild(disc('자세히: 출처 표기 안내',
+    `<p>모든 출처 경로는 <code>/Users/jahoonjin/dev/my-plugins</code> 기준 상대 경로입니다. 줄 번호는 그 줄(또는 범위) 하나가 문장을 뒷받침할 때만 붙였습니다. 1~3장의 출처는 항목마다 <code>출처:</code> 줄에 있고, 4장 비교표의 번호는 6장에서 풀립니다.</p>`));
+
+  /* ---------- 2. flow ---------- */
+  document.getElementById('flow-note').appendChild(disc('자세히: 예시 요청',
+    `<p>예시 요청은 "여러 부분으로 된 문서를 만들어 줘"입니다(이런 요청이 my-agent의 대상이라는 근거는 <code>plugins/my-agent/SKILL.md:3</code>). general 프로필의 정상 경로에서 사람은 두 번, G1b와 G3에서만 답합니다.</p>` +
+    src('plugins/my-agent/l1-orchestration/profiles/general.md:3')));
+
+  var steps = [
+    { n: '요청', title: '요청', gate: false,
+      text: `사람이 요청을 보냅니다. 메인 세션(L1)이 요청을 보고 프로필을 고릅니다. 사용자가 프로필을 직접 지정했으면 그대로 따릅니다. 문서 작업은 general에 해당합니다. 이어서 작업 폴더를 만들고 작업 ID를 정합니다.`,
+      src: 'plugins/my-agent/SKILL.md:112, plugins/my-agent/SKILL.md:115, plugins/my-agent/SKILL.md:116' },
+    { n: '①', title: '① 정의', gate: false,
+      text: `요청이 기존 파일이나 프로젝트와 관련 있으면 explorer가 관련 파일과 현재 동작을 살펴 보고하고, 요청만으로 충분하면 위임하지 않습니다. 이어서 L1이 목적·완료 기준·하지 않을 일·결과물 위치를 팝업으로 묻습니다. 요청이 이미 답한 항목은 묻지 않습니다. general에서는 범위 확인(G1a)을 따로 묻지 않고, 정리한 범위 요약을 계획 첫머리에 넣어 G1b에서 함께 승인받습니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/define.md:8, plugins/my-agent/l1-orchestration/phases/define.md:11, plugins/my-agent/l1-orchestration/phases/define.md:16, plugins/my-agent/l1-orchestration/phases/define.md:18, plugins/my-agent/l1-orchestration/profiles/general.md:9' },
+    { n: '②', title: '② 계획', gate: false,
+      text: `architect가 작업 단위로 나눈 <code>plan.md</code>를 씁니다. 작업 단위마다 담당 에이전트·병렬 그룹·상태가 들어가고, 결과물의 견본인 목업(mock-up)은 반드시 포함됩니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/plan.md:6, plugins/my-agent/l1-orchestration/phases/plan.md:10, plugins/my-agent/l1-orchestration/phases/plan.md:12' },
+    { n: '②', title: '② 계획 검토', gate: false,
+      text: `plan-reviewer가 계획을 따로 검토합니다. L1은 작성자인 architect의 설명을 넘기지 않습니다. 작업 단위가 바꾸는 파일이 모두 합쳐 3개 미만이면 이 검토를 건너뛸 수 있습니다. 지적 사항은 작으면 L1이 고치고, 크면 architect가 다시 씁니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/plan.md:24, plugins/my-agent/l1-orchestration/profiles/general.md:11, plugins/my-agent/l1-orchestration/phases/plan.md:26' },
+    { n: 'G1b', title: 'G1b 계획 승인', gate: true,
+      text: `L1이 목업 전체를 채팅에 붙여 보여 준 뒤, 사람이 팝업(승인 / 변경 요청 / 중단)에서 답합니다. 화면처럼 눈으로 봐야 판단되는 결과물이면 writer가 만든 프로토타입을 먼저 볼 수도 있습니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/plan.md:35, plugins/my-agent/l1-orchestration/phases/plan.md:36, plugins/my-agent/l1-orchestration/phases/plan.md:42, plugins/my-agent/l1-orchestration/phases/plan.md:38, plugins/my-agent/l2-design-judge/agents/architect.md:41' },
+    { n: '③', title: '③ 실행', gate: false,
+      text: `승인 뒤 L1이 승인된 작업 단위를 병렬 그룹 순서대로 하위 에이전트(researcher·writer 등)에 맡깁니다. 일하는 에이전트에게는 계획 경로·작업 단위·읽을 파일·결과 경로만 줍니다. 위험한 행동이 나오면 Claude Code의 권한 대화상자(G2)가 뜹니다. general에서는 하위 에이전트만 쓰고 워크플로는 쓰지 않습니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/build.md:11, plugins/my-agent/l1-orchestration/phases/build.md:14, plugins/my-agent/l1-orchestration/phases/build.md:20, plugins/my-agent/l1-orchestration/profiles/general.md:13' },
+    { n: '③', title: '③ 병합', gate: false,
+      text: `결과물이 문서이고 작업 단위가 둘 이상이면 계획의 마지막 단위인 writer가 앞선 결과를 하나로 합칩니다. L1은 합치지 않고 확인만 합니다(작업 단위마다 결과 파일이 있는지, 완료 기준마다 대응하는 부분이 있는지).`,
+      src: 'plugins/my-agent/l1-orchestration/profiles/general.md:14' },
+    { n: '④', title: '④ 검증', gate: false,
+      text: `verifier가 완료 기준마다 PASS/FAIL을 판정합니다. 작업자의 설명은 받지 않습니다. 하나라도 FAIL이면 실행으로 되돌립니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:8, plugins/my-agent/l1-orchestration/phases/accept.md:9, plugins/my-agent/l1-orchestration/phases/accept.md:10' },
+    { n: '④', title: '④ 리뷰', gate: false,
+      text: `reviewer가 결과물의 품질을 판정합니다. 이 두 판정은 어느 프로필에서도 건너뛰지 않습니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:3, plugins/my-agent/l1-orchestration/phases/accept.md:23' },
+    { n: 'G3', title: 'G3 최종 인수', gate: true,
+      text: `L1이 결과 요약·실패 목록·결과물·저장될 정확한 경로를 보여 주고, 사람이 팝업(수락 / 재작업 / 중단)에서 답합니다. 이 팝업은 위임 승인이 켜져 있어도 항상 사람에게 옵니다. 수락하면 작업자는 작업 폴더 밖에 쓰지 못하므로 L1이 최종본을 저장 위치로 복사합니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:25, plugins/my-agent/l1-orchestration/phases/accept.md:29, plugins/my-agent/l1-orchestration/phases/accept.md:31, plugins/my-agent/l1-orchestration/phases/accept.md:35' },
+    { n: '회고', title: '회고', gate: false,
+      text: `수락 뒤 gate-analyst가 게이트 결정 집계를 읽고 경향과 개선 제안을 보고서로 씁니다.`,
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:76' }
+  ];
+  var cur = 0;
+  var track = document.getElementById('track');
+  var card = document.getElementById('step-card');
+  var prev = document.getElementById('prev');
+  var next = document.getElementById('next');
+  function renderFlow() {
+    track.innerHTML = '';
+    steps.forEach(function (s, i) {
+      if (i > 0) track.appendChild(el('span', 'link' + (i <= cur ? ' done' : '')));
+      var b = el('button', 'node' + (s.gate ? ' gate' : '') + (i < cur ? ' done' : ''), s.n);
+      b.type = 'button';
+      b.id = 'node-' + i;
+      b.setAttribute('aria-label', (i + 1) + '번 ' + s.title);
+      if (i === cur) b.setAttribute('aria-current', 'step');
+      b.addEventListener('click', function () { cur = i; renderFlow(); });
+      track.appendChild(b);
+    });
+    var s = steps[cur];
+    card.innerHTML =
+      '<div class="count">' + (cur + 1) + '/' + steps.length + '</div>' +
+      '<h3>' + s.title + '</h3>' +
+      '<p>' + s.text + '</p>' +
+      '<p class="src" style="margin-top:8px"><b>출처:</b> <span class="mono">' + s.src + '</span></p>';
+    prev.disabled = cur === 0;
+    next.disabled = cur === steps.length - 1;
+    var node = document.getElementById('node-' + cur);
+    if (node) track.scrollLeft = Math.max(0, node.offsetLeft - (track.clientWidth - node.offsetWidth) / 2);
+  }
+  prev.addEventListener('click', function () { if (cur > 0) { cur--; renderFlow(); } });
+  next.addEventListener('click', function () { if (cur < steps.length - 1) { cur++; renderFlow(); } });
+  renderFlow();
+
+  /* ---------- 3. features ---------- */
+  /* feature = [title, summary, [bullets], source line, optional table html] */
+  var themes = [
+    { name: '3.1 구조와 레벨', feats: [
+      ['4개 레벨로 나누고 역할을 갈랐습니다.',
+       '조율(L1), 설계·판정(L2), 작업(L3), 도구·방어(L4)가 각각 다른 일을 맡습니다.',
+       ['L1은 메인 세션이고 L2에는 5개, L3에는 4개 에이전트가 있습니다. 설계 문서는 구성 요소를 레벨당 4개로 맞추되, gate-analyst는 회고에서만 부르는 보조라 L2의 5번째로 따로 센다고 설명합니다.',
+        '플러그인은 에이전트 9개를 <code>plugin.json</code>에 등록해 불러 씁니다.',
+        'L4(도구·MCP, hook, 권한 규칙, 스크립트)는 판단하지 않습니다. 모니터와 Claude Code 권한 대화상자(G2)는 레벨 밖에 있습니다.'],
+       'plugins/my-agent/SKILL.md:46, plugins/my-agent/SKILL.md:51, plugins/my-agent/SKILL.md:53, plugins/my-agent/.claude-plugin/plugin.json:11, plugins/my-agent/docs/build-guide/my-agent-architecture.md:204'],
+      ['메인 세션이 L2·L3에 직접 위임합니다.',
+       'L2가 L3를 관리하지 않고, L1이 각각에 직접 일을 줍니다.',
+       ['L1은 L2와 L3에 직접 일을 넘기며, 넘기는 것은 경로와 기준뿐입니다.',
+        '설계 문서가 드는 이유 두 가지: 사람에게 묻는 일은 L1만 할 수 있어서 계획이 L1을 거쳐 승인받아야 하고, 판정자(L2)가 작업자(L3)를 관리하면 작성자와 판정자를 나누는 의미가 사라집니다.',
+        '이 점이 Gemini의 4단계 모델과 다릅니다. 그쪽은 L1 → L2 → L3로 이어지는 사슬입니다.'],
+       'plugins/my-agent/SKILL.md:54, plugins/my-agent/docs/build-guide/my-agent-architecture.md:211, plugins/my-agent/docs/build-guide/my-agent-architecture.md:212, plugins/my-agent/docs/build-guide/my-agent-architecture.md:213, plugins/my-agent/docs/build-guide/my-agent-architecture.md:214'],
+      ['L1은 결과물을 직접 만들지 않습니다.',
+       '메인 세션은 진행·위임·기록만 하고 만드는 일은 하위 에이전트에 맡깁니다.',
+       ['예외는 판정이 짚은 작은 수정(파일 2개 이하, 약 10줄)과 G1b 전 <code>plan.md</code>의 작은 수정뿐입니다.',
+        '문서 결과물을 합치는 일도 L1이 아니라 마지막 writer 작업 단위가 하고, L1은 확인만 합니다.'],
+       'plugins/my-agent/SKILL.md:48, plugins/my-agent/l1-orchestration/profiles/general.md:14'],
+      ['사람에게 묻는 창구는 메인 세션 하나입니다.',
+       '하위 에이전트는 묻지 않고 결과 파일과 보고만 돌려줍니다.',
+       ['모든 질문은 <code>AskUserQuestion</code> 팝업으로 하며, 선택지는 2~4개이고 추천 항목을 맨 앞에 <code>(Recommended)</code>와 함께 둡니다.',
+        '사람이 팝업 대신 글로 되물으면 답한 뒤 같은 결정을 다시 팝업으로 묻습니다.',
+        '하위 에이전트 정의 파일들은 "사람에게 묻지 않는다"고 적고, 풀지 못한 것은 <code>To confirm:</code>으로 남기거나 <code>PARTIAL</code>로 보고하게 합니다.'],
+       'plugins/my-agent/SKILL.md:17, plugins/my-agent/SKILL.md:18, plugins/my-agent/SKILL.md:21, plugins/my-agent/l3-workers/agents/coder.md:18, plugins/my-agent/l3-workers/agents/writer.md:18'],
+      ['에이전트 9개의 역할이 정의 파일에 나뉘어 있습니다.',
+       '에이전트마다 하는 일 하나와 쓸 수 있는 도구가 고정됩니다.',
+       ['L2 architect(opus)는 범위 문서와 탐색 결과로 <code>plan.md</code>를 쓰고 결과물은 만들지 않습니다. plan-reviewer(sonnet)는 <code>plan.md</code>가 범위를 충분히 덮고 실행 가능한지 판정해 <code>plan-review.md</code>를 씁니다.',
+        'L2 verifier(opus)는 결과물이 완료 기준을 만족하는지 근거와 함께 판정해 <code>verify.md</code>를, reviewer(sonnet)는 결과물의 품질을 판정해 <code>review.md</code>를 씁니다. gate-analyst(sonnet)는 게이트 결정 집계를 읽고 <code>gate-report.md</code>를 씁니다.',
+        'L3 explorer(sonnet)는 관련 파일 위치와 현재 동작, 제약을 찾아 보고하며 읽기 전용입니다. researcher(sonnet)는 하위 질문 하나를 웹에서 조사해 출처가 달린 노트 하나를 씁니다.',
+        'L3 writer(sonnet)는 작업 단위 하나의 문서(초안, 조사 노트 종합, 프로토타입 페이지)를 씁니다. coder(sonnet)는 작업 단위 하나를 테스트를 먼저 쓰고 구현하며 커밋하지 않습니다.'],
+       'plugins/my-agent/l2-design-judge/agents/architect.md:4, plugins/my-agent/l2-design-judge/agents/architect.md:12, plugins/my-agent/l2-design-judge/agents/plan-reviewer.md:4, plugins/my-agent/l2-design-judge/agents/plan-reviewer.md:12, plugins/my-agent/l2-design-judge/agents/verifier.md:4, plugins/my-agent/l2-design-judge/agents/verifier.md:12, plugins/my-agent/l2-design-judge/agents/reviewer.md:4, plugins/my-agent/l2-design-judge/agents/reviewer.md:12, plugins/my-agent/l2-design-judge/agents/gate-analyst.md:4, plugins/my-agent/l2-design-judge/agents/gate-analyst.md:12, plugins/my-agent/l3-workers/agents/explorer.md:4, plugins/my-agent/l3-workers/agents/explorer.md:13, plugins/my-agent/l3-workers/agents/researcher.md:4, plugins/my-agent/l3-workers/agents/researcher.md:13, plugins/my-agent/l3-workers/agents/writer.md:4, plugins/my-agent/l3-workers/agents/writer.md:13, plugins/my-agent/l3-workers/agents/coder.md:4, plugins/my-agent/l3-workers/agents/coder.md:13'],
+      ['L2·L3는 더 아래로 위임하지 못합니다.',
+       '에이전트가 에이전트를 부르는 사슬이 생기지 않습니다.',
+       ['각 에이전트 정의 파일은 "다른 에이전트를 부르지 않는다"고 적어 둡니다.',
+        '설계 문서는 에이전트 정의의 <code>tools</code>에서 <code>Agent</code> 도구를 뺀다고 설명합니다.',
+        'L3는 맡은 범위 밖의 파일을 건드리지 않고, 막히면 우회하지 않고 보고합니다.'],
+       'plugins/my-agent/SKILL.md:49, plugins/my-agent/SKILL.md:50, plugins/my-agent/l2-design-judge/agents/architect.md:20, plugins/my-agent/l3-workers/agents/coder.md:22, plugins/my-agent/l3-workers/agents/coder.md:19, plugins/my-agent/docs/build-guide/my-agent-architecture.md:385']
+    ]},
+    { name: '3.2 단계와 게이트', feats: [
+      ['일은 4개 단계, 8개 스텝입니다.',
+       '① 정의 → ② 계획 → ③ 실행 → ④ 인수 순서로 가고, 각 단계의 끝에 게이트가 있습니다.',
+       ['① 정의 = 1 접수(Intake) · 2 탐색→범위, ② 계획 = 3 계획 · 4 계획 검토, ③ 실행 = 5 실행 · 6 병합, ④ 인수 = 7 검증 · 8 리뷰→인도입니다.',
+        'L1은 단계가 시작될 때와 <code>continue</code>·압축(compaction) 뒤에 해당 단계 파일과 프로필 파일을 다시 읽고 따릅니다.'],
+       'plugins/my-agent/SKILL.md:72, plugins/my-agent/SKILL.md:73, plugins/my-agent/SKILL.md:74, plugins/my-agent/SKILL.md:75, plugins/my-agent/SKILL.md:76, plugins/my-agent/docs/build-guide/my-agent-architecture.md:220'],
+      ['사람이 답하는 게이트는 다섯 종류입니다.',
+       '범위(G1a)·계획(G1b)·위험한 행동(G2)·최종 인수(G3)·에스컬레이션(E).',
+       [],
+       'plugins/my-agent/SKILL.md:25, plugins/my-agent/SKILL.md:26, plugins/my-agent/SKILL.md:27, plugins/my-agent/SKILL.md:28, plugins/my-agent/SKILL.md:29, plugins/my-agent/SKILL.md:30, plugins/my-agent/SKILL.md:31, plugins/my-agent/SKILL.md:34',
+       `<div class="mini-box"><table class="mini"><thead><tr><th>게이트</th><th>언제</th><th>선택지</th></tr></thead><tbody>` +
+       `<tr><td>G1a 범위 확인</td><td>범위 정리가 끝날 때(general에는 없음, G1b에 합쳐짐)</td><td>확인 / 수정 / 중단</td></tr>` +
+       `<tr><td>G1b 계획 승인</td><td>계획 검토 끝, 목업 전체를 채팅에 붙인 뒤</td><td>승인 / 변경 요청 / 중단</td></tr>` +
+       `<tr><td>G2 위험한 행동</td><td>위험한 도구 호출 직전, Claude Code 권한 대화상자</td><td>한 번 허용 / 거부</td></tr>` +
+       `<tr><td>G3 최종 인수</td><td>검증 ALL PASS, 리뷰 BLOCKER 0일 때</td><td>수락 / 재작업 / 중단 (dev: 커밋 / 재작업 / 중단)</td></tr>` +
+       `<tr><td>E 에스컬레이션</td><td>검증 3회 연속 FAIL 등</td><td>방향 제시 / 범위 변경 / 중단</td></tr>` +
+       `</tbody></table></div>`],
+      ['G1b 전에는 위임과 쓰기가 제한됩니다.',
+       '계획 승인 전에는 탐색·계획·계획 검토만 위임할 수 있습니다.',
+       ['승인 전에 위임할 수 있는 에이전트는 explorer, architect, plan-reviewer뿐이고, 작업 폴더 밖에는 쓰지 못합니다.',
+        '이 제한은 프롬프트 지시가 아니라 플러그인 hook(<code>plan-approved-check.py</code>)이 실제로 막습니다. hook의 세부 규칙은 3.3의 ‘계획 승인 전에는 hook이 위임과 쓰기를 막습니다’ 항목에 있습니다. 막히면 우회하지 않고 G1b로 갑니다.'],
+       'plugins/my-agent/SKILL.md:33'],
+      ['계획 검토의 지적은 모든 프로필이 같은 방식으로 처리합니다.',
+       '막는 지적(BLOCKER)이 있으면 고쳐서 다시 판정하고, 세 번째 <code>REVISE</code>부터는 사람이 결정합니다.',
+       ['<code>REVISE</code>(BLOCKER가 하나라도 있을 때)는 작으면 L1이 고치고 크면 architect가 다시 쓴 뒤 다시 판정합니다. 세 번째 <code>REVISE</code>는 G1b 팝업에서 사람에게 맡깁니다.',
+        '<code>READY FOR APPROVAL</code> 뒤에는 검토를 다시 돌리지 않습니다. NIT만 있으면 팝업 없이 적용하고, SHOULD-FIX가 있으면 전체 목록을 한 번의 팝업(전부 적용 / 적용하지 않고 승인 / 직접 고르기)으로 묻습니다.',
+        '지적마다 적용 또는 거절한 내용을 <code>plan-review.md</code>에 한 줄씩 남깁니다.'],
+       'plugins/my-agent/l1-orchestration/phases/plan.md:25, plugins/my-agent/l1-orchestration/phases/plan.md:27, plugins/my-agent/l1-orchestration/phases/plan.md:28, plugins/my-agent/l1-orchestration/phases/plan.md:29, plugins/my-agent/l1-orchestration/phases/plan.md:30, plugins/my-agent/l1-orchestration/phases/plan.md:31'],
+      ['검증과 리뷰는 어떤 프로필에서도 건너뛰지 않습니다.',
+       '인수 단계의 두 판정은 필수입니다.',
+       ['verifier의 <code>verify.md</code>는 첫 줄이 <code>Verdict: ALL PASS</code> 또는 <code>Verdict: FAIL</code>이고, 이어서 완료 기준 하나당 한 줄씩 PASS/FAIL과 근거가 있습니다.',
+        'reviewer의 <code>review.md</code> 첫 줄은 <code>BLOCKER &lt;개수&gt;</code>입니다. BLOCKER가 1개 이상이면 작은 수정은 L1이 고치고 새 판정을 받으며, 작은 수정이 아니면 실행으로 되돌아갑니다.',
+        '실행으로 되돌아가기 전에 현재 판정 파일을 <code>archive/</code> 아래에 보관합니다.'],
+       'plugins/my-agent/l1-orchestration/phases/accept.md:3, plugins/my-agent/l1-orchestration/phases/accept.md:9, plugins/my-agent/l1-orchestration/phases/accept.md:23, plugins/my-agent/l1-orchestration/phases/accept.md:24, plugins/my-agent/l1-orchestration/phases/accept.md:16'],
+      ['반복 실패는 사람에게 넘깁니다 (E).',
+       '같은 일이 계속 막히면 L1이 스스로 풀지 않고 사람에게 방향을 묻습니다.',
+       ['조건은 검증 3회 연속 FAIL, 같은 작업 단위가 두 번 멈춤, 워크플로 오류 종료, 병합 충돌이 계획 오류를 드러냄입니다.',
+        'E는 위임 승인이 켜져 있어도 항상 사람에게 갑니다. L1은 어디서 막혔고 무엇을 시도했는지 채팅에 보여 준 뒤 팝업(방향 제시 / 범위 변경 / 중단)으로 묻습니다.',
+        '작업자가 한 번 멈추면 같은 입력과 중단 보고로 opus에서 다시 시도합니다.'],
+       'plugins/my-agent/l1-orchestration/phases/accept.md:65, plugins/my-agent/l1-orchestration/phases/accept.md:66, plugins/my-agent/l1-orchestration/phases/accept.md:68, plugins/my-agent/SKILL.md:210'],
+      ['작업 도중 요청이 바뀌면 종류부터 묻습니다.',
+       'G1b 승인 뒤의 변경 요청은 바로 고치지 않고 팝업으로 종류를 정합니다.',
+       ['선택지는 "이 작업을 수정" / "승인된 범위 안에서 조정" / "새 작업으로 분리" / "취소"입니다.',
+        'G1b 전에 계획을 고치는 일과 G3 인수 뒤의 요청(새 작업)은 따로 정해진 절차를 따릅니다.'],
+       'plugins/my-agent/SKILL.md:68, plugins/my-agent/SKILL.md:244, plugins/my-agent/SKILL.md:257'],
+      ['팝업을 대신 답하는 위임 승인이 있습니다.',
+       '사람이 켜면 일상적인 팝업을 L1이 추천 선택지로 대신 답합니다.',
+       ['시작은 플래그(<code>--auto</code>) 또는 "묻지 말고 진행해" 같은 메시지이며, 메시지로 시작할 때는 한 번 확인 팝업을 거칩니다.',
+        'G2·G3·E, 세 번째 <code>REVISE</code> 뒤의 G1b 팝업, 추천 선택지가 없는 팝업은 켜져 있어도 사람에게 갑니다.',
+        '같은 반복 고리가 5번 돌면 6번째 전에 E로 넘어갑니다.'],
+       'plugins/my-agent/SKILL.md:38, plugins/my-agent/SKILL.md:39, plugins/my-agent/SKILL.md:40, plugins/my-agent/SKILL.md:219']
+    ]},
+    { name: '3.3 강제와 안전', feats: [
+      ['계획 승인 전에는 hook이 위임과 쓰기를 막습니다 (G1b 하드 게이트).',
+       '<code>plan.md</code>에 승인 줄이 없는 동안에는 hook이 작업 위임과 파일 쓰기를 거부합니다.',
+       ['작업이 진행 중이고 <code>plan.md</code>의 <code>## Approval</code> 아래에 <code>Approved</code> 줄이 없으면, 어느 단계이든 위임과 쓰기를 거부합니다.',
+        '승인 전에 허용되는 것은 explorer·architect·plan-reviewer 호출뿐입니다. 프로토타입이 요청된 경우에 한해 writer도 허용됩니다. 쓰기는 <code>&lt;작업 위치&gt;/docs/agent/</code> 아래와 데이터 폴더의 색인·프로젝트 목록 파일로 한정됩니다.',
+        '승인 뒤에도 작업 위치·데이터 폴더·계획서가 선언한 결과 위치 밖에 쓰려 하면 거부하지 않고 사용자에게 확인(<code>ask</code>)을 띄웁니다. 자동 모드는 그런 쓰기를 확인 없이 통과시키기 때문입니다. hook 자체가 오류나 시간 초과로 실패하면 호출이 막힙니다(<code>onFailure: block</code>).',
+        '알려진 한계: 이 hook은 <code>.active</code>에 적힌 세션에만 적용됩니다. 새 세션이 <code>/my-agent continue</code>로 작업을 이어받기 전에는 게이트가 걸리지 않습니다(3.4의 ‘세션 재개 알림’ 항목에 세션 알림이 있으나 안내일 뿐 강제는 아님).'],
+       'plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py:9-17 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:24-33 · plugins/my-agent/SKILL.md:33 · plugins/my-agent/maintenance-notes.md:119'],
+      ['최신 검증·검토 결과가 없으면 커밋과 최종 전달을 막습니다.',
+       '<code>verify.md</code>가 ALL PASS이고 <code>review.md</code>가 BLOCKER 0이며 둘 다 최신일 때만 커밋·전달이 통과합니다.',
+       ['적용 대상은 <code>git commit</code>과 G3 전달(작업 폴더 <code>deliverable/</code>에 쓰기, 작업 폴더에서 <code>docs/agent/</code> 밖으로 복사·이동)입니다.',
+        '<code>verify.md</code> 첫 줄이 <code>Verdict: ALL PASS</code>, <code>review.md</code> 첫 줄이 <code>BLOCKER 0</code>이어야 하며, 둘 다 마지막으로 바뀐 파일보다 새로워야 합니다. 그렇지 않으면 거부하고 검증·검토를 다시 받게 합니다.',
+        '검증보다 변경이 늦었더라도 검토가 더 새롭고 <code>## Applied after review</code> 절이 있으면 통과합니다. 오류가 나면 호출이 막힙니다.'],
+       'plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py:9-17 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:35-44 · plugins/my-agent/l1-orchestration/phases/accept.md:35'],
+      ['에이전트마다 읽기·쓰기 범위를 hook이 제한합니다 (scope-guard).',
+       '모든 도구 호출에서 <code>my-agent:</code> 에이전트의 읽기·쓰기 경로를 역할별로 검사하고, 범위 밖이면 거부합니다.',
+       ['L2 에이전트는 작업 위치를 읽고 자기 결과 파일 하나만 씁니다. L3 에이전트는 작업 위치를 읽되 쓰지 않는 것이 기본값이고, 역할이 이를 넓히거나 좁힙니다. researcher와 writer는 작업 폴더를 읽고 <code>work/</code>에 씁니다(writer는 <code>prototype/</code>과 계획서의 참고 파일도 해당). coder는 작업 위치나 자기 worktree에 쓰지만 <code>docs/agent/</code>, <code>.git/</code>, <code>.claude/</code>는 쓰지 못합니다. gate-analyst는 <code>gate-tally.md</code>와 <code>gate-report.md</code>만 읽습니다.',
+        '웹은 verifier와 researcher만 씁니다. verifier의 curl·wget은 데이터를 보내는 옵션이면 거부됩니다(가져오기만 허용). 어떤 명령이 무엇을 읽거나 쓰는지 판단할 수 없으면 거부하고, 오류가 나도 호출이 막힙니다.',
+        'architect는 L1이 쓰는 <code>Approved</code> 줄과 <code>Prototype: requested</code> 줄을 <code>plan.md</code>에 넣을 수 없고, <code>## Revisions</code> 줄도 지우거나 바꿀 수 없습니다.'],
+       'plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:2-16 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:166-167 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:175 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:3-13'],
+      ['비밀 파일은 모든 에이전트가 읽거나 쓰지 못합니다.',
+       '<code>.env</code>, <code>.pem</code>, <code>.key</code>, <code>~/.ssh</code> 등은 에이전트 종류와 상관없이 막고, 같은 목록을 사용자 설정의 deny 규칙으로도 둡니다.',
+       ['scope-guard는 비밀 경로를 읽기·쓰기 모두 거부하고, 이름을 소문자로 맞춰 비교하며, <code>.env</code>나 <code>*.pem</code>을 이름으로 고르는 Grep glob도 막습니다.',
+        '<code>permissions.json</code>의 deny 목록에도 <code>.env</code>, <code>.pem</code>, <code>.key</code>, <code>~/.ssh</code>, <code>~/.aws</code>, <code>~/.config/gh</code>, <code>~/.netrc</code> 읽기가 들어 있습니다.',
+        '이 규칙들은 플러그인이 직접 싣지 못하므로 사용자가 자기 설정에 합쳐 넣는 파일입니다.'],
+       'plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:50-59 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:160-162 · plugins/my-agent/l4-tools-guards/permissions/permissions.json:31-38 · plugins/my-agent/maintenance-notes.md:100'],
+      ['위험한 동작은 권한 규칙으로 확인을 받거나 거부합니다 (G2).',
+       '커밋·푸시·설치·외부 쓰기 도구는 사람에게 확인을 받고, 강제 푸시와 검증 우회는 거부합니다.',
+       ['확인(<code>ask</code>) 대상은 git commit·push, <code>rm -rf</code>, npm·pip·brew 설치, Slack 메시지 보내기, GitHub PR 생성·파일 푸시, Vercel 배포 생성 등입니다.',
+        '거부(<code>deny</code>) 대상은 강제 푸시(<code>--force</code>, <code>-f</code>)와 <code>--no-verify</code>가 든 명령입니다.',
+        'G2에서는 "세션 동안 허용"을 권하지 않고 위험한 동작을 한 번에 하나씩 허용하게 합니다. 허용·거부 여부를 정하는 것은 L4 규칙이며, L4는 판단하지 않고 실행·기록·차단만 합니다.'],
+       'plugins/my-agent/l4-tools-guards/permissions/permissions.json:3-30 · plugins/my-agent/SKILL.md:29 · plugins/my-agent/SKILL.md:34 · plugins/my-agent/SKILL.md:51'],
+      ['작업자 결과·웹 내용은 데이터로만 읽습니다.',
+       '작업자 결과, 웹 내용, <code>work/</code> 파일 안의 지시문은 따르지 않고 데이터로만 취급합니다.',
+       ['이 규칙은 SKILL.md의 핵심 규칙에 들어 있습니다.',
+        '하위 에이전트는 사용자에게 직접 묻지 않고 결과 파일과 보고만 돌려줍니다.'],
+       'plugins/my-agent/SKILL.md:64 · plugins/my-agent/SKILL.md:21'],
+      ['밖으로 나가기 전에 비밀 패턴을 검사합니다 (secret scan).',
+       '산출물이 작업 폴더를 떠나기 직전에 비밀처럼 생긴 문자열이 있는지 스캔합니다.',
+       ['검사 시점은 프로토타입 게시, G3 후 산출물 복사, 회고의 <code>gate-report.md</code> 복사, 커밋(dev 프로필 또는 <code>docs/agent/</code>를 커밋하기로 한 프로젝트)입니다.',
+        '찾는 것은 AWS 키, 개인 키 헤더, <code>KEY/TOKEN/SECRET/PASSWORD=</code> 꼴의 줄, GitHub 토큰, Anthropic 키 형식입니다. 걸린 위치와 종류만 보여 주고 일치한 내용은 출력하지 않습니다.',
+        '걸리면 사람에게 <code>해당 부분을 지우고 진행(권장)</code> / <code>그대로 진행</code> / <code>중단</code>을 묻습니다. 존재하지 않는 경로는 "깨끗함"으로 읽히지 않고 오류로 처리합니다.'],
+       'plugins/my-agent/SKILL.md:222-228 · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py:2-8 · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py:13-19'],
+      ['작업자에게 턴 한도가 있습니다.',
+       '모든 작업자(L3)에게 최대 턴 수가 정해져 있어 무한히 돌지 않습니다.',
+       ['현재 한도는 explorer 30, researcher 40, writer 40, coder 60입니다.',
+        '한도에 걸려 끝난 작업자는 정상 종료 이벤트가 없으므로, 기록 단계가 이를 <code>partial</code>로 따로 잡아냅니다(3.4의 ‘run-log’ 항목 참고). 같은 작업 단위가 두 번 멈추면 사람에게 올리는 에스컬레이션(E)이 열립니다.'],
+       'plugins/my-agent/maintenance-notes.md:61 · plugins/my-agent/maintenance-notes.md:65 · plugins/my-agent/l1-orchestration/phases/accept.md:65']
+    ]},
+    { name: '3.4 기록·모니터·피드백', feats: [
+      ['run-log: L1과 hook이 나눠서 자동 기록합니다.',
+       '작업 폴더의 <code>run-log.md</code>에 단계·질문·하위 에이전트 호출이 시간순으로 쌓입니다.',
+       ['줄은 <code>run-log.py</code> 스크립트만 쓰며 직접 고치지 않습니다. 시간은 스크립트가 시계에서 가져옵니다. L1은 단계 진입, 팝업 질문·답, 단계 전환 시 비용 등을 이 스크립트로 남깁니다.',
+        'hook이 하위 에이전트의 호출·시작·종료를 자동으로 남깁니다. 종료 기록에는 작업 단위, 실제 모델, 토큰, 시간, 결과 첫 줄이 들어가고, 한도로 끝난 작업자는 <code>partial</code>로 보충됩니다. L1이 따로 쓰지 않습니다.',
+        'G2 권한 팝업도 hook이 묻기 직전과 허용 직후에 기록합니다(거부는 이벤트가 없어 기록되지 않음).',
+        '설정된 모델과 실제 모델이 다르면 불일치로 알려 주고, 메인 세션이 opus가 아니면 한 번 알립니다. 기록 hook은 항상 성공으로 끝나 세션을 막지 않으며, 실패하면 기록 줄에 오류를 남기려 시도합니다.'],
+       'plugins/my-agent/SKILL.md:170 · plugins/my-agent/l4-tools-guards/scripts/run-log.py:2-19 · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py:2-15 · plugins/my-agent/l4-tools-guards/hooks/permission-log.py:2-13 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:47-92 · plugins/my-agent/SKILL.md:198-199'],
+      ['읽기 전용 모니터와 메뉴 막대 앱.',
+       '로컬 웹 페이지가 모든 my-agent 작업을 보여 주며, 읽기만 하고 아무것도 쓰지 않습니다.',
+       ['화면은 Dashboard, Architecture, Deliverables, Log replay로 구성됩니다. 프로젝트의 <code>docs/agent/</code>, 대화 기록, 데이터 폴더에 쓰지 않습니다.',
+        '서버는 127.0.0.1에만 열리고, 페이지는 2초마다 갱신됩니다. 작업을 시작하면 my-agent가 모니터를 자동으로 띄웁니다.',
+        '메뉴 막대 앱은 실행 중 작업 수를 아이콘에 보여 주고, 작은 창에 작업별 상태·경과 시간·진행 막대를 나열합니다. 상태와 모니터 실행만 다루고 작업 데이터는 쓰지 않으며, 작업을 누르면 해당 작업이 선택된 상세 화면(웹 모니터)으로 넘어갑니다.',
+        '완료된 작업의 메인 세션 토큰은 작업 끝에 저장한 파일(<code>main-usage.json</code>)에서 읽습니다. Claude Code가 일정 기간 뒤 대화 기록을 지우기 때문입니다. 오래된 완료 작업은 사람이 실행하는 스크립트로 <code>.archived/</code> 폴더로 옮겨 모니터 목록에서 뺄 수 있습니다(진행 중인 작업은 옮기지 않음).'],
+       'plugins/my-agent/monitor/README.md:3 · plugins/my-agent/monitor/README.md:6 · plugins/my-agent/monitor/README.md:16 · plugins/my-agent/monitor/README.md:33 · plugins/my-agent/monitor/README.md:43-44 · plugins/my-agent/monitor/menubar/README.md:3 · plugins/my-agent/monitor/menubar/README.md:7 · plugins/my-agent/monitor/menubar/README.md:16 · plugins/my-agent/monitor/menubar/README.md:32-33 · plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py:2-11'],
+      ['회고의 게이트 집계(tally)와 게이트 보고서.',
+       '작업이 끝나면 사람이 게이트에서 한 선택을 표로 집계하고, 별도 에이전트가 경향을 해석한 보고서를 남깁니다.',
+       ['스크립트는 run-log에서 결정 표, 카운터, 구간별 비용·토큰을 집계해 <code>gate-tally.md</code>에 저장합니다. 숫자만 만들고 해석하지 않습니다.',
+        '해석은 L2 gate-analyst가 하고 <code>gate-report.md</code>를 씁니다. gate-analyst는 <code>gate-tally.md</code>와 <code>gate-report.md</code>만 읽을 수 있고 run-log나 다른 파일은 읽지 못합니다.',
+        'L1은 보고서를 직접 쓰지 않고 데이터 폴더의 보고서 폴더로 복사하기만 하며, 채팅에는 두 경로와 요약 3줄만 보여 줍니다. 복사 전에 비밀 스캔을 거칩니다.',
+        '회고는 <code>Status: done</code>을 쓴 뒤에 진행되므로 중간에 끊겨도 G3를 다시 하지 않습니다. 중단(abort)된 작업에는 회고가 없습니다.'],
+       'plugins/my-agent/l4-tools-guards/scripts/gate-report.py:2-13 · plugins/my-agent/l1-orchestration/phases/accept.md:73-78 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:11-12 · plugins/my-agent/docs/build-guide/my-agent-architecture.md:1211 · plugins/my-agent/docs/build-guide/my-agent-architecture.md:1224'],
+      ['레벨별 피드백 목록.',
+       '회고에서 나온 개선점을 L1~L4 레벨 표시와 함께 데이터 폴더의 <code>feedback.md</code>에 쌓습니다.',
+       ['항목은 열림(open)과 완료(done) 두 구역에 한 줄씩 들어가며, 완료할 때는 무엇으로 고쳤는지가 함께 적힙니다.',
+        '한 레벨에 열린 개선점이 4개 이상이면 L1이 사람에게 한 줄로 알립니다. <code>status</code>도 레벨별 열린 개수를 보여 줍니다.',
+        'gate-analyst가 <code>clear</code>로 표시한 제안은 L1이 자동으로 L1 항목으로 올리고, 이 작업에서 나온 다른 개선점도 레벨을 붙여 올립니다.',
+        '회고는 이 밖에도 누락된 하위 에이전트 호출을 L4 개선점으로 올리고, 자동이 아닌 권한 모드로 끝난 하위 에이전트가 있으면 회고에 적습니다.'],
+       'plugins/my-agent/l4-tools-guards/scripts/feedback.py:2-12 · plugins/my-agent/l1-orchestration/phases/accept.md:79-82 · plugins/my-agent/SKILL.md:141'],
+      ['세션 재개 알림.',
+       '새로 열린·재개된·정리된·압축된·분기된 세션에서 끝나지 않은 작업이 있으면 먼저 이어서 하라고 알려 줍니다.',
+       ['알림은 진행 중인 작업 이름과 단계를 말하고, <code>/my-agent continue</code>를 먼저 실행하라고 안내합니다. 계획서에 승인 줄이 없으면 위임도 쓰기도 하지 말라는 문장이 함께 들어갑니다. 분기(fork)된 세션에는 "원래 세션이 이 작업을 하고 있으니, 이 세션에서 이어받으려면 continue를 실행하라"는 다른 안내가 나갑니다.',
+        '진행 중인 작업(<code>.active</code>)이 없으면 아무것도 출력하지 않고, 어떤 경우에도 세션은 정상적으로 시작됩니다.',
+        '이 알림은 안내일 뿐 강제가 아닙니다. 따르지 않으면 막는 장치는 없다고 설계 문서에 남은 위험으로 적혀 있습니다.',
+        '<code>continue</code>는 이어받기 전에 세션 확인, 규칙 변경 확인, 위임 중이던 작업 단위의 상태 정리를 하고 <code>resume</code> 기록을 남깁니다.'],
+       'plugins/my-agent/l4-tools-guards/hooks/session-notice.py:2-3 · plugins/my-agent/l4-tools-guards/hooks/session-notice.py:14-16 · plugins/my-agent/l4-tools-guards/hooks/session-notice.py:27-30 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:93-103 · plugins/my-agent/docs/build-guide/my-agent-architecture.md:1094-1095 · plugins/my-agent/SKILL.md:145-153']
+    ]},
+    { name: '3.5 프로필', feats: [
+      ['프로필 3가지가 같은 단계 뼈대를 일의 종류에 맞게 바꿉니다.',
+       'general·research·dev는 단계는 같고, 범위를 묻는 항목, 계획 검토, 실행 방식, 결과물이 다릅니다.',
+       ['프로필은 <code>intake.md</code>에 기록되고, 단계 시작 때마다 해당 프로필 파일을 다시 읽습니다.',
+        '사람이 플래그로 지정하면 라우터가 고르지 않고, 지정하지 않으면 라우터가 요청을 보고 고르며 따로 묻지 않습니다.',
+        '라우터는 git 저장소가 아니면 <code>dev</code>를 고르지 않고 <code>general</code>을 고릅니다.'],
+       'plugins/my-agent/SKILL.md:77, plugins/my-agent/SKILL.md:112, plugins/my-agent/SKILL.md:113'],
+      ['general: 그 밖의 여러 단계 작업.',
+       '정상 경로에서 사람은 G1b와 G3 두 번만 답합니다.',
+       ['범위 확인(G1a)을 따로 묻지 않고, 범위 요약을 계획 첫머리에 넣어 G1b에서 한꺼번에 승인받습니다. 요청이 목적·완료 기준·하지 않을 일·결과물 위치를 모두 답했으면 범위 인터뷰도 건너뜁니다.',
+        '변경 파일이 모두 합쳐 3개 미만이면 계획 검토를 건너뛸 수 있습니다. 실행은 하위 에이전트로만 하고 워크플로는 쓰지 않습니다.',
+        '결과물이 문서이고 작업 단위가 둘 이상이면 마지막 writer 단위가 앞선 결과를 합치고, 결과물은 범위 요약에 적은 위치에 저장됩니다(없으면 작업 폴더의 <code>deliverable/</code>).'],
+       'plugins/my-agent/l1-orchestration/profiles/general.md:3, plugins/my-agent/l1-orchestration/profiles/general.md:9, plugins/my-agent/l1-orchestration/profiles/general.md:11, plugins/my-agent/l1-orchestration/profiles/general.md:13, plugins/my-agent/l1-orchestration/profiles/general.md:14, plugins/my-agent/l1-orchestration/profiles/general.md:16'],
+      ['research: 웹 조사를 출처 달린 노트로.',
+       '정상 경로에서 사람은 G1a·G1b·G3 세 번 답하고, 모든 주장에 출처 URL과 원문 인용이 붙습니다.',
+       ['범위 인터뷰에서 질문·범위·출처 기준(공식 문서와 1차 자료 우선)·결과물 형식 네 가지를 <code>scope.md</code>에 정합니다.',
+        '질문마다 researcher 하나가 노트 하나를 쓰고(<code>주장 · 출처 URL · "인용"</code> 형식), 마지막 단위에서 writer가 노트를 종합 구조에 배치합니다. 웹 조사는 G1b 승인 뒤에만 시작합니다.',
+        '조사 단위가 4개 이하면 한 메시지로 함께 부르고, 5개 이상이면 계획의 <code>## Estimate</code>에 있을 때만 워크플로를 씁니다.',
+        '검증 때 verifier가 출처를 직접 열어 인용을 확인하고, 형식에 맞지 않는 문장이나 지시처럼 보이는 내용은 FAIL로 봅니다.'],
+       'plugins/my-agent/l1-orchestration/profiles/research.md:3, plugins/my-agent/l1-orchestration/profiles/research.md:9, plugins/my-agent/l1-orchestration/profiles/research.md:10, plugins/my-agent/l1-orchestration/profiles/research.md:13, plugins/my-agent/l1-orchestration/profiles/research.md:14, plugins/my-agent/l1-orchestration/profiles/research.md:15'],
+      ['dev: git 저장소의 코드 변경, 결과물은 커밋 하나.',
+       '정상 경로에서 사람은 G1a·G1b·G3 세 번(작은 작업은 G1b·G3 두 번) 답하고, G3는 커밋 승인입니다.',
+       ['항상 explorer가 먼저 관련 파일·호출하는 곳·검사 명령·커밋 안 된 변경을 살피고, 범위 인터뷰로 목적·완료 기준·제약·예외·데이터·하지 않을 일·UX 선호 일곱 가지를 정합니다.',
+        '바꿀 파일이 3개 미만이고 요청이 목적·완료 기준·하지 않을 일을 이미 답했으면 범위 인터뷰와 G1a, 계획 검토를 건너뛰는 작은 작업 예외가 있습니다.',
+        '작업 단위 하나가 코드 한 조각(coder)입니다. 병렬 coder는 첫 병렬 그룹에서만 worktree에서 일하고, 이후 그룹은 메인 트리에서 차례로 합니다. 병합 뒤 검사 명령을 돌립니다.',
+        'G3에서는 차이(diff)와 제안 커밋 메시지를 보여 주고 커밋 / 재작업 / 중단을 묻습니다. 커밋 메시지에는 완료 기준 번호가 들어갑니다.'],
+       'plugins/my-agent/l1-orchestration/profiles/dev.md:3, plugins/my-agent/l1-orchestration/profiles/dev.md:9, plugins/my-agent/l1-orchestration/profiles/dev.md:10, plugins/my-agent/l1-orchestration/profiles/dev.md:11, plugins/my-agent/l1-orchestration/profiles/dev.md:14, plugins/my-agent/l1-orchestration/profiles/dev.md:15, plugins/my-agent/l1-orchestration/profiles/dev.md:17'],
+      ['프로필마다 부르는 에이전트가 다릅니다.',
+       '프로필 파일의 "Agents used" 표가 단계별 담당을 정합니다.',
+       ['general은 explorer·architect·plan-reviewer·researcher·writer·coder·verifier·reviewer를 필요에 따라 씁니다.',
+        'research는 coder를 쓰지 않고, dev는 researcher를 쓰지 않습니다. dev에서 writer는 프로토타입에만 나옵니다.'],
+       'plugins/my-agent/l1-orchestration/profiles/general.md:22, plugins/my-agent/l1-orchestration/profiles/research.md:22, plugins/my-agent/l1-orchestration/profiles/dev.md:23, plugins/my-agent/l1-orchestration/profiles/dev.md:29'],
+      ['첫 게이트까지는 프로필을 바꿀 수 있습니다.',
+       '처음 팝업에 답하기 전에는 프로필을 바꿔도 되고, 승인 뒤에는 새 작업으로 갑니다.',
+       ['바꿀 때 L1은 작업 폴더를 보관하고 <code>intake.md</code>의 프로필을 바꾼 뒤 변환합니다. 바꾼 경우의 표시는 "(set by you)"입니다.',
+        'dev로 바꾸려는데 git 저장소가 아니면 거절하고 현재 프로필을 유지할지 묻습니다.',
+        'G1b 승인 뒤의 프로필 변경은 새 작업(<code>Follows:</code>)으로 처리합니다.'],
+       'plugins/my-agent/SKILL.md:236, plugins/my-agent/SKILL.md:237, plugins/my-agent/SKILL.md:238, plugins/my-agent/SKILL.md:239, plugins/my-agent/SKILL.md:242']
+    ]}
+  ];
+  function featEl(f) {
+    var d = el('div', 'feat');
+    d.innerHTML = '<p class="ft">' + f[0] + '</p><p class="fs"><b>요약:</b> ' + f[1] + '</p>';
+    var html = '';
+    if (f[2].length) html += '<ul>' + f[2].map(function (b) { return '<li>' + b + '</li>'; }).join('') + '</ul>';
+    if (f[4]) html += f[4];
+    html += src(f[3]);
+    d.appendChild(disc('자세히', html));
+    return d;
+  }
+  var accList = document.getElementById('acc-list');
+  themes.forEach(function (t, ti) {
+    var wrap = el('div', 'acc');
+    var head = el('button', 'acc-head', '<span class="mark" aria-hidden="true">▸</span><span>' + t.name + '</span>');
+    head.type = 'button';
+    head.id = 'acc-' + ti;
+    head.setAttribute('aria-expanded', 'false');
+    var body = el('div', 'acc-body');
+    body.id = 'accb-' + ti;
+    body.hidden = true;
+    t.feats.forEach(function (f) { body.appendChild(featEl(f)); });
+    head.setAttribute('aria-controls', body.id);
+    bindDisc(head, body);
+    wrap.appendChild(head); wrap.appendChild(body);
+    accList.appendChild(wrap);
+  });
+
+  /* ---------- 6. sources (numbered as in the Markdown) ---------- */
+  var S = [null,
+    `plugins/my-agent/SKILL.md:46 · plugins/my-agent/SKILL.md:49 · plugins/my-agent/SKILL.md:50 · plugins/my-agent/SKILL.md:54`,
+    `plugins/my-agent/SKILL.md:72 · plugins/my-agent/SKILL.md:77 · plugins/my-agent/SKILL.md:112`,
+    `plugins/my-agent/SKILL.md:17 · plugins/my-agent/SKILL.md:25 · plugins/my-agent/SKILL.md:40`,
+    `plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py:9-13 · plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py:9-17 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:2-16 · plugins/my-agent/l4-tools-guards/permissions/permissions.json:3-39 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:3-45`,
+    `plugins/my-agent/SKILL.md:54 · plugins/my-agent/l2-design-judge/agents/plan-reviewer.md:20 · plugins/my-agent/l2-design-judge/agents/verifier.md:21 · plugins/my-agent/l2-design-judge/agents/reviewer.md:21 · plugins/my-agent/l1-orchestration/phases/accept.md:3`,
+    `plugins/my-agent/l1-orchestration/phases/build.md:14 · plugins/my-agent/SKILL.md:58 · plugins/my-agent/SKILL.md:145 · plugins/my-agent/SKILL.md:153`,
+    `plugins/my-agent/SKILL.md:170 · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py:2-15 · plugins/my-agent/monitor/README.md:3-6 · plugins/my-agent/monitor/menubar/README.md:3 · plugins/my-agent/l4-tools-guards/scripts/gate-report.py:2-4 · plugins/my-agent/l4-tools-guards/scripts/feedback.py:2-12`,
+    `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/agent-teams`,
+    `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/workflows`,
+    `https://code.claude.com/docs/en/workflows · https://code.claude.com/docs/en/sub-agents`,
+    `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/agent-teams · https://code.claude.com/docs/en/workflows`,
+    `문서에 없음 — 확인한 문서: https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/agent-teams · https://code.claude.com/docs/en/workflows (스크립트로 독립 검토를 구성할 수 있다는 내용은 마지막 URL)`,
+    `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/workflows · https://code.claude.com/docs/en/agent-teams`,
+    `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/workflows`,
+    `https://raw.githubusercontent.com/obra/superpowers/main/skills/subagent-driven-development/SKILL.md`,
+    `https://raw.githubusercontent.com/obra/superpowers/main/README.md (프로필·템플릿은 문서에 없음 — 확인한 문서: 같은 URL)`,
+    `https://raw.githubusercontent.com/obra/superpowers/main/README.md · https://raw.githubusercontent.com/obra/superpowers/main/skills/subagent-driven-development/SKILL.md`,
+    `https://raw.githubusercontent.com/obra/superpowers/main/README.md (차단 hook은 문서에 없음 — 확인한 문서: 같은 URL)`,
+    `https://raw.githubusercontent.com/obra/superpowers/main/skills/subagent-driven-development/SKILL.md · https://raw.githubusercontent.com/obra/superpowers/main/skills/requesting-code-review/SKILL.md`,
+    `https://raw.githubusercontent.com/obra/superpowers/main/skills/subagent-driven-development/SKILL.md · https://raw.githubusercontent.com/obra/superpowers/main/README.md`,
+    `문서에 없음 — 확인한 문서: https://raw.githubusercontent.com/obra/superpowers/main/README.md · https://raw.githubusercontent.com/obra/superpowers/main/skills/subagent-driven-development/SKILL.md · https://raw.githubusercontent.com/obra/superpowers/main/skills/dispatching-parallel-agents/SKILL.md · https://raw.githubusercontent.com/obra/superpowers/main/skills/requesting-code-review/SKILL.md`,
+    `https://raw.githubusercontent.com/Jaan-Mustafa/10x-Team/main/skills/10x-team/SKILL.md (서브에이전트 위임은 문서에 없음 — 확인한 문서: 같은 URL, https://github.com/Jaan-Mustafa/10x-Team)`,
+    `https://github.com/Jaan-Mustafa/10x-Team · https://raw.githubusercontent.com/Jaan-Mustafa/10x-Team/main/skills/10x-team/SKILL.md`,
+    `https://raw.githubusercontent.com/Jaan-Mustafa/10x-Team/main/skills/10x-team/SKILL.md · https://claudskills.com/skills/10x-team/SKILL.md (secondary)`,
+    `https://raw.githubusercontent.com/Jaan-Mustafa/10x-Team/main/skills/10x-team/SKILL.md · https://raw.githubusercontent.com/Jaan-Mustafa/10x-Team/main/README.md`,
+    `https://claudskills.com/skills/10x-team/SKILL.md (secondary) · 독립 컨텍스트 검토는 문서에 없음 — 확인한 문서: https://github.com/Jaan-Mustafa/10x-Team`,
+    `https://raw.githubusercontent.com/Jaan-Mustafa/10x-Team/main/README.md · https://raw.githubusercontent.com/Jaan-Mustafa/10x-Team/main/skills/10x-team/SKILL.md`,
+    `문서에 없음 — 확인한 문서: https://github.com/Jaan-Mustafa/10x-Team · 가장 가까운 기록 파일에 대한 언급: https://claudskills.com/skills/10x-team/SKILL.md (secondary)`,
+    `https://docs.langchain.com/oss/python/langgraph/overview · https://docs.langchain.com/oss/python/langchain/multi-agent`,
+    `https://docs.langchain.com/oss/python/langgraph/graph-api · https://docs.langchain.com/oss/python/langgraph/workflows-agents`,
+    `https://docs.langchain.com/oss/python/langgraph/interrupts`,
+    `문서에 없음 — 확인한 문서: https://docs.langchain.com/oss/python/langgraph/overview · https://docs.langchain.com/oss/python/langgraph/interrupts`,
+    `https://docs.langchain.com/oss/python/langgraph/workflows-agents (내장 독립 검토는 문서에 없음 — 확인한 문서: 같은 URL)`,
+    `https://docs.langchain.com/oss/python/langgraph/graph-api · https://docs.langchain.com/oss/python/langgraph/persistence · https://docs.langchain.com/oss/python/langgraph/interrupts`,
+    `https://docs.langchain.com/oss/python/langgraph/observability · https://docs.langchain.com/oss/python/langgraph/overview`,
+    `https://openai.github.io/openai-agents-python/multi_agent/ · https://openai.github.io/openai-agents-python/handoffs/`,
+    `https://openai.github.io/openai-agents-python/multi_agent/ (프로필·템플릿은 문서에 없음 — 확인한 문서: 같은 URL)`,
+    `https://openai.github.io/openai-agents-python/human_in_the_loop/`,
+    `https://openai.github.io/openai-agents-python/guardrails/`,
+    `https://github.com/openai/openai-agents-python/blob/main/examples/agent_patterns/llm_as_a_judge.py · https://openai.github.io/openai-agents-python/multi_agent/`,
+    `https://openai.github.io/openai-agents-python/handoffs/ · https://openai.github.io/openai-agents-python/sessions/ · https://openai.github.io/openai-agents-python/human_in_the_loop/`,
+    `https://openai.github.io/openai-agents-python/tracing/`,
+    `https://docs.crewai.com/en/introduction · https://docs.crewai.com/en/concepts/processes · https://docs.crewai.com/en/concepts/agents`,
+    `https://docs.crewai.com/en/concepts/processes · https://docs.crewai.com/en/concepts/flows (프로필은 문서에 없음 — 확인한 문서: https://docs.crewai.com/en/introduction · https://docs.crewai.com/en/concepts/processes)`,
+    `https://docs.crewai.com/en/concepts/tasks · https://docs.crewai.com/en/concepts/flows · https://docs.crewai.com/en/learn/execution-hooks`,
+    `https://docs.crewai.com/en/learn/execution-hooks · https://docs.crewai.com/en/concepts/agents (권한 시스템·경로 범위는 문서에 없음 — 확인한 문서: 같은 두 URL)`,
+    `https://docs.crewai.com/en/concepts/tasks (판정자 분리 규칙은 문서에 없음 — 확인한 문서: https://docs.crewai.com/en/concepts/tasks · https://docs.crewai.com/en/concepts/crews)`,
+    `https://docs.crewai.com/en/concepts/tasks · https://docs.crewai.com/en/concepts/crews · https://docs.crewai.com/en/concepts/flows`,
+    `https://docs.crewai.com/en/concepts/crews · https://docs.crewai.com/en/concepts/agents · https://docs.crewai.com/en/observability/overview`,
+    `https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/teams.html`,
+    `https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/graph-flow.html (프로필은 문서에 없음 — 확인한 문서: https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/teams.html)`,
+    `https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/human-in-the-loop.html`,
+    `https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/teams.html (정책 차단 hook·권한 검사는 문서에 없음 — 확인한 문서: 같은 URL, https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/components/command-line-code-executors.html)`,
+    `https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/design-patterns/reflection.html`,
+    `https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/teams.html · https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/state.html`,
+    `https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/framework/logging.html · https://microsoft.github.io/autogen/stable/user-guide/core-user-guide/framework/telemetry.html (내장 대시보드는 문서에 없음 — 확인한 문서: 같은 두 URL)`,
+    `https://github.com/microsoft/autogen · https://learn.microsoft.com/en-us/agent-framework/overview/`
+  ];
+  function srcHtml(n) {
+    var s = S[n];
+    return s.indexOf('plugins/') === 0 ? '<span class="mono">' + s + '</span>' : linkify(s);
+  }
+  var ol = document.getElementById('src-list');
+  for (var n = 1; n < S.length; n++) {
+    ol.appendChild(el('li', '', srcHtml(n)));
+  }
+
+  /* ---------- 4. comparison ---------- */
+  var axes = [
+    ['A1', '조율 구조', '조율 구조', '누가 누구를 조율하는가. 레벨이나 역할이 있는가. 작업자가 더 아래로 위임할 수 있는가'],
+    ['A2', '흐름 모델', '흐름 모델', '단계나 국면인가, 그래프나 대화인가. 작업 종류에 따라 흐름이 바뀌는가(프로필·템플릿)'],
+    ['A3', '사람 개입', '사람 개입', '사람이 어디서 어떻게 승인하거나 답하는가(게이트, 인터럽트, 프롬프트)'],
+    ['A4', '규칙 강제', '규칙 강제', '규칙이 프롬프트에만 있는가, 행동을 막는 코드(hook, 가드, 권한 검사)가 있는가'],
+    ['A5', '작성자와 판정자 분리', '작성자·판정자 분리', '작업을 독립적으로 검토·검증하는가, 판정자가 작성자와 분리되어 있는가'],
+    ['A6', '인수인계와 상태', '인수인계·상태', '결과를 에이전트 사이에 어떻게 넘기는가(파일, 메시지, 공유 상태). 실행을 이어 갈 수 있는가'],
+    ['A7', '기록과 관측', '기록·관측', '로그, 트레이싱, 대시보드, 모니터가 있는가']
+  ];
+  /* base = source number of the A1 cell; axis i uses base + i */
+  var systems = [
+    { name: 'my-agent', kind: 'cc', kindLabel: 'Claude Code 플러그인', mine: true, base: 1, cells: [
+      `메인 세션(L1)이 L2·L3에 직접 위임, L2·L3는 더 위임하지 못함`,
+      `4단계 고정 뼈대 + general·research·dev 프로필`,
+      `모든 질문을 팝업으로, G1a·G1b·G2·G3·E 게이트에서 승인·답변`,
+      `hook이 계획 승인 전 위임·쓰기, 최신 판정 없는 커밋·전달, 에이전트별 경로 범위를 거부`,
+      `plan-reviewer·verifier·reviewer가 별도 에이전트, 작성자 설명은 넘기지 않음`,
+      `작업 폴더의 파일로 넘기고 <code>continue</code>로 이어 감`,
+      `run-log(L1 스크립트+hook), 읽기 전용 모니터·메뉴 막대 앱, 게이트 집계`] },
+    { name: 'Claude Code 내장 (서브에이전트 / Workflow)', kind: 'cc', kindLabel: 'Claude Code 내장 기능', base: 8, cells: [
+      `서브에이전트는 기본 3단계까지 재위임 가능, 에이전트 팀은 리드가 조율하고 팀원은 재위임 불가`,
+      `서브에이전트는 설명을 보고 Claude가 위임, 워크플로는 작업마다 Claude가 쓰는 스크립트`,
+      `워크플로는 실행 전 단계 승인·실행 중 입력 없음, 서브에이전트 권한 프롬프트는 메인 세션에 표시`,
+      `도구 허용·거부 목록과 hook으로 제한, 워크플로 에이전트 수 상한`,
+      `문서에 없음(고정 규칙), 워크플로 스크립트로 독립 에이전트 검토를 구성할 수 있음`,
+      `서브에이전트 결과는 요약으로 메인에 전달·재개 가능, 팀은 mailbox 파일`,
+      `서브에이전트 transcript 파일, <code>/workflows</code> 진행 화면`] },
+    { name: 'superpowers', kind: 'cc', kindLabel: 'Claude Code 플러그인', base: 15, cells: [
+      `메인이 작업마다 새 구현 서브에이전트를 보내고 구현자는 재위임하지 않음`,
+      `브레인스토밍부터 브랜치 마무리까지 고정 스킬 순서, 프로필·템플릿은 문서에 없음`,
+      `설계 승인 뒤 계획 작성, 작업 사이에는 사람에게 멈춰 묻지 않음`,
+      `규칙은 스킬 텍스트("mandatory"), 행동을 막는 hook은 문서에서 찾지 못함`,
+      `작업마다 코디네이터가 리뷰를 보냄, 구현자 자체 리뷰로 대신할 수 없음`,
+      `산출물은 파일로 전달, 진행은 ledger 파일, 작업은 git worktree에서`,
+      `문서에 없음(README는 버전 사용 텔레메트리만 언급)`] },
+    { name: '10x-Team*', kind: 'cc', kindLabel: 'Claude Code 플러그인', base: 22, cells: [
+      `역할 스킬 12개+오케스트레이터가 한 세션에서 역할을 바꿔 가며 일함, 서브에이전트 위임은 문서에 없음`,
+      `브레인스토밍→전략→설계→계획→구현→테스트→배포 고정 단계, 문제가 생기면 이전 단계로`,
+      `구현 전에 사용자가 설계 승인, 이후 게이트는 체크리스트(부차 출처)`,
+      `SKILL.md 프롬프트의 HARD-GATE, hook 언급 없음`,
+      `QA·Security 역할이 같은 세션에서 보고서 작성, 독립 컨텍스트 검토는 문서에 없음(부차 출처)`,
+      `<code>.10x/</code> 아래 파일로 상태 보존, handoff.md로 다음 세션이 이어 감`,
+      `문서에 없음(가장 가까운 것은 status.md·결정 파일, 부차 출처)`] },
+    { name: 'LangGraph', kind: 'gen', kindLabel: 'Python·TypeScript 라이브러리', base: 29, cells: [
+      `개발자가 그래프로 구성, 서브에이전트 패턴은 메인이 라우팅, 고정 계층은 문서에 없음`,
+      `노드·엣지 그래프, 조건 엣지로 실행 중 분기, 작업 유형별 프로필은 문서에 없음`,
+      `인터럽트로 정한 지점에서 멈추고 외부 입력을 기다림`,
+      `문서에 없음(내장 차단 규칙·권한 계층)`,
+      `평가자-최적화 패턴(개발자가 구성), 내장 독립 검토는 문서에 없음`,
+      `공유 상태 객체, checkpointer로 스레드 상태 저장·재개`,
+      `실행 트레이스(LangSmith 연동)`] },
+    { name: 'OpenAI Agents SDK', kind: 'gen', kindLabel: 'Python 라이브러리', base: 36, cells: [
+      `핸드오프(전문가가 활성 에이전트) 또는 agents-as-tools(매니저가 통제 유지), 위임 깊이 제한은 문서에 없음`,
+      `LLM 주도 또는 코드 주도 오케스트레이션, 프로필·템플릿은 문서에 없음`,
+      `<code>needs_approval</code>로 민감한 도구 호출을 사람이 승인·거부할 때까지 멈춤`,
+      `가드레일 tripwire가 입력·출력·도구 호출을 코드로 거부, 입력은 첫 에이전트·출력은 마지막 에이전트에만 적용`,
+      `생성 에이전트와 심사 에이전트 예제(패턴), 내장 분리 규칙은 문서에 없음`,
+      `핸드오프는 한 run 안, 세션 메모리, 멈춘 run을 저장·재개`,
+      `트레이싱 기본 켜짐, Traces 대시보드`] },
+    { name: 'CrewAI', kind: 'gen', kindLabel: 'Python 라이브러리', base: 43, cells: [
+      `Flow가 Crew에 작업을 위임, hierarchical은 매니저가 배분, 재위임은 기본 꺼짐`,
+      `순차 프로세스 + Flow의 조건 라우팅, 프로필은 문서에 없음`,
+      `작업별 사람 검토(기본 꺼짐), Flow 휴먼 피드백, 도구 호출 전 확인 훅`,
+      `LLM·도구 호출 전 훅이 코드로 차단, 반복 한도 기본 20, 권한 시스템·경로 범위는 문서에 없음`,
+      `작업 guardrail이 출력을 검증, 판정자 분리 규칙은 문서에 없음`,
+      `작업 <code>context</code> 의존·출력 파일·메모리·특정 작업부터 replay·Flow 상태 영속`,
+      `로그 파일 저장, step 콜백, 서드파티 관측 연동`] },
+    { name: 'AutoGen**', kind: 'gen', kindLabel: 'Python 라이브러리', base: 50, cells: [
+      `공동 목표를 가진 팀, SelectorGroupChat은 모델이 다음 발언자를 고름`,
+      `기본은 팀원 간 대화, GraphFlow로 조건을 단 방향 그래프, 프로필은 문서에 없음`,
+      `UserProxyAgent가 팀 실행을 멈추고 피드백을 기다림, 최대 턴 뒤 일시정지 가능`,
+      `종료 조건이 코드로 팀을 멈춤, 정책으로 행동을 막는 hook·권한 검사는 문서에 없음`,
+      `생성 에이전트와 비평 에이전트 쌍(reflection 패턴), 같은 루프에서 상호작용`,
+      `팀이 대화 이력을 유지, 상태를 파일·DB로 저장`,
+      `Python logging·OpenTelemetry, 내장 대시보드는 문서에 없음`] }
+  ];
+  var kind = 'all', axis = 0;
+  var axisCtl = document.getElementById('axis-ctl');
+  axes.forEach(function (a, i) {
+    var b = el('button', 'pill mono', a[0]);
+    b.type = 'button'; b.id = 'axis-' + a[0];
+    b.setAttribute('aria-pressed', String(i === 0));
+    b.addEventListener('click', function () { axis = i; renderCmp(); });
+    axisCtl.appendChild(b);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#kind-ctl .pill'), function (b) {
+    b.addEventListener('click', function () { kind = b.dataset.kind; renderCmp(); });
+  });
+
+  document.getElementById('cmp-note').appendChild(disc('자세히: 조사 기준',
+    `<p>조사한 문서는 2026-10-30에 본 것입니다. my-agent 칸은 플러그인 파일(버전 0.4.5, <code>plugins/my-agent/.claude-plugin/plugin.json:3</code>)에 근거하며, 출처는 <code>/Users/jahoonjin/dev/my-plugins</code> 기준 상대 경로입니다. 다른 시스템 칸은 각 시스템의 공식 문서·저장소에서 확인한 내용만 씁니다. 부차 출처(secondary)는 칸 설명과 출처 목록에 따로 표시했습니다.</p>`));
+
+  var cmpList = document.getElementById('cmp-list');
+  function renderCmp() {
+    Array.prototype.forEach.call(document.querySelectorAll('#kind-ctl .pill'), function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.kind === kind));
+    });
+    axes.forEach(function (a, i) {
+      document.getElementById('axis-' + a[0]).setAttribute('aria-pressed', String(i === axis));
+    });
+    var a = axes[axis];
+    document.getElementById('axis-name').innerHTML =
+      '<b><span class="mono">' + a[0] + '</span> ' + a[1] + '</b><p>' + a[3] + '</p>';
+    cmpList.innerHTML = '';
+    systems.forEach(function (s, si) {
+      if (kind !== 'all' && s.kind !== kind) return;
+      var n = s.base + axis;
+      var li = el('li', s.mine ? 'mine' : '');
+      var line = el('div', 'line',
+        '<div class="sys">' + s.name + '<span class="chip kind">' + s.kindLabel + '</span></div>' +
+        '<div class="val">' + s.cells[axis] + sup(n) + '</div>');
+      var btn = el('button', 'more', '▸');
+      btn.type = 'button';
+      btn.id = 'more-' + si;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', s.name + ' ' + a[0] + ' 출처 ' + n + ' 보기');
+      var box = el('div', 'srcbox src', '<b>' + n + '.</b> ' + srcHtml(n));
+      box.id = 'srcbox-' + si;
+      box.hidden = true;
+      btn.setAttribute('aria-controls', box.id);
+      btn.addEventListener('click', function () {
+        var open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!open));
+        btn.textContent = open ? '▸' : '▾';
+        box.hidden = open;
+      });
+      line.appendChild(btn);
+      li.appendChild(line); li.appendChild(box);
+      cmpList.appendChild(li);
+    });
+  }
+  renderCmp();
+
+  var tblBox = document.getElementById('tbl-box');
+  (function buildTable() {
+    var h = '<table class="full"><thead><tr><th>시스템</th><th>종류</th>' +
+      axes.map(function (a) { return '<th>' + a[0] + ' ' + a[2] + '</th>'; }).join('') + '</tr></thead><tbody>';
+    systems.forEach(function (s) {
+      h += '<tr><td>' + s.name + '</td><td>' + s.kindLabel + '</td>';
+      axes.forEach(function (a, i) { h += '<td>' + s.cells[i] + sup(s.base + i) + '</td>'; });
+      h += '</tr>';
+    });
+    tblBox.innerHTML = h + '</tbody></table>';
+  })();
+  var tblToggle = document.getElementById('tbl-toggle');
+  tblToggle.addEventListener('click', function () {
+    var open = tblToggle.getAttribute('aria-expanded') === 'true';
+    tblToggle.setAttribute('aria-expanded', String(!open));
+    tblToggle.textContent = open ? '전체 표 보기' : '전체 표 닫기';
+    tblBox.hidden = open;
+  });
+
+  /* ---------- 5. differentiators ---------- */
+  var diffs = [
+    { tags: ['A4'], title: '규칙을 hook이 코드로 막는다 (A4).',
+      text: `my-agent는 계획 승인 전 위임·쓰기, 최신 판정 없는 커밋·전달, 에이전트별 경로 범위를 hook이 거부합니다. 확인한 문서 기준으로 이 셋이 한 칸에 함께 적힌 것은 my-agent뿐입니다. superpowers와 10x-Team은 규칙이 프롬프트(스킬 텍스트)에 있고, Claude Code 내장은 도구 허용·거부 목록과 hook, OpenAI Agents SDK는 가드레일, CrewAI는 호출 전 훅으로 막습니다. 한계: 이 hook은 <code>.active</code>에 적힌 세션에만 걸립니다(<code>plugins/my-agent/maintenance-notes.md:119</code>). 근거 칸: A4 열 ⁴, ¹¹, ¹⁸, ²⁵, ³⁹, ⁴⁶.` },
+    { tags: ['A5'], title: '판정이 필수 단계이고, 최신 판정이 없으면 막는다 (A5).',
+      text: `my-agent는 계획 검토·검증·리뷰를 별도 에이전트가 하고, 작성자의 설명을 넘기지 않으며, 검증과 리뷰는 어느 프로필에서도 건너뛰지 않습니다. superpowers도 작업마다 코디네이터가 보내는 리뷰가 있습니다(비슷한 점). 그 밖의 시스템 칸은 개발자가 구성하는 패턴이거나(LangGraph, OpenAI Agents SDK, AutoGen, 내장 워크플로), 같은 세션 안의 역할(10x-Team), 출력 검증 guardrail(CrewAI)이거나, 분리 규칙이 문서에 없습니다. 근거 칸: A5 열 ⁵, ¹², ¹⁹, ²⁶, ³³, ⁴⁰, ⁴⁷, ⁵⁴.` },
+    { tags: ['A2'], title: '작업 종류별 프로필이 흐름을 바꾼다 (A2).',
+      text: `my-agent는 같은 4단계 뼈대에 general·research·dev 프로필이 규칙을 달리 적용합니다. 프로필·템플릿이 문서에 없다고 확인된 곳은 superpowers, LangGraph, OpenAI Agents SDK, CrewAI, AutoGen입니다. Claude Code 내장 워크플로는 작업마다 스크립트를 새로 쓰고, 10x-Team은 고정 단계를 따릅니다. 근거 칸: A2 열 ², ⁹, ¹⁶, ²³, ³⁰, ³⁷, ⁴⁴, ⁵¹.` },
+    { tags: ['A3'], title: '사람이 답하는 게이트가 단계마다 기본 구성이다 (A3).',
+      text: `my-agent는 모든 질문을 팝업으로 하고 G1a·G1b·G2·G3·E 게이트를 둡니다. 다른 시스템은 사람 개입 지점을 개발자가 놓거나(LangGraph 인터럽트, CrewAI, AutoGen), 민감한 도구 호출 단위로 둡니다(OpenAI Agents SDK). superpowers는 설계 승인 뒤 작업 사이에 멈추지 않고, 내장 워크플로는 실행 중 입력이 없습니다. 근거 칸: A3 열 ³, ¹⁰, ¹⁷, ³¹, ³⁸, ⁴⁵, ⁵².` },
+    { tags: ['A1'], title: '메인 세션이 L2·L3에 직접 위임하고 그 아래로는 위임하지 못한다 (A1).',
+      text: `my-agent는 레벨과 역할이 고정되어 있고 L2·L3는 재위임하지 못합니다. 내장 서브에이전트는 기본 3단계까지, CrewAI는 설정에 따라 재위임할 수 있으며, superpowers는 구현자가 재위임하지 않는 점이 같습니다. LangGraph는 고정 계층이 문서에 없고 개발자가 그래프로 구성합니다. 근거 칸: A1 열 ¹, ⁸, ¹⁵, ²⁹, ³⁶, ⁴³.` },
+    { tags: ['A7'], title: '기록이 게이트 결정 집계와 레벨별 피드백까지 이어진다 (A7).',
+      text: `my-agent는 run-log를 L1 스크립트와 hook이 함께 채우고, 읽기 전용 모니터·메뉴 막대 앱으로 보여 주며, 게이트 집계가 남습니다. 트레이스·대시보드 자체는 OpenAI Agents SDK, LangGraph(LangSmith), 내장 <code>/workflows</code>에도 있습니다. 게이트 집계는 다른 시스템 칸에 적힌 것이 없습니다. 근거 칸: A7 열 ⁷, ¹⁴, ²¹, ²⁸, ³⁵, ⁴², ⁴⁹, ⁵⁶.` }
+  ];
+  var dl = document.getElementById('diffs');
+  diffs.forEach(function (d) {
+    var c = el('article', 'diff',
+      '<div>' + d.tags.map(function (t) { return '<span class="chip axis-tag mono">' + t + '</span> '; }).join('') + '</div>' +
+      '<h3>' + d.title + '</h3>');
+    c.appendChild(disc('자세히', '<p>' + d.text + '</p>'));
+    dl.appendChild(c);
+  });
+})();
+</script>
+</body>
+</html>

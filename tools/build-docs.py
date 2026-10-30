@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build the my-agent architecture page for GitHub Pages: docs/index.html (repository root).
+"""Build the my-agent architecture page for GitHub Pages: docs/architecture.html (repository root).
 
-usage: build-docs.py            write docs/index.html (and docs/.nojekyll)
-       build-docs.py --check    exit 1 when docs/index.html is not what the sources give now (nothing written)
+usage: build-docs.py            write docs/architecture.html (and docs/.nojekyll)
+       build-docs.py --check    exit 1 when docs/architecture.html is not what the sources give now (nothing written)
 
 Everything on the page is read from the plugin's own files: plugin.json, the agent definitions, SKILL.md, the phase
 and profile files, hooks.json, permissions.json, the L4 scripts and lib docstrings, `ma_schema` (formats),
@@ -28,7 +28,7 @@ PLUGIN = REPO / 'plugins' / 'my-agent'
 L4 = PLUGIN / 'l4-tools-guards'
 ARCH = PLUGIN / 'docs' / 'build-guide' / 'my-agent-architecture.md'
 TEMPLATE = Path(__file__).resolve().parent / 'docs-template.html'
-OUT = REPO / 'docs' / 'index.html'
+OUT = REPO / 'docs' / 'architecture.html'
 
 sys.path.insert(0, str(L4 / 'lib'))
 import ma_schema  # noqa: E402

@@ -1,4 +1,4 @@
-"""tools/build-docs.py: the GitHub Pages architecture page (docs/index.html) matches the plugin files."""
+"""tools/build-docs.py: the GitHub Pages architecture page (docs/architecture.html) matches the plugin files."""
 import importlib.util
 import json
 import subprocess
@@ -27,6 +27,16 @@ class BuildDocsTest(unittest.TestCase):
     def test_committed_page_is_current(self):
         r = subprocess.run([sys.executable, str(SCRIPT), '--check'], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_output_is_architecture_page(self):
+        self.assertEqual(bd.OUT, bd.REPO / 'docs' / 'architecture.html')
+        r = subprocess.run([sys.executable, str(SCRIPT), '--check'], capture_output=True, text=True)
+        self.assertIn('docs/architecture.html', r.stdout)
+
+    def test_pre_commit_hook_names_architecture_page(self):
+        hook = (REPO / '.githooks' / 'pre-commit').read_text(encoding='utf-8')
+        self.assertIn('docs/architecture.html', hook)
+        self.assertNotIn('docs/index.html', hook)
 
     def test_every_manifest_agent_is_on_the_page(self):
         manifest = json.loads((bd.PLUGIN / '.claude-plugin' / 'plugin.json').read_text(encoding='utf-8'))

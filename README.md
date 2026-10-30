@@ -42,7 +42,7 @@ The main session (L1) takes a request, runs plan → execute → verify → revi
 | L3 | `explorer` · `researcher` · `writer` · `coder`: one assigned piece of work each |
 | L4 | Tools·MCP · hooks · permission rules · scripts: running, recording and blocking |
 
-The whole architecture — each level's components, their roles and permissions, the steps and gates, and the format of every task file — is on one page, `docs/index.html`, published at <https://hamin-apple.github.io/my-plugins/>. `python3 tools/build-docs.py` builds it from the plugin files; run it again after changing them.
+The whole architecture — each level's components, their roles and permissions, the steps and gates, and the format of every task file — is on one page, `docs/architecture.html`, published at <https://hamin-apple.github.io/my-plugins/architecture.html>. The site root <https://hamin-apple.github.io/my-plugins/> shows the feature overview. `python3 tools/build-docs.py` builds the architecture page from the plugin files; run it again after changing them.
 
 | Command | What it does |
 |---|---|
@@ -77,7 +77,9 @@ claude plugin uninstall my-agent@my-plugins
 - `.claude-plugin/marketplace.json`: plugin list
 - `plugins/<name>/`: a plugin. Only this folder is copied on install.
 - `tools/build-docs.py`, `tools/docs-template.html`: build the my-agent architecture page
-- `docs/index.html`: the architecture page (generated; GitHub Pages source `main` · `/docs`)
+- `docs/architecture.html`: the architecture page (generated; GitHub Pages source `main` · `/docs`)
+- `docs/index.html`: the my-agent feature overview in English (the site root; maintained by hand)
+- `docs/index-ko.html`: the my-agent feature overview in Korean (maintained by hand)
 - `tests/`: tests for `tools/`
 - `docs/handoff/`: handoff notes for work continued in another environment
 - `docs/agent/`: my-agent task records from this repository. Excluded from git.

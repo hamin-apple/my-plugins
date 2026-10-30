@@ -11,7 +11,7 @@
    - `## Reference files`: files outside the task folder that writer may read (scope-guard allows writer's reads by this list)
    - `## Mock-up` (**required**): first line `Kind: <kind>`, then a sample of the deliverable. Both the normal case and the exception cases in the scope, each tagged with its completion criterion number
    - `## Prototype`: needed / not needed, and why
-   - `## Estimate`: number of subagents, workflow steps and agent count, expected tokens (`<N>k tokens`)
+   - `## Estimate`: number of subagents, workflow steps and agent count
    - `## Existing work`: only when rewriting for a revision (rev). For each deliverable already made: keep / revise / discard
    - `## Approval`: left empty
    - `## Revisions`: if the previous `plan.md` had it, carried over as is at the very end

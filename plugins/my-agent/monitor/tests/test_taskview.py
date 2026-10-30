@@ -53,7 +53,8 @@ class TaskViewTest(unittest.TestCase):
 
     def test_header_fields(self):
         t = task('claude-sessions', '261024-cli-json-output')
-        self.assertEqual((t['started'], t['elapsed'], t['now'], t['est'], t['cost']), ('15:30', 38, '16:08', 600, '2.41'))
+        self.assertEqual((t['started'], t['elapsed'], t['now'], t['cost']), ('15:30', 38, '16:08', '2.41'))
+        self.assertNotIn('est', t)
         self.assertEqual(t['title'], 'Add a --json output option to the CLI')
         self.assertRegex(t['key'], r'^[0-9a-f]{8}/261024-cli-json-output$')
         self.assertEqual(t['running'][0]['a'], 'coder')

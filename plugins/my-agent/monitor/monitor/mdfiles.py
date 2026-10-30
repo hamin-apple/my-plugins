@@ -59,16 +59,10 @@ def read_verify(p: Path) -> list:
 
 
 def read_plan(p: Path) -> dict:
-    d = {'estimate_k': None, 'approved_at': None, 'mockup': None, 'prototype': None, 'revisions': []}
+    d = {'approved_at': None, 'mockup': None, 'prototype': None, 'revisions': []}
     text = _text(p)
     if not text:
         return d
-    for line in _section(text, 'Estimate') or []:
-        if re.search(r'token', line, re.I):
-            m = re.search(r'(\d+)\s*k\b', line)
-            if m:
-                d['estimate_k'] = int(m.group(1))
-                break
     d['approved_at'] = ma_schema.approved_at(text)
     mock = _section(text, 'Mock-up')
     if mock:

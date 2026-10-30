@@ -717,7 +717,7 @@ function renderStatus() {
   const sel = t.status !== 'done' && R === latestRev(t) ? t.step : 0;
   const vl = revChips(t, R, 'rev') + vsteps(t, SR, { key: 'step', sel, R, stats: true, compact: true, tone: taskTone(t), state: n => rstate(t, R, n) });
   const c = t.crit, cPass = c.res.filter(x => x === 'p').length;
-  const ratio = t.est ? t.tokens / t.est : 0, eLvl = (t.vfail >= 3 || t.sstop >= 2) ? 'bad' : (t.vfail >= 2 || t.sstop >= 1) ? 'warn' : 'ok';
+  const eLvl = (t.vfail >= 3 || t.sstop >= 2) ? 'bad' : (t.vfail >= 2 || t.sstop >= 1) ? 'warn' : 'ok';
   const run = t.running[0];
   const nowTile = t.status === 'done' ? `<div class="kv2 st-done">✓ ${L('Done', '완료')}</div><div class="ks">${L('accepted at G3 · deliverable saved', 'G3 수용 · 결과물 저장됨')}</div>`
     : t.status === 'stopped' ? `<div class="kv2 st-stop">■ ${L('Stopped', '중단')}</div><div class="ks">${(t.step ? L(`at ${t.step}. ${STEP_NAME[t.step]}`, `${t.step}. ${STEP_NAME[t.step]}에서`) : '–')}</div>`
@@ -728,8 +728,7 @@ function renderStatus() {
     <div class="kpi"><div class="kl">Now</div>${nowTile}</div>
     <div class="kpi"><div class="kl">Elapsed</div><div class="kv2">${fmtMin(t.elapsed)}</div><div class="ks">${L('started', '시작')} ${esc(t.started)}</div></div>
     <div class="kpi"><div class="kl">Criteria</div><div class="kv2">${cPass}/${c.total}</div><div class="cells">${cells}</div></div>
-    <div class="kpi"><div class="kl">Tokens</div><div class="kv2">${cu('tok-' + t.id, t.tokens, 'k')} <small class="ks">/ ${t.est ? t.est + 'k' : '–'} ${L('estimate', '예상')}</small></div>
-      <div class="bar ${ratio >= 1 ? 'warn' : ''} ${t.status === 'running' ? 'live' : ''}" data-p="${Math.min(1, ratio)}"><i></i></div><div class="ks">${t.est ? Math.round(ratio * 100) + '%' : '–'} ${L('of estimate', '사용')}</div></div>
+    <div class="kpi"><div class="kl">Tokens</div><div class="kv2">${cu('tok-' + t.id, t.tokens, 'k')}</div><div class="ks">${L('subagents + main session', '서브에이전트 + 메인 세션')}</div></div>
     <div class="kpi"><div class="kl">Escalation (E)</div><div class="kv2 ${eLvl}">${eLvl === 'bad' ? L('▲ E raised', '▲ E 발생') : eLvl === 'warn' ? L('△ Caution', '△ 주의') : L('● Normal', '● 정상')}</div>
       <div class="ks" title="${L('Verify FAILs in a row · slices stopped (limits 3 · 2)', 'Verify 연속 FAIL · slice 중단 (한도 3 · 2)')}">${L(`Verify FAIL ${t.vfail}/3 · slice stops ${t.sstop}/2`, `Verify 연속 FAIL ${t.vfail}/3 · slice 중단 ${t.sstop}/2`)}</div></div>
     <div class="kpi"><div class="kl">Cost</div><div class="kv2">${cu('mc-' + t.id, tot[2], '$')}</div><div class="ks">${L('estimate', '추정')} · statusline ${t.cost == null ? '–' : cu('cost-' + t.id, +t.cost, '$')}</div></div>

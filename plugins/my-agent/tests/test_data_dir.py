@@ -1,4 +1,4 @@
-"""ma_data (data folder resolution) and data-dir.py: MA_TASKS_DIR > setting > ~/dev/my-agent, per-file overrides first."""
+"""ma_data (data folder resolution) and data-dir.py: MA_TASKS_DIR > setting > ~/dev/log/my-agent, per-file overrides first."""
 import json
 import os
 import tempfile
@@ -35,12 +35,12 @@ class DataDirTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_default(self):
-        self.assertEqual(ma_data.data_dir(), self.home / 'dev' / 'my-agent')
+        self.assertEqual(ma_data.data_dir(), self.home / 'dev' / 'log' / 'my-agent')
 
     def test_plugin_json_default_matches_fallback(self):
         manifest = json.loads((L4.parent / '.claude-plugin' / 'plugin.json').read_text())
         default = manifest['userConfig']['data_dir']['default']
-        self.assertEqual(default, '~/dev/my-agent')
+        self.assertEqual(default, '~/dev/log/my-agent')
         self.assertEqual(ma_data.data_dir(default), ma_data.data_dir())
 
     def test_order(self):
@@ -58,9 +58,9 @@ class DataDirTest(unittest.TestCase):
 
     def test_unset_values_fall_back(self):
         for value in ('', '  ', PLACEHOLDER):
-            self.assertEqual(ma_data.data_dir(value), self.home / 'dev' / 'my-agent', value)
+            self.assertEqual(ma_data.data_dir(value), self.home / 'dev' / 'log' / 'my-agent', value)
             os.environ['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = value   # hook path: no argument
-            self.assertEqual(ma_data.data_dir(), self.home / 'dev' / 'my-agent', value)
+            self.assertEqual(ma_data.data_dir(), self.home / 'dev' / 'log' / 'my-agent', value)
 
     def test_hook_path_env_only(self):
         os.environ['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = '~/hook'
@@ -90,9 +90,9 @@ class DataDirTest(unittest.TestCase):
         r = self.run_clean('--data-dir', '~/dev/agent-tasks')
         self.assertEqual((r.returncode, r.stdout), (0, f'{self.home}/dev/agent-tasks\n'))
         r = self.run_clean('--data-dir', PLACEHOLDER)
-        self.assertEqual(r.stdout, f'{self.home}/dev/my-agent\n')
+        self.assertEqual(r.stdout, f'{self.home}/dev/log/my-agent\n')
         r = self.run_clean('--data-dir', '')
-        self.assertEqual(r.stdout, f'{self.home}/dev/my-agent\n')
+        self.assertEqual(r.stdout, f'{self.home}/dev/log/my-agent\n')
         r = self.run_clean('--data-dir', '~/x', MA_TASKS_DIR='/tmp/t')
         self.assertEqual(r.stdout, '/tmp/t\n')
 

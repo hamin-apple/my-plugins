@@ -6,7 +6,7 @@ jahoonjin의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| `my-agent` | 0.4.3 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent` | 0.4.4 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
 
 ## 요구 사항
 
@@ -29,7 +29,7 @@ claude plugin install my-agent@my-plugins
 
 플러그인은 권한 규칙을 실을 수 없습니다. 위험한 행동 확인(G2: `git commit`, `git push`, `rm -rf`, 패키지 설치)과 막는 명령(비밀값 파일, `--no-verify`, `git push --force`)을 쓰려면 `plugins/my-agent/l4-tools-guards/permissions/permissions.json`의 `ask`·`deny` 목록을 `~/.claude/settings.json`의 `permissions`에 직접 병합합니다. 병합하지 않으면 이 행동들을 묻거나 막지 않습니다.
 
-플러그인을 켤 때 Claude Code가 설정 하나, 데이터 폴더를 묻습니다(기본값 `~/dev/my-agent`, 나중에 `/config`에서 바꿀 수 있습니다). my-agent가 작업 폴더 밖에 두는 모든 것이 여기에 들어갑니다: 프로젝트 목록(`projects.txt`), 실행 색인(`active-index.json`), 모니터 상태·로그·설정, 가격 재정의, 개선 목록(`feedback.md`), 회고 보고서 사본(`gate-report/`). 앞의 `~`는 홈 폴더로 펼쳐집니다. 플러그인 자기 폴더에는 아무것도 쓰지 않습니다. 폴더를 바꾸면 이전 폴더는 그대로 두고 그때부터 새 폴더를 씁니다. 설정이 없으면(예: `--plugin-dir`로 불러온 경우) `~/dev/my-agent`를 씁니다. 환경변수 `MA_TASKS_DIR`(데이터 폴더), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE`, `MA_GATE_REPORT_DIR`이 설정보다 먼저 적용됩니다. 이전 버전의 폴더(`~/my-agent`)는 옮겨 주지 않습니다. 새 위치로 직접 옮기거나, 데이터 폴더를 옛 경로로 지정하세요.
+플러그인을 켤 때 Claude Code가 설정 하나, 데이터 폴더를 묻습니다(기본값 `~/dev/log/my-agent`, 나중에 `/config`에서 바꿀 수 있습니다). my-agent가 작업 폴더 밖에 두는 모든 것이 여기에 들어갑니다: 프로젝트 목록(`projects.txt`), 실행 색인(`active-index.json`), 모니터 상태·로그·설정, 가격 재정의, 개선 목록(`feedback.md`), 회고 보고서 사본(`gate-report/`). 앞의 `~`는 홈 폴더로 펼쳐집니다. 플러그인 자기 폴더에는 아무것도 쓰지 않습니다. 폴더를 바꾸면 이전 폴더는 그대로 두고 그때부터 새 폴더를 씁니다. 설정이 없으면(예: `--plugin-dir`로 불러온 경우) `~/dev/log/my-agent`를 씁니다. 환경변수 `MA_TASKS_DIR`(데이터 폴더), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE`, `MA_GATE_REPORT_DIR`이 설정보다 먼저 적용됩니다. 이전 버전의 폴더(`~/my-agent`)는 옮겨 주지 않습니다. 새 위치로 직접 옮기거나, 데이터 폴더를 옛 경로로 지정하세요.
 
 ## my-agent
 
@@ -61,7 +61,7 @@ python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.
 python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py [--days N] [--data-dir <폴더>]
 ```
 
-셸에서 직접 실행하면 스크립트는 설정을 알지 못합니다. 데이터 폴더가 기본값 `~/dev/my-agent`가 아니면 `--data-dir <폴더>`로 알려 주어야 프로젝트 목록을 찾습니다.
+셸에서 직접 실행하면 스크립트는 설정을 알지 못합니다. 데이터 폴더가 기본값 `~/dev/log/my-agent`가 아니면 `--data-dir <폴더>`로 알려 주어야 프로젝트 목록을 찾습니다.
 
 ## 업데이트와 제거
 

@@ -1,6 +1,6 @@
 {
   "name": "my-agent",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks",
   "author": {
     "name": "jahoonjin"
@@ -26,7 +26,7 @@
       "title": "Data folder",
       "description": "Where my-agent keeps its project list, run index, monitor state, retrospective notes and report copies.",
       "required": true,
-      "default": "~/dev/my-agent"
+      "default": "~/dev/log/my-agent"
     }
   }
 }

@@ -34,7 +34,7 @@ def snapshot(task_dir: Path) -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--cwd', default=os.getcwd())
-    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/my-agent)')
+    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/log/my-agent)')
     ap.add_argument('--task-dir')
     args = ap.parse_args(argv)   # argparse exits 2 on bad arguments
     if args.task_dir:

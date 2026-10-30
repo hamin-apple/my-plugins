@@ -39,7 +39,7 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
 4. `## Reference files`: files outside the task folder that writer may read, one per line as `` - `relative path` ``. If there are none, `- none`.
 5. `## Mock-up`: the first line is `Kind: <kind of example>` (e.g. `CLI input/output`, `note outline + sample paragraph`, `screen layout`), and below it is an example of the deliverable. Show both the normal case and the exception cases written in the scope document, and tag each case with its completion criterion number. It only shows the scope document as an example; it adds no new requirements.
 6. `## Prototype`: `needed` or `not needed` and a one-line reason. `needed` only when a judgment needs to be made by eye, such as a screen layout or a document layout. The `Prototype: requested` line in this section is written only by L1.
-7. `## Estimate`: the number of subagents; if you use a workflow, the number of steps and agents (9 or fewer per workflow); the expected tokens `<N>k tokens`.
+7. `## Estimate`: the number of subagents; if you use a workflow, the number of steps and agents (9 or fewer per workflow). Write no expected tokens.
 8. `## Existing work` (when rewriting, if deliverables already exist): a table `| Target | Decision | Reason |`. The decision is keep / revise / discard for notes and drafts in `work/`, merge / redo / discard for an unmerged coder worktree, and keep / revise / revert for code already merged (dev). A revert and a worktree discard are each a work unit of their own.
 9. `## Approval`: leave empty. Only L1 writes this section.
 

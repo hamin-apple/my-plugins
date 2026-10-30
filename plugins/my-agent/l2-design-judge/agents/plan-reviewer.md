@@ -48,7 +48,7 @@ Run: <n>
 2. **Mock-up:** `## Mock-up` exists, shows both the normal case and the scope's exception cases, and each case has a criterion number. If it adds requirements not in the scope, BLOCKER.
 3. **Scope:** the plan does nothing listed in the non-goals. If there is work outside the scope, BLOCKER.
 4. **Parallel groups:** within a group, the files to change do not overlap. If they overlap, BLOCKER. A group without a workflow has 4 units or fewer.
-5. **Required sections:** `## Work units` (each unit with a unique `### u<n> <name>` heading and `- Status: pending`), `## Reference files`, `## Mock-up` (first line `Kind: <kind of example>`), `## Prototype`, `## Estimate` (`<N>k tokens`), an empty `## Approval`. If one is missing, BLOCKER. For a rewritten plan, also check that every BLOCKER in the previous `plan-review.md` is resolved.
+5. **Required sections:** `## Work units` (each unit with a unique `### u<n> <name>` heading and `- Status: pending`), `## Reference files`, `## Mock-up` (first line `Kind: <kind of example>`), `## Prototype`, `## Estimate` (number of subagents), an empty `## Approval`. If one is missing, BLOCKER. For a rewritten plan, also check that every BLOCKER in the previous `plan-review.md` is resolved.
 6. **Risk:** steps that are hard to undo if they fail, and actions that go outside, are marked. If not, SHOULD-FIX.
 
 ## Checks per profile

@@ -226,7 +226,7 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
         'step': 9 if status == 'done' else (ev.step_enter[-1][1] if ev.step_enter else None),
         'started': _hm(started, now), 'elapsed': round((end - started).total_seconds() / 60),
         'now': end.strftime('%H:%M'),
-        'tokens': round(sub_tokens / 1000) + main_tokens, 'est': plan['estimate_k'], 'cost': ev.cost_usd,
+        'tokens': round(sub_tokens / 1000) + main_tokens, 'cost': ev.cost_usd,
         'gates': gates, 'running': ev.running if status == 'running' else [],
         'waiting': ev.waiting if status == 'running' else None,
         'revs': ev.revs, 'log': log,

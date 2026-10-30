@@ -26,9 +26,9 @@ class MdFilesTest(unittest.TestCase):
         self.assertEqual(read_verify(HOOKS / 'verify.md'), ['p'] * 5)
         self.assertEqual(read_criteria(WEEKLY / 'plan.md'), 3)
 
-    def test_plan_estimate_and_approval(self):
+    def test_plan_approval(self):
         p = read_plan(CLI / 'plan.md')
-        self.assertEqual(p['estimate_k'], 600)
+        self.assertNotIn('estimate_k', p)
         self.assertEqual(p['approved_at'], '2026-10-24 15:55')
         self.assertTrue(p['mockup'].startswith('Kind: CLI input/output'))
 
@@ -36,7 +36,7 @@ class MdFilesTest(unittest.TestCase):
         self.assertIsNone(read_intake(Path('/nonexistent/intake.md')))
         self.assertEqual(read_criteria(Path('/nonexistent/scope.md')), 0)
         self.assertEqual(read_verify(Path('/nonexistent/verify.md')), [])
-        self.assertIsNone(read_plan(Path('/nonexistent/plan.md'))['estimate_k'])
+        self.assertIsNone(read_plan(Path('/nonexistent/plan.md'))['approved_at'])
 
 
 if __name__ == '__main__':

@@ -71,7 +71,7 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 - Right: 6 tiles in 2 columns. Order: Now, Elapsed / Criteria, Tokens / Escalation, Cost
   - Now: the current step and the running subagents (model, effort); when waiting for an answer, that gate
   - Criteria: passed / total, one cell per criterion
-  - Tokens: used / estimated, progress bar (the estimate is for reference, not an E condition)
+  - Tokens: used (subagents plus the main session; no estimate, dropped in architecture v0.34)
   - Escalation (E): consecutive Verify FAIL n/3, slice stops n/2. Normal / Caution / E raised from these two values only
   - Cost: estimated total per model and the statusline value (small, labeled "statusline")
 - Bottom: Models table (calls, tokens, time, cost per model, including the main session row), MISMATCH warning
@@ -116,7 +116,6 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 | rev | run-log `revision:` lines, `plan.md`/`scope.md ## Revisions`, `archive/` |
 | Criteria | `scope.md` completion criteria (for the general profile, the scope summary at the top of `plan.md`), `verify.md` verdicts |
 | Escalation | verifier `stop:` results in the run-log (consecutive FAIL), worker stop records |
-| Estimated tokens | `plan.md ## Estimate` |
 | Cost estimate | tokens × `prices.json` (5.4) |
 | Cost statusline | run-log `cost:` lines |
 | File tree, write times, preview | task folder files and their modification times |

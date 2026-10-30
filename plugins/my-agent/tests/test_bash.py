@@ -295,6 +295,33 @@ class GitSubcommandsTest(unittest.TestCase):
                 self.assertEqual(ma_bash.git_subcommands(cmd), ['?'])
 
 
+class EnvReadsTest(unittest.TestCase):
+    def test_env_reads_table(self):
+        table = [
+            ('env', ['env']), ('env -i', ['env -i']), ('printenv', ['printenv']), ('printenv HOME', ['printenv HOME']),
+            ('env | grep KEY', ['env']), ('true && printenv', ['printenv']), ('ls; set', ['set']),
+            ('/usr/bin/env', ['/usr/bin/env']), ('command env', ['command env']), ('exec printenv', ['exec printenv']),
+            ('nohup env', ['nohup env']), ('timeout 5 env', ['timeout 5 env']), ('FOO=1 env', ['FOO=1 env']),
+            ('false || export', ['export']), ('export -p', ['export -p']), ('declare', ['declare']),
+            ('typeset -p', ['typeset -p']), ('launchctl getenv PATH', ['launchctl getenv PATH']),
+            ('cat /proc/1/environ', ['cat /proc/1/environ']), ('cat /proc/self/environ', ['cat /proc/self/environ']),
+            ('cat /proc/$$/environ', ['cat /proc/$$/environ']),
+            ('xargs -0 < /proc/self/environ', ['xargs -0 < /proc/self/environ']),
+            ("bash -c 'printenv'", ['printenv']), ('env VAR=x printenv', ['env VAR=x printenv']),
+            ('env -u HOME', ['env -u HOME']), ('sudo env', ['sudo env']), ('nice -n 5 env', ['nice -n 5 env']),
+            ('env FOO=1', ['env FOO=1']), ('cat /proc/self/task/1/environ', ['cat /proc/self/task/1/environ']),
+            ('bash -c "cat /proc/self/environ"', ['bash -c cat /proc/self/environ', 'cat /proc/self/environ']),
+            ('env nohup', []),
+            ('env -i cmd', []), ('env VAR=x cmd', []), ('command env VAR=x cmd', []), ('timeout 5 env -i cmd', []),
+            ('set -e', []), ('set -o pipefail', []), ('export VAR=x', []), ('declare -x VAR=1', []),
+            ('declare -p HOME', []), ('ls $HOME/x', []), ('echo $HOME', []), ('cat /proc/cpuinfo', []),
+            ('launchctl list', []), ('echo env printenv', []), ('ls', []), ('echo "unclosed', []),
+        ]
+        for cmd, expected in table:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.env_reads(cmd), expected)
+
+
 class GitMutatesTest(unittest.TestCase):
     def test_git_mutates(self):
         for cmd in ('git commit -m x', 'git push', 'git -C a checkout b', 'git reset --hard', 'git add .',

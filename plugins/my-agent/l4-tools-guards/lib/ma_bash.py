@@ -45,6 +45,7 @@ class Simple(NamedTuple):
     after: str = ''        # the separator after it
     top: bool = False      # runs at the top level: not in `( )`, a pipeline, the background, a compound command
     orl: bool = False      # a top-level `||` came before it in the same and-or list
+    raw: List[str] = []    # the words as written, assignments and prefixes still in (the environment rule)
 
 
 def _delimiters(line: str) -> List[tuple]:
@@ -168,7 +169,7 @@ def _commands(cmd: str, depth: int = 0) -> List[Simple]:
             compound = True
         top = (depth == 0 and paren == 0 and not compound and sep not in PIPE
                and after not in PIPE and after != '&')
-        s = s._replace(sep=sep, after=after, top=top, orl=orl)
+        s = s._replace(sep=sep, after=after, top=top, orl=orl, raw=list(raw))
         inner = _inner(s)
         if inner is None:
             out.append(s)
@@ -518,6 +519,58 @@ def http_sends(cmd: str) -> Optional[bool]:
                     if ch in 'oHAeuUwbcEKm':   # options taking a value end the cluster
                         break
     return False
+
+
+PRINT_ONLY = {'export', 'declare', 'typeset'}
+PROC_ENVIRON = re.compile(r'/proc/[^/\s]+/(?:task/[^/\s]+/)?environ')
+
+
+def _dumps_env(raw: List[str]) -> bool:
+    """Whether one simple command (its raw words) prints the environment. Assignments and prefixes come off the way
+    `_simple` does them, but `env` is looked through, not dropped: bare `env` (options only) prints, `env -i cmd`
+    runs `cmd`, which is then judged on its own."""
+    rest, bare_env = list(raw), False
+    while rest:
+        name = os.path.basename(rest[0])
+        if ASSIGN.match(rest[0]) or rest[0] in RESERVED:
+            rest.pop(0)
+        elif name in PREFIX:
+            rest.pop(0)
+            while rest and rest[0].startswith('-'):
+                opt = rest.pop(0)
+                if opt in PREFIX_VALUE.get(name, ()) and rest:
+                    rest.pop(0)
+            if name == 'timeout' and rest:
+                rest.pop(0)
+            bare_env = name == 'env'
+        else:
+            break
+    if not rest:
+        return bare_env
+    name, args = os.path.basename(rest[0]), rest[1:]
+    if name == 'printenv':
+        return True
+    if name == 'set':
+        return not args
+    if name in PRINT_ONLY:
+        return all(a.startswith('-') for a in args)
+    return name == 'launchctl' and bool(args) and args[0] == 'getenv'
+
+
+def env_reads(cmd: str) -> List[str]:
+    """The simple commands of `cmd` (pipelines, `;`, `&&`, `||`, `bash -c` strings included) that read the process
+    environment: `env`/`printenv` with no command, `set`/`export`/`declare`/`typeset` with no name, `launchctl
+    getenv`, any word naming `/proc/<pid>/environ`. Each as written. [] when `cmd` does not tokenize (the read-path
+    rule denies that)."""
+    try:
+        cmds = _commands(cmd)
+    except ValueError:
+        return []
+    out = []
+    for c in cmds:
+        if _dumps_env(c.raw) or any(PROC_ENVIRON.search(w) for w in c.raw + c.inputs):
+            out.append(' '.join(c.raw + [f'< {i}' for i in c.inputs]))
+    return out
 
 
 def _unquote(seg: str) -> str:

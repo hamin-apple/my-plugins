@@ -30,7 +30,7 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
 ## `plan.md` sections (in this order, all required)
 
 1. `## Scope summary` (general profile only): purpose, non-goals, deliverable location (an absolute path (no `~`, no relative path)).
-2. `## Completion criteria` (general profile only): a numbered list `1.`, `2.`. Other profiles use the numbers in `scope.md` as is.
+2. `## Completion criteria` (general profile only): a numbered list `1.`, `2.`; it carries each criterion's check tag (`[check: command]`, `[check: file]`, `[check: URL]` or `[check: person]`) unchanged. Other profiles use the numbers and tags in `scope.md` as is.
 3. `## Work units`: for each unit, a `### u<n> <name>` heading (`u1`, `u2` …, unique within the plan), and under it `- ` lines with the agent that takes it (`my-agent:researcher`·`writer`·`coder`), files to read, and for a coder the files to change, or for a writer or researcher the result path (`docs/agent/<task-id>/work/…`), the parallel group (`group 1`, `group 2` …), the matching completion criterion number, and `- Status: pending` (when rewriting, a unit whose result `## Existing work` keeps as is gets `- Status: done`). L1 calls workers by this ID and the run-log records it as `unit=`.
    - When rewriting, units you keep or revise keep their old ID; new units get the next unused number. Never reuse the ID of a discarded unit.
    - In the general and research profiles, writer and researcher result paths are always under `docs/agent/<task-id>/work/`. L1 copies them to the deliverable location (final location) in the scope summary after G3. Do not list the final location as a file to change. scope-guard blocks that write.

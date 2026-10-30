@@ -29,7 +29,7 @@ Implement one work unit of the plan. Write the test first, see it fail, then imp
 
 ## Input
 
-The `plan.md` path and the work unit ID and name, the files to read, the files to change (no result path; your final report is the result), the completion criterion number, and the check commands. When taking a unit again: the list of failed criteria or the stop report, and the merge conflict details. The first line of the prompt is `Work unit: u<n> <name>` (L1 adds it so the run-log records the unit).
+The `plan.md` path and the work unit ID and name, the files to read, the files to change (no result path; your final report is the result), the completion criterion number, and the check commands. When taking a unit again (always a fresh call, never a resume): the archived `verify.md`/`review.md` paths (or the stop report), the failed criterion numbers and the merge conflict details. Read those files; do not expect earlier context. The first line of the prompt is `Work unit: u<n> <name>` (L1 adds it so the run-log records the unit).
 
 ## Order
 

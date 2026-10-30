@@ -14,6 +14,7 @@ import ma_schema
 NO_REC = '(not recorded)'
 SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustment (B3), not a fix
 NOTE_BY_L1 = 'answered by L1'
+VERIFIER = 'my-agent:verifier'   # the `agent=` value of the verifier's `start:` line
 PLAN_REVIEWER = 'my-agent:plan-reviewer'   # the `agent=` value subagent-log.py writes on `start:` lines
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
 
@@ -142,6 +143,23 @@ def _segments(lines) -> list:
     return segs
 
 
+def judge_misses(lines) -> int:
+    """Times a verifier `Verdict: ALL PASS` was followed, with no later Verify in between, by a G3 `Rework`."""
+    verifiers, pending, misses = set(), False, 0
+    for _, kind, f in lines:
+        if kind == 'start' and f.get('agent') == VERIFIER:
+            verifiers.add(f.get('id'))
+        elif kind == 'stop' and f.get('id') in verifiers:
+            result = f.get('result')
+            pending = isinstance(result, str) and result.startswith(ma_schema.VERIFY_PASS)
+        elif kind == 'step' and f.get('name') == 'Verify':
+            pending = False
+        elif kind == 'answer' and f.get('gate') == 'G3' and _bare(f.get('choice')) == 'Rework':
+            misses += pending
+            pending = False
+    return misses
+
+
 def tally_text(lines) -> str:
     """The "Decision table", "Metrics" and "Cost and tokens per stretch" sections for a run-log's stamped lines."""
     out = ['## Decision table']
@@ -168,6 +186,7 @@ def tally_text(lines) -> str:
     revs = len({f.get('rev') for k, f in kinds if k == 'revision' and not f.get('before') and f.get('rev')})
     out += ['', '## Metrics', '| Item | Value |', '|---|---|',
             f"| Verify runs | {count('step', name='Verify')} |",
+            f'| Judge misses | {judge_misses(lines)} |',
             f"| Plan Review runs | {count('start', agent=PLAN_REVIEWER)} |",
             f"| Subagents | {count('start')} |",
             f'| Model mismatches | {main + sub} (main session {main} · by step lines, subagents {sub}) |',

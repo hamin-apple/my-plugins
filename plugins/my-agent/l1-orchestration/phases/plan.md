@@ -6,7 +6,7 @@
 2. Hand it to `my-agent:architect`. Pass: the paths of `intake.md`, `explore.md` (and `scope.md`), the scope summary in the general profile, and the result path `docs/agent/<task-id>/plan.md`.
 3. Sections `plan.md` must have (if one is missing, have architect rewrite only that section):
    - `## Scope summary` (general profile): purpose, non-goals, deliverable location
-   - `## Completion criteria`: numbered list `1.`, `2.` (general profile; other profiles have it in `scope.md`)
+   - `## Completion criteria`: numbered list `1.`, `2.`, each criterion line ending with its check tag (general profile; other profiles have it in `scope.md`)
    - `## Work units`: per unit, a `### u<n> <name>` heading, the agent in charge, the list of files to change, the parallel group, `- Status: pending` (when rewriting, `done` for units whose results `## Existing work` keeps as they are)
    - `## Reference files`: files outside the task folder that writer may read (scope-guard allows writer's reads by this list)
    - `## Mock-up` (**required**): first line `Kind: <kind>`, then a sample of the deliverable. Both the normal case and the exception cases in the scope, each tagged with its completion criterion number

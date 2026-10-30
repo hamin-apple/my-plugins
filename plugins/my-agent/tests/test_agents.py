@@ -75,6 +75,14 @@ class AgentsTest(unittest.TestCase):
         self.assertIn('no result path', coder)
         self.assertIn('You write no result file', coder)
 
+    def test_coder_input_names_archived_judgments_and_fresh_call(self):
+        """Criterion 6: a rerun is a fresh call; the input names archived judgment paths and failed criteria."""
+        coder = (REPO / 'l3-workers' / 'agents' / 'coder.md').read_text(encoding='utf-8')
+        inp = coder.split('## Input')[1].split('\n## ')[0]
+        self.assertIn('archived `verify.md`/`review.md` paths', inp)
+        self.assertIn('failed criterion numbers', inp)
+        self.assertIn('fresh call', inp)
+
     def test_manifest_lists_all_nine(self):
         manifest = json.loads((REPO / '.claude-plugin' / 'plugin.json').read_text())
         self.assertEqual(manifest['agents'], MANIFEST)
@@ -161,6 +169,10 @@ class AgentsTest(unittest.TestCase):
             with self.subTest(agent=name):
                 self.assertIn(f"`{f}` is this role's deliverable", body)
 
+    def test_gate_analyst_names_judge_misses_row(self):
+        body = split(REPO / 'l2-design-judge' / 'agents' / 'gate-analyst.md')[1]
+        self.assertIn('Judge misses', body)
+
     def test_gate_analyst_popup_action_rule(self):
         """Criterion 9: the popup-side action per clear tendency, in the agent and in ARCH 4.11 (e)."""
         arch = (REPO / 'docs' / 'build-guide' / 'my-agent-architecture.md').read_text(encoding='utf-8')
@@ -196,6 +208,27 @@ class AgentsTest(unittest.TestCase):
         plan = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
         self.assertIn('`/reload-plugins`', plan)
         self.assertIn('Plugin reload: needed', plan)
+
+    def test_verifier_evidence_rule(self):
+        v = (REPO / 'l2-design-judge' / 'agents' / 'verifier.md').read_text(encoding='utf-8')
+        for kind in ('a command result', 'a file location', 'a fetched page'):
+            self.assertIn(kind, v)
+        self.assertIn('Inferred or "likely" evidence is FAIL', v)
+        self.assertIn('`[check: person]`', v)
+        self.assertIn('`Scope change: criterion <n> …`', v)
+        self.assertIn('checked by the person', v)
+        self.assertIn('is checked by the user later', v)
+        self.assertIn('no Scope change line for criterion <n>', v)
+        self.assertIn('FAIL', v.split('no Scope change line')[0].splitlines()[-1])
+        self.assertIn('written before check tags', v)
+
+    def test_check_tags_architect_and_reviewer(self):
+        arch = (REPO / 'l2-design-judge' / 'agents' / 'architect.md').read_text(encoding='utf-8')
+        self.assertIn('it carries each criterion\'s check tag (`[check: command]`, `[check: file]`, `[check: URL]` or `[check: person]`) unchanged', arch)
+        rev = (REPO / 'l2-design-judge' / 'agents' / 'plan-reviewer.md').read_text(encoding='utf-8')
+        self.assertIn('**Check tags:**', rev)
+        self.assertIn('a missing tag or a value other than the four is a BLOCKER', rev)
+        self.assertIn('carry no tag at all', rev)
 
 
 if __name__ == '__main__':

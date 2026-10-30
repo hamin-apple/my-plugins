@@ -207,7 +207,7 @@ Read the lines the command prints:
 | Situation | Handling |
 |---|---|
 | API error, rate limit | Retry once with the same model. If it happens again, E |
-| Worker stopped once (`PARTIAL`, `end=partial`) | Retry on opus with the same input and the stop report (call argument `model: "opus"`) |
+| Worker stopped once (`PARTIAL`, `end=partial`) | Retry on opus as a new call (never a resume) with the same input and the stop report (call argument `model: "opus"`) |
 | Worker stopped twice | If it is a small fix L1 can make directly, make it; otherwise E. If the plan was wrong, go back to Plan |
 | Verify FAIL 1–2 times | Archive the judgment files, go back to Execute, and pass the list of failed criteria (`accept.md` "Back to Execute") |
 | Verify FAIL 3 times in a row | E: `Keep fixing` / `Change scope·criteria` / `Abort` |

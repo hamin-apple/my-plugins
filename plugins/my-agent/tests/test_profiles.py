@@ -64,6 +64,12 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn('Commit (Recommended)', accept)
         self.assertIn('deliver path=commit:', accept)
 
+    def test_retrospective_files_judge_miss_item(self):
+        accept = (REPO / 'l1-orchestration' / 'phases' / 'accept.md').read_text(encoding='utf-8')
+        retro = accept.split('## Retrospective', 1)[1]
+        for text in ('Judge misses', 'add L2', 'not named'):
+            self.assertIn(text, retro)
+
     def test_judge_fixtures(self):
         expected = json.loads((FIXTURES / 'expected.json').read_text(encoding='utf-8'))
         self.assertEqual(sorted(expected.values()).count('FAIL'), 3)
@@ -140,6 +146,54 @@ class ProfilesTest(unittest.TestCase):
         c = row.index('git worktree remove')
         self.assertLess(a, b)
         self.assertLess(b, c)
+
+    def test_check_tags_in_scope_rules(self):
+        """Criterion 4: every criterion line gets one check tag; four tag values are named."""
+        tags = ('[check: command]', '[check: file]', '[check: URL]', '[check: person]')
+        define = (REPO / 'l1-orchestration' / 'phases' / 'define.md').read_text(encoding='utf-8')
+        for t in tags:
+            self.assertIn(t, define)
+        self.assertIn('one check tag', define)
+        for name in ('dev', 'general', 'research'):
+            row = next(l for l in (PROFILES / f'{name}.md').read_text(encoding='utf-8').splitlines() if l.startswith('| 2 Explore'))
+            for t in tags:
+                self.assertIn(t, row, name)
+            self.assertIn('one check tag', row, name)
+        plan = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
+        line = next(l for l in plan.splitlines() if '`## Completion criteria`' in l)
+        self.assertIn('check tag', line)
+
+    def test_person_check_popup(self):
+        """Criterion 5: one popup per [check: person] criterion; Scope change lines; G3 lists later ones."""
+        phases = REPO / 'l1-orchestration' / 'phases'
+        define = (phases / 'define.md').read_text(encoding='utf-8')
+        self.assertIn('I check it before G3 and tell you', define)
+        self.assertIn('[check: person]', define)
+        self.assertIn('How criterion <n> is checked', define)
+        accept = (phases / 'accept.md').read_text(encoding='utf-8')
+        verify = accept[accept.index('## 7. Verify'):accept.index('## Back to Execute')]
+        self.assertIn('Scope change: criterion <n> checked by the person', verify)
+        self.assertIn('checked by the user later', verify)
+        review = accept[accept.index('## 8. Review'):accept.index('## G3 in the dev profile')]
+        dev = accept[accept.index('## G3 in the dev profile'):accept.index('## E escalation')]
+        for sec in (review, dev):
+            self.assertIn('checked by the user later', sec)
+
+    def test_rerun_is_a_new_worker_call_never_a_resume(self):
+        """Criterion 6: where units are handed out and sent back, a rerun is a new call, never a resume."""
+        phases = REPO / 'l1-orchestration' / 'phases'
+        build = (phases / 'build.md').read_text(encoding='utf-8')
+        item = build.split('## 5. Execute')[1].split('## Workflow rules')[0]
+        self.assertIn('new worker call, never a resume', item)
+        self.assertIn('archive/<ts>-run<N>/verify.md', item)
+        self.assertIn('failed criterion numbers', item)
+        merge = build.split('## 6. Merge')[1]
+        self.assertIn('new worker call', merge)
+        accept = (phases / 'accept.md').read_text(encoding='utf-8')
+        sec = accept.split('## Back to Execute')[1].split('\n## ')[0]
+        self.assertIn('new worker call, never a resume', sec)
+        self.assertIn('archive folder', sec)
+        self.assertIn('failed criterion numbers', sec)
 
 
 if __name__ == '__main__':

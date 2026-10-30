@@ -10,7 +10,7 @@ The task named in that project's `.active` never moves. Before a move, a task wi
 The monitor, the menu bar app and `/my-agent status` read only `docs/agent/*/`, so moved tasks leave them without any
 change there. To bring a task back, move its folder back to `docs/agent/`.
 --dry-run prints what would move and changes nothing. The project list is $MA_PROJECTS_FILE, else
-<data folder>/projects.txt ($MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/my-agent). Transcripts: $MA_CLAUDE_PROJECTS.
+<data folder>/projects.txt ($MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/log/my-agent). Transcripts: $MA_CLAUDE_PROJECTS.
 Run by the person (not by L1). exit: 0 done (also when nothing was due), 2 bad arguments, 3 a move failed.
 """
 import argparse
@@ -100,7 +100,7 @@ def main(argv=None) -> int:
     ap.add_argument('--days', type=int, default=30)
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--projects')
-    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/my-agent)')
+    ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/log/my-agent)')
     args = ap.parse_args(argv)   # argparse exits 2 on bad arguments
     if args.days < 0:
         ap.error('--days must be 0 or more')

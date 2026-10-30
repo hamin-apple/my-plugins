@@ -83,12 +83,12 @@ menubar/build/my-agent-menubar --print-detail loaded=8765 port=8765 applied=1 se
 ## Login item
 
 ```sh
-sh menubar/login-item.sh install [<data folder>]   # start at login (folder default ~/dev/my-agent)
+sh menubar/login-item.sh install [<data folder>]   # start at login (folder default ~/dev/log/my-agent)
 sh menubar/login-item.sh status      # loaded / not loaded
 sh menubar/login-item.sh uninstall   # stop starting at login
 ```
 
-`install` and `uninstall` write outside the repository: `~/Library/LaunchAgents/my-agent.monitor-menubar.plist` (a launchd user agent, `RunAtLoad`, no `KeepAlive`). `install` needs a build first and loads the agent right away. The app reads the data folder from `MA_TASKS_DIR`, then `CLAUDE_PLUGIN_OPTION_DATA_DIR`, then `~/dev/my-agent`; a login item has no plugin environment, so `install` writes the folder (a leading `~` is expanded) into the plist as `CLAUDE_PLUGIN_OPTION_DATA_DIR`, and the `monitor-up.py` the app starts inherits it. Use the same folder as the my-agent `data_dir` setting. After changing that setting, run `install <new folder>` again.
+`install` and `uninstall` write outside the repository: `~/Library/LaunchAgents/my-agent.monitor-menubar.plist` (a launchd user agent, `RunAtLoad`, no `KeepAlive`). `install` needs a build first and loads the agent right away. The app reads the data folder from `MA_TASKS_DIR`, then `CLAUDE_PLUGIN_OPTION_DATA_DIR`, then `~/dev/log/my-agent`; a login item has no plugin environment, so `install` writes the folder (a leading `~` is expanded) into the plist as `CLAUDE_PLUGIN_OPTION_DATA_DIR`, and the `monitor-up.py` the app starts inherits it. Use the same folder as the my-agent `data_dir` setting. After changing that setting, run `install <new folder>` again.
 
 ## Safari permission
 

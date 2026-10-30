@@ -8,7 +8,7 @@ from helpers import L4, make_task, parse, run_script
 
 SCRIPT = L4 / 'scripts' / 'gate-report.py'
 TASK = '261025-probe-task'
-DEFAULT_COPY = Path.home() / 'dev' / 'my-agent'
+DEFAULT_COPY = Path.home() / 'dev' / 'log' / 'my-agent'
 
 
 class GateReportTest(unittest.TestCase):
@@ -325,7 +325,7 @@ class GateReportTest(unittest.TestCase):
             for k in names[:3]:
                 os.environ.pop(k, None)
             os.environ['HOME'] = str(self.root)
-            self.assertEqual(ma_gate_report.report_dir(), self.root / 'dev/my-agent/gate-report')
+            self.assertEqual(ma_gate_report.report_dir(), self.root / 'dev/log/my-agent/gate-report')
             os.environ['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = str(self.root / 'X')
             self.assertEqual(ma_gate_report.report_dir(), self.root / 'X/gate-report')
             os.environ['MA_GATE_REPORT_DIR'] = str(self.reports)

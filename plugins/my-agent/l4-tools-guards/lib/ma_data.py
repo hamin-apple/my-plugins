@@ -1,7 +1,7 @@
 """The my-agent data folder and the files inside it (one place decides the order).
 
 Data folder: $MA_TASKS_DIR, else the setting (a script's `--data-dir` argument, or for hooks the environment
-variable $CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/my-agent. `~` is expanded. An empty value or one starting with `${`
+variable $CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/log/my-agent. `~` is expanded. An empty value or one starting with `${`
 (a placeholder that was never substituted) counts as "not set".
 Per-file overrides win first: $MA_PROJECTS_FILE, $MA_FEEDBACK_FILE, $MA_GATE_REPORT_DIR.
 The run index, monitor state, logs, open settings and price override sit directly in the data folder.
@@ -27,7 +27,7 @@ def _path(raw: str) -> Path:
 
 def data_dir(arg=None) -> Path:
     raw = _value(os.environ.get('MA_TASKS_DIR')) or _value(arg) or _value(os.environ.get(SETTING_ENV))
-    return _path(raw) if raw else Path.home() / 'dev' / 'my-agent'
+    return _path(raw) if raw else Path.home() / 'dev' / 'log' / 'my-agent'
 
 
 def projects_file(arg=None) -> Path:

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from helpers import L4, make_task, run_script
 
+import ma_prices
 import ma_usage
 
 SNAP = L4 / 'scripts' / 'usage-snapshot.py'
@@ -19,6 +20,8 @@ def entry(ts, mid, model='claude-opus-5-5', inp=10, out=5):
     return json.dumps({'type': 'assistant', 'timestamp': stamp,
                        'message': {'id': mid, 'model': model, 'usage': {'input_tokens': inp, 'output_tokens': out}}})
 
+
+TP = {'claude-opus-5-5': {'input': 4.0, 'output': 20.0, 'cache_write': 5.0, 'cache_read': 0.2}}
 
 LOG = ['2026-10-01 10:00:00 step: n=1 name=Intake rev=0 session=s-1',
        '2026-10-01 10:10:00 step: n=2 name=Explore rev=0 session=s-1',
@@ -74,6 +77,45 @@ class UsageTest(Base):
         self.assertEqual(ma_usage.read_snapshot(d), ma_usage.measure(d, self.claude)[2])
         self.assertIsNone(ma_usage.read_snapshot(self.root))
 
+    def snap_message(self, *lines, prices=TP):
+        d = self.task()
+        self.transcript(*lines)
+        code, message = ma_usage.write_snapshot(d, self.claude, datetime(2026, 10, 2), prices)
+        self.assertEqual(code, 0, message)
+        return d, message
+
+    def test_snapshot_message_shows_usd(self):
+        d, m = self.snap_message(entry('2026-10-01 10:01:00', 'a', inp=1_000_000, out=0),
+                                 entry('2026-10-01 10:11:00', 'b', inp=1_000_000, out=0))
+        self.assertEqual(m, f'saved: {d / ma_usage.SNAPSHOT} (2 rows, \u2248 $8.00)')
+
+    def test_snapshot_message_same_rates_as_monitor(self):
+        d, m = self.snap_message(entry('2026-10-01 10:01:00', 'a', inp=333_333, out=1_234_567),
+                                 entry('2026-10-01 10:11:00', 'b', inp=777_777, out=0))
+        total = sum(ma_prices.cost(TP, model, u) for models in ma_usage.read_snapshot(d).values()
+                    for model, u in models.items())
+        self.assertTrue(m.endswith(f'\u2248 ${round(total, 2):.2f})'), m)
+
+    def test_snapshot_message_without_priced_rows(self):
+        d, m = self.snap_message(entry('2026-10-01 10:01:00', 'a', model='gpt-x'))
+        self.assertEqual(m, f'saved: {d / ma_usage.SNAPSHOT} (1 rows)')
+
+    def test_snapshot_message_mixed_rows_sum_priced_only(self):
+        d, m = self.snap_message(entry('2026-10-01 10:01:00', 'a', inp=1_000_000, out=0),
+                                 entry('2026-10-01 10:02:00', 'b', model='gpt-x', inp=1_000_000, out=0))
+        self.assertEqual(m, f'saved: {d / ma_usage.SNAPSHOT} (2 rows, \u2248 $4.00)')
+
+    def test_snapshot_message_empty(self):
+        d, m = self.snap_message(entry('2026-10-01 10:30:00', 'c'))
+        self.assertEqual(m, f'saved: {d / ma_usage.SNAPSHOT} (0 rows)')
+
+    def test_snapshot_file_unchanged(self):
+        d, _ = self.snap_message(entry('2026-10-01 10:01:00', 'a'))
+        data = json.loads((d / ma_usage.SNAPSHOT).read_text(encoding='utf-8'))
+        self.assertEqual(sorted(data), ['sessions', 'windows', 'written'])
+        for row in data['windows']:
+            self.assertEqual(sorted(row), ['model', 'rev', 'step', 'usage'])
+
 
 class SnapshotScriptTest(Base):
     def test_active_task(self):
@@ -102,6 +144,18 @@ class SnapshotScriptTest(Base):
         r = run_script(SNAP, '--cwd', str(run), '--data-dir', str(data), env=env)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertTrue((d / ma_usage.SNAPSHOT).is_file())
+
+    def test_data_folder_price_override(self):
+        d = self.task()
+        self.transcript(entry('2026-10-01 10:01:00', 'a', inp=1000, out=0))
+        data = self.root / 'data'
+        data.mkdir()
+        (data / 'prices.json').write_text('{"models": {"claude-opus-5-5": {"input": 1000.0}}}', encoding='utf-8')
+        r = run_script(SNAP, '--task-dir', str(d), env=dict(self.env, MA_TASKS_DIR=str(data)))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue(r.stdout.strip().endswith('(1 rows, \u2248 $1.00)'), r.stdout)
+        r = run_script(SNAP, '--task-dir', str(d), env=self.env)
+        self.assertTrue(r.stdout.strip().endswith('(1 rows, \u2248 $0.00)'), r.stdout)
 
     def test_no_task(self):
         self.assertEqual(run_script(SNAP, '--cwd', str(self.root), env=self.env).returncode, 1)
@@ -137,6 +191,20 @@ class ArchiveTest(Base):
         self.assertEqual(moved, ['261001-aborted', '261001-done'])
         self.assertTrue((self.agent() / '.archived' / '261001-done' / ma_usage.SNAPSHOT).is_file())
         self.assertTrue((self.agent() / '.active').is_file())
+        self.assertIn('saved: ', r.stdout)
+        self.assertIn('\u2248 $', r.stdout)
+
+    def test_snapshot_line_uses_data_dir_prices(self):
+        self.task(task='261001-done')
+        self.task(task='261001-current', status='active')
+        self.transcript(entry('2026-10-01 10:01:00', 'a'))
+        data = self.root / 'data'
+        data.mkdir()
+        (data / 'prices.json').write_text('{"models": {"claude-opus-5-5": {"input": 100000.0}}}', encoding='utf-8')
+        self.env.update(MA_TASKS_DIR='')
+        r = self.run_archive('--days', '7', '--data-dir', str(data))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('(1 rows, \u2248 $1.00)', r.stdout)
 
     def test_data_dir_projects_file(self):
         """Criterion 4: without MA_PROJECTS_FILE the list is <data folder>/projects.txt."""

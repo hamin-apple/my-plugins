@@ -91,14 +91,14 @@ def build_events(lines) -> Events:
             a = f.get('agent', '').removeprefix('my-agent:')
             iso = f.get('isolation')
             it = item(l, 'agent', a, f.get('agent', ''), sub=f'isolation: {iso}' if iso not in (None, '-') else None,
-                      model=None, actual=None, effort=None, tok=None, dur=None, c=None, res=None, end=None,
+                      model=None, actual=None, effort=None, dur=None, c=None, res=None, end=None,
                       live=True, mm=False, id=None)
             calls.setdefault(a, []).append(it)
         elif l.kind == 'start':
             a = f.get('agent', '').removeprefix('my-agent:')
             pending = calls.get(a)
             it = pending.pop() if pending else item(l, 'agent', a, f.get('agent', ''), sub=None, actual=None,
-                                                    tok=None, dur=None, c=None, res=None, end=None, live=True, mm=False)
+                                                    dur=None, c=None, res=None, end=None, live=True, mm=False)
             it.update(id=f.get('id'), model=alias(f.get('configured')), effort=f.get('effort'))
             if it['id']:
                 by_id[it['id']] = it
@@ -106,10 +106,9 @@ def build_events(lines) -> Events:
             it = by_id.get(f.get('id'))
             if not it:
                 continue
-            tokens, secs = _int(f.get('tokens')), _int(f.get('secs'))
+            secs = _int(f.get('secs'))
             it.update(live=False, actual=alias(f.get('actual')), res=f.get('result'), end=f.get('end'),
-                      tok=f'{round(tokens / 1000)}k' if tokens is not None else None,
-                      dur=round(secs / 60) if secs is not None else None, tokens=tokens,
+                      dur=round(secs / 60) if secs is not None else None,
                       usage={'input_tokens': _int(f.get('in')) or 0, 'output_tokens': _int(f.get('out')) or 0,
                              'cache_creation_input_tokens': _int(f.get('cw')) or 0,
                              'cache_read_input_tokens': _int(f.get('cr')) or 0} if 'in' in f else None,

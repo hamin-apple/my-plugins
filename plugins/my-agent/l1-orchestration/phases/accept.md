@@ -23,7 +23,7 @@ Do this every time you go back to ③ Build for Verify FAIL, Review BLOCKER (whe
 1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=8 name=Review-Deliver --model <main session model ID> --data-dir "<data folder>"`
 2. Hand it to `my-agent:reviewer`. Pass: the deliverable path, the `plan.md` path, and the result path `review.md`. The first line of the result is `BLOCKER <count>`.
 3. If there is 1 BLOCKER or more: if it is a small fix (the L1 exception in the SKILL.md level table), L1 fixes it (`fix` line) and gets a new judgment. If only Review was redone, without Verify, add a `## Applied after review` section at the end of the new `review.md` with Edit and list each fix on its own line as `- <what was fixed> (<file>)` (without this section, the hook blocks the G3 save and asks before the commit because `verify.md` is older than the change). If it is not a small fix, do "Back to Execute".
-4. **G3 report (chat):** summary of the result, list of failures and unhandled items, the diff or the deliverable, tokens used and cost (reference), and **the exact path it will be saved to**.
+4. **G3 report (chat):** summary of the result, list of failures and unhandled items, the diff or the deliverable, cost (reference), and **the exact path it will be saved to**.
    - List the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
    - Save location: the deliverable location in `## Scope summary` (or `scope.md`). If none, `deliverable/` in the task folder.
    - File names are lowercase English with hyphens. If the same name exists, do not overwrite; add `-2`. If the task changes an existing file, show the diff.
@@ -49,7 +49,7 @@ The deliverable is a commit, so do this instead of items 4–6.
 
 G3 always goes to the person, even while delegated approval is on.
 
-1. **Paste into the chat:** `git status --porcelain`, `git diff --stat` and the main diffs, the list of new files, the judgment summary (`verify.md` `Run:`, SHOULD-FIX·NIT in `review.md`), the proposed commit message (first line says what changed; the body lists completion criterion numbers `criteria: 1, 2, 3`), tokens used and cost (reference), and the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
+1. **Paste into the chat:** `git status --porcelain`, `git diff --stat` and the main diffs, the list of new files, the judgment summary (`verify.md` `Run:`, SHOULD-FIX·NIT in `review.md`), the proposed commit message (first line says what changed; the body lists completion criterion numbers `criteria: 1, 2, 3`), cost (reference), and the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
 2. Commit only the files this task changed (changes since the `base` line, excluding `docs/agent/`; if `docs/agent/.gitignore` is `# my-agent: commit`, include the task folder too).
 3. Record before and after the popup.
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G3 q="Commit approval: <task-id>" rec="Commit" --data-dir "<data folder>"`

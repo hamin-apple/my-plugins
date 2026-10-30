@@ -1,7 +1,11 @@
+import os
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
-from monitor.prices import cost, load_prices
+import monitor  # puts l4-tools-guards/lib on sys.path
+from ma_prices import cost, load_prices
 
 ROOT = Path(__file__).resolve().parent.parent
 P = {'claude-sonnet-5': {'input': 3, 'output': 15, 'cache_write': 3.75, 'cache_read': 0.3},
@@ -32,6 +36,30 @@ class PricesTest(unittest.TestCase):
 
     def test_missing_table_is_empty(self):
         self.assertEqual(load_prices(Path('/nonexistent/prices.json')), {})
+
+    def test_monitor_uses_the_lib_module(self):
+        from monitor import registry, taskview
+        import ma_prices
+        self.assertIs(taskview.cost, ma_prices.cost)
+        self.assertIs(registry.load_prices, ma_prices.load_prices)
+        self.assertFalse((ROOT / 'monitor' / 'prices.py').exists())
+        self.assertEqual(ma_prices.BUNDLED, (ROOT / 'prices.json').resolve())
+
+    def test_snapshot_uses_the_lib_module(self):
+        import ma_prices
+        import ma_usage
+        self.assertIs(ma_usage.ma_prices, ma_prices)
+
+    def test_prices_file_override(self):
+        import ma_prices
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {'MA_TASKS_DIR': d}):
+            self.assertEqual(ma_prices.prices_file(), ma_prices.BUNDLED)
+            Path(d, 'prices.json').write_text('{"models": {}}')
+            self.assertEqual(ma_prices.prices_file(), Path(d, 'prices.json'))
+        keep = {k: v for k, v in os.environ.items() if not k.startswith('MA_') and k != 'CLAUDE_PLUGIN_OPTION_DATA_DIR'}
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, keep, clear=True):
+            Path(d, 'prices.json').write_text('{"models": {}}')
+            self.assertEqual(ma_prices.prices_file(d), Path(d, 'prices.json'))
 
 
 if __name__ == '__main__':

@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_data  # noqa: E402
+import ma_prices  # noqa: E402
 import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
 import ma_usage  # noqa: E402
@@ -107,6 +108,7 @@ def main(argv=None) -> int:
     now = datetime.now()
     cutoff = now - timedelta(days=args.days)
     root = ma_subagent.claude_projects()
+    prices = ma_prices.load_prices(ma_prices.prices_file(args.data_dir))
     moved, failed = 0, 0
     for project in projects(Path(args.projects).expanduser() if args.projects else projects_file(args.data_dir)):
         for task_dir, st, when in due(project, cutoff):
@@ -116,7 +118,7 @@ def main(argv=None) -> int:
                 print(f'would move: {head}')
                 continue
             if not (task_dir / ma_usage.SNAPSHOT).exists():
-                code, message = ma_usage.write_snapshot(task_dir, root, now)
+                code, message = ma_usage.write_snapshot(task_dir, root, now, prices)
                 print(f'  {message}' if code == 0 else f'  no usage snapshot: {message}')
             try:
                 folder.mkdir(exist_ok=True)

@@ -6,10 +6,11 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from monitor.prices import load_prices
 from monitor.taskview import build_task
 from monitor.transcript import TranscriptCache
-from tests.fixtures.build_fixtures import CLAUDE, PROJECTS
+from tests.fixtures.build_fixtures import CLAUDE, EXPECTED_MAIN, PROJECTS
+
+from ma_prices import cost, load_prices
 
 ROOT = Path(__file__).resolve().parent.parent
 PRICES = load_prices(ROOT / 'prices.json')
@@ -66,10 +67,38 @@ class TaskViewTest(unittest.TestCase):
         c2 = [x for x in t['log'] if x.get('id') == 'ag-c2'][0]
         self.assertIsInstance(c2['c'], float)
         self.assertNotIn('usage', c2)
-        self.assertEqual(t['main'][5][0], 20)
+        self.assertEqual(t['main'][5], round(cost(PRICES, 'claude-opus-5-5', EXPECTED_MAIN[5]), 2))
+        self.assertEqual(c2['c'], round(cost(PRICES, 'claude-sonnet-5-5', {
+            'input_tokens': 63000, 'output_tokens': 12600, 'cache_creation_input_tokens': 5040,
+            'cache_read_input_tokens': 3360}), 2))
+        self.assertNotIn('tok', c2)
+        self.assertNotIn('tokens', c2)
         self.assertTrue(t['mainApprox'])
         self.assertIsNone(task('flight-search', '261021-flight-watch')['main'])
         self.assertEqual(task('agent-tasks', '261024-hitl-survey')['main'], None)
+
+    def test_unpriced_main_window_is_none(self):
+        prices = {k: v for k, v in PRICES.items() if 'opus' not in k}
+        root = PROJECTS / 'claude-sessions'
+        t = build_task(root, root / 'docs/agent/261024-cli-json-output', prices, TranscriptCache(CLAUDE), NOW)
+        self.assertIsNone(t['main'][5])
+        self.assertIn('claude-opus-5-5', t['unpriced'])
+        self.assertEqual([x for x in t['log'] if x.get('id') == 'ag-c2'][0]['c'], 0.27)
+
+    def test_payload_has_no_token_counts(self):
+        def check(t):
+            self.assertNotIn('tokens', t)
+            self.assertIn('cost', t)
+            for it in t['log']:
+                for k in ('tok', 'tokens', 'usage'):
+                    self.assertNotIn(k, it)
+            vals = list((t['main'] or {}).values())
+            for m in (t.get('mainR') or {}).values():
+                vals += list(m.values())
+            for v in vals:
+                self.assertIsInstance(v, (int, float))
+        for (project, tid) in EXPECTED:
+            check(task(project, tid))
 
     def test_done_task_window_closes_at_last_record(self):
         """After G3 the same main session goes on to other work; that must not count for the finished task."""
@@ -81,7 +110,7 @@ class TaskViewTest(unittest.TestCase):
             sess.write_text(row((15, 5), 'in-step-8') + '\n' + row((16, 20), 'next-task') + '\n', encoding='utf-8')
             t = build_task(PROJECTS / 'obsidian-notes', PROJECTS / 'obsidian-notes/docs/agent/261023-hooks-notify-note',
                            PRICES, TranscriptCache(Path(d)), NOW)
-            self.assertEqual(t['main'][8][0], 4)
+            self.assertEqual(t['main'][8], round(cost(PRICES, 'claude-opus-5-5', {'input_tokens': 4000}), 2))
 
     def test_files_steps_and_todo(self):
         f = {r['p']: r for r in task('claude-sessions', '261024-cli-json-output')['files']}
@@ -181,10 +210,18 @@ class SnapshotTest(unittest.TestCase):
         self.assertEqual(self.ma_usage.write_snapshot(task_dir, self.claude, NOW)[0], 0)
         after = self.build('obsidian-notes', '261023-hooks-notify-note', self.none)
         self.assertEqual(after['main'], before['main'])
-        self.assertEqual(after['tokens'], before['tokens'])
+        self.assertEqual([x.get('c') for x in after['log']], [x.get('c') for x in before['log']])
+        self.assertNotIn('tokens', after)
 
     def test_finished_task_without_snapshot_or_transcript(self):
         self.assertIsNone(self.build('obsidian-notes', '261023-hooks-notify-note', self.none)['main'])
+
+    def test_snapshot_payload_has_no_token_counts(self):
+        task_dir = self.root / 'obsidian-notes/docs/agent/261023-hooks-notify-note'
+        self.ma_usage.write_snapshot(task_dir, self.claude, NOW)
+        t = self.build('obsidian-notes', '261023-hooks-notify-note', self.none)
+        self.assertNotIn('tokens', t)
+        self.assertTrue(all(isinstance(v, (int, float)) for v in t['main'].values()))
 
     def test_running_task_ignores_snapshot(self):
         task_dir = self.root / 'claude-sessions/docs/agent/261024-cli-json-output'

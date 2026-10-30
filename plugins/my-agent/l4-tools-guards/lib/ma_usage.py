@@ -6,11 +6,13 @@ model inside each step window: from a `step:` line to the next `step:` line; the
 (default 30 days), so at the end of a task L1 runs `usage-snapshot.py`, which writes the same sums to
 `<task>/main-usage.json` (architecture 4.8.2 "Task records over time"). The monitor reads that file for a finished task.
 The monitor also uses `parse_entry` and `windows` here, so both count the same way.
+`write_snapshot` prints the cost from `ma_prices` (the same table and override as the monitor).
 """
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import ma_prices
 import ma_schema
 
 KEYS = ('input_tokens', 'output_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens')
@@ -147,8 +149,10 @@ def read_snapshot(task_dir: Path):
         return None
 
 
-def write_snapshot(task_dir: Path, root: Path, now: datetime):
-    """(0, message) after writing `<task>/main-usage.json`, or (3, cause) when nothing was written."""
+def write_snapshot(task_dir: Path, root: Path, now: datetime, prices=None):
+    """(0, message) after writing `<task>/main-usage.json`, or (3, cause) when nothing was written.
+
+    `prices` is a `models` table; None loads the shared one (bundled, or the data folder override)."""
     task_dir = Path(task_dir)
     sessions, missing, usage = measure(task_dir, root)
     target = task_dir / SNAPSHOT
@@ -161,5 +165,9 @@ def write_snapshot(task_dir: Path, root: Path, now: datetime):
         target.write_text(json.dumps(data, indent=1) + '\n', encoding='utf-8')
     except OSError as exc:
         return 3, f'cannot write {target}: {exc}'
-    tokens = sum(sum(u.values()) for models in usage.values() for u in models.values())
-    return 0, f'saved: {target} ({len(data["windows"])} rows, {round(tokens / 1000)}k tokens)'
+    if prices is None:
+        prices = ma_prices.load_prices(ma_prices.prices_file())
+    costs = [ma_prices.cost(prices, w['model'], w['usage']) for w in data['windows']]
+    costs = [c for c in costs if c is not None]
+    shown = f', ≈ ${round(sum(costs), 2):.2f}' if costs else ''
+    return 0, f'saved: {target} ({len(data["windows"])} rows{shown})'

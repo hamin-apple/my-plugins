@@ -47,6 +47,11 @@ class RuntimeTextTest(unittest.TestCase):
         self.assertNotIn('blocks it. If blocked, redo from Verify', commit)
         self.assertIn('blocks it. If blocked, redo from Verify', line(accept, 'Copy the final version'))
 
+    def test_g3_report_says_cost_only(self):
+        accept = (REPO / 'l1-orchestration/phases/accept.md').read_text(encoding='utf-8')
+        self.assertNotIn('tokens used and cost', accept)
+        self.assertGreaterEqual(accept.count('cost (reference)'), 2)
+
 
 if __name__ == '__main__':
     unittest.main()

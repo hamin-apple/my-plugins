@@ -6,16 +6,16 @@ from pathlib import Path
 
 from .events import build_events
 from .mdfiles import read_confirmation, read_criteria, read_intake, read_plan, read_verify
-from .prices import cost
 from .runlog import read_lines
 
 import ma_schema
 import ma_usage
+from ma_prices import cost
 
 STATUS = dict(zip(ma_schema.INTAKE_STATUS, ('running', 'done', 'stopped')))
 PREVIEW_MAX_BYTES, PREVIEW_CHARS = 200 * 1024, 4000
 LIVE_SECS = 10 * 60
-INTERNAL = ('usage', 'actual_id', 'tokens')
+INTERNAL = ('usage', 'actual_id')
 
 
 def task_key(project: Path, task_id: str) -> str:
@@ -134,7 +134,7 @@ def _deliver(project: Path, intake: dict, status: str):
 
 
 def _main(ev, tcache, prices, unpriced, running, task_dir):
-    """{(rev, step): [k, usd]} of the main session, or None if neither a snapshot nor a transcript was found.
+    """{(rev, step): usd} of the main session (None for a window whose models have no price row), or None if neither a snapshot nor a transcript was found.
 
     A finished task reads `main-usage.json` (written by L1 at the end of the task, ma_usage) when it exists, since
     Claude Code deletes transcripts after `cleanupPeriodDays`; otherwise the transcript. A finished task's last window
@@ -156,15 +156,15 @@ def _main(ev, tcache, prices, unpriced, running, task_dir):
             return None
     out = {}
     for key, models in got.items():
-        acc = out.setdefault(key, [0, 0.0])
+        usd = None
         for model, usage in models.items():
-            acc[0] += sum(usage.values())
             c = cost(prices, model, usage)
             if c is None:
                 unpriced.add(model)
             else:
-                acc[1] += c
-    return {k: [round(v[0] / 1000), round(v[1], 2)] for k, v in out.items()}
+                usd = (usd or 0.0) + c
+        out[key] = None if usd is None else round(usd, 2)
+    return out
 
 
 def build_task(project: Path, task_dir: Path, prices, tcache, now: datetime) -> dict:
@@ -199,12 +199,11 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
     scope = task_dir / 'scope.md'
     crit_total = read_criteria(scope) if scope.exists() else read_criteria(task_dir / 'plan.md')
 
-    unpriced, sub_tokens = set(), 0
+    unpriced = set()
     log = []
     for it in ev.log:
         it = dict(it)
         if it['k'] == 'agent':
-            sub_tokens += it.get('tokens') or 0
             if it.get('usage') and it.get('actual_id'):
                 it['c'] = cost(prices, it['actual_id'], it['usage'])
                 if it['c'] is not None:
@@ -216,7 +215,6 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
         log.append(it)
 
     main = _main(ev, tcache, prices, unpriced, status == 'running', task_dir)
-    main_tokens = sum(v[0] for v in main.values()) if main else 0
 
     started = ev.started or datetime.fromtimestamp((task_dir / 'intake.md').stat().st_mtime)
     end = now if status == 'running' else (ev.last or started)
@@ -226,7 +224,7 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
         'step': 9 if status == 'done' else (ev.step_enter[-1][1] if ev.step_enter else None),
         'started': _hm(started, now), 'elapsed': round((end - started).total_seconds() / 60),
         'now': end.strftime('%H:%M'),
-        'tokens': round(sub_tokens / 1000) + main_tokens, 'cost': ev.cost_usd,
+        'cost': ev.cost_usd,
         'gates': gates, 'running': ev.running if status == 'running' else [],
         'waiting': ev.waiting if status == 'running' else None,
         'revs': ev.revs, 'log': log,

@@ -22,7 +22,7 @@ The monitor shows these four things as a local web page on the Mac. **It only re
 
 - Show a running task with changes reflected within 2 seconds.
 - Replay finished and aborted tasks on the same screen (record replay).
-- Show tokens, time and cost (estimate) per step and per model.
+- Show time and cost (estimate, USD) per step and per model; token counts are not shown (architecture v0.37).
 
 **Non-goals**
 
@@ -66,15 +66,14 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 
 **1 Dashboard**
 
-- Left: step list. The 8 steps under the 4 phases as one-line cards (time · tokens · cost), gate lines (passed / awaiting / pending), rev chips (`rev0 · archived`, `rev1 · current`) and step marks (`↺ rev1`, `from rev0`)
+- Left: step list. The 8 steps under the 4 phases as one-line cards (time · cost), gate lines (passed / awaiting / pending), rev chips (`rev0 · archived`, `rev1 · current`) and step marks (`↺ rev1`, `from rev0`)
   - Clicking a step jumps to that step's first record in the Log tab replay.
-- Right: 6 tiles in 2 columns. Order: Now, Elapsed / Criteria, Tokens / Escalation, Cost
+- Right: 5 tiles in 2 columns. Order: Now, Elapsed / Criteria, Escalation / Cost
   - Now: the current step and the running subagents (model, effort); when waiting for an answer, that gate
   - Criteria: passed / total, one cell per criterion
-  - Tokens: used (subagents plus the main session; no estimate, dropped in architecture v0.34)
   - Escalation (E): consecutive Verify FAIL n/3, slice stops n/2. Normal / Caution / E raised from these two values only
   - Cost: estimated total per model and the statusline value (small, labeled "statusline")
-- Bottom: Models table (calls, tokens, time, cost per model, including the main session row), MISMATCH warning
+- Bottom: Models table (calls, time, cost per model, including the main session row; rows sorted by cost, the bar drawn from the cost; a model with no price row (an agent row whose finished calls, or the main row whose step windows, are all unpriced) shows `–` and no bar, and the Total sums priced rows only; heading note "list price, estimate"), MISMATCH warning
 
 **2 Architecture**
 
@@ -110,13 +109,13 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 | Task list, status, title, profile, location, start | `intake.md` (`Status:`, `Profile:`, `Location:`, the request line), folder name (task-id) |
 | Running task | `docs/agent/.active` (task, phase, session, started) |
 | Step entry, time per step | run-log `step:` lines (5.2, changes on the my-agent side) |
-| Subagent calls · model · effort · tokens · time · result · MISMATCH | run-log `call:` / `start:` / `stop:` lines (architecture section 4.7.2) |
-| Main session tokens | main transcript (5.3) |
+| Subagent calls · model · effort · cost · time · result · MISMATCH | run-log `call:` / `start:` / `stop:` lines (architecture section 4.7.2); cost from the `stop:` token split × `prices.json` |
+| Main session cost | main transcript or `main-usage.json` (5.3) × `prices.json` (5.4); a step window with no priced model is `null` |
 | Gates, popup questions and choices | run-log popup lines, `scope.md ## Confirmation`, `plan.md ## Approval` |
 | rev | run-log `revision:` lines, `plan.md`/`scope.md ## Revisions`, `archive/` |
 | Criteria | `scope.md` completion criteria (for the general profile, the scope summary at the top of `plan.md`), `verify.md` verdicts |
 | Escalation | verifier `stop:` results in the run-log (consecutive FAIL), worker stop records |
-| Cost estimate | tokens × `prices.json` (5.4) |
+| Cost estimate | token counts × `prices.json` (5.4), shown as USD only |
 | Cost statusline | run-log `cost:` lines |
 | File tree, write times, preview | task folder files and their modification times |
 | Mock-up and version compare | `plan.md ## Mock-up`, `archive/*/plan.md ## Mock-up` |
@@ -166,7 +165,7 @@ The monitor's parser interprets only the lines below and ignores lines it does n
 ### 5.4 Price table
 
 - File: `prices.json` in the monitor folder (default). If `<data folder>/prices.json` exists, that one is used (section 6.1). For each model ID prefix (e.g. `claude-opus-5`): input, output, cache write and cache read prices (USD / 1M tokens) and the date checked
-- The person updates it by hand. A model not in the table gets cost `?`, and one line "model not in the price table" appears below the Models table.
+- `l4-tools-guards/lib/ma_prices.py` reads the table for the monitor and for `usage-snapshot.py`. The person updates it by hand. A model not in the table gets cost `–` and no bar, and one line "model not in the price table" appears below the Models table.
 
 ## 6. Structure
 

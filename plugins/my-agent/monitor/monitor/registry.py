@@ -4,13 +4,14 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-from .prices import load_prices
 from .runlog import read_lines
 from .taskview import build_task, task_key
 from .transcript import TranscriptCache
 
 import ma_data
+import ma_prices
 import ma_usage
+from ma_prices import load_prices
 
 ROOT = Path(__file__).resolve().parent.parent
 SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed')
@@ -22,8 +23,7 @@ def default_projects_file() -> Path:
 
 def default_prices_file() -> Path:
     """`prices.json` in the data folder when it exists, else the bundled one (spec 6.1)."""
-    override = ma_data.data_dir() / 'prices.json'
-    return override if override.is_file() else ROOT / 'prices.json'
+    return ma_prices.prices_file()
 
 
 def default_claude_root() -> Path:

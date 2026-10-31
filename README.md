@@ -6,15 +6,16 @@ A Claude Code plugin marketplace by jahoonjin.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.4.8 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.5.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent-tray` | 0.1.0 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
 
 - Claude Code with plugin support. Tested with Claude Code 2.1.311; the minimum version was not checked.
 - Python 3.9 or later, available as `python3` in `PATH` (standard library only). Tested with Python 3.13.7. Hooks, scripts and the monitor server run on it.
 - git, for the `dev` profile (base commit, worktrees, commit). Tested with git 2.50.1.
-- macOS, for the monitor's browser window opening and the menu bar app. Tested on macOS 27.0.1. Linux and Windows were not tried: the hooks call `python3`, and the monitor opens windows with macOS commands (`open`, `osascript`).
-- Optional, for the menu bar app only: Command Line Tools (`swiftc`) on macOS 12 or later; Xcode is not required. Tested with Swift 6.3.3; older Swift versions were not tried.
+- macOS, for the monitor's window opening. Tested on macOS 27.0.1. On other platforms the monitor opens a tab through the standard browser opener; this was not tried. Linux and Windows were not tried: the hooks call `python3`.
+- Optional, for the menu bar app (the `my-agent-tray` plugin) only: Command Line Tools (`swiftc`) on macOS 12 or later; Xcode is not required. Tested with Swift 6.3.3; older Swift versions were not tried.
 
 Nothing else is installed.
 
@@ -23,6 +24,7 @@ Nothing else is installed.
 ```bash
 claude plugin marketplace add hamin-apple/my-plugins
 claude plugin install my-agent@my-plugins
+claude plugin install my-agent-tray@my-plugins   # optional: macOS menu bar app
 ```
 
 The repository is private, so you must be signed in with a GitHub account that has been invited to it.
@@ -69,6 +71,8 @@ Run by hand in a shell, the script does not know the setting. Unless your data f
 claude plugin marketplace update my-plugins
 claude plugin update my-agent@my-plugins
 claude plugin uninstall my-agent@my-plugins
+claude plugin update my-agent-tray@my-plugins      # if installed
+claude plugin uninstall my-agent-tray@my-plugins   # if installed
 ```
 
 ## Repository layout

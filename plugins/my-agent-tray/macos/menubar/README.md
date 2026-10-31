@@ -1,6 +1,6 @@
 # my-agent menu bar app
 
-A small menu bar app for the my-agent monitor. It only shows state and runs `monitor-up.py`; it never writes task data.
+A small menu bar app for the my-agent monitor (plugin `my-agent-tray`). It only shows state and runs `monitor-up.py`; it never writes task data.
 
 ## What it shows
 
@@ -46,46 +46,46 @@ Only screen settings are stored, in the defaults domain `my-agent.monitor-menuba
 - `Open Monitor` runs `monitor-up.py --open`. `Quit` quits the app only; the server keeps running.
 - When the app starts it runs `monitor-up.py --no-open`, so the server is up without a window. The menu refreshes every 5 s. The menu and the icon never blink.
 
-How a window opens (window or tab, per browser) is decided by `monitor-up.py`; see `../README.md`.
+How a window opens (window or tab, per browser) is decided by `monitor-up.py`; see [the monitor README](../../../my-agent/monitor/README.md).
 
 ## Build
 
 Needs the Command Line Tools (`xcode-select --install`) for the system `/usr/bin/swiftc`. Nothing else is installed.
 
 ```sh
-cd ~/dev/my-plugins/plugins/my-agent/monitor
-sh menubar/build.sh
+cd ~/dev/my-plugins/plugins/my-agent-tray
+sh macos/menubar/build.sh
 ```
 
-The result is `menubar/build/my-agent-menubar`. The script writes only under `menubar/build/`, and bakes in this folder's path and the `python3` found in `PATH`. Rebuild after moving the folder.
+The result is `macos/menubar/build/my-agent-menubar`. The script writes only under `macos/menubar/build/`, and bakes in only the `python3` found in `PATH`; it does not bake in the monitor folder, so the build keeps working after my-agent is updated or moved. It needs my-agent 0.5.0 or later (the app reads `root` from `monitor.json`).
 
 ## Install
 
 There is no copy step. The built binary is used where it is. To try it by hand:
 
 ```sh
-menubar/build/my-agent-menubar
-menubar/build/my-agent-menubar --print-menu    # print the menu and the commands it would run, then exit
-menubar/build/my-agent-menubar --print-list [--filter all|running|done|stopped] [--ports A-B]
+macos/menubar/build/my-agent-menubar
+macos/menubar/build/my-agent-menubar --print-menu    # print the menu and the commands it would run, then exit
+macos/menubar/build/my-agent-menubar --print-list [--filter all|running|done|stopped] [--ports A-B]
                                                # print the List lines (symbol, ID, step, elapsed, bar, pulse or -, key), then exit
                                                # (the step column is printed here only; the window does not show it)
-menubar/build/my-agent-menubar --print-list --tones
+macos/menubar/build/my-agent-menubar --print-list --tones
                                                # add two columns: the mark's tone and 8 bar tone letters (p past, r run, w wait, b done, s stop, -)
-menubar/build/my-agent-menubar --list-frame 1180,220,300,640 12 0,0,1512,944
+macos/menubar/build/my-agent-menubar --list-frame 1180,220,300,640 12 0,0,1512,944
                                                # saved frame, number of lines, then screens; print the fitted frame (at most 7 lines tall) and fit or scroll (scroll: not every line fits, more than 7 lines or cut by the screen)
-menubar/build/my-agent-menubar --print-palette # print tone, light, dark for the status colors
-menubar/build/my-agent-menubar --fit-frame 3000,100,300,640 0,0,1512,944
+macos/menubar/build/my-agent-menubar --print-palette # print tone, light, dark for the status colors
+macos/menubar/build/my-agent-menubar --fit-frame 3000,100,300,640 0,0,1512,944
                                                # saved frame first, then screens (x,y,w,h); print the frame moved inside a screen
-menubar/build/my-agent-menubar --print-detail loaded=8765 port=8765 applied=1 seq=2 key=<key>
+macos/menubar/build/my-agent-menubar --print-detail loaded=8765 port=8765 applied=1 seq=2 key=<key>
                                                # print what Detail would do: off, load <url>, select <js> or none
 ```
 
 ## Login item
 
 ```sh
-sh menubar/login-item.sh install [<data folder>]   # start at login (folder default ~/dev/log/my-agent)
-sh menubar/login-item.sh status      # loaded / not loaded
-sh menubar/login-item.sh uninstall   # stop starting at login
+sh macos/menubar/login-item.sh install [<data folder>]   # start at login (folder default ~/dev/log/my-agent)
+sh macos/menubar/login-item.sh status      # loaded / not loaded
+sh macos/menubar/login-item.sh uninstall   # stop starting at login
 ```
 
 `install` and `uninstall` write outside the repository: `~/Library/LaunchAgents/my-agent.monitor-menubar.plist` (a launchd user agent, `RunAtLoad`, no `KeepAlive`). `install` needs a build first and loads the agent right away. The app reads the data folder from `MA_TASKS_DIR`, then `CLAUDE_PLUGIN_OPTION_DATA_DIR`, then `~/dev/log/my-agent`; a login item has no plugin environment, so `install` writes the folder (a leading `~` is expanded) into the plist as `CLAUDE_PLUGIN_OPTION_DATA_DIR`, and the `monitor-up.py` the app starts inherits it. Use the same folder as the my-agent `data_dir` setting. After changing that setting, run `install <new folder>` again.
@@ -97,9 +97,23 @@ If Safari is the default browser, the first window opened through the app (or `m
 ## Remove
 
 ```sh
-sh menubar/login-item.sh uninstall
-rm -r menubar/build
+sh macos/menubar/login-item.sh uninstall
+rm -r macos/menubar/build
 defaults delete my-agent.monitor-menubar    # forget mode, pin and window frames
 ```
 
 Then quit the running app from its menu (`Quit`).
+
+## Finding the monitor
+
+The app does not know where my-agent is installed. It finds the monitor through the state file `<data folder>/monitor.json` (`port`, `root`) and `/api/health`: the port from `monitor.json` is tried first, then 8765 to 8775. The folder it runs `monitor-up.py` from is the `root` that the monitor found reports in `/api/health`, else the `root` in `monitor.json`; a `root` counts only when it is a string and `<root>/monitor-up.py` exists. If neither gives a folder, the menu shows `Monitor folder unknown: run /my-agent:monitor once`, `Open Monitor`, the task lines and `Browser` are disabled, and the app starts nothing.
+
+After `/my-agent:monitor stop` (which deletes `monitor.json`) nothing answers and no state file exists, so the app shows `Monitor folder unknown` and cannot start the monitor until `/my-agent:monitor` runs once.
+
+A monitor that still runs from before a my-agent update keeps reporting the old plugin folder. Restart it (`/my-agent:monitor stop`, then `/my-agent:monitor`) after updating my-agent, so the app uses the new folder.
+
+With `"autostart": false` in `monitor-config.json`, the `monitor-up.py --no-open` the app runs at start does nothing; `Open Monitor` starts the monitor.
+
+Users of the 0.4.x menu bar app: the old login item points at a deleted binary; run `login-item.sh install` again (same label, so it replaces the old one).
+
+After a marketplace install or update of my-agent-tray the plugin folder changes: rebuild (`sh macos/menubar/build.sh`) and run `sh macos/menubar/login-item.sh install` again from the new folder.

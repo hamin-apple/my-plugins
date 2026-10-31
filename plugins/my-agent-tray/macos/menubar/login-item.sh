@@ -11,7 +11,7 @@ domain="gui/$(id -u)"
 case "$1" in
   install)
     if [ ! -x "$bin" ]; then
-      echo "not installed: build first (sh menubar/build.sh)"
+      echo "not installed: build first (sh macos/menubar/build.sh)"
       exit 1
     fi
     folder="${2:-$HOME/dev/log/my-agent}"

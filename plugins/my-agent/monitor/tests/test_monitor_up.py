@@ -1,4 +1,5 @@
 """monitor-up.py: start once, report running, skip ports other programs hold, stop only our own server (spec 6.1)."""
+import functools
 import importlib.util
 import io
 import json
@@ -123,6 +124,57 @@ class MonitorUpTest(unittest.TestCase):
                          'monitor: not started (no free port in 8791-8791)')
 
 
+class AutostartTest(MonitorUpTest):
+    """`autostart` in monitor-config.json: only an explicit JSON false stops a call without --open."""
+    OFF = 'monitor: not started (autostart off)'
+
+    def config(self, text):
+        (Path(self.tmp.name) / 'monitor-config.json').write_text(text, encoding='utf-8')
+
+    def assert_closed(self):
+        self.assertFalse(self.state.exists())
+        for p in range(8791, 8795):
+            self.assertFalse(port_open(p), p)
+
+    def test_off_no_flag_starts_nothing(self):
+        self.config('{"autostart": false}')
+        self.assertEqual(self.up('--ports', PORTS), self.OFF)
+        self.assert_closed()
+        self.assertFalse((Path(self.tmp.name) / 'monitor.log').exists())
+
+    def test_off_no_open_starts_nothing(self):
+        self.config('{"autostart": false}')
+        self.assertEqual(self.up('--no-open', '--ports', PORTS), self.OFF)
+        self.assert_closed()
+
+    def test_off_open_starts(self):
+        self.config('{"autostart": false}')
+        self.assertRegex(self.up('--open', '--ports', PORTS), r'\(started\)$')
+
+    def test_off_status_stop_set_browser(self):
+        self.config('{"autostart": false}')
+        self.assertEqual(self.up('status', '--ports', PORTS), 'monitor: not running')
+        self.assertEqual(self.up('stop', '--ports', PORTS), 'monitor: nothing to stop')
+        self.assertEqual(self.up('set-browser', 'safari'), 'monitor: browser set to safari')
+        cfg = json.loads((Path(self.tmp.name) / 'monitor-config.json').read_text())
+        self.assertIs(cfg['autostart'], False)
+
+    def test_other_values_start(self):
+        for text in ('{"autostart": true}', '{"autostart": "false"}', '{"autostart": 0}', '{broken', '[false]', None):
+            with self.subTest(text=text):
+                cfg = Path(self.tmp.name) / 'monitor-config.json'
+                if text is None:
+                    cfg.unlink(missing_ok=True)
+                else:
+                    self.config(text)
+                self.assertRegex(self.up('--no-open', '--ports', PORTS), r'\(started\)$')
+                self.up('stop', '--ports', PORTS)
+                for _ in range(50):
+                    if not port_open(8791):
+                        break
+                    time.sleep(0.1)
+
+
 class OpenModeTest(unittest.TestCase):
     """monitor-up.py loaded in-process with open_monitor stubbed: no window is ever opened."""
 
@@ -225,6 +277,12 @@ class OpenModeTest(unittest.TestCase):
 
     def test_failed_open_still_started_and_exit_0(self):
         self.result = 'failed'
+        self.assertEqual(self.up(), 'monitor: http://127.0.0.1:8791/ (started)')
+
+    def test_non_macos_failed_open_keeps_the_output_line(self):
+        sys.path.insert(0, str(ROOT))
+        from monitor import opener
+        self.fake_open = functools.partial(opener.open_monitor, platform='linux', web_open=lambda u: False)
         self.assertEqual(self.up(), 'monitor: http://127.0.0.1:8791/ (started)')
 
     def test_browser_defaults_to_config_then_default(self):

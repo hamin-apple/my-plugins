@@ -64,9 +64,9 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v037(self):
+    def test_status_line_starts_with_v038(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.37 ('), line[:60])
+        self.assertTrue(line.startswith('- Status: design draft v0.38 ('), line[:60])
 
     def test_cost_only_texts(self):
         lines = self.text.splitlines()

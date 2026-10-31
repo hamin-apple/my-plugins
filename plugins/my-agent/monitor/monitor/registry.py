@@ -21,7 +21,7 @@ def default_projects_file() -> Path:
 
 
 def default_prices_file() -> Path:
-    """`prices.json` in the data folder when it exists, else the bundled one (spec 6.1)."""
+    """`prices.json` in the data folder when it exists, else the bundled `l4-tools-guards/lib/prices.json` (spec 6.1)."""
     return prices_file()
 
 
@@ -80,7 +80,7 @@ class Registry:
         return self._prices
 
     def _get(self, project, task_dir):
-        """Cached task, rebuilt only when the folder, the transcript size or prices.json changed."""
+        """Cached task, rebuilt only when the folder, the transcript size or the price table changed."""
         key = task_key(project, task_dir.name)
         prices = self._prices_now()
         cached = self._cache.get(key)

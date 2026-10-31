@@ -6,15 +6,16 @@ jahoonjin의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| `my-agent` | 0.4.8 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent` | 0.5.0 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent-tray` | 0.1.0 | my-agent 모니터용 macOS 메뉴바 앱 (선택; my-agent 0.5.0 이상 필요) |
 
 ## 요구 사항
 
 - 플러그인을 지원하는 Claude Code. Claude Code 2.1.311로 테스트했고, 최소 버전은 확인하지 않았습니다.
 - Python 3.9 이상, `PATH`에서 `python3`로 실행 가능(표준 라이브러리만 씀). Python 3.13.7로 테스트했습니다. hook, 스크립트, 모니터 서버가 이것으로 돕니다.
 - git: `dev` 프로파일(기준 커밋, worktree, 커밋)에 필요. git 2.50.1로 테스트했습니다.
-- macOS: 모니터의 브라우저 창 열기와 메뉴바 앱에 필요. macOS 27.0.1에서 테스트했습니다. Linux와 Windows는 시험하지 않았습니다: hook이 `python3`를 부르고, 모니터는 macOS 명령(`open`, `osascript`)으로 창을 엽니다.
-- 선택, 메뉴바 앱에만: macOS 12 이상의 Command Line Tools(`swiftc`). Xcode는 필요 없습니다. Swift 6.3.3으로 테스트했고, 더 낮은 Swift 버전은 시험하지 않았습니다.
+- macOS: 모니터의 창 열기에 필요. macOS 27.0.1에서 테스트했습니다. 다른 플랫폼에서는 모니터가 표준 브라우저 열기 도구로 탭을 열지만 시험하지 않았습니다. Linux와 Windows는 시험하지 않았습니다: hook이 `python3`를 부릅니다.
+- 선택, 메뉴바 앱(`my-agent-tray` 플러그인)에만: macOS 12 이상의 Command Line Tools(`swiftc`). Xcode는 필요 없습니다. Swift 6.3.3으로 테스트했고, 더 낮은 Swift 버전은 시험하지 않았습니다.
 
 그 밖에 설치하는 것은 없습니다.
 
@@ -23,6 +24,7 @@ jahoonjin의 Claude Code 플러그인 마켓플레이스입니다.
 ```bash
 claude plugin marketplace add hamin-apple/my-plugins
 claude plugin install my-agent@my-plugins
+claude plugin install my-agent-tray@my-plugins   # 선택: macOS 메뉴바 앱
 ```
 
 비공개 저장소이므로 저장소에 초대된 GitHub 계정으로 로그인되어 있어야 합니다.
@@ -69,6 +71,8 @@ python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.
 claude plugin marketplace update my-plugins
 claude plugin update my-agent@my-plugins
 claude plugin uninstall my-agent@my-plugins
+claude plugin update my-agent-tray@my-plugins      # 설치했다면
+claude plugin uninstall my-agent-tray@my-plugins   # 설치했다면
 ```
 
 ## 저장소 구조

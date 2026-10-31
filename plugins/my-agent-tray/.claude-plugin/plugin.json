@@ -1,0 +1,8 @@
+{
+  "name": "my-agent-tray",
+  "version": "0.1.0",
+  "description": "OS shells for the my-agent monitor: macOS menu bar app (build it yourself with swiftc), Windows tray reserved",
+  "author": {
+    "name": "jahoonjin"
+  }
+}

@@ -27,7 +27,7 @@ struct BrowserChoice: Equatable {
     let value: String
     let title: String
     let selected: Bool
-    let argv: [String]
+    let argv: [String]?   // nil: the monitor folder is unknown
 }
 
 struct MenuItem: Equatable {
@@ -107,7 +107,11 @@ func readBrowser(env: [String: String]) -> String {
     return value
 }
 
-func menuItems(_ state: MenuState, browser: String = "default", python: String, root: String) -> [MenuItem] {
+let folderUnknownTitle = "Monitor folder unknown: run /my-agent:monitor once"
+
+/// `root` is the monitor folder (holds monitor-up.py); nil disables every item that would run it.
+func menuItems(_ state: MenuState, browser: String = "default", python: String, root: String?) -> [MenuItem] {
+    func argv(_ launch: Launch) -> [String]? { root.map { command(launch, python: python, root: $0) } }
     var items: [MenuItem] = []
     switch state {
     case .off:
@@ -116,40 +120,41 @@ func menuItems(_ state: MenuState, browser: String = "default", python: String, 
         items.append(MenuItem(kind: .info, title: "No running tasks", key: nil, enabled: false, argv: nil))
     case .on(let tasks):
         for t in tasks {
-            items.append(MenuItem(kind: .task, title: taskTitle(t), key: t.key, enabled: true,
-                                  argv: command(.task(t.key), python: python, root: root)))
+            items.append(MenuItem(kind: .task, title: taskTitle(t), key: t.key, enabled: root != nil, argv: argv(.task(t.key))))
         }
     }
+    if root == nil {
+        items.append(MenuItem(kind: .info, title: folderUnknownTitle, key: nil, enabled: false, argv: nil))
+    }
     items.append(MenuItem(kind: .separator, title: "", key: nil, enabled: false, argv: nil))
-    items.append(MenuItem(kind: .open, title: "Open Monitor", key: nil, enabled: true,
-                          argv: command(.open, python: python, root: root)))
-    items.append(MenuItem(kind: .browser, title: "Browser", key: nil, enabled: true, argv: nil,
+    items.append(MenuItem(kind: .open, title: "Open Monitor", key: nil, enabled: root != nil, argv: argv(.open)))
+    items.append(MenuItem(kind: .browser, title: "Browser", key: nil, enabled: root != nil, argv: nil,
                           choices: browserChoices.map {
                               BrowserChoice(value: $0.value, title: $0.title, selected: $0.value == browser,
-                                            argv: command(.setBrowser($0.value), python: python, root: root))
+                                            argv: argv(.setBrowser($0.value)))
                           }))
     items.append(MenuItem(kind: .quit, title: "Quit", key: nil, enabled: true, argv: nil))
     return items
 }
 
-func renderMenu(_ state: MenuState, browser: String = "default", python: String, root: String) -> String {
+func renderMenu(_ state: MenuState, browser: String = "default", python: String, root: String?) -> String {
     var lines = ["icon: " + iconText(state)]
     for item in menuItems(state, browser: browser, python: python, root: root) {
         switch item.kind {
         case .separator: lines.append("---")
         case .task:
-            lines.append([item.title, item.key ?? "", "run: " + (item.argv ?? []).joined(separator: " ")].joined(separator: "\t"))
+            lines.append([item.title, item.key ?? "", item.argv.map { "run: " + $0.joined(separator: " ") } ?? "disabled"].joined(separator: "\t"))
         case .open:
-            lines.append(item.title + "\trun: " + (item.argv ?? []).joined(separator: " "))
+            lines.append(item.title + "\t" + (item.argv.map { "run: " + $0.joined(separator: " ") } ?? "disabled"))
         case .browser:
             // "Browser: *default safari chrome<TAB>run: <python> <root>/monitor-up.py set-browser" (the value is appended when run)
             let names = item.choices.map { ($0.selected ? "*" : "") + $0.value }.joined(separator: " ")
-            let base = (item.choices.first?.argv.dropLast() ?? []).joined(separator: " ")
-            lines.append(item.title + ": " + names + "\trun: " + base)
+            let base = item.choices.first?.argv.map { "run: " + $0.dropLast().joined(separator: " ") } ?? "disabled"
+            lines.append(item.title + ": " + names + "\t" + base)
         default: lines.append(item.title)
         }
     }
-    lines.append("launch: " + command(.start, python: python, root: root).joined(separator: " "))
+    lines.append("launch: " + (root.map { command(.start, python: python, root: $0).joined(separator: " ") } ?? "none (monitor folder unknown)"))
     return lines.joined(separator: "\n")
 }
 
@@ -174,17 +179,37 @@ func fetch(_ port: Int, _ path: String) -> Data? {
     return out
 }
 
-func isMonitor(_ port: Int) -> Bool {
+/// The /api/health answer of a my-agent monitor on this port (nil when it is not one): the `root` it reports, if any.
+struct Health { let root: String? }
+
+func health(_ port: Int) -> Health? {
     guard let data = fetch(port, "/api/health"),
-          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
-    return (obj["app"] as? String) == "my-agent-monitor"
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          (obj["app"] as? String) == "my-agent-monitor" else { return nil }
+    return Health(root: obj["root"] as? String)
+}
+
+func stateFile(env: [String: String]) -> [String: Any]? {
+    let dir = dataDir(env: env)
+    guard let data = FileManager.default.contents(atPath: dir + "/monitor.json") else { return nil }
+    return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
 }
 
 func statePort(env: [String: String]) -> Int? {
-    let dir = dataDir(env: env)
-    guard let data = FileManager.default.contents(atPath: dir + "/monitor.json"),
-          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-    return obj["port"] as? Int
+    stateFile(env: env)?["port"] as? Int
+}
+
+/// A monitor folder counts only when the value is a string and `<root>/monitor-up.py` exists.
+func validRoot(_ value: Any?) -> String? {
+    guard let root = value as? String, !root.isEmpty,
+          FileManager.default.fileExists(atPath: root + "/monitor-up.py") else { return nil }
+    return root
+}
+
+/// The folder monitor-up.py is launched from: the `root` of the monitor found (/api/health), else the `root` of monitor.json, else none.
+/// monitor-up.py accepts a running server only when its root equals its own folder, so the health root reuses the running one.
+func launchRoot(healthRoot: String?, env: [String: String]) -> String? {
+    validRoot(healthRoot) ?? validRoot(stateFile(env: env)?["root"])
 }
 
 func parsePorts(_ text: String) -> ClosedRange<Int>? {
@@ -193,18 +218,14 @@ func parsePorts(_ text: String) -> ClosedRange<Int>? {
     return a...b
 }
 
-/// The first monitor (monitor.json port, then the range) whose /api/tasks parses.
-func queryTasks(ports: ClosedRange<Int>, env: [String: String]) -> (port: Int, data: Data)? {
+/// The first monitor (monitor.json port, then the range) whose /api/tasks parses; `root` is what its /api/health reported.
+func queryTasks(ports: ClosedRange<Int>, env: [String: String]) -> (port: Int, data: Data, root: String?)? {
     var candidates: [Int] = []
     if let p = statePort(env: env) { candidates.append(p) }
     candidates += ports.filter { !candidates.contains($0) }
-    for port in candidates where isMonitor(port) {
-        if let data = fetch(port, "/api/tasks"), parseRunning(data) != nil { return (port, data) }
+    for port in candidates {
+        guard let h = health(port) else { continue }
+        if let data = fetch(port, "/api/tasks"), parseRunning(data) != nil { return (port, data, h.root) }
     }
     return nil
-}
-
-func queryState(ports: ClosedRange<Int>, env: [String: String]) -> MenuState {
-    guard let found = queryTasks(ports: ports, env: env), let tasks = parseRunning(found.data) else { return .off }
-    return .on(tasks)
 }

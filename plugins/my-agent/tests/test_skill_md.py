@@ -402,6 +402,14 @@ class SkillMdTest(unittest.TestCase):
                 for m in re.finditer(r'active-index\.json', line):
                     self.assertEqual(line[:m.start()][-14:], '<data folder>/', f'{path.name}:{n}')
 
+    def test_autostart_off_in_intake_and_monitor_skill(self):
+        i = self.text.index('8. **Monitor:**')
+        item = self.text[i:self.text.index('\n9. ', i)]
+        self.assertIn('autostart off', item)
+        self.assertIn('<data folder>/monitor-config.json', item)
+        self.assertLess(i + len(item), CORE_CHARS)
+        self.assertIn('autostart off', self.MONITOR_SKILL.read_text(encoding='utf-8'))
+
     def test_intake_popup_recommends_data_folder(self):
         self.assertIn('`<data folder> (Recommended)`', self.text)
 

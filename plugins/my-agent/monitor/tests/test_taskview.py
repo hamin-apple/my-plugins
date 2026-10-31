@@ -10,10 +10,11 @@ from monitor.taskview import build_task
 from monitor.transcript import TranscriptCache
 from tests.fixtures.build_fixtures import CLAUDE, EXPECTED_MAIN, PROJECTS
 
+import ma_prices
 from ma_prices import cost, load_prices
 
 ROOT = Path(__file__).resolve().parent.parent
-PRICES = load_prices(ROOT / 'prices.json')
+PRICES = load_prices(ma_prices.BUNDLED)
 NOW = datetime(2026, 10, 24, 16, 8)
 G = lambda a, b, c, d: {'G1a': a, 'G1b': b, 'G2': c, 'G3': d}
 

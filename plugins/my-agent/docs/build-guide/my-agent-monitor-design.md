@@ -1,7 +1,7 @@
 # my-agent monitor design
 
-- Status: design v0.3 (2026-10-28, aligned with architecture v0.27: code location corrected; 5.2 line format gains `unit=`, the `revision` state, `Scope change`, and the back-to-Execute `back=`/`archive=`; the monitor reads through L4 `lib/ma_schema.py`). v0.2 (2026-10-25). Built after v0.1 was approved (`~/dev/my-agent-monitor/`). v0.2 adds the decision to put it in the plugin (section 6.1, architecture v0.20 Q14). The same day, probe results (architecture v0.21) added `session=` to `start:` and `mode=` and `effort=` to `stop:`. The monitor does not need to read these fields.
-- Code location: `monitor/` inside the plugin (`~/dev/my-plugins/plugins/my-agent/monitor/`, section 6.1). The first build lived in `~/dev/my-agent-monitor/`.
+- Status: design v0.4 (2026-10-31, aligned with architecture v0.38: the menu bar app moves to the separate `my-agent-tray` plugin and finds the monitor on its own (6.1); the price table moves to `l4-tools-guards/lib/prices.json` (5.4); other platforms open one browser tab; the `autostart` setting). v0.3 (2026-10-28, aligned with architecture v0.27: code location corrected; 5.2 line format gains `unit=`, the `revision` state, `Scope change`, and the back-to-Execute `back=`/`archive=`; the monitor reads through L4 `lib/ma_schema.py`). v0.2 (2026-10-25). Built after v0.1 was approved (`~/dev/my-agent-monitor/`). v0.2 adds the decision to put it in the plugin (section 6.1, architecture v0.20 Q14). The same day, probe results (architecture v0.21) added `session=` to `start:` and `mode=` and `effort=` to `stop:`. The monitor does not need to read these fields.
+- Code location: `monitor/` inside the plugin (`~/dev/my-plugins/plugins/my-agent/monitor/`, section 6.1); the menu bar app is in the `my-agent-tray` plugin (`plugins/my-agent-tray/macos/menubar/`). The first build lived in `~/dev/my-agent-monitor/`.
 - Screen reference: mock-up v22 `~/dev/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html`
 - Related document: `my-agent-architecture.md` v0.19. The "changes on the my-agent side" in section 7 are applied in v0.19.
 
@@ -92,7 +92,7 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 - Header line: Replay / Parallel timeline switch next to `4 · Log`; at the far right, `run-log.md · task-id` and `↗ Components`
 - Replay: first/previous/next/auto play, speed 0.5×~4×, slider, keyboard (← → Space Home End)
   - Step list on the left, console (level-colored tags) and event cards (model, effort, MISMATCH, the mock-up at G1b time) in the middle, the work files at that moment on the right (newly written files get a typing effect)
-- `↗ Components`: opens "components at this moment" in a separate window. It follows the replay position and remembers the window size and position. In the menu bar app (see monitor/menubar/README.md) the same button opens a native Components window that floats above other apps while the main window is pinned and remembers its size and position across restarts (`frame.components`); closing it or the main window closes it, and clicking the button while it is open brings it to front.
+- `↗ Components`: opens "components at this moment" in a separate window. It follows the replay position and remembers the window size and position. In the menu bar app (see `plugins/my-agent-tray/macos/menubar/README.md`) the same button opens a native Components window that floats above other apps while the main window is pinned and remembers its size and position across restarts (`frame.components`); closing it or the main window closes it, and clicking the button while it is open brings it to front.
 - Parallel timeline: subagent calls as bars (model color, `×N` for N rows, red border for MISMATCH), step bands and gate marks, maximum concurrency. Clicking a bar jumps to that moment in the replay
 
 **Effects**
@@ -164,7 +164,7 @@ The monitor's parser interprets only the lines below and ignores lines it does n
 
 ### 5.4 Price table
 
-- File: `prices.json` in the monitor folder (default). If `<data folder>/prices.json` exists, that one is used (section 6.1). For each model ID prefix (e.g. `claude-opus-5`): input, output, cache write and cache read prices (USD / 1M tokens) and the date checked
+- File: `l4-tools-guards/lib/prices.json` (default). If `<data folder>/prices.json` exists, that one is used (section 6.1). For each model ID prefix (e.g. `claude-opus-5`): input, output, cache write and cache read prices (USD / 1M tokens) and the date checked
 - `l4-tools-guards/lib/ma_prices.py` reads the table for the monitor and for `usage-snapshot.py`. The person updates it by hand. A model not in the table gets cost `–` and no bar, and one line "model not in the price table" appears below the Models table.
 
 ## 6. Structure
@@ -175,12 +175,12 @@ The monitor's parser interprets only the lines below and ignores lines it does n
 ├── monitor-up.py      # check whether it is already up, start it · open the window (section 6.1)
 ├── monitor/           # reads the project list, intake, run-log, transcript and file tree into the task model (runlog · events · mdfiles · taskview etc.; imports L4 lib/ma_schema)
 ├── web/index.html     # the screen, started from mock-up v22
-├── prices.json
-├── menubar/           # menu bar app (optional)
 ├── tools/             # screen generator (running it again drops direct edits to web/index.html)
 ├── tests/fixtures/    # fake tasks built in the real output formats (build_fixtures.py)
 └── README.md          # how to run
 ```
+
+The price table is `l4-tools-guards/lib/prices.json`. The menu bar app is not in this folder; it is in the `my-agent-tray` plugin (section 6.1).
 
 - **API:** two endpoints are enough: the task list (summary) and one task (full model). The screen fetches again every 2 seconds.
 - **Read cost:** only tasks whose file modification times changed are read again. Transcripts are read on from the last read position.
@@ -194,9 +194,13 @@ The detailed behavior is in section 4.7.4 of the architecture document. Only the
 - **`GET /api/health`:** returns `{"app": "my-agent-monitor", "root": <absolute path of the monitor folder>}`. The launch script uses it to recognize a server that is already up.
 - **`monitor-up.py`:** if already up, prints only the URL; otherwise starts the server on a free port. Takes `--open`, `--no-open`, `--window`, `--tab`, `--task <key>`, `status`, `stop`. The open mode (`window`/`tab`) is chosen from the option, then `<data folder>/monitor-config.json`, then the default `window`. The browser (`default`/`safari`/`chrome`) is chosen from the `--browser` option, then `browser` in the config file, then the default `default` (detects the default browser); `monitor-up.py set-browser <value>` rewrites only `browser` in the config file. If the chosen browser does not open, a tab in the default browser is used instead. It exits 0 in every case.
 - **Task link:** opening `/#task=<key>` (key is `<8-char sha1>/<task-id>`, URL-encoded) selects that task. If the key is wrong or the task is finished, the usual selection rules apply.
-- **Menu bar app:** a small app in `monitor/menubar/` shows the number of running tasks and a line per task, and runs `monitor-up.py` (`monitor/menubar/README.md`).
-- **Price table override:** if `<data folder>/prices.json` exists, it is used instead of `prices.json` in the monitor folder.
-- **Who starts it:** the my-agent Router right after it sets the task location in Intake, and the person calling `/my-agent:monitor` directly.
+- **Menu bar app:** a small app shows the number of running tasks and a line per task, and runs `monitor-up.py`. It lives in the separate `my-agent-tray` plugin (`plugins/my-agent-tray/macos/menubar/`, `windows/tray/` reserved; README: `plugins/my-agent-tray/macos/menubar/README.md`) and needs my-agent 0.5.0 or later.
+- **How a shell finds the monitor:** the port comes from `port` in `<data folder>/monitor.json`, then the port range 8765 to 8775; a port counts only when `/api/health` answers `app == "my-agent-monitor"`. The launch folder is the `/api/health` `root` of the monitor it found, else `root` in `monitor.json`, and it counts only when `<root>/monitor-up.py` exists. With neither, the shell shows the server as off and cannot launch it.
+- **After `stop`:** `/my-agent:monitor stop` deletes `monitor.json`, so after `stop` the shell has no launch folder and cannot start the monitor until `/my-agent:monitor` runs once.
+- **Opening per platform:** macOS opens as described above. Other platforms open one tab through `webbrowser.open`; the result is `failed` when that returns false or raises. The one-line output is unchanged.
+- **`autostart`:** a key in `<data folder>/monitor-config.json`, default true. When false, a call without `--open` prints `monitor: not started (autostart off)` and starts nothing, including the menu bar app's own `--no-open` launch at start. `--open` ignores it. `status`, `stop` and `set-browser` are unaffected. A missing or unreadable file, or any value other than JSON `false`, means true.
+- **Price table override:** if `<data folder>/prices.json` exists, it is used instead of `l4-tools-guards/lib/prices.json`.
+- **Who starts it:** the my-agent Router right after it sets the task location in Intake, and the person calling `/my-agent:monitor` directly. With `autostart` false the Router start does nothing; `/my-agent:monitor` (which passes `--open`) still opens it.
 - **Lifetime:** the server stays up after the session ends. `/my-agent:monitor stop` turns it off.
 
 ## 7. Changes on the my-agent side (applied in architecture document v0.19)
@@ -221,6 +225,7 @@ The detailed behavior is in section 4.7.4 of the architecture document. Only the
 - G2: recorded by hooks (`PermissionRequest` + `PostToolUse`). A denial is shown as an inference
 - Code in `~/dev/my-agent-monitor/`, this document in `~/dev/my-agent/`
 - (v0.2) Move it into `monitor/` inside the plugin; it starts along with my-agent (when the Router starts a task). Also keep a `/my-agent:monitor` skill for manual start
+- (v0.4, 2026-10-31) The menu bar app moves out of `monitor/` into the separate `my-agent-tray` plugin; the price table moves to `l4-tools-guards/lib/prices.json`; other platforms open one tab; `autostart` setting added
 
 ## 9. What I decided (please confirm)
 

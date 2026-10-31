@@ -1,6 +1,6 @@
 # Opening the monitor from Shortcuts
 
-Can the macOS Shortcuts app open the monitor, with a keyboard shortcut? Yes, with one shortcut and one shell command. This note records how, and compares it with the menu bar app (`menubar/README.md`). No shortcut file is shipped.
+Can the macOS Shortcuts app open the monitor, with a keyboard shortcut? Yes, with one shortcut and one shell command. This note records how, and compares it with the menu bar app (`../../my-agent-tray/macos/menubar/README.md`). No shortcut file is shipped.
 
 ## One shortcut: Run Shell Script
 

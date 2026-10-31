@@ -71,7 +71,7 @@ class SkillMdTest(unittest.TestCase):
         self.assertIn('the verdict hook cannot tell whether it is a commit', self.text)
 
     def test_defined_popup_options_kept_verbatim(self):
-        """Live run: L1 reordered the dev NIT popup and dropped `(Recommended)` because it judged the NITs harmless."""
+        """Live run: L1 reordered the dev NITPICK popup and dropped `(Recommended)` because it judged the NITPICKs harmless."""
         self.assertIn('the choices as written', self.text)
 
     def test_main_model_mismatch_points_to_model_opus(self):
@@ -248,10 +248,10 @@ class SkillMdTest(unittest.TestCase):
         plan = self.PLAN.read_text(encoding='utf-8')
         return plan[plan.index('## 4. Plan Review'):plan.index('## G1b plan approval')]
 
-    def test_nit_only_applied_without_popup(self):
-        """Criterion 2: NIT only -> applied without a popup, one `## Decisions` line each, then G1b."""
+    def test_nitpick_only_applied_without_popup(self):
+        """Criterion 2: NITPICK only -> applied without a popup, one `## Decisions` line each, then G1b."""
         step = self.plan_step4()
-        self.assertIn('NIT only', step)
+        self.assertIn('NITPICK only', step)
         self.assertIn('without a popup', step)
         self.assertIn('- <severity> <path>:<line> <summary> → applied by L1 | applied by architect | declined', step)
 
@@ -261,7 +261,7 @@ class SkillMdTest(unittest.TestCase):
         self.assertIn('never another Plan Review round', step)
         self.assertIn('third `REVISE`', step)
         self.assertIn('Apply all (Recommended)', step)
-        self.assertIn('whole list (NITs included)', step)
+        self.assertIn('whole list (NITPICKs included)', step)
 
     def test_l1_plan_edit_rules(self):
         """Criterion 3: small plan.md edits by L1 before G1b, recorded as `fix ... before=G1b` with an archive."""
@@ -331,7 +331,7 @@ class SkillMdTest(unittest.TestCase):
         self.assertIn('## Delegated approval details', self.text)
         sec = self.text[self.text.index('## Delegated approval details'):self.text.index('## Check before anything leaves')]
         for word in ('a round is', '6th round', 'E answer', 'third `REVISE`', '3 Verify FAILs',
-                     'Plan Review `REVISE`', 'Review BLOCKER', 'NIT'):
+                     'Plan Review `REVISE`', 'Review BLOCKER', 'NITPICK'):
             self.assertIn(word, sec, word)
         self.assertLess(self.text.index('## Failure handling'), self.text.index('## Delegated approval details'))
 

@@ -7,7 +7,11 @@ the input) passes; no task found passes (a `.active` without `task:` warns, befo
 whose `session:` differs from the input `session_id` (both set) passes.
 
 A stale result on a commit (or a command that may be one) gets `ask` (the G2 dialog) naming the judgment; a stale
-deliver stays `deny`, also when the same command line holds a commit.
+deliver stays `deny`, also when the same command line holds a commit. A command that does not parse but has the
+commit shape is scanned leniently on its raw text: a literal cp, mv or rsync with an argument under the task folder's
+`work/` or `deliverable/` (relative paths resolved against the cwd and every literal `cd`/`pushd` target before it)
+counts as a deliver, so a stale result denies instead of asking. Limits: a relative path after a `cd` to a variable is
+not followed, and an argument containing `$` (such as `cp $F /x`) is skipped, so a variable source is not recognised.
 
 Applies while a task is active, to a `git commit` and to the G3 deliver: any write into the task folder's
 `deliverable/` (the default save place, accept.md), and a Bash cp, mv or rsync from the task folder's `work/` or `deliverable/` to a place outside
@@ -21,6 +25,8 @@ prints a warning, C9). Any error → exit 2 (blocked).
 """
 import json
 import os
+import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -116,6 +122,41 @@ def ask_reason(active, stale, unparsed: bool) -> str:
     return ASK_OLDER.format(name=name, file=rel)
 
 
+_PIECE_SPLIT = re.compile(r'&&|\|\||\$\(|[;|&\n)`]')
+_COPY_WORDS = ('cp', 'mv', 'rsync')
+
+
+def raw_task_copy(cmd: str, cwd: Path, T: Path):
+    """Lenient scan of a command that does not parse: the first cp, mv or rsync argument under `T/work` or
+    `T/deliverable`, else None. The destination is not read (a copy whose destination is unknown counts)."""
+    try:
+        text = ma_bash._strip_heredocs(cmd)
+    except ValueError:
+        text = cmd
+    folders = [cwd]
+    for piece in _PIECE_SPLIT.split(text):
+        try:
+            words = shlex.split(piece)
+        except ValueError:
+            words = piece.split()
+        if not words:
+            continue
+        name = os.path.basename(words[0])
+        if name in ('cd', 'pushd'):
+            args = [w for w in words[1:] if not w.startswith('-')]
+            if args and '$' not in args[0] and '`' not in args[0]:
+                folders += [(f / os.path.expanduser(args[0])).resolve() for f in list(folders)]
+        elif name in _COPY_WORDS:
+            for w in words[1:]:
+                if w.startswith('-') or '$' in w:
+                    continue
+                for f in folders:
+                    p = (f / os.path.expanduser(w)).resolve()
+                    if under(p, T / 'work') or under(p, T / 'deliverable'):
+                        return p
+    return None
+
+
 def applies(tool: str, ti: dict, cwd: Path, active, commit: bool = True):
     """None when the call is neither a commit nor a deliver (`commit=False`: not a deliver); else whether `deliverable/` counts as changed."""
     T, agent = active.task_dir, active.task_dir.parent   # agent: the records folder, resolved by the reader
@@ -133,7 +174,9 @@ def applies(tool: str, ti: dict, cwd: Path, active, commit: bool = True):
     from_task = any(under(s, T / 'work') or under(s, deliverable)
                     for s in ma_bash.copy_sources(cmd, cwd))   # cp, mv, rsync sources only
     if targets is None:
-        return True if from_task else None
+        if from_task or (not commit and '?' in ma_bash.git_subcommands(cmd) and raw_task_copy(cmd, cwd, T)):
+            return True
+        return None
     if from_task and any(not under(t, agent) for t in targets):
         return True
     return False if any(under(t, deliverable) for t in targets) else None
@@ -160,12 +203,20 @@ def main() -> int:
             return 0
         stale = stale_result(active, changed_files(active, mode))
         if stale:
-            subs = ma_bash.git_subcommands((inp.get('tool_input') or {}).get('command') or '') \
+            ti_cmd = (inp.get('tool_input') or {}).get('command') or ''
+            subs = ma_bash.git_subcommands(ti_cmd) \
                 if inp.get('tool_name') == 'Bash' else []
             if any(x in ('commit', '?') for x in subs) and applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active, commit=False) is None:
                 decision, reason = 'ask', ask_reason(active, stale, '?' in subs)
             else:
-                decision, reason = 'deny', REASON.format(task=active.task, why=deliver_why(stale))
+                why = deliver_why(stale)
+                seen = raw_task_copy(ti_cmd, cwd, active.task_dir) if '?' in subs else None
+                if seen:
+                    kind, name, _ = stale
+                    what = 'is not a pass' if kind == 'not-pass' else 'a file changed after it'
+                    why = (f'The unparsed command copies {os.path.relpath(seen, cwd) if under(seen, cwd) else seen} '
+                           f'from the task folder while {name} {what}.')
+                decision, reason = 'deny', REASON.format(task=active.task, why=why)
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
                                                      'permissionDecisionReason': reason}},
                              ensure_ascii=False))

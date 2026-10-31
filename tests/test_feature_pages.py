@@ -89,6 +89,19 @@ def sources(page: str) -> list:
     return re.findall(r'`([^`]*)`', m.group(1))
 
 
+LINE_CITE_RE = re.compile(
+    r'plugins/[\w./-]+:\d+(?:-\d+)?|(?<![\w-])[\w.-]+\.(?:py|md|json|html|sh):\d+(?:-\d+)?')
+
+
+class NoLineNumberCitations(unittest.TestCase):
+    """Plugin files change often, so a cited line number goes stale; cite the path only."""
+
+    def test_no_line_numbers(self):
+        for name in ('index.html', 'index-ko.html'):
+            m = LINE_CITE_RE.search(read(name))
+            self.assertIsNone(m, '%s cites a line number: %s' % (name, m and m.group(0)))
+
+
 class PairedFeaturePages(unittest.TestCase):
     def setUp(self):
         self.en = read('index.html')

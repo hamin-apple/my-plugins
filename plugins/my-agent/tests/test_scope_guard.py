@@ -6,9 +6,14 @@ import unittest
 from pathlib import Path
 
 from helpers import clean_task_env, make_task, records, rel, run_hook
+import ma_logline
 
 TASK = '261025-probe-task'
 L4 = Path(__file__).resolve().parents[1] / 'l4-tools-guards'
+
+
+CANNOT_READ = ('scope-guard: Cannot tell what this command reads (a path built from a variable, command '
+               'substitution, cd to a variable, etc.).')
 
 
 class ScopeGuardTest(unittest.TestCase):
@@ -45,6 +50,40 @@ class ScopeGuardTest(unittest.TestCase):
         r = self.hook(agent, 'Bash', {'command': command})
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason'] if r.stdout else None
+
+    def guard_lines(self):
+        p = self.T / 'run-log.md'
+        return [l for l in p.read_text(encoding='utf-8').splitlines() if ' guard: ' in l] if p.exists() else []
+
+    def test_deny_writes_one_guard_line(self):
+        r = self.hook('my-agent:coder', 'Bash', {'command': 'cat /etc/hosts'})
+        why = json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason']
+        lines = self.guard_lines()
+        self.assertEqual(len(lines), 1)
+        kind, f = ma_logline.parse_line(lines[0])
+        self.assertEqual(kind, 'guard')
+        self.assertEqual(f, {'hook': 'scope-guard', 'agent': 'my-agent:coder', 'id': 'a1', 'tool': 'Bash',
+                             'decision': 'deny', 'why': why})
+
+    def test_allowed_call_writes_no_guard_line(self):
+        self.assertFalse(self.denied('my-agent:coder', 'Bash', {'command': 'ls src'}))
+        self.assertEqual(self.guard_lines(), [])
+
+    def test_no_active_task_denies_without_line(self):
+        other = self.root / 'elsewhere'
+        other.mkdir()
+        r = self.hook('my-agent:coder', 'Bash', {'command': 'ls'}, cwd=other)
+        self.assertEqual(json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason'],
+                         'scope-guard: No active my-agent task (no .active).')
+        self.assertEqual(self.guard_lines(), [])
+
+    def test_unwritable_run_log_keeps_the_deny(self):
+        want = json.loads(self.hook('my-agent:coder', 'Bash', {'command': 'cat /etc/hosts'}).stdout)
+        (self.T / 'run-log.md').unlink()
+        (self.T / 'run-log.md').mkdir()   # a folder: append fails
+        r = self.hook('my-agent:coder', 'Bash', {'command': 'cat /etc/hosts'})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), want)
 
     def test_environment_read_denied_with_exact_reason(self):
         env_cases = [('env', 'env'), ('printenv HOME', 'printenv HOME'),
@@ -193,8 +232,36 @@ class ScopeGuardTest(unittest.TestCase):
         self.assertFalse(self.denied('my-agent:explorer', 'Bash', {'command': f'grep -rn x {data}'}))
         self.assertFalse(self.denied('my-agent:explorer', 'Bash', {'command': f'cat {data / "feedback.md"}'}))
 
+    def test_environment_read_in_substitutions_and_wrappers(self):
+        cases = [('echo $(printenv)', 'printenv'), ('echo "$(env)"', 'env'), ('printenv $(date)', 'printenv $(date)'),
+                 ('setsid env', 'setsid env'), ('python3 -c "import os;print(os.environ)"',
+                                                'python3 -c import os;print(os.environ)'),
+                 ('python3 -c "from os import environ; print(environ)"',
+                  'python3 -c from os import environ; print(environ)'),
+                 ('echo $(printenv HOME)', 'printenv HOME')]
+        for cmd, seg in cases:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.reason('my-agent:coder', cmd),
+                                 f'my-agent scope-guard: coder may not read the environment ({seg})')
+        self.assertEqual(self.reason('my-agent:coder', 'echo $(date)'), CANNOT_READ)
+        self.assertFalse(self.denied('my-agent:coder', 'Bash', {'command': 'python3 -c "print(1)"'}))
+
+    def test_literal_variable_paths(self):
+        coder, L = 'my-agent:coder', self.L
+        (L / 'a').mkdir()
+        (L / 'a' / 'b').write_text('x')
+        self.assertFalse(self.denied(coder, 'Bash', {'command': f'P={L}/a; cat $P/b'}))
+        self.assertEqual(self.reason(coder, 'P=/etc; cat $P/hosts'),
+                         f'scope-guard: Outside the read scope of coder: {Path("/etc/hosts").resolve()}')
+        ssh = Path.home() / '.ssh'
+        self.assertEqual(self.reason(coder, f'P={ssh}; cat $P/id_rsa'),
+                         f'scope-guard: Secret paths are not read or written: {(ssh / "id_rsa").resolve()}')
+        for cmd in (f'false && P={L}/a; cat $P/etc/passwd', f'P={L}/a; P=/etc; cat $P/passwd'):
+            with self.subTest(cmd=cmd):
+                self.assertEqual(self.reason(coder, cmd), CANNOT_READ)
+
     def test_relative_and_cd_reads(self):
-        ex = 'my-agent:explorer'
+        ex ='my-agent:explorer'
         (self.L / 'README.md').write_text('r')
         self.assertFalse(self.denied(ex, 'Bash', {'command': 'cat ../README.md'}, cwd=self.L / 'src'))
         self.assertFalse(self.denied(ex, 'Bash', {'command': 'cd src && cat ../README.md'}))

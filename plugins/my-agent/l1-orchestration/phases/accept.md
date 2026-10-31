@@ -49,7 +49,7 @@ The deliverable is a commit, so do this instead of items 4–6.
 
 G3 always goes to the person, even while delegated approval is on.
 
-1. **Paste into the chat:** `git status --porcelain`, `git diff --stat` and the main diffs, the list of new files, the judgment summary (`verify.md` `Run:`, SHOULD-FIX·NIT in `review.md`), the proposed commit message (first line says what changed; the body lists completion criterion numbers `criteria: 1, 2, 3`), cost (reference), and the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
+1. **Paste into the chat:** `git status --porcelain`, `git diff --stat` and the main diffs, the list of new files, the judgment summary (`verify.md` `Run:`, SHOULD-FIX·NITPICK in `review.md`), the proposed commit message (first line says what changed; the body lists completion criterion numbers `criteria: 1, 2, 3`), cost (reference), and the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
 2. Commit only the files this task changed (changes since the `base` line, excluding `<task_dir>/`; if `<task_dir>/.gitignore` is `# my-agent: commit`, include the task folder too).
 3. Record before and after the popup.
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G3 q="Commit approval: <task-id>" rec="Commit" --data-dir "<data folder>" --task-dir "<task_dir>"`

@@ -31,9 +31,9 @@ TABLE = {   # name: (model, effort, tools, maxTurns)
 }
 FIRST_LINES = {
     'architect': ['DONE', 'PARTIAL'],
-    'plan-reviewer': ['READY FOR APPROVAL', 'REVISE', 'BLOCKER', 'SHOULD-FIX', 'NIT'],
+    'plan-reviewer': ['READY FOR APPROVAL', 'REVISE', 'BLOCKER', 'SHOULD-FIX', 'NITPICK'],
     'verifier': ['Verdict: ALL PASS', 'Verdict: FAIL', 'Run: ', '- <n>. PASS|FAIL'],
-    'reviewer': ['BLOCKER <', 'SHOULD-FIX', 'NIT'],
+    'reviewer': ['BLOCKER <', 'SHOULD-FIX', 'NITPICK'],
     'gate-analyst': ['DONE', 'PARTIAL'],
     'explorer': ['DONE', 'PARTIAL'],
     'researcher': ['DONE', 'PARTIAL', 'claim · source URL · quote'],

@@ -7,6 +7,9 @@ ask     PermissionRequest: `ask: gate=G2 agent= id= tool= q=` just before Claude
 answer  PostToolUse: `answer: gate=G2 id= result=allowed`, only when this call is the newest
         unanswered G2 ask (same tool and q). A denial has no event and is not recorded.
 
+The ask's agent and id come from the input's `agent_type`/`agent_id` (present for a subagent request); without
+`agent_id` the line is `agent=main id=-`. The hook never guesses a running subagent.
+
 Both lines carry `session=<session_id>` when the input has it. Writes nothing when no `.active` is found, or
 when the input's `session_id` differs from `.active` `session:` (another session of the same repo, ma_active.owns).
 Always exits 0 with no output.
@@ -33,17 +36,6 @@ def summary(tool, ti) -> str:
         text = json.dumps(ti, ensure_ascii=False, separators=(',', ':'))
     text = ' '.join(text.splitlines())
     return text if len(text) <= Q_MAX else text[:Q_MAX - 1] + '…'
-
-
-def running_agent(lines):
-    """(agent, id) of the one subagent started and not stopped, else None."""
-    started = {}
-    for kind, f in lines:
-        if kind == 'start' and f.get('id'):
-            started[f['id']] = f.get('agent')
-        elif kind == 'stop':
-            started.pop(f.get('id'), None)
-    return next(iter(started.items()))[::-1] if len(started) == 1 else None
 
 
 def open_asks(lines):
@@ -74,10 +66,8 @@ def do_ask(inp, active):
     tool = inp.get('tool_name') or '-'
     if tool in NOT_G2:
         return
-    agent, agent_id = inp.get('agent_type'), inp.get('agent_id')
-    if not agent_id:
-        guess = running_agent(ma_logline.read(active.log))
-        agent, agent_id = guess if guess else ('main', None)
+    agent_id = inp.get('agent_id')
+    agent = inp.get('agent_type') if agent_id else None   # no agent_id: a main-session call
     ma_logline.append(active.log, ma_logline.format_line('ask', [
         ('gate', 'G2'), ('agent', agent or 'main'), ('id', agent_id), ('tool', tool),
         ('q', summary(tool, inp.get('tool_input')))] + session_field(inp)))

@@ -44,3 +44,16 @@ class ReadLinesTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class GuardLineTest(unittest.TestCase):
+    def test_mixed_run_log_parses(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'run-log.md'
+            p.write_text('2026-11-01 10:00:00 step: n=5 name=Execute rev=0 session=s\n'
+                         '2026-11-01 10:05:12 guard: hook=scope-guard agent=my-agent:coder id=a1 tool=Bash '
+                         'decision=deny why="scope-guard: x y"\n'
+                         '2026-11-01 10:06:00 ask: gate=G2 tool=Bash q=x\n', encoding='utf-8')
+            lines = read_lines(p)
+            self.assertEqual([l.kind for l in lines], ['step', 'guard', 'ask'])
+            self.assertEqual(lines[1].f['why'], 'scope-guard: x y')

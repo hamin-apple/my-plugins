@@ -7,15 +7,21 @@ the input) passes; no task found passes (a `.active` without `task:` warns, befo
 whose `session:` differs from the input `session_id` (both set) passes. Only then the verdict below.
 
 While a task is active and its `plan.md` has no `Approved` line under `## Approval`, deny delegation and ask (the G2
-dialog) for writes, whatever the phase: a write outside the task folder, or a Bash command whose write target cannot be
-told, is the person's call, allowed only for their own request. Allowed before approval: my-agent:explorer / architect / plan-reviewer (and writer once
-`Prototype: requested` is under plan.md's `## Prototype`), and writes under `<location>/<task_dir>/` or to the data folder's
-`active-index.json` / `projects.txt` (and `mkdir -p` of the data folder itself, Intake step 7). A `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with a
-warning. A data-folder write other than those two files is asked like any other outside write. Any error → exit 2, so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
+dialog) for writes, whatever the phase: a write outside the active task folder (a sibling task's folder too), or a
+Bash command whose write target cannot be told, is the person's call, allowed only for their own request. Allowed
+before approval: my-agent:explorer / architect / plan-reviewer (and writer once `Prototype: requested` is under
+plan.md's `## Prototype`), and writes under the active task folder (`<location>/<task_dir>/<task>/`), to the records
+folder's `.active`, or to the data folder's `active-index.json` / `projects.txt` (and `mkdir -p` of the data folder
+itself, Intake step 7). A `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with
+a warning. A data-folder write other than those two files is asked like any other outside write. Any error → exit 2,
+so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
 
 After approval, a write outside the location, the data folder and the result path that plan.md / scope.md
 declare (`- Deliverable location: `…`` or `- Save path: `…``) gets `ask`: auto mode lets such a write through without a
-prompt (probe 2026-10-25); the same holds for the ask before approval. A Bash write whose target cannot be told passes, as before (git commit asks via G2).
+prompt (probe 2026-10-25); the same holds for the ask before approval. A Bash write whose target cannot be told
+passes, as before (git commit asks via G2). A deny appends one `guard:` line (hook=plan-approved-check agent=main
+id=-, ma_schema.GUARD_FIELDS) to the task's run-log; an ask writes none, and a failed write never changes the
+decision.
 The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
 """
 import json
@@ -28,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
 import ma_gate_report  # noqa: E402
+import ma_logline  # noqa: E402
 import ma_plan  # noqa: E402
 import ma_schema  # noqa: E402
 from ma_path import same, under  # noqa: E402
@@ -42,7 +49,8 @@ RESULT_LINE = re.compile(r'(?m)^\s*-\s*(?:Deliverable location|Save path)\s*:\s*
 
 
 def allowed_write(p: Path, active, tasks_dir: Path) -> bool:
-    return (under(p, active.task_dir.parent)   # the records folder, resolved by the reader
+    return (under(p, active.task_dir)   # the active task folder only, not a sibling task's
+            or same(p, active.task_dir.parent / '.active')   # L1 writes `phase:` there (define.md step 5)
             or any(same(p, tasks_dir / n) for n in ('', 'active-index.json', 'projects.txt')))  # '' = mkdir -p
 
 
@@ -133,6 +141,8 @@ def main() -> int:
         why, decision = decide(inp, active, tasks_dir)
         if not why and ma_plan.approved(active.task_dir / 'plan.md'):
             why, decision = outside_ask(inp, active, tasks_dir), 'ask'
+        if why and decision == 'deny':   # an ask writes no line; this hook only sees the main session
+            ma_logline.log_guard(active, 'plan-approved-check', 'main', '-', inp.get('tool_name') or '-', 'deny', why)
         if why:
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
                                                      'permissionDecisionReason': why}}, ensure_ascii=False))

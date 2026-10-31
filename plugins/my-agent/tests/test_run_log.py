@@ -201,6 +201,16 @@ class RunLogTest(unittest.TestCase):
         r = self.run_log('step', 'n=7', 'name=Verify')
         self.assertNotIn('MISMATCH', r.stdout)
 
+    def test_guard_line_does_not_hide_subagent_mismatch(self):
+        (self.task / 'run-log.md').write_text(
+            '2026-10-25 09:00:00 step: n=5 name=Execute rev=0 session=s\n'
+            '2026-10-25 09:00:01 start: agent=my-agent:coder id=a1 configured=sonnet effort=medium\n'
+            '2026-10-25 09:00:09 stop: id=a1 actual=claude-opus-5-5 tokens=10 in=1 out=1 cw=1 cr=7 secs=8 '
+            'result=DONE end=ok mismatch=1\n'
+            '2026-10-25 09:00:10 guard: hook=scope-guard agent=my-agent:coder id=a2 tool=Bash decision=deny why=x\n')
+        r = self.run_log('step', 'n=6', 'name=Merge')
+        self.assertIn('MISMATCH: my-agent:coder configured sonnet, actual claude-opus-5-5', r.stdout)
+
     def test_data_dir_finds_run_index(self):
         """A run folder outside git is found through <data folder>/active-index.json."""
         with tempfile.TemporaryDirectory() as d:

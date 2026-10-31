@@ -33,11 +33,11 @@ BLOCKER <n>
 ## Findings
 - BLOCKER <path>:<line> <problem> → <how to fix>
 - SHOULD-FIX <path>:<line> <problem> → <how to fix>
-- NIT <path>:<line> <problem>
+- NITPICK <path>:<line> <problem>
 ```
 
 - The first line is only `BLOCKER <count>`. If there are no problems, `BLOCKER 0`.
-- BLOCKER: a problem that, if shipped as is, leaves the person unable to use it or believing something wrong. SHOULD-FIX: a problem worth fixing. NIT: something minor.
+- BLOCKER: a problem that, if shipped as is, leaves the person unable to use it or believing something wrong. SHOULD-FIX: a problem worth fixing. NITPICK: something minor.
 - Do not write an `## Applied after review` section in this file. That section is for L1, which made small fixes after the verdict and got only Review again without Verify; L1 adds what it fixed, one line each, at the end of the new `review.md` (`phases/accept.md`).
 
 ## Checks per profile

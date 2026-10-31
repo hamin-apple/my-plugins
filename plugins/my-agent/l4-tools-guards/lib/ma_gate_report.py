@@ -172,8 +172,8 @@ def tally_text(lines) -> str:
         out.append('No decisions (no ask/answer lines)')
     kinds = [(k, f) for _, k, f in lines]
     count = lambda kind, **want: sum(1 for k, f in kinds if k == kind and all(f.get(a) == b for a, b in want.items()))  # noqa: E731
-    main = sum(1 for k, f in kinds if k == 'step' and f.get('model') not in (None, '-')
-               and ma_schema.family(f.get('model')) != 'opus')
+    main = len({(f.get('session'), f.get('model')) for k, f in kinds if k == 'step' and f.get('model') not in (None, '-')
+                and ma_schema.family(f.get('model')) != 'opus'})
     sub = count('stop', mismatch='1')
     opus = sum(1 for k, f in kinds if k == 'call' and 'opus' in (f.get('model') or ''))
     scope = sum(1 for k, f in kinds if k == 'fix' and (f.get('what') or '').startswith(SCOPE_CHANGE))
@@ -185,11 +185,11 @@ def tally_text(lines) -> str:
     drafts = sum(1 for k, f in kinds if k == 'revision' and f.get('before'))
     revs = len({f.get('rev') for k, f in kinds if k == 'revision' and not f.get('before') and f.get('rev')})
     out += ['', '## Metrics', '| Item | Value |', '|---|---|',
-            f"| Verify runs | {count('step', name='Verify')} |",
+            f"| Verify runs | {count('start', agent=VERIFIER)} |",
             f'| Judge misses | {judge_misses(lines)} |',
             f"| Plan Review runs | {count('start', agent=PLAN_REVIEWER)} |",
             f"| Subagents | {count('start')} |",
-            f'| Model mismatches | {main + sub} (main session {main} · by step lines, subagents {sub}) |',
+            f'| Model mismatches | {main + sub} (main session {main} · per session and model, subagents {sub}) |',
             f'| L1 small fixes | {fixes} |',
             f'| Adjustments within the approved scope | {scope} |',
             f'| Plan rewrites before approval | {drafts} |',

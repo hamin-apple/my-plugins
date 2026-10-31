@@ -51,6 +51,15 @@ class CheckRunTest(unittest.TestCase):
         self.assertIn('info popups: 2 (general normal path: 2)', r.stdout)
         self.assertNotIn('FAIL', r.stdout)
 
+    def test_guard_lines_give_no_finding(self):
+        self.lines.insert(5, L('guard', hook='scope-guard', agent='my-agent:coder', id='a1', tool='Bash',
+                               decision='deny', why='scope-guard: Outside the read scope of coder: /etc/hosts'))
+        self.lines.append(L('guard', hook='plan-approved-check', agent='main', id='-', tool='Agent',
+                            decision='deny', why='x'))
+        r = self.check()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn('FAIL', r.stdout)
+
     def test_missing_answer_fails(self):
         self.lines = [ln for ln in self.lines if 'answer: gate=G3' not in ln]
         r = self.check()

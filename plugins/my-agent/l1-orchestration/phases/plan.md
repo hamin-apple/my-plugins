@@ -26,13 +26,13 @@
    - **L1 edit of `plan.md`** (small): archive per SKILL.md "In-flight revision" → "Rewrite before approval", edit `plan.md` with Edit, then record `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="Plan Review <severity> <path>:<line>" files=plan.md before=G1b archive=<archive folder> --data-dir "<data folder>" --task-dir "<task_dir>"`. **Architect rewrite** (larger): archive and write the `revision … before=G1b` line as in that section, then pass the `plan-review.md` path to architect.
    - `REVISE` (any BLOCKER): small → L1 edit, otherwise architect rewrite; then judge again. If the third `REVISE` comes, show that judgment in the G1b popup and leave it to the person, even while delegated approval is on (SKILL.md "Delegated approval"; the popup is unchanged).
    - `READY FOR APPROVAL`: never another Plan Review round. Apply what is chosen below, then go to G1b.
-     - NIT only: apply them without a popup (L1 edit if small, else architect) and go to G1b.
-     - Any SHOULD-FIX: show the list and ask one popup over the whole list (NITs included), recorded with `ask gate=Q … rec="Apply all"` and `answer gate=Q`: `Apply all (Recommended)` / `Approve without applying` / `Pick myself`. Apply the chosen items (L1 edit if small, else architect), then go to G1b.
+     - NITPICK only: apply them without a popup (L1 edit if small, else architect) and go to G1b.
+     - Any SHOULD-FIX: show the list and ask one popup over the whole list (NITPICKs included), recorded with `ask gate=Q … rec="Apply all"` and `answer gate=Q`: `Apply all (Recommended)` / `Approve without applying` / `Pick myself`. Apply the chosen items (L1 edit if small, else architect), then go to G1b.
    - Each applied or declined item is one line in `## Decisions` of `plan-review.md`: `- <severity> <path>:<line> <summary> → applied by L1 | applied by architect | declined`.
 
 ## G1b plan approval
 
-1. **Paste into the chat:** the full `## Mock-up` (no summary), the flow diagram if any, a summary of the work units, `## Estimate`, the task ID. In the general profile, also `## Scope summary` and `## Completion criteria`. Mark parts that change because of the judgment, and list the findings applied after Plan Review ("Applied after Plan Review: 2 NIT (plan.md:41, plan.md:77)"). If a work unit has a `- Plugin reload: needed (<what>)` line, tell the person that `/reload-plugins` (or a new session) is needed after that unit.
+1. **Paste into the chat:** the full `## Mock-up` (no summary), the flow diagram if any, a summary of the work units, `## Estimate`, the task ID. In the general profile, also `## Scope summary` and `## Completion criteria`. Mark parts that change because of the judgment, and list the findings applied after Plan Review ("Applied after Plan Review: 2 NITPICK (plan.md:41, plan.md:77)"). If a work unit has a `- Plugin reload: needed (<what>)` line, tell the person that `/reload-plugins` (or a new session) is needed after that unit.
 2. If `## Prototype` is "needed", popup: `Make a prototype (Recommended)` / `Mock-up is enough` / `Plan change`.
    - `Plan change` is the same as item 5, Request changes.
    - To make one, add a `Prototype: requested` line inside the `plan.md` `## Prototype` section with Edit and hand `<task_dir>/<task-id>/prototype/index.html` to `my-agent:writer` (per `artifact-design`).

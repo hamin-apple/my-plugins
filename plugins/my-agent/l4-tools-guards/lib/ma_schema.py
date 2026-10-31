@@ -39,6 +39,11 @@ def plan_review_skipped(first_line) -> bool:
     return isinstance(first_line, str) and (first_line == PLAN_SKIPPED or first_line.startswith(PLAN_SKIPPED + ' '))
 
 
+# --- run-log kinds written by the L4 hooks ---
+
+GUARD = 'guard'                                        # run-log kind of a guard deny (scope-guard, plan-approved-check)
+GUARD_FIELDS = ('hook', 'agent', 'id', 'tool', 'decision', 'why')   # guard: field order; why = the reason as printed
+
 # --- status values ---
 
 INTAKE_STATUS = ('active', 'done', 'aborted')          # intake.md `Status:` (first word)

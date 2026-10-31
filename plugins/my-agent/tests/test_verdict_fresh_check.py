@@ -256,6 +256,27 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.assertIn('cannot parse the command', why)
         self.assertNotIn('verify.md', why)
 
+    def test_unparsed_commit_with_hidden_copy(self):
+        self.file(self.L / 'src/a.py', 'x', 0)
+        self.file(self.T / 'work/x', 'w', 5)
+        self.file(self.T / 'deliverable/d', 'd', 5)
+        for cmd in (f'git commit -m "$(date)" && cp {self.T}/work/x out/',
+                    f'git commit -m "$(date)" && cp {self.T}/deliverable/d out/',
+                    f'git commit -m "$(date)" && mv {self.T}/work/x out/',
+                    f'git commit -m "$(date)" && rsync -a {self.T}/work/x out/'):
+            r = self.bash(cmd)
+            self.assertDenied(r)
+            src = 'deliverable/d' if 'deliverable/d' in cmd else 'work/x'
+            self.assertIn(src, json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason'])
+        self.assertDenied(self.bash(f'cd {self.T} && git commit -m "$(date)" && cp work/x out/'))
+        self.assertAsked(self.bash('git commit -m "$(date)"'),
+                         'my-agent verdict gate: cannot parse the command; allow it only if it is your own commit, not the task\'s')
+        self.assertPassed(self.bash(f'cat $(ls); cp {self.T}/work/x /tmp/'))
+        self.assertPassed(self.bash(f'git commit -m "$(date)" && cp {self.T}/work/x out/', session_id='s-other'))
+        self.assertPassed(self.bash(f'git commit -m "$(date)" && cp {self.T}/work/x out/', agent_id='ag1'))
+        self.verdicts(verify_at=30, review_at=30)
+        self.assertPassed(self.bash(f'git commit -m "$(date)" && cp {self.T}/work/x out/'))
+
     def test_commit_inside_shell_keywords_checked(self):
         self.file(self.L / 'src/a.py', 'x', 0)
         self.assertAsked(self.bash('if true; then git commit -m m; fi'))

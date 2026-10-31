@@ -45,7 +45,7 @@ class EventsTest(unittest.TestCase):
         """Delegation, L1 fixes and back-to-Execute belong to the orchestrator (monitor design 4 "2 Architecture")."""
         e = synth('2026-10-24 15:42:00 step: n=3 name=Plan rev=0 session=s',
                   '2026-10-24 15:42:05 call: agent=my-agent:architect model=- effort=- isolation=- background=false',
-                  '2026-10-24 15:49:00 fix: what="Plan Review NIT plan.md:12" files=plan.md before=G1b archive=x/archive/a-rev0-draft',
+                  '2026-10-24 15:49:00 fix: what="Plan Review NITPICK plan.md:12" files=plan.md before=G1b archive=x/archive/a-rev0-draft',
                   '2026-10-24 15:56:00 step: n=5 name=Execute rev=0 session=s',
                   '2026-10-24 15:56:05 call: agent=my-agent:coder model=- effort=- isolation=worktree background=true unit=u1',
                   '2026-10-24 16:20:00 fix: what="Scope change: skip the --json flag" files=scope.md',
@@ -55,7 +55,7 @@ class EventsTest(unittest.TestCase):
         self.assertEqual(orch, [
             ('phase', '② Plan start', None),
             ('delegate', 'delegate → my-agent:architect', None),
-            ('phase', 'plan edit by L1 · Plan Review NIT plan.md:12', None),
+            ('phase', 'plan edit by L1 · Plan Review NITPICK plan.md:12', None),
             ('phase', '③ Build start', None),
             ('delegate', 'delegate → my-agent:coder · u1', None),
             ('phase', 'Scope change: skip the --json flag', None),
@@ -83,6 +83,12 @@ class EventsTest(unittest.TestCase):
             ('scripts', 'stale · a81c rev1', None),
             ('hooks', 'log-error · subagent-log', 'OSError: disk full')])
         self.assertEqual({x['k'] for x in e.log if x['a'] in ('scripts', 'hooks')}, {'note'})
+
+    def test_guard_line_is_a_hooks_note(self):
+        e = synth('2026-11-01 10:05:12 guard: hook=scope-guard agent=my-agent:coder id=a1 tool=Bash decision=deny '
+                  'why="scope-guard: Outside the read scope of coder: /etc/hosts"')
+        self.assertEqual([(x['k'], x['a'], x['tx'], x.get('sub')) for x in e.log], [
+            ('note', 'hooks', 'scope-guard deny · Bash', 'scope-guard: Outside the read scope of coder: /etc/hosts')])
 
     def test_mismatch(self):
         w, = agents(ev('obsidian-notes', '261023-hooks-notify-note'), 'writer')
@@ -210,11 +216,11 @@ class EventsTest(unittest.TestCase):
     def test_profile_and_plan_edit_items(self):
         e = synth('2026-10-29 03:12:40 profile: from=dev to=general back=2 archive=archive/a',
                   '2026-10-29 03:13:00 profile: from=research to=dev back=- archive=-',
-                  '2026-10-29 03:14:00 fix: what="Plan Review NIT plan.md:41" files=plan.md before=G1b archive=archive/b',
+                  '2026-10-29 03:14:00 fix: what="Plan Review NITPICK plan.md:41" files=plan.md before=G1b archive=archive/b',
                   '2026-10-29 03:15:00 fix: what=plain')
         self.assertEqual([(x['a'], x['tx']) for x in e.log],
                          [('recorder', 'profile dev → general · back to ② Plan'), ('recorder', 'profile research → dev'),
-                          ('orchestrator', 'plan edit by L1 · Plan Review NIT plan.md:41'), ('orchestrator', 'fix · plain')])
+                          ('orchestrator', 'plan edit by L1 · Plan Review NITPICK plan.md:41'), ('orchestrator', 'fix · plain')])
 
     def test_cost_usd(self):
         self.assertEqual(ev('claude-sessions', '261024-cli-json-output').cost_usd, '2.41')

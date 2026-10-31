@@ -63,6 +63,16 @@ class SchemaTest(unittest.TestCase):
         e = build_events([parse_line(l) for l in lines])
         self.assertEqual((e.vfail, e.vfail_max), (3, 3))
 
+    def test_guard_kind(self):
+        self.assertEqual(ma_schema.GUARD, 'guard')
+        self.assertEqual(ma_schema.GUARD_FIELDS, ('hook', 'agent', 'id', 'tool', 'decision', 'why'))
+        self.assertTrue(ma_logline.is_hook_line('guard', {}))
+        line = ma_logline.guard_line('scope-guard', 'my-agent:coder', 'a1', 'Bash', 'deny', 'scope-guard: Outside "x"')
+        kind, fields = ma_logline.parse_line(line)
+        self.assertEqual(kind, 'guard')
+        self.assertEqual(list(fields), list(ma_schema.GUARD_FIELDS))
+        self.assertEqual(fields['why'], 'scope-guard: Outside "x"')
+
     def test_one_line_parser(self):
         line = ma_logline.format_line('ask', [('gate', 'G3'), ('q', 'a "b" c'), ('rec', 'Accept')])
         self.assertEqual(ma_logline.parse_line(line), (parse_line(line).kind, parse_line(line).f))

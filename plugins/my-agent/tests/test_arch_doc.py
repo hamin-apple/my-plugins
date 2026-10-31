@@ -4,6 +4,7 @@ import re
 import unittest
 
 from helpers import REPO
+import ma_schema
 from test_skill_md import SKILL, frontmatter
 
 ARCH = REPO / 'docs' / 'build-guide' / 'my-agent-architecture.md'
@@ -64,9 +65,22 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v040(self):
+    def test_status_line_starts_with_v041(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.40 ('), line[:60])
+        self.assertTrue(line.startswith('- Status: design draft v0.41 ('), line[:60])
+        self.assertIn('v0.40 (', line)
+
+    def test_run_log_kinds_name_the_guard_line(self):
+        section = self.section('### 4.7.2 ', '### 4.7.3 ')
+        self.assertIn('`guard:`', section)
+        for field in ma_schema.GUARD_FIELDS:
+            self.assertIn(f'`{field}=`', section, field)
+
+    def test_g1b_section_says_a_sibling_task_folder_write_is_asked(self):
+        a = self.text.index('**G1b hard gate**')
+        sec = self.text[a:self.text.index('- **Block when the hook fails:**', a)]
+        self.assertIn('sibling task folder', sec)
+        self.assertRegex(sec, r'(?s)sibling task folder.{0,200}asked')
 
     def test_cost_only_texts(self):
         lines = self.text.splitlines()

@@ -33,14 +33,14 @@ Run: <n>
 ## Findings
 - BLOCKER <path>:<line> <problem> → <how to fix>
 - SHOULD-FIX <path>:<line> <problem> → <how to fix>
-- NIT <path>:<line> <problem>
+- NITPICK <path>:<line> <problem>
 
 ## Decisions
 ```
 
 - The first line is the verdict word only. If there is even one BLOCKER, `REVISE`; otherwise `READY FOR APPROVAL`.
 - `Run:` is the previous `plan-review.md` value + 1 if one exists, otherwise 1.
-- Leave `## Decisions` empty. L1 fills it, one line per applied or declined finding (a NIT is applied without asking; a SHOULD-FIX follows the person's popup answer).
+- Leave `## Decisions` empty. L1 fills it, one line per applied or declined finding (a NITPICK is applied without asking; a SHOULD-FIX follows the person's popup answer).
 
 ## Common checks (all profiles)
 

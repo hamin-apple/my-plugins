@@ -248,7 +248,7 @@ footer .disc { border-top: 0; }
       <h1>my-agent 한눈에 보기</h1>
       <span class="ver mono">v0.4.5</span>
     </div>
-    <p class="lede">사람이 개입하는(HITL) 멀티 에이전트 오케스트레이션 스킬, Claude Code 플러그인 · 버전 0.4.5 (<code>plugins/my-agent/.claude-plugin/plugin.json:3</code>)</p>
+    <p class="lede">사람이 개입하는(HITL) 멀티 에이전트 오케스트레이션 스킬, Claude Code 플러그인 · 버전 0.4.5 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)</p>
     <nav class="lede" aria-label="페이지 링크"><a href="index.html" hreflang="en" lang="en">English</a> · <a href="architecture.html">아키텍처</a></nav>
   </header>
 
@@ -404,13 +404,13 @@ footer .disc { border-top: 0; }
   var ov = [
     ['무엇을 하나.',
      `<p>my-agent는 Claude Code에서 쓰는 멀티 에이전트 작업 플러그인입니다. 여러 단계가 필요한 요청, 곧 기능 구현·버그 수정·여러 파일에 걸친 리팩터링, 주제를 조사해 노트로 만드는 일, 여러 부분으로 된 문서 만들기에 쓰도록 만들어져 있습니다. 한 줄짜리 수정, 오타 고치기, 간단한 사실 질문, 코드가 어떻게 동작하는지 묻는 질문에는 쓰지 않도록 되어 있습니다.</p>` +
-     src('plugins/my-agent/SKILL.md:3')],
+     src('plugins/my-agent/SKILL.md')],
     ['누구를 위한 것인가.',
      `<p>작업 중 정해진 지점마다 사람이 직접 승인하거나 답하기를 원하는 사용자를 위한 것입니다. 사람에게 묻는 일은 모두 <code>AskUserQuestion</code> 팝업으로 하고, 글로 된 질문은 하지 않습니다. 플러그인 설명도 이를 사람이 개입하는(HITL) 멀티 에이전트 오케스트레이션 스킬이라고 밝힙니다.</p>` +
-     src('plugins/my-agent/SKILL.md:17, plugins/my-agent/.claude-plugin/plugin.json:4')],
+     src('plugins/my-agent/SKILL.md, plugins/my-agent/.claude-plugin/plugin.json')],
     ['작업 종류에 맞는 3가지 프로필.',
      `<p>같은 단계 뼈대를 쓰되 일의 종류에 따라 규칙이 달라집니다. <code>dev</code>는 git 저장소의 코드를 바꾸는 일이고 결과물은 커밋입니다. <code>research</code>는 웹 조사를 출처가 달린 노트나 보고서로 만드는 일입니다. <code>general</code>은 그 밖의 여러 단계 작업입니다.</p>` +
-     src('plugins/my-agent/SKILL.md:113, plugins/my-agent/SKILL.md:114, plugins/my-agent/SKILL.md:115')],
+     src('plugins/my-agent/SKILL.md')],
     ['4개 레벨과 메인 세션의 역할.',
      `<p>일을 4개 레벨로 나눕니다.</p>` +
      `<div class="mini-box"><table class="mini"><thead><tr><th>레벨</th><th>누가</th><th>하는 일</th><th>하지 않는 일</th></tr></thead><tbody>` +
@@ -419,12 +419,12 @@ footer .disc { border-top: 0; }
      `<tr><td><span class="chip lv3">L3</span></td><td>explorer · researcher · writer · coder</td><td>맡은 작업 단위 하나를 합니다</td><td>범위 밖 파일을 건드리거나 더 아래로 위임하지 않습니다</td></tr>` +
      `<tr><td><span class="chip lv4">L4</span></td><td>도구·MCP · hook · 권한 규칙 · 스크립트</td><td>실행하고, 기록하고, 막습니다</td><td>판단하지 않습니다</td></tr>` +
      `</tbody></table></div>` +
-     src('plugins/my-agent/SKILL.md:48, plugins/my-agent/SKILL.md:49, plugins/my-agent/SKILL.md:50, plugins/my-agent/SKILL.md:51') +
+     src('plugins/my-agent/SKILL.md') +
      `<p>메인 세션(L1)은 네 가지 일을 맡습니다. 요청을 분류하는 라우터(Router), 단계를 이끌고 위임하는 오케스트레이터(Orchestrator), 모든 질문과 게이트를 지키는 게이트키퍼(Gatekeeper), 기록하는 레코더(Recorder)입니다. 하위 에이전트(서브에이전트)는 사람에게 묻지 못하고 결과 파일과 보고만 돌려줍니다.</p>` +
-     src('plugins/my-agent/SKILL.md:10, plugins/my-agent/SKILL.md:21')],
+     src('plugins/my-agent/SKILL.md')],
     ['왜 4개씩 나눴나.',
      `<p>설계 문서에 따르면, 사람이 이 시스템의 유지보수에 직접 참여하므로 한 번에 기억하는 단위가 4개 안팎이라는 Cowan의 이론을 구조 전체에 적용했습니다. 레벨 4개, 레벨별 구성 요소 4개, 진행 단계(phase) 4개, 게이트 4종(G1a·G1b를 G1 하나로 세어 G1·G2·G3·E; 3.2에서는 다섯 종류로 나눠 적음), 팝업 선택지 최대 4개입니다. 문서는 이 이론이 사람의 기억에 관한 것이지 에이전트 성능의 근거는 아니라고 밝혀 둡니다.</p>` +
-     src('plugins/my-agent/docs/build-guide/my-agent-architecture.md:16, plugins/my-agent/docs/build-guide/my-agent-architecture.md:20, plugins/my-agent/docs/build-guide/my-agent-architecture.md:138, plugins/my-agent/docs/build-guide/my-agent-architecture.md:139, plugins/my-agent/docs/build-guide/my-agent-architecture.md:140')]
+     src('plugins/my-agent/docs/build-guide/my-agent-architecture.md')]
   ];
   ov.forEach(function (o) {
     var c = el('div', 'card');
@@ -436,43 +436,43 @@ footer .disc { border-top: 0; }
 
   /* ---------- 2. flow ---------- */
   document.getElementById('flow-note').appendChild(disc('자세히: 예시 요청',
-    `<p>예시 요청은 "여러 부분으로 된 문서를 만들어 줘"입니다(이런 요청이 my-agent의 대상이라는 근거는 <code>plugins/my-agent/SKILL.md:3</code>). general 프로필의 정상 경로에서 사람은 두 번, G1b와 G3에서만 답합니다.</p>` +
-    src('plugins/my-agent/l1-orchestration/profiles/general.md:3')));
+    `<p>예시 요청은 "여러 부분으로 된 문서를 만들어 줘"입니다(이런 요청이 my-agent의 대상이라는 근거는 <code>plugins/my-agent/SKILL.md</code>). general 프로필의 정상 경로에서 사람은 두 번, G1b와 G3에서만 답합니다.</p>` +
+    src('plugins/my-agent/l1-orchestration/profiles/general.md')));
 
   var steps = [
     { n: '요청', title: '요청', gate: false,
       text: `사람이 요청을 보냅니다. 메인 세션(L1)이 요청을 보고 프로필을 고릅니다. 사용자가 프로필을 직접 지정했으면 그대로 따릅니다. 문서 작업은 general에 해당합니다. 이어서 작업 폴더를 만들고 작업 ID를 정합니다.`,
-      src: 'plugins/my-agent/SKILL.md:112, plugins/my-agent/SKILL.md:115, plugins/my-agent/SKILL.md:116' },
+      src: 'plugins/my-agent/SKILL.md' },
     { n: '①', title: '① 정의', gate: false,
       text: `요청이 기존 파일이나 프로젝트와 관련 있으면 explorer가 관련 파일과 현재 동작을 살펴 보고하고, 요청만으로 충분하면 위임하지 않습니다. 이어서 L1이 목적·완료 기준·하지 않을 일·결과물 위치를 팝업으로 묻습니다. 요청이 이미 답한 항목은 묻지 않습니다. general에서는 범위 확인(G1a)을 따로 묻지 않고, 정리한 범위 요약을 계획 첫머리에 넣어 G1b에서 함께 승인받습니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/define.md:8, plugins/my-agent/l1-orchestration/phases/define.md:11, plugins/my-agent/l1-orchestration/phases/define.md:16, plugins/my-agent/l1-orchestration/phases/define.md:18, plugins/my-agent/l1-orchestration/profiles/general.md:9' },
+      src: 'plugins/my-agent/l1-orchestration/phases/define.md, plugins/my-agent/l1-orchestration/profiles/general.md' },
     { n: '②', title: '② 계획', gate: false,
       text: `architect가 작업 단위로 나눈 <code>plan.md</code>를 씁니다. 작업 단위마다 담당 에이전트·병렬 그룹·상태가 들어가고, 결과물의 견본인 목업(mock-up)은 반드시 포함됩니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/plan.md:6, plugins/my-agent/l1-orchestration/phases/plan.md:10, plugins/my-agent/l1-orchestration/phases/plan.md:12' },
+      src: 'plugins/my-agent/l1-orchestration/phases/plan.md' },
     { n: '②', title: '② 계획 검토', gate: false,
       text: `plan-reviewer가 계획을 따로 검토합니다. L1은 작성자인 architect의 설명을 넘기지 않습니다. 작업 단위가 바꾸는 파일이 모두 합쳐 3개 미만이면 이 검토를 건너뛸 수 있습니다. 지적 사항은 작으면 L1이 고치고, 크면 architect가 다시 씁니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/plan.md:24, plugins/my-agent/l1-orchestration/profiles/general.md:11, plugins/my-agent/l1-orchestration/phases/plan.md:26' },
+      src: 'plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/profiles/general.md' },
     { n: 'G1b', title: 'G1b 계획 승인', gate: true,
       text: `L1이 목업 전체를 채팅에 붙여 보여 준 뒤, 사람이 팝업(승인 / 변경 요청 / 중단)에서 답합니다. 화면처럼 눈으로 봐야 판단되는 결과물이면 writer가 만든 프로토타입을 먼저 볼 수도 있습니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/plan.md:35, plugins/my-agent/l1-orchestration/phases/plan.md:36, plugins/my-agent/l1-orchestration/phases/plan.md:42, plugins/my-agent/l1-orchestration/phases/plan.md:38, plugins/my-agent/l2-design-judge/agents/architect.md:41' },
+      src: 'plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l2-design-judge/agents/architect.md' },
     { n: '③', title: '③ 실행', gate: false,
       text: `승인 뒤 L1이 승인된 작업 단위를 병렬 그룹 순서대로 하위 에이전트(researcher·writer 등)에 맡깁니다. 일하는 에이전트에게는 계획 경로·작업 단위·읽을 파일·결과 경로만 줍니다. 위험한 행동이 나오면 Claude Code의 권한 대화상자(G2)가 뜹니다. general에서는 하위 에이전트만 쓰고 워크플로는 쓰지 않습니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/build.md:11, plugins/my-agent/l1-orchestration/phases/build.md:14, plugins/my-agent/l1-orchestration/phases/build.md:20, plugins/my-agent/l1-orchestration/profiles/general.md:13' },
+      src: 'plugins/my-agent/l1-orchestration/phases/build.md, plugins/my-agent/l1-orchestration/profiles/general.md' },
     { n: '③', title: '③ 병합', gate: false,
       text: `결과물이 문서이고 작업 단위가 둘 이상이면 계획의 마지막 단위인 writer가 앞선 결과를 하나로 합칩니다. L1은 합치지 않고 확인만 합니다(작업 단위마다 결과 파일이 있는지, 완료 기준마다 대응하는 부분이 있는지).`,
-      src: 'plugins/my-agent/l1-orchestration/profiles/general.md:14' },
+      src: 'plugins/my-agent/l1-orchestration/profiles/general.md' },
     { n: '④', title: '④ 검증', gate: false,
       text: `verifier가 완료 기준마다 PASS/FAIL을 판정합니다. 작업자의 설명은 받지 않습니다. 하나라도 FAIL이면 실행으로 되돌립니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:8, plugins/my-agent/l1-orchestration/phases/accept.md:9, plugins/my-agent/l1-orchestration/phases/accept.md:10' },
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md' },
     { n: '④', title: '④ 리뷰', gate: false,
       text: `reviewer가 결과물의 품질을 판정합니다. 이 두 판정은 어느 프로필에서도 건너뛰지 않습니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:3, plugins/my-agent/l1-orchestration/phases/accept.md:23' },
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md' },
     { n: 'G3', title: 'G3 최종 인수', gate: true,
       text: `L1이 결과 요약·실패 목록·결과물·저장될 정확한 경로를 보여 주고, 사람이 팝업(수락 / 재작업 / 중단)에서 답합니다. 이 팝업은 위임 승인이 켜져 있어도 항상 사람에게 옵니다. 수락하면 작업자는 작업 폴더 밖에 쓰지 못하므로 L1이 최종본을 저장 위치로 복사합니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:25, plugins/my-agent/l1-orchestration/phases/accept.md:29, plugins/my-agent/l1-orchestration/phases/accept.md:31, plugins/my-agent/l1-orchestration/phases/accept.md:35' },
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md' },
     { n: '회고', title: '회고', gate: false,
       text: `수락 뒤 gate-analyst가 게이트 결정 집계를 읽고 경향과 개선 제안을 보고서로 씁니다.`,
-      src: 'plugins/my-agent/l1-orchestration/phases/accept.md:76' }
+      src: 'plugins/my-agent/l1-orchestration/phases/accept.md' }
   ];
   var cur = 0;
   var track = document.getElementById('track');
@@ -515,48 +515,48 @@ footer .disc { border-top: 0; }
        ['L1은 메인 세션이고 L2에는 5개, L3에는 4개 에이전트가 있습니다. 설계 문서는 구성 요소를 레벨당 4개로 맞추되, gate-analyst는 회고에서만 부르는 보조라 L2의 5번째로 따로 센다고 설명합니다.',
         '플러그인은 에이전트 9개를 <code>plugin.json</code>에 등록해 불러 씁니다.',
         'L4(도구·MCP, hook, 권한 규칙, 스크립트)는 판단하지 않습니다. 모니터와 Claude Code 권한 대화상자(G2)는 레벨 밖에 있습니다.'],
-       'plugins/my-agent/SKILL.md:46, plugins/my-agent/SKILL.md:51, plugins/my-agent/SKILL.md:53, plugins/my-agent/.claude-plugin/plugin.json:11, plugins/my-agent/docs/build-guide/my-agent-architecture.md:204'],
+       'plugins/my-agent/SKILL.md, plugins/my-agent/.claude-plugin/plugin.json, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
       ['메인 세션이 L2·L3에 직접 위임합니다.',
        'L2가 L3를 관리하지 않고, L1이 각각에 직접 일을 줍니다.',
        ['L1은 L2와 L3에 직접 일을 넘기며, 넘기는 것은 경로와 기준뿐입니다.',
         '설계 문서가 드는 이유 두 가지: 사람에게 묻는 일은 L1만 할 수 있어서 계획이 L1을 거쳐 승인받아야 하고, 판정자(L2)가 작업자(L3)를 관리하면 작성자와 판정자를 나누는 의미가 사라집니다.',
         '이 점이 Gemini의 4단계 모델과 다릅니다. 그쪽은 L1 → L2 → L3로 이어지는 사슬입니다.'],
-       'plugins/my-agent/SKILL.md:54, plugins/my-agent/docs/build-guide/my-agent-architecture.md:211, plugins/my-agent/docs/build-guide/my-agent-architecture.md:212, plugins/my-agent/docs/build-guide/my-agent-architecture.md:213, plugins/my-agent/docs/build-guide/my-agent-architecture.md:214'],
+       'plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
       ['L1은 결과물을 직접 만들지 않습니다.',
        '메인 세션은 진행·위임·기록만 하고 만드는 일은 하위 에이전트에 맡깁니다.',
        ['예외는 판정이 짚은 작은 수정(파일 2개 이하, 약 10줄)과 G1b 전 <code>plan.md</code>의 작은 수정뿐입니다.',
         '문서 결과물을 합치는 일도 L1이 아니라 마지막 writer 작업 단위가 하고, L1은 확인만 합니다.'],
-       'plugins/my-agent/SKILL.md:48, plugins/my-agent/l1-orchestration/profiles/general.md:14'],
+       'plugins/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/profiles/general.md'],
       ['사람에게 묻는 창구는 메인 세션 하나입니다.',
        '하위 에이전트는 묻지 않고 결과 파일과 보고만 돌려줍니다.',
        ['모든 질문은 <code>AskUserQuestion</code> 팝업으로 하며, 선택지는 2~4개이고 추천 항목을 맨 앞에 <code>(Recommended)</code>와 함께 둡니다.',
         '사람이 팝업 대신 글로 되물으면 답한 뒤 같은 결정을 다시 팝업으로 묻습니다.',
         '하위 에이전트 정의 파일들은 "사람에게 묻지 않는다"고 적고, 풀지 못한 것은 <code>To confirm:</code>으로 남기거나 <code>PARTIAL</code>로 보고하게 합니다.'],
-       'plugins/my-agent/SKILL.md:17, plugins/my-agent/SKILL.md:18, plugins/my-agent/SKILL.md:21, plugins/my-agent/l3-workers/agents/coder.md:18, plugins/my-agent/l3-workers/agents/writer.md:18'],
+       'plugins/my-agent/SKILL.md, plugins/my-agent/l3-workers/agents/coder.md, plugins/my-agent/l3-workers/agents/writer.md'],
       ['에이전트 9개의 역할이 정의 파일에 나뉘어 있습니다.',
        '에이전트마다 하는 일 하나와 쓸 수 있는 도구가 고정됩니다.',
        ['L2 architect(opus)는 범위 문서와 탐색 결과로 <code>plan.md</code>를 쓰고 결과물은 만들지 않습니다. plan-reviewer(sonnet)는 <code>plan.md</code>가 범위를 충분히 덮고 실행 가능한지 판정해 <code>plan-review.md</code>를 씁니다.',
         'L2 verifier(opus)는 결과물이 완료 기준을 만족하는지 근거와 함께 판정해 <code>verify.md</code>를, reviewer(sonnet)는 결과물의 품질을 판정해 <code>review.md</code>를 씁니다. gate-analyst(sonnet)는 게이트 결정 집계를 읽고 <code>gate-report.md</code>를 씁니다.',
         'L3 explorer(sonnet)는 관련 파일 위치와 현재 동작, 제약을 찾아 보고하며 읽기 전용입니다. researcher(sonnet)는 하위 질문 하나를 웹에서 조사해 출처가 달린 노트 하나를 씁니다.',
         'L3 writer(sonnet)는 작업 단위 하나의 문서(초안, 조사 노트 종합, 프로토타입 페이지)를 씁니다. coder(sonnet)는 작업 단위 하나를 테스트를 먼저 쓰고 구현하며 커밋하지 않습니다.'],
-       'plugins/my-agent/l2-design-judge/agents/architect.md:4, plugins/my-agent/l2-design-judge/agents/architect.md:12, plugins/my-agent/l2-design-judge/agents/plan-reviewer.md:4, plugins/my-agent/l2-design-judge/agents/plan-reviewer.md:12, plugins/my-agent/l2-design-judge/agents/verifier.md:4, plugins/my-agent/l2-design-judge/agents/verifier.md:12, plugins/my-agent/l2-design-judge/agents/reviewer.md:4, plugins/my-agent/l2-design-judge/agents/reviewer.md:12, plugins/my-agent/l2-design-judge/agents/gate-analyst.md:4, plugins/my-agent/l2-design-judge/agents/gate-analyst.md:12, plugins/my-agent/l3-workers/agents/explorer.md:4, plugins/my-agent/l3-workers/agents/explorer.md:13, plugins/my-agent/l3-workers/agents/researcher.md:4, plugins/my-agent/l3-workers/agents/researcher.md:13, plugins/my-agent/l3-workers/agents/writer.md:4, plugins/my-agent/l3-workers/agents/writer.md:13, plugins/my-agent/l3-workers/agents/coder.md:4, plugins/my-agent/l3-workers/agents/coder.md:13'],
+       'plugins/my-agent/l2-design-judge/agents/architect.md, plugins/my-agent/l2-design-judge/agents/plan-reviewer.md, plugins/my-agent/l2-design-judge/agents/verifier.md, plugins/my-agent/l2-design-judge/agents/reviewer.md, plugins/my-agent/l2-design-judge/agents/gate-analyst.md, plugins/my-agent/l3-workers/agents/explorer.md, plugins/my-agent/l3-workers/agents/researcher.md, plugins/my-agent/l3-workers/agents/writer.md, plugins/my-agent/l3-workers/agents/coder.md'],
       ['L2·L3는 더 아래로 위임하지 못합니다.',
        '에이전트가 에이전트를 부르는 사슬이 생기지 않습니다.',
        ['각 에이전트 정의 파일은 "다른 에이전트를 부르지 않는다"고 적어 둡니다.',
         '설계 문서는 에이전트 정의의 <code>tools</code>에서 <code>Agent</code> 도구를 뺀다고 설명합니다.',
         'L3는 맡은 범위 밖의 파일을 건드리지 않고, 막히면 우회하지 않고 보고합니다.'],
-       'plugins/my-agent/SKILL.md:49, plugins/my-agent/SKILL.md:50, plugins/my-agent/l2-design-judge/agents/architect.md:20, plugins/my-agent/l3-workers/agents/coder.md:22, plugins/my-agent/l3-workers/agents/coder.md:19, plugins/my-agent/docs/build-guide/my-agent-architecture.md:385']
+       'plugins/my-agent/SKILL.md, plugins/my-agent/l2-design-judge/agents/architect.md, plugins/my-agent/l3-workers/agents/coder.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md']
     ]},
     { name: '3.2 단계와 게이트', feats: [
       ['일은 4개 단계, 8개 스텝입니다.',
        '① 정의 → ② 계획 → ③ 실행 → ④ 인수 순서로 가고, 각 단계의 끝에 게이트가 있습니다.',
        ['① 정의 = 1 접수(Intake) · 2 탐색→범위, ② 계획 = 3 계획 · 4 계획 검토, ③ 실행 = 5 실행 · 6 병합, ④ 인수 = 7 검증 · 8 리뷰→인도입니다.',
         'L1은 단계가 시작될 때와 <code>continue</code>·압축(compaction) 뒤에 해당 단계 파일과 프로필 파일을 다시 읽고 따릅니다.'],
-       'plugins/my-agent/SKILL.md:72, plugins/my-agent/SKILL.md:73, plugins/my-agent/SKILL.md:74, plugins/my-agent/SKILL.md:75, plugins/my-agent/SKILL.md:76, plugins/my-agent/docs/build-guide/my-agent-architecture.md:220'],
+       'plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
       ['사람이 답하는 게이트는 다섯 종류입니다.',
        '범위(G1a)·계획(G1b)·위험한 행동(G2)·최종 인수(G3)·에스컬레이션(E).',
        [],
-       'plugins/my-agent/SKILL.md:25, plugins/my-agent/SKILL.md:26, plugins/my-agent/SKILL.md:27, plugins/my-agent/SKILL.md:28, plugins/my-agent/SKILL.md:29, plugins/my-agent/SKILL.md:30, plugins/my-agent/SKILL.md:31, plugins/my-agent/SKILL.md:34',
+       'plugins/my-agent/SKILL.md',
        `<div class="mini-box"><table class="mini"><thead><tr><th>게이트</th><th>언제</th><th>선택지</th></tr></thead><tbody>` +
        `<tr><td>G1a 범위 확인</td><td>범위 정리가 끝날 때(general에는 없음, G1b에 합쳐짐)</td><td>확인 / 수정 / 중단</td></tr>` +
        `<tr><td>G1b 계획 승인</td><td>계획 검토 끝, 목업 전체를 채팅에 붙인 뒤</td><td>승인 / 변경 요청 / 중단</td></tr>` +
@@ -568,36 +568,36 @@ footer .disc { border-top: 0; }
        '계획 승인 전에는 탐색·계획·계획 검토만 위임할 수 있습니다.',
        ['승인 전에 위임할 수 있는 에이전트는 explorer, architect, plan-reviewer뿐이고, 작업 폴더 밖에는 쓰지 못합니다.',
         '이 제한은 프롬프트 지시가 아니라 플러그인 hook(<code>plan-approved-check.py</code>)이 실제로 강제합니다. 위임은 거부하고, 작업 폴더 밖의 쓰기와 git 변경은 확인(ask)을 띄웁니다. hook의 세부 규칙은 3.3의 ‘계획 승인 전에는 hook이 위임을 거부하고 쓰기는 묻습니다’ 항목에 있습니다. 막히면 우회하지 않고 G1b로 갑니다.'],
-       'plugins/my-agent/SKILL.md:33'],
+       'plugins/my-agent/SKILL.md'],
       ['계획 검토의 지적은 모든 프로필이 같은 방식으로 처리합니다.',
        '막는 지적(BLOCKER)이 있으면 고쳐서 다시 판정하고, 세 번째 <code>REVISE</code>부터는 사람이 결정합니다.',
        ['<code>REVISE</code>(BLOCKER가 하나라도 있을 때)는 작으면 L1이 고치고 크면 architect가 다시 쓴 뒤 다시 판정합니다. 세 번째 <code>REVISE</code>는 G1b 팝업에서 사람에게 맡깁니다.',
-        '<code>READY FOR APPROVAL</code> 뒤에는 검토를 다시 돌리지 않습니다. NIT만 있으면 팝업 없이 적용하고, SHOULD-FIX가 있으면 전체 목록을 한 번의 팝업(전부 적용 / 적용하지 않고 승인 / 직접 고르기)으로 묻습니다.',
+        '<code>READY FOR APPROVAL</code> 뒤에는 검토를 다시 돌리지 않습니다. NITPICK만 있으면 팝업 없이 적용하고, SHOULD-FIX가 있으면 전체 목록을 한 번의 팝업(전부 적용 / 적용하지 않고 승인 / 직접 고르기)으로 묻습니다.',
         '지적마다 적용 또는 거절한 내용을 <code>plan-review.md</code>에 한 줄씩 남깁니다.'],
-       'plugins/my-agent/l1-orchestration/phases/plan.md:25, plugins/my-agent/l1-orchestration/phases/plan.md:27, plugins/my-agent/l1-orchestration/phases/plan.md:28, plugins/my-agent/l1-orchestration/phases/plan.md:29, plugins/my-agent/l1-orchestration/phases/plan.md:30, plugins/my-agent/l1-orchestration/phases/plan.md:31'],
+       'plugins/my-agent/l1-orchestration/phases/plan.md'],
       ['검증과 리뷰는 어떤 프로필에서도 건너뛰지 않습니다.',
        '인수 단계의 두 판정은 필수입니다.',
        ['verifier의 <code>verify.md</code>는 첫 줄이 <code>Verdict: ALL PASS</code> 또는 <code>Verdict: FAIL</code>이고, 이어서 완료 기준 하나당 한 줄씩 PASS/FAIL과 근거가 있습니다.',
         'reviewer의 <code>review.md</code> 첫 줄은 <code>BLOCKER &lt;개수&gt;</code>입니다. BLOCKER가 1개 이상이면 작은 수정은 L1이 고치고 새 판정을 받으며, 작은 수정이 아니면 실행으로 되돌아갑니다.',
         '실행으로 되돌아가기 전에 현재 판정 파일을 <code>archive/</code> 아래에 보관합니다.'],
-       'plugins/my-agent/l1-orchestration/phases/accept.md:3, plugins/my-agent/l1-orchestration/phases/accept.md:9, plugins/my-agent/l1-orchestration/phases/accept.md:23, plugins/my-agent/l1-orchestration/phases/accept.md:24, plugins/my-agent/l1-orchestration/phases/accept.md:16'],
+       'plugins/my-agent/l1-orchestration/phases/accept.md'],
       ['반복 실패는 사람에게 넘깁니다 (E).',
        '같은 일이 계속 막히면 L1이 스스로 풀지 않고 사람에게 방향을 묻습니다.',
        ['조건은 검증 3회 연속 FAIL, 같은 작업 단위가 두 번 멈춤, 워크플로 오류 종료, 병합 충돌이 계획 오류를 드러냄입니다.',
         'E는 위임 승인이 켜져 있어도 항상 사람에게 갑니다. L1은 어디서 막혔고 무엇을 시도했는지 채팅에 보여 준 뒤 팝업(방향 제시 / 범위 변경 / 중단)으로 묻습니다.',
         '작업자가 한 번 멈추면 같은 입력과 중단 보고로 opus에서 다시 시도합니다.'],
-       'plugins/my-agent/l1-orchestration/phases/accept.md:65, plugins/my-agent/l1-orchestration/phases/accept.md:66, plugins/my-agent/l1-orchestration/phases/accept.md:68, plugins/my-agent/SKILL.md:210'],
+       'plugins/my-agent/l1-orchestration/phases/accept.md, plugins/my-agent/SKILL.md'],
       ['작업 도중 요청이 바뀌면 종류부터 묻습니다.',
        'G1b 승인 뒤의 변경 요청은 바로 고치지 않고 팝업으로 종류를 정합니다.',
        ['선택지는 "이 작업을 수정" / "승인된 범위 안에서 조정" / "새 작업으로 분리" / "취소"입니다.',
         'G1b 전에 계획을 고치는 일과 G3 인수 뒤의 요청(새 작업)은 따로 정해진 절차를 따릅니다.'],
-       'plugins/my-agent/SKILL.md:68, plugins/my-agent/SKILL.md:244, plugins/my-agent/SKILL.md:257'],
+       'plugins/my-agent/SKILL.md'],
       ['팝업을 대신 답하는 위임 승인이 있습니다.',
        '사람이 켜면 일상적인 팝업을 L1이 추천 선택지로 대신 답합니다.',
        ['시작은 플래그(<code>--auto</code>) 또는 "묻지 말고 진행해" 같은 메시지이며, 메시지로 시작할 때는 한 번 확인 팝업을 거칩니다.',
         'G2·G3·E, 세 번째 <code>REVISE</code> 뒤의 G1b 팝업, 추천 선택지가 없는 팝업은 켜져 있어도 사람에게 갑니다.',
         '같은 반복 고리가 5번 돌면 6번째 전에 E로 넘어갑니다.'],
-       'plugins/my-agent/SKILL.md:38, plugins/my-agent/SKILL.md:39, plugins/my-agent/SKILL.md:40, plugins/my-agent/SKILL.md:219']
+       'plugins/my-agent/SKILL.md']
     ]},
     { name: '3.3 강제와 안전', feats: [
       ['계획 승인 전에는 hook이 위임을 거부하고 쓰기는 묻습니다 (G1b 하드 게이트).',
@@ -606,47 +606,47 @@ footer .disc { border-top: 0; }
         '승인 전에 허용되는 것은 explorer·architect·plan-reviewer 호출뿐입니다. 프로토타입이 요청된 경우에 한해 writer도 허용됩니다. 작업 폴더 밖의 쓰기는 거부하지 않고 확인(<code>ask</code>)을 띄우며, 작업 폴더와 데이터 폴더의 색인·프로젝트 목록 파일만 묻지 않고 통과합니다.',
         '승인 뒤에도 작업 위치·데이터 폴더·계획서가 선언한 결과 위치 밖에 쓰려 하면 거부하지 않고 사용자에게 확인(<code>ask</code>)을 띄웁니다. 자동 모드는 그런 쓰기를 확인 없이 통과시키기 때문입니다. hook 자체가 오류나 시간 초과로 실패하면 호출이 막힙니다(<code>onFailure: block</code>).',
         '알려진 한계: 이 hook은 <code>.active</code>에 적힌 세션에만 적용됩니다. 새 세션이 <code>/my-agent continue</code>로 작업을 이어받기 전에는 게이트가 걸리지 않습니다(3.4의 ‘세션 재개 알림’ 항목에 세션 알림이 있으나 안내일 뿐 강제는 아님).'],
-       'plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py:9-18 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:24-33 · plugins/my-agent/SKILL.md:33 · plugins/my-agent/maintenance-notes.md:129'],
+       'plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/SKILL.md · plugins/my-agent/maintenance-notes.md'],
       ['최신 검증·검토 결과가 없으면 커밋은 확인을 띄우고 최종 전달은 막습니다.',
        '<code>verify.md</code>가 ALL PASS이고 <code>review.md</code>가 BLOCKER 0이며 둘 다 최신일 때만 커밋·전달이 통과합니다.',
        ['적용 대상은 <code>git commit</code>(결과가 오래되었으면 확인을 띄움)과 G3 전달(작업 폴더 <code>deliverable/</code>에 쓰기, 작업 폴더(기본값 <code>.my-agent/</code>, 설정 <code>task_dir</code>) 밖으로 복사·이동. 작업의 <code>work/</code>나 <code>deliverable/</code> 아래 원본만 전달로 셈)입니다.',
         '<code>verify.md</code> 첫 줄이 <code>Verdict: ALL PASS</code>, <code>review.md</code> 첫 줄이 <code>BLOCKER 0</code>이어야 하며, 둘 다 마지막으로 바뀐 파일보다 새로워야 합니다. 그렇지 않으면 거부하고 검증·검토를 다시 받게 합니다.',
         '검증보다 변경이 늦었더라도 검토가 더 새롭고 <code>## Applied after review</code> 절이 있으면 통과합니다. 오류가 나면 호출이 막힙니다.'],
-       'plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py:9-20 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:35-44 · plugins/my-agent/l1-orchestration/phases/accept.md:35'],
+       'plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/l1-orchestration/phases/accept.md'],
       ['에이전트마다 읽기·쓰기 범위를 hook이 제한합니다 (scope-guard).',
        '모든 도구 호출에서 <code>my-agent:</code> 에이전트의 읽기·쓰기 경로를 역할별로 검사하고, 범위 밖이면 거부합니다.',
        ['L2 에이전트는 작업 위치를 읽고 자기 결과 파일 하나만 씁니다. L3 에이전트는 작업 위치를 읽되 쓰지 않는 것이 기본값이고, 역할이 이를 넓히거나 좁힙니다. gate-analyst를 뺀 모든 에이전트는 데이터 폴더, 플러그인 폴더, 세션 스크래치패드, 계획서의 참고 파일도 읽습니다. researcher와 writer는 작업 위치 전체를 읽고 <code>work/</code>에 씁니다(writer는 <code>prototype/</code>과 계획서의 참고 파일도 해당). coder는 작업 위치나 자기 worktree에 쓰지만 작업 폴더(기본값 <code>.my-agent/</code>, 설정 <code>task_dir</code>), <code>.git/</code>, <code>.claude/</code>는 쓰지 못합니다. gate-analyst는 <code>gate-tally.md</code>와 <code>gate-report.md</code>만 읽습니다.',
         '웹은 verifier와 researcher만 씁니다. verifier의 curl·wget은 데이터를 보내는 옵션이면 거부됩니다(가져오기만 허용). 어떤 명령이 무엇을 읽거나 쓰는지 판단할 수 없으면 거부하고, 오류가 나도 호출이 막힙니다.',
         'architect는 L1이 쓰는 <code>Approved</code> 줄과 <code>Prototype: requested</code> 줄을 <code>plan.md</code>에 넣을 수 없고, <code>## Revisions</code> 줄도 지우거나 바꿀 수 없습니다.'],
-       'plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:2-20 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:128-141 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:198-199 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:3-13'],
+       'plugins/my-agent/l4-tools-guards/hooks/scope-guard.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json'],
       ['비밀 파일은 모든 에이전트가 읽거나 쓰지 못합니다.',
        '<code>.env</code>, <code>.pem</code>, <code>.key</code>, <code>~/.ssh</code> 등은 에이전트 종류와 상관없이 막고, 같은 목록을 사용자 설정의 deny 규칙으로도 둡니다.',
        ['scope-guard는 비밀 경로를 읽기·쓰기 모두 거부하고, 이름을 소문자로 맞춰 비교하며, <code>.env</code>나 <code>*.pem</code>을 이름으로 고르는 Grep glob도 막습니다.',
         '<code>permissions.json</code>의 deny 목록에도 <code>.env</code>, <code>.pem</code>, <code>.key</code>, <code>~/.ssh</code>, <code>~/.aws</code>, <code>~/.config/gh</code>, <code>~/.netrc</code> 읽기가 들어 있습니다.',
         '이 규칙들은 플러그인이 직접 싣지 못하므로 사용자가 자기 설정에 합쳐 넣는 파일입니다.'],
-       'plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:56-59 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:189-193 · plugins/my-agent/l4-tools-guards/permissions/permissions.json:31-38 · plugins/my-agent/maintenance-notes.md:106'],
+       'plugins/my-agent/l4-tools-guards/hooks/scope-guard.py · plugins/my-agent/l4-tools-guards/permissions/permissions.json · plugins/my-agent/maintenance-notes.md'],
       ['위험한 동작은 권한 규칙으로 확인을 받거나 거부합니다 (G2).',
        '커밋·푸시·설치·외부 쓰기 도구는 사람에게 확인을 받고, 강제 푸시와 검증 우회는 거부합니다.',
        ['확인(<code>ask</code>) 대상은 git commit·push, <code>rm -rf</code>, npm·pip·brew 설치, Slack 메시지 보내기, GitHub PR 생성·파일 푸시, Vercel 배포 생성 등입니다.',
         '거부(<code>deny</code>) 대상은 강제 푸시(<code>--force</code>, <code>-f</code>)와 <code>--no-verify</code>가 든 명령입니다.',
         'G2에서는 "세션 동안 허용"을 권하지 않고 위험한 동작을 한 번에 하나씩 허용하게 합니다. 허용·거부 여부를 정하는 것은 L4 규칙이며, L4는 판단하지 않고 실행·기록·차단만 합니다.'],
-       'plugins/my-agent/l4-tools-guards/permissions/permissions.json:3-30 · plugins/my-agent/SKILL.md:29 · plugins/my-agent/SKILL.md:34 · plugins/my-agent/SKILL.md:51'],
+       'plugins/my-agent/l4-tools-guards/permissions/permissions.json · plugins/my-agent/SKILL.md'],
       ['작업자 결과·웹 내용은 데이터로만 읽습니다.',
        '작업자 결과, 웹 내용, <code>work/</code> 파일 안의 지시문은 따르지 않고 데이터로만 취급합니다.',
        ['이 규칙은 SKILL.md의 핵심 규칙에 들어 있습니다.',
         '하위 에이전트는 사용자에게 직접 묻지 않고 결과 파일과 보고만 돌려줍니다.'],
-       'plugins/my-agent/SKILL.md:64 · plugins/my-agent/SKILL.md:21'],
+       'plugins/my-agent/SKILL.md'],
       ['밖으로 나가기 전에 비밀 패턴을 검사합니다 (secret scan).',
        '산출물이 작업 폴더를 떠나기 직전에 비밀처럼 생긴 문자열이 있는지 스캔합니다.',
        ['검사 시점은 프로토타입 게시, G3 후 산출물 복사, 회고의 <code>gate-report.md</code> 복사, 커밋(dev 프로필 또는 작업 폴더를 커밋하기로 한 프로젝트. 기본값 <code>.my-agent/</code>, 이전 구조는 <code>docs/agent/</code>)입니다.',
         '찾는 것은 AWS 키, 개인 키 헤더, <code>KEY/TOKEN/SECRET/PASSWORD=</code> 꼴의 줄, GitHub 토큰, Anthropic 키 형식입니다. 걸린 위치와 종류만 보여 주고 일치한 내용은 출력하지 않습니다.',
         '걸리면 사람에게 <code>해당 부분을 지우고 진행(권장)</code> / <code>그대로 진행</code> / <code>중단</code>을 묻습니다. 존재하지 않는 경로는 "깨끗함"으로 읽히지 않고 오류로 처리합니다.'],
-       'plugins/my-agent/SKILL.md:222-228 · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py:2-8 · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py:13-19'],
+       'plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py'],
       ['작업자에게 턴 한도가 있습니다.',
        '모든 작업자(L3)에게 최대 턴 수가 정해져 있어 무한히 돌지 않습니다.',
        ['현재 한도는 explorer 30, researcher 40, writer 40, coder 60입니다.',
         '한도에 걸려 끝난 작업자는 정상 종료 이벤트가 없으므로, 기록 단계가 이를 <code>partial</code>로 따로 잡아냅니다(3.4의 ‘run-log’ 항목 참고). 같은 작업 단위가 두 번 멈추면 사람에게 올리는 에스컬레이션(E)이 열립니다.'],
-       'plugins/my-agent/maintenance-notes.md:61 · plugins/my-agent/maintenance-notes.md:65 · plugins/my-agent/l1-orchestration/phases/accept.md:65']
+       'plugins/my-agent/maintenance-notes.md · plugins/my-agent/l1-orchestration/phases/accept.md']
     ]},
     { name: '3.4 기록·모니터·피드백', feats: [
       ['run-log: L1과 hook이 나눠서 자동 기록합니다.',
@@ -655,35 +655,35 @@ footer .disc { border-top: 0; }
         'hook이 하위 에이전트의 호출·시작·종료를 자동으로 남깁니다. 종료 기록에는 작업 단위, 실제 모델, 토큰, 시간, 결과 첫 줄이 들어가고, 한도로 끝난 작업자는 <code>partial</code>로 보충됩니다. L1이 따로 쓰지 않습니다.',
         'G2 권한 팝업도 hook이 묻기 직전과 허용 직후에 기록합니다(거부는 이벤트가 없어 기록되지 않음).',
         '설정된 모델과 실제 모델이 다르면 불일치로 알려 주고, 메인 세션이 opus가 아니면 한 번 알립니다. 기록 hook은 항상 성공으로 끝나 세션을 막지 않으며, 실패하면 기록 줄에 오류를 남기려 시도합니다.'],
-       'plugins/my-agent/SKILL.md:170 · plugins/my-agent/l4-tools-guards/scripts/run-log.py:2-19 · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py:2-15 · plugins/my-agent/l4-tools-guards/hooks/permission-log.py:2-13 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:47-92 · plugins/my-agent/SKILL.md:198-199'],
+       'plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/run-log.py · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py · plugins/my-agent/l4-tools-guards/hooks/permission-log.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json'],
       ['읽기 전용 모니터와 메뉴 막대 앱.',
        '로컬 웹 페이지가 모든 my-agent 작업을 보여 주며, 읽기만 하고 아무것도 쓰지 않습니다.',
        ['화면은 Dashboard, Architecture, Deliverables, Log replay로 구성됩니다. 프로젝트의 작업 폴더(기본값 <code>.my-agent/</code>), 대화 기록, 데이터 폴더에 쓰지 않습니다.',
         '서버는 127.0.0.1에만 열리고, 페이지는 2초마다 갱신됩니다. 작업을 시작하면 my-agent가 모니터를 자동으로 띄웁니다.',
         '메뉴 막대 앱은 실행 중 작업 수를 아이콘에 보여 주고, 작은 창에 작업별 상태·경과 시간·진행 막대를 나열합니다. 상태와 모니터 실행만 다루고 작업 데이터는 쓰지 않으며, 작업을 누르면 해당 작업이 선택된 상세 화면(웹 모니터)으로 넘어갑니다.',
         '완료된 작업의 메인 세션 토큰은 작업 끝에 저장한 파일(<code>main-usage.json</code>)에서 읽습니다. Claude Code가 일정 기간 뒤 대화 기록을 지우기 때문입니다. 오래된 완료 작업은 사람이 실행하는 스크립트로 <code>.archived/</code> 폴더로 옮겨 모니터 목록에서 뺄 수 있습니다(진행 중인 작업은 옮기지 않음).'],
-       'plugins/my-agent/monitor/README.md:3 · plugins/my-agent/monitor/README.md:6 · plugins/my-agent/monitor/README.md:16 · plugins/my-agent/monitor/README.md:35 · plugins/my-agent/monitor/README.md:45-46 · plugins/my-agent-tray/macos/menubar/README.md:3 · plugins/my-agent-tray/macos/menubar/README.md:7 · plugins/my-agent-tray/macos/menubar/README.md:16 · plugins/my-agent-tray/macos/menubar/README.md:32-33 · plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py:2-11'],
+       'plugins/my-agent/monitor/README.md · plugins/my-agent-tray/macos/menubar/README.md · plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py'],
       ['회고의 게이트 집계(tally)와 게이트 보고서.',
        '작업이 끝나면 사람이 게이트에서 한 선택을 표로 집계하고, 별도 에이전트가 경향을 해석한 보고서를 남깁니다.',
        ['스크립트는 run-log에서 결정 표, 카운터, 구간별 비용·토큰을 집계해 <code>gate-tally.md</code>에 저장합니다. 숫자만 만들고 해석하지 않습니다.',
         '해석은 L2 gate-analyst가 하고 <code>gate-report.md</code>를 씁니다. gate-analyst는 <code>gate-tally.md</code>와 <code>gate-report.md</code>만 읽을 수 있고 run-log나 다른 파일은 읽지 못합니다.',
         'L1은 보고서를 직접 쓰지 않고 데이터 폴더의 보고서 폴더로 복사하기만 하며, 채팅에는 두 경로와 요약 3줄만 보여 줍니다. 복사 전에 비밀 스캔을 거칩니다.',
         '회고는 <code>Status: done</code>을 쓴 뒤에 진행되므로 중간에 끊겨도 G3를 다시 하지 않습니다. 중단(abort)된 작업에는 회고가 없습니다.'],
-       'plugins/my-agent/l4-tools-guards/scripts/gate-report.py:2-13 · plugins/my-agent/l1-orchestration/phases/accept.md:73-78 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:128-129 · plugins/my-agent/docs/build-guide/my-agent-architecture.md:1211 · plugins/my-agent/docs/build-guide/my-agent-architecture.md:1224'],
+       'plugins/my-agent/l4-tools-guards/scripts/gate-report.py · plugins/my-agent/l1-orchestration/phases/accept.md · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py · plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
       ['레벨별 피드백 목록.',
        '회고에서 나온 개선점을 L1~L4 레벨 표시와 함께 데이터 폴더의 <code>feedback.md</code>에 쌓습니다.',
        ['항목은 열림(open)과 완료(done) 두 구역에 한 줄씩 들어가며, 완료할 때는 무엇으로 고쳤는지가 함께 적힙니다.',
         '한 레벨에 열린 개선점이 4개 이상이면 L1이 사람에게 한 줄로 알립니다. <code>status</code>도 레벨별 열린 개수를 보여 줍니다.',
         'gate-analyst가 <code>clear</code>로 표시한 제안은 L1이 자동으로 L1 항목으로 올리고, 이 작업에서 나온 다른 개선점도 레벨을 붙여 올립니다.',
         '회고는 이 밖에도 누락된 하위 에이전트 호출을 L4 개선점으로 올리고, 자동이 아닌 권한 모드로 끝난 하위 에이전트가 있으면 회고에 적습니다.'],
-       'plugins/my-agent/l4-tools-guards/scripts/feedback.py:2-12 · plugins/my-agent/l1-orchestration/phases/accept.md:79-82 · plugins/my-agent/SKILL.md:141'],
+       'plugins/my-agent/l4-tools-guards/scripts/feedback.py · plugins/my-agent/l1-orchestration/phases/accept.md · plugins/my-agent/SKILL.md'],
       ['세션 재개 알림.',
        '새로 열린·재개된·정리된·압축된·분기된 세션에서 끝나지 않은 작업이 있으면 먼저 이어서 하라고 알려 줍니다.',
        ['알림은 진행 중인 작업 이름과 단계를 말하고, <code>/my-agent continue</code>를 먼저 실행하라고 안내합니다. 계획서에 승인 줄이 없으면 위임도 쓰기도 하지 말라는 문장이 함께 들어갑니다. 분기(fork)된 세션에는 "원래 세션이 이 작업을 하고 있으니, 이 세션에서 이어받으려면 continue를 실행하라"는 다른 안내가 나갑니다.',
         '진행 중인 작업(<code>.active</code>)이 없으면 아무것도 출력하지 않고, 어떤 경우에도 세션은 정상적으로 시작됩니다.',
         '이 알림은 안내일 뿐 강제가 아닙니다. 따르지 않으면 막는 장치는 없다고 설계 문서에 남은 위험으로 적혀 있습니다.',
         '<code>continue</code>는 이어받기 전에 세션 확인, 규칙 변경 확인, 위임 중이던 작업 단위의 상태 정리를 하고 <code>resume</code> 기록을 남깁니다.'],
-       'plugins/my-agent/l4-tools-guards/hooks/session-notice.py:2-3 · plugins/my-agent/l4-tools-guards/hooks/session-notice.py:14-16 · plugins/my-agent/l4-tools-guards/hooks/session-notice.py:27-30 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:93-103 · plugins/my-agent/docs/build-guide/my-agent-architecture.md:1094-1095 · plugins/my-agent/SKILL.md:145-153']
+       'plugins/my-agent/l4-tools-guards/hooks/session-notice.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/docs/build-guide/my-agent-architecture.md · plugins/my-agent/SKILL.md']
     ]},
     { name: '3.5 프로필', feats: [
       ['프로필 3가지가 같은 단계 뼈대를 일의 종류에 맞게 바꿉니다.',
@@ -691,38 +691,38 @@ footer .disc { border-top: 0; }
        ['프로필은 <code>intake.md</code>에 기록되고, 단계 시작 때마다 해당 프로필 파일을 다시 읽습니다.',
         '사람이 플래그로 지정하면 라우터가 고르지 않고, 지정하지 않으면 라우터가 요청을 보고 고르며 따로 묻지 않습니다.',
         '라우터는 git 저장소가 아니면 <code>dev</code>를 고르지 않고 <code>general</code>을 고릅니다.'],
-       'plugins/my-agent/SKILL.md:77, plugins/my-agent/SKILL.md:112, plugins/my-agent/SKILL.md:113'],
+       'plugins/my-agent/SKILL.md'],
       ['general: 그 밖의 여러 단계 작업.',
        '정상 경로에서 사람은 G1b와 G3 두 번만 답합니다.',
        ['범위 확인(G1a)을 따로 묻지 않고, 범위 요약을 계획 첫머리에 넣어 G1b에서 한꺼번에 승인받습니다. 요청이 목적·완료 기준·하지 않을 일·결과물 위치를 모두 답했으면 범위 인터뷰도 건너뜁니다.',
         '변경 파일이 모두 합쳐 3개 미만이면 계획 검토를 건너뛸 수 있습니다. 실행은 하위 에이전트로만 하고 워크플로는 쓰지 않습니다.',
         '결과물이 문서이고 작업 단위가 둘 이상이면 마지막 writer 단위가 앞선 결과를 합치고, 결과물은 범위 요약에 적은 위치에 저장됩니다(없으면 작업 폴더의 <code>deliverable/</code>).'],
-       'plugins/my-agent/l1-orchestration/profiles/general.md:3, plugins/my-agent/l1-orchestration/profiles/general.md:9, plugins/my-agent/l1-orchestration/profiles/general.md:11, plugins/my-agent/l1-orchestration/profiles/general.md:13, plugins/my-agent/l1-orchestration/profiles/general.md:14, plugins/my-agent/l1-orchestration/profiles/general.md:16'],
+       'plugins/my-agent/l1-orchestration/profiles/general.md'],
       ['research: 웹 조사를 출처 달린 노트로.',
        '정상 경로에서 사람은 G1a·G1b·G3 세 번 답하고, 모든 주장에 출처 URL과 원문 인용이 붙습니다.',
        ['범위 인터뷰에서 질문·범위·출처 기준(공식 문서와 1차 자료 우선)·결과물 형식 네 가지를 <code>scope.md</code>에 정합니다.',
         '질문마다 researcher 하나가 노트 하나를 쓰고(<code>주장 · 출처 URL · "인용"</code> 형식), 마지막 단위에서 writer가 노트를 종합 구조에 배치합니다. 웹 조사는 G1b 승인 뒤에만 시작합니다.',
         '조사 단위가 4개 이하면 한 메시지로 함께 부르고, 5개 이상이면 계획의 <code>## Estimate</code>에 있을 때만 워크플로를 씁니다.',
         '검증 때 verifier가 출처를 직접 열어 인용을 확인하고, 형식에 맞지 않는 문장이나 지시처럼 보이는 내용은 FAIL로 봅니다.'],
-       'plugins/my-agent/l1-orchestration/profiles/research.md:3, plugins/my-agent/l1-orchestration/profiles/research.md:9, plugins/my-agent/l1-orchestration/profiles/research.md:10, plugins/my-agent/l1-orchestration/profiles/research.md:13, plugins/my-agent/l1-orchestration/profiles/research.md:14, plugins/my-agent/l1-orchestration/profiles/research.md:15'],
+       'plugins/my-agent/l1-orchestration/profiles/research.md'],
       ['dev: git 저장소의 코드 변경, 결과물은 커밋 하나.',
        '정상 경로에서 사람은 G1a·G1b·G3 세 번(작은 작업은 G1b·G3 두 번) 답하고, G3는 커밋 승인입니다.',
        ['항상 explorer가 먼저 관련 파일·호출하는 곳·검사 명령·커밋 안 된 변경을 살피고, 범위 인터뷰로 목적·완료 기준·제약·예외·데이터·하지 않을 일·UX 선호 일곱 가지를 정합니다.',
         '바꿀 파일이 3개 미만이고 요청이 목적·완료 기준·하지 않을 일을 이미 답했으면 범위 인터뷰와 G1a, 계획 검토를 건너뛰는 작은 작업 예외가 있습니다.',
         '작업 단위 하나가 코드 한 조각(coder)입니다. 병렬 coder는 첫 병렬 그룹에서만 worktree에서 일하고, 이후 그룹은 메인 트리에서 차례로 합니다. 병합 뒤 검사 명령을 돌립니다.',
         'G3에서는 차이(diff)와 제안 커밋 메시지를 보여 주고 커밋 / 재작업 / 중단을 묻습니다. 커밋 메시지에는 완료 기준 번호가 들어갑니다.'],
-       'plugins/my-agent/l1-orchestration/profiles/dev.md:3, plugins/my-agent/l1-orchestration/profiles/dev.md:9, plugins/my-agent/l1-orchestration/profiles/dev.md:10, plugins/my-agent/l1-orchestration/profiles/dev.md:11, plugins/my-agent/l1-orchestration/profiles/dev.md:14, plugins/my-agent/l1-orchestration/profiles/dev.md:15, plugins/my-agent/l1-orchestration/profiles/dev.md:17'],
+       'plugins/my-agent/l1-orchestration/profiles/dev.md'],
       ['프로필마다 부르는 에이전트가 다릅니다.',
        '프로필 파일의 "Agents used" 표가 단계별 담당을 정합니다.',
        ['general은 explorer·architect·plan-reviewer·researcher·writer·coder·verifier·reviewer를 필요에 따라 씁니다.',
         'research는 coder를 쓰지 않고, dev는 researcher를 쓰지 않습니다. dev에서 writer는 프로토타입에만 나옵니다.'],
-       'plugins/my-agent/l1-orchestration/profiles/general.md:22, plugins/my-agent/l1-orchestration/profiles/research.md:22, plugins/my-agent/l1-orchestration/profiles/dev.md:23, plugins/my-agent/l1-orchestration/profiles/dev.md:29'],
+       'plugins/my-agent/l1-orchestration/profiles/general.md, plugins/my-agent/l1-orchestration/profiles/research.md, plugins/my-agent/l1-orchestration/profiles/dev.md'],
       ['첫 게이트까지는 프로필을 바꿀 수 있습니다.',
        '처음 팝업에 답하기 전에는 프로필을 바꿔도 되고, 승인 뒤에는 새 작업으로 갑니다.',
        ['바꿀 때 L1은 작업 폴더를 보관하고 <code>intake.md</code>의 프로필을 바꾼 뒤 변환합니다. 바꾼 경우의 표시는 "(set by you)"입니다.',
         'dev로 바꾸려는데 git 저장소가 아니면 거절하고 현재 프로필을 유지할지 묻습니다.',
         'G1b 승인 뒤의 프로필 변경은 새 작업(<code>Follows:</code>)으로 처리합니다.'],
-       'plugins/my-agent/SKILL.md:236, plugins/my-agent/SKILL.md:237, plugins/my-agent/SKILL.md:238, plugins/my-agent/SKILL.md:239, plugins/my-agent/SKILL.md:242']
+       'plugins/my-agent/SKILL.md']
     ]}
   ];
   function featEl(f) {
@@ -754,13 +754,13 @@ footer .disc { border-top: 0; }
 
   /* ---------- 6. sources (numbered as in the Markdown) ---------- */
   var S = [null,
-    `plugins/my-agent/SKILL.md:46 · plugins/my-agent/SKILL.md:49 · plugins/my-agent/SKILL.md:50 · plugins/my-agent/SKILL.md:54`,
-    `plugins/my-agent/SKILL.md:72 · plugins/my-agent/SKILL.md:77 · plugins/my-agent/SKILL.md:112`,
-    `plugins/my-agent/SKILL.md:17 · plugins/my-agent/SKILL.md:25 · plugins/my-agent/SKILL.md:40`,
-    `plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py:9-14 · plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py:9-20 · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py:2-20 · plugins/my-agent/l4-tools-guards/permissions/permissions.json:3-39 · plugins/my-agent/l4-tools-guards/hooks/hooks.json:3-45`,
-    `plugins/my-agent/SKILL.md:54 · plugins/my-agent/l2-design-judge/agents/plan-reviewer.md:20 · plugins/my-agent/l2-design-judge/agents/verifier.md:21 · plugins/my-agent/l2-design-judge/agents/reviewer.md:21 · plugins/my-agent/l1-orchestration/phases/accept.md:3`,
-    `plugins/my-agent/l1-orchestration/phases/build.md:14 · plugins/my-agent/SKILL.md:58 · plugins/my-agent/SKILL.md:145 · plugins/my-agent/SKILL.md:153`,
-    `plugins/my-agent/SKILL.md:170 · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py:2-15 · plugins/my-agent/monitor/README.md:3-6 · plugins/my-agent-tray/macos/menubar/README.md:3 · plugins/my-agent/l4-tools-guards/scripts/gate-report.py:2-4 · plugins/my-agent/l4-tools-guards/scripts/feedback.py:2-12`,
+    `plugins/my-agent/SKILL.md`,
+    `plugins/my-agent/SKILL.md`,
+    `plugins/my-agent/SKILL.md`,
+    `plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py · plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py · plugins/my-agent/l4-tools-guards/permissions/permissions.json · plugins/my-agent/l4-tools-guards/hooks/hooks.json`,
+    `plugins/my-agent/SKILL.md · plugins/my-agent/l2-design-judge/agents/plan-reviewer.md · plugins/my-agent/l2-design-judge/agents/verifier.md · plugins/my-agent/l2-design-judge/agents/reviewer.md · plugins/my-agent/l1-orchestration/phases/accept.md`,
+    `plugins/my-agent/l1-orchestration/phases/build.md · plugins/my-agent/SKILL.md`,
+    `plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py · plugins/my-agent/monitor/README.md · plugins/my-agent-tray/macos/menubar/README.md · plugins/my-agent/l4-tools-guards/scripts/gate-report.py · plugins/my-agent/l4-tools-guards/scripts/feedback.py`,
     `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/agent-teams`,
     `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/workflows`,
     `https://code.claude.com/docs/en/workflows · https://code.claude.com/docs/en/sub-agents`,
@@ -912,7 +912,7 @@ footer .disc { border-top: 0; }
   });
 
   document.getElementById('cmp-note').appendChild(disc('자세히: 조사 기준',
-    `<p>조사한 문서는 2026-10-30에 본 것입니다. my-agent 칸은 플러그인 파일(버전 0.4.5, <code>plugins/my-agent/.claude-plugin/plugin.json:3</code>)에 근거하며, 출처는 저장소 루트 기준 상대 경로입니다. 다른 시스템 칸은 각 시스템의 공식 문서·저장소에서 확인한 내용만 씁니다. 부차 출처(secondary)는 칸 설명과 출처 목록에 따로 표시했습니다.</p>`));
+    `<p>조사한 문서는 2026-10-30에 본 것입니다. my-agent 칸은 플러그인 파일(버전 0.4.5, <code>plugins/my-agent/.claude-plugin/plugin.json</code>)에 근거하며, 출처는 저장소 루트 기준 상대 경로입니다. 다른 시스템 칸은 각 시스템의 공식 문서·저장소에서 확인한 내용만 씁니다. 부차 출처(secondary)는 칸 설명과 출처 목록에 따로 표시했습니다.</p>`));
 
   var cmpList = document.getElementById('cmp-list');
   function renderCmp() {
@@ -977,7 +977,7 @@ footer .disc { border-top: 0; }
   /* ---------- 5. differentiators ---------- */
   var diffs = [
     { tags: ['A4'], title: '규칙을 hook이 코드로 막는다 (A4).',
-      text: `my-agent는 계획 승인 전 위임·쓰기, 최신 판정 없는 커밋·전달, 에이전트별 경로 범위를 hook이 거부합니다. 확인한 문서 기준으로 이 셋이 한 칸에 함께 적힌 것은 my-agent뿐입니다. superpowers와 10x-Team은 규칙이 프롬프트(스킬 텍스트)에 있고, Claude Code 내장은 도구 허용·거부 목록과 hook, OpenAI Agents SDK는 가드레일, CrewAI는 호출 전 훅으로 막습니다. 한계: 이 hook은 <code>.active</code>에 적힌 세션에만 걸립니다(<code>plugins/my-agent/maintenance-notes.md:129</code>). 근거 칸: A4 열 ⁴, ¹¹, ¹⁸, ²⁵, ³⁹, ⁴⁶.` },
+      text: `my-agent는 계획 승인 전 위임·쓰기, 최신 판정 없는 커밋·전달, 에이전트별 경로 범위를 hook이 거부합니다. 확인한 문서 기준으로 이 셋이 한 칸에 함께 적힌 것은 my-agent뿐입니다. superpowers와 10x-Team은 규칙이 프롬프트(스킬 텍스트)에 있고, Claude Code 내장은 도구 허용·거부 목록과 hook, OpenAI Agents SDK는 가드레일, CrewAI는 호출 전 훅으로 막습니다. 한계: 이 hook은 <code>.active</code>에 적힌 세션에만 걸립니다(<code>plugins/my-agent/maintenance-notes.md</code>). 근거 칸: A4 열 ⁴, ¹¹, ¹⁸, ²⁵, ³⁹, ⁴⁶.` },
     { tags: ['A5'], title: '판정이 필수 단계이고, 최신 판정이 없으면 막는다 (A5).',
       text: `my-agent는 계획 검토·검증·리뷰를 별도 에이전트가 하고, 작성자의 설명을 넘기지 않으며, 검증과 리뷰는 어느 프로필에서도 건너뛰지 않습니다. superpowers도 작업마다 코디네이터가 보내는 리뷰가 있습니다(비슷한 점). 그 밖의 시스템 칸은 개발자가 구성하는 패턴이거나(LangGraph, OpenAI Agents SDK, AutoGen, 내장 워크플로), 같은 세션 안의 역할(10x-Team), 출력 검증 guardrail(CrewAI)이거나, 분리 규칙이 문서에 없습니다. 근거 칸: A5 열 ⁵, ¹², ¹⁹, ²⁶, ³³, ⁴⁰, ⁴⁷, ⁵⁴.` },
     { tags: ['A2'], title: '작업 종류별 프로필이 흐름을 바꾼다 (A2).',

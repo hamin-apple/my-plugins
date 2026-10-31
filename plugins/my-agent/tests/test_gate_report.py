@@ -93,10 +93,23 @@ class GateReportTest(unittest.TestCase):
         self.assertEqual(len(self.rows(out)), 1)
         self.assertIn('L1 lines 2, hook lines 0, G2 lines 2 left out', out)
 
+    def test_guard_lines_change_nothing(self):
+        base = ['2026-10-26 23:01:00 ask: gate=Q q=x rec=a', '2026-10-26 23:01:30 answer: gate=Q choice=a',
+                '2026-10-26 23:02:00 start: agent=my-agent:coder id=a1 configured=sonnet']
+        guards = ['2026-10-26 23:01:10 guard: hook=scope-guard agent=my-agent:coder id=a1 tool=Bash decision=deny why=x',
+                  '2026-10-26 23:01:11 guard: hook=plan-approved-check agent=main id=- tool=Agent decision=deny why=y']
+        plain = self.tally(*base)
+        out = self.tally(*base[:1], guards[0], *base[1:], guards[1])
+        self.assertEqual(self.rows(out), self.rows(plain))
+        self.assertIn('L1 lines 2, hook lines 3, G2 lines 0 left out', out)
+        self.assertIn('L1 lines 2, hook lines 1,', plain)
+
     def test_metrics(self):
         out = self.tally(
             '2026-10-26 23:00:00 step: n=7 name=Verify model=claude-opus-4-8 session=s1',
             '2026-10-26 23:00:01 step: n=7 name=Verify model=claude-sonnet-5-5 session=s1',
+            '2026-10-26 23:00:01 start: agent=my-agent:verifier id=v1 configured=sonnet',
+            '2026-10-26 23:00:01 start: agent=my-agent:verifier id=v2 configured=sonnet',
             '2026-10-26 23:00:02 start: agent=my-agent:plan-reviewer id=p1 configured=opus',
             '2026-10-26 23:00:02 start: agent=my-agent:plan-reviewer id=p2 configured=opus',
             '2026-10-26 23:00:03 call: agent=my-agent:coder model=opus effort=-',
@@ -110,12 +123,37 @@ class GateReportTest(unittest.TestCase):
             '2026-10-26 23:00:12 revision: rev=0 before=G1b why=x archive=a',
             '2026-10-26 23:00:13 revision: rev=1 why=x archive=b state=pending',
             '2026-10-26 23:00:14 revision: rev=1 state=done')
-        for row in ('| Verify runs | 2 |', '| Plan Review runs | 2 |', '| Subagents | 4 |',
-                    '| Model mismatches | 2 (main session 1 · by step lines, subagents 1) |',
+        for row in ('| Verify runs | 2 |', '| Plan Review runs | 2 |', '| Subagents | 6 |',
+                    '| Model mismatches | 2 (main session 1 · per session and model, subagents 1) |',
                     '| L1 small fixes | 2 |', '| Adjustments within the approved scope | 1 |', '| Plan rewrites before approval | 1 |',
                     '| In-flight revisions | 1 |',
                     '| Calls raised to opus | 1 (retries and explicit calls are not told apart) |'):
             self.assertIn(row, out)
+
+    def row(self, out, label):
+        return [l for l in out.splitlines() if l.startswith(f'| {label} | ')][0]
+
+    def test_verify_runs_count_verifier_starts(self):
+        out = self.tally('2026-10-26 23:00:00 step: n=7 name=Verify',
+                         '2026-10-26 23:00:01 start: agent=my-agent:verifier id=v1 configured=sonnet',
+                         '2026-10-26 23:00:02 start: agent=my-agent:verifier id=v2 configured=sonnet')
+        self.assertIn('| Verify runs | 2 |', out)
+        self.assertIn('| Verify runs | 0 |', self.tally('2026-10-26 23:00:00 step: n=7 name=Verify'))
+
+    def test_main_mismatch_per_session_and_model(self):
+        step = lambda i, model, s: f'2026-10-26 23:00:{i:02d} step: n={i} name=X model={model} session={s}'  # noqa: E731
+        same = self.tally(*[step(i, 'claude-sonnet-5-5', 's1') for i in range(5)])
+        self.assertIn('main session 1 ·', self.row(same, 'Model mismatches'))
+        two_sessions = self.tally(step(1, 'claude-sonnet-5-5', 's1'), step(2, 'claude-sonnet-5-5', 's2'))
+        self.assertIn('main session 2 ·', self.row(two_sessions, 'Model mismatches'))
+        two_models = self.tally(step(1, 'claude-sonnet-5-5', 's1'), step(2, 'claude-haiku-5', 's1'),
+                                step(3, 'claude-opus-4-8', 's1'))
+        self.assertIn('main session 2 ·', self.row(two_models, 'Model mismatches'))
+
+    def test_empty_run_log_tally_rows_zero(self):
+        out = self.tally('2026-10-26 23:00:00 fix: what=x')
+        self.assertIn('| Verify runs | 0 |', out)
+        self.assertIn('| Model mismatches | 0 (main session 0 · per session and model, subagents 0) |', out)
 
     def misses(self, *events):
         """The Judge misses value for events: 'pass', 'fail', 'partial', 'verify' (step), 'rework'."""
@@ -157,7 +195,7 @@ class GateReportTest(unittest.TestCase):
             '2026-10-29 04:06:10 answer: gate=G1a choice=Confirm by=L1',
             '2026-10-29 04:07:00 ask: gate=G3 q="Accept?" rec=Commit',
             '2026-10-29 04:07:30 answer: gate=G3 choice=Commit',
-            '2026-10-29 04:08:00 fix: what="Plan Review NIT" files=plan.md before=G1b archive=a',
+            '2026-10-29 04:08:00 fix: what="Plan Review NITPICK" files=plan.md before=G1b archive=a',
             '2026-10-29 04:08:30 fix: what=x',
             '2026-10-29 04:09:00 profile: from=dev to=general back=2 archive=a',
             '2026-10-29 04:10:00 delegate: state=off how=end')
@@ -257,7 +295,7 @@ class GateReportTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn(f'run-log: {rel()}/{TASK}/run-log.md missing', r.stdout)
         self.assertIn('No decisions (no ask/answer lines)', r.stdout)
-        self.assertIn('| Model mismatches | 0 (main session 0 · by step lines, subagents 0) |', r.stdout)
+        self.assertIn('| Model mismatches | 0 (main session 0 · per session and model, subagents 0) |', r.stdout)
         self.assertTrue(r.stdout.rstrip().endswith('## Cost and tokens per stretch\nNot recorded'))
         out = self.tally('2026-10-26 23:00:00 fix: what=x')
         self.assertIn('No decisions', out)

@@ -15,6 +15,8 @@ location or its worktree (also one inside a linked-worktree location) but not `<
 (hooks and settings run in L1's context), and the gate-analyst reads only gate-tally.md and gate-report.md. The
 architect may not add the `Approved` or
 `Prototype: requested` line L1 writes into plan.md (4.4 G1b) nor drop a `## Revisions` line (4.8.1).
+On a deny with an active task it appends one `guard:` line to the task's run-log (fields ma_schema.GUARD_FIELDS, `why` is
+the reason as printed); no active task, no line; a failed write never changes the decision.
 Paths compare without case (ma_path). Any error → exit 2, so the call is blocked
 (`onFailure: block` covers a crash or timeout).
 """
@@ -30,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
 import ma_data  # noqa: E402
+import ma_logline  # noqa: E402
 import ma_plan  # noqa: E402
 import ma_schema  # noqa: E402
 from ma_path import same, under  # noqa: E402
@@ -244,8 +247,12 @@ def main() -> int:
                    'No active my-agent task (no .active).')
         why = missing if active is None else check(inp, role, active)
         if why:
+            reason = why if why.startswith('my-agent scope-guard:') else f'scope-guard: {why}'
+            if active is not None:
+                ma_logline.log_guard(active, 'scope-guard', agent, inp.get('agent_id') or '-',
+                                     inp.get('tool_name') or '-', 'deny', reason)
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
-                                                     'permissionDecisionReason': why if why.startswith('my-agent scope-guard:') else f'scope-guard: {why}'}},
+                                                     'permissionDecisionReason': reason}},
                              ensure_ascii=False))
         return 0
     except Exception as e:   # block the call: exit 2 is a blocking error for PreToolUse

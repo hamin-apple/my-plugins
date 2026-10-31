@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from helpers import L4, clean_task_env, make_task, records, rel, run_hook
+import ma_logline
 
 TASK = '261025-probe-task'
 
@@ -54,6 +55,25 @@ class PlanApprovedCheckTest(unittest.TestCase):
     def plan(self, text):
         (self.task / 'plan.md').write_text(text, encoding='utf-8')
 
+    def guard_lines(self):
+        p = self.task / 'run-log.md'
+        return [l for l in p.read_text(encoding='utf-8').splitlines() if ' guard: ' in l] if p.exists() else []
+
+    def test_delegation_deny_writes_guard_line(self):
+        r = self.hook('Agent', {'subagent_type': 'my-agent:coder'})
+        self.assertDenied(r)
+        lines = self.guard_lines()
+        self.assertEqual(len(lines), 1)
+        kind, f = ma_logline.parse_line(lines[0])
+        self.assertEqual(kind, 'guard')
+        self.assertEqual((f['hook'], f['agent'], f['id'], f['tool'], f['decision']),
+                         ('plan-approved-check', 'main', '-', 'Agent', 'deny'))
+        self.assertEqual(f['why'], json.loads(r.stdout)['hookSpecificOutput']['permissionDecisionReason'])
+
+    def test_ask_writes_no_guard_line(self):
+        self.assertAsked(self.hook('Write', {'file_path': str(self.root / 'outside.txt')}))
+        self.assertEqual(self.guard_lines(), [])
+
     def test_not_applicable_is_silent(self):
         other = self.root / 'other'
         (other / '.git').mkdir(parents=True)
@@ -68,6 +88,29 @@ class PlanApprovedCheckTest(unittest.TestCase):
     def test_define_phase_allows_task_folder_write(self):
         self.assertPassed(self.hook('Write', {'file_path': str(self.task / 'explore.md')}))
         self.assertPassed(self.hook('Edit', {'file_path': str(records(self.proj) / '.active')}))
+
+    def test_sibling_task_folder_asks_before_approval(self):
+        sib = records(self.proj) / '261024-other-task'
+        sib.mkdir()
+        for tool, ti in (('Write', {'file_path': str(sib / 'work/a.md')}),
+                         ('Edit', {'file_path': str(sib / 'plan.md')})):
+            with self.subTest(tool=tool):
+                self.assertAsked(self.hook(tool, ti), ti['file_path'])
+        self.assertIn(str(sib / 'work/a.md'), self.assertAsked(self.hook('Bash', {'command': f'cp a.md {sib}/work/a.md'})))
+        self.assertIn(str(sib / 'x.md'), self.assertAsked(self.hook('Bash', {'command': f'echo x > {sib}/x.md'})))
+
+    def test_active_task_and_bookkeeping_pass_before_approval(self):
+        self.assertPassed(self.hook('Write', {'file_path': str(self.task / 'work/a.md')}))
+        self.assertPassed(self.hook('Bash', {'command': f'cp a.md {self.task}/work/a.md'}))
+        self.assertPassed(self.hook('Edit', {'file_path': str(records(self.proj) / '.active')}))
+        for name in ('active-index.json', 'projects.txt'):
+            self.assertPassed(self.hook('Write', {'file_path': str(self.tasks_dir / name)}))
+
+    def test_sibling_task_folder_after_approval_unchanged(self):
+        self.plan('# Plan\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')
+        sib = records(self.proj) / '261024-other-task'
+        sib.mkdir()
+        self.assertPassed(self.hook('Write', {'file_path': str(sib / 'a.md')}))
 
     def test_allows_index_and_projects(self):
         for name in ('active-index.json', 'projects.txt'):

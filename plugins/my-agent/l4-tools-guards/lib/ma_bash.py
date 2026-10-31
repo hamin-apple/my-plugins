@@ -2,7 +2,9 @@
 4.12 "limiting read paths too"). Best effort by design: a write it cannot see (`python -c`, a script) is the accepted
 risk of 4.4 "remaining risk"; the forms it knows are pinned case by case in tests/test_bash.py. What it cannot follow
 (command substitution outside single quotes, a heredoc left open, a `cd` to a variable, a symlink made and written
-through in one command) fails closed: None.
+through in one command) fails closed: None. A variable is followed only when `NAME=<literal>` is a bare assignment that
+always runs, nothing else sets or names `NAME`, and the line has no command that can set a variable unseen
+(`_literal_vars`).
 """
 import os
 import re
@@ -18,11 +20,14 @@ PIPE = {'|', '|&'}
 VAR_PATH_NOT = re.compile(r'://|^[sy]/|[\^\\|()<>"\'`]')
 ASSIGN = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*=')
 NOT_PATH = re.compile(r'[\^$\\|(){}<>"\'`]|://|^[sy]/')
-PREFIX = {'sudo', 'doas', 'env', 'command', 'time', 'nohup', 'nice', 'exec', 'builtin', 'timeout', 'xargs'}
+PREFIX = {'sudo', 'doas', 'env', 'command', 'time', 'nohup', 'nice', 'exec', 'builtin', 'timeout', 'xargs',
+          'setsid'}
 PREFIX_VALUE = {'sudo': {'-u', '-g', '-h', '-p', '-C', '-D', '-r', '-t', '-U', '-T'}, 'doas': {'-u', '-C'},
                 'env': {'-u', '-C', '-S', '--unset', '--chdir', '--split-string'}, 'nice': {'-n', '--adjustment'},
                 'timeout': {'-s', '-k', '--signal', '--kill-after'},
                 'xargs': {'-I', '-i', '-n', '-P', '-L', '-l', '-s', '-d', '-E', '-e', '-a'}}
+SETTERS = {'eval', 'source', '.', 'read', 'mapfile', 'readarray', 'unset', 'export', 'declare', 'typeset', 'readonly',
+           'local', 'let', 'getopts'}
 RESERVED = {'if', 'then', 'else', 'elif', 'while', 'until', 'do', '!', '{', '}'}
 SHELLS = {'bash', 'sh', 'zsh', 'dash', 'ksh'}
 CD = {'cd', 'pushd'}
@@ -34,6 +39,11 @@ GIT_READ = {'status', 'diff', 'log', 'show', 'blame', 'annotate', 'ls-files', 'l
             'count-objects', 'check-ignore', 'whatchanged', 'var', 'help', 'version'}
 GIT_BRANCH_WRITE = {'-d', '-D', '-m', '-M', '-c', '-C', '-f', '--delete', '--move', '--copy', '--force'}
 FIND_WRITE = {'-delete', '-exec', '-execdir', '-ok', '-okdir', '-fprint', '-fprintf', '-fls'}
+
+# set by the shell itself (`cd` rewrites PWD / OLDPWD…), so an assignment in the line does not fix the value
+SHELL_VARS = {'PWD', 'OLDPWD', 'SHLVL', 'RANDOM', 'SECONDS', 'LINENO', 'BASHPID', 'PPID', 'UID', 'EUID', 'HOSTNAME',
+              'BASH_COMMAND', 'BASH_LINENO', 'BASH_SOURCE', 'FUNCNAME', 'REPLY', 'OPTIND', 'OPTARG', 'EPOCHSECONDS',
+              'EPOCHREALTIME', 'SRANDOM', 'PIPESTATUS', 'COMP_LINE', 'COMP_POINT', 'DIRSTACK', 'MATCH', 'BASH_REMATCH'}
 
 
 class Simple(NamedTuple):
@@ -379,7 +389,7 @@ def _walk(cmd: str, cwd: Path):
     `cd x || cmd`, in `( )`) adds its target to the folders. None when a `cd` goes to a folder it cannot name
     (`$VAR`, `-`) or `cmd` does not tokenize."""
     try:
-        cmds = _commands(cmd)
+        cmds = _literal_vars(cmd, _commands(cmd))
     except ValueError:
         return None
     return _follow(cmds, cwd)
@@ -416,6 +426,106 @@ def _resolve_all(tok: str, cwds: List[Path]) -> Optional[List[Path]]:
         if p not in out:
             out.append(p)
     return out
+
+
+def _hidden_names(cmd: str) -> set:
+    """Names used as `$NAME` / `${NAME` where the shell does not expand them: inside single quotes or after a
+    backslash (shlex drops the quotes, so the words alone cannot tell)."""
+    text = _scan(_strip_heredocs(cmd))
+    lit, i, n, quote = [], 0, len(text), None
+    while i < n:
+        c = text[i]
+        if quote == "'":
+            if c == "'":
+                quote = None
+                lit.append(' ')
+            else:
+                lit.append(c)
+        elif c == '\\' and i + 1 < n:
+            if text[i + 1] == '$':
+                m = re.match(r'\{?[A-Za-z_]\w*', text[i + 2:])
+                lit.append(' $' + (m.group(0) if m else ''))
+            i += 2
+            continue
+        elif quote == '"':
+            if c == '"':
+                quote = None
+        elif c in '\'"':
+            quote = c
+        i += 1
+    return set(re.findall(r'\$\{?([A-Za-z_]\w*)', ''.join(lit)))
+
+
+def _sets_unseen(c: Simple) -> bool:
+    """Whether one simple command can set a variable by a name the text does not show."""
+    if not c.words:
+        return False
+    name = os.path.basename(c.words[0])
+    if name in SETTERS:
+        return True
+    if name == 'printf':
+        return any(w.startswith('-v') for w in c.words[1:])
+    return name in SHELLS and any(re.fullmatch(r'-[A-Za-z]*c[A-Za-z]*', w) for w in c.raw)
+
+
+def _literal_vars(cmd: str, cmds: List[Simple]) -> List[Simple]:
+    """`cmds` with `$NAME` / `${NAME}` replaced by its value, for each NAME that is safe to follow. All must hold:
+    exactly one simple command assigns it (not a shell-managed name such as `PWD`), as a bare `NAME=value` that always runs (top level, not after `&&` or
+    `||`, not in a pipeline, the background, `( )` or a compound command); no other word names it, sets it or uses
+    it in another form (`${NAME:-x}`, `${#NAME}`), and every use comes after the assignment, unquoted by single
+    quotes or a backslash; the value is a literal (not empty, no whitespace, `$`, quote-removal leftovers, glob
+    characters, leading `~`); and the line has no command that can set a variable unseen (`eval`, `read`,
+    `export`, `bash -c`, `printf -v`, `((`, `IFS`…), which turns following off for the whole line. Otherwise the
+    variable stays as it is and the path is unknown."""
+    if '((' in cmd or any(_sets_unseen(c) for c in cmds):
+        return cmds
+    words = [c.raw + c.redirects + c.inputs for c in cmds]
+    if any(re.search(r'(?<![A-Za-z0-9_])IFS(?![A-Za-z0-9_])', w) for ws in words for w in ws):
+        return cmds
+    hidden, values = None, {}
+    for i, c in enumerate(cmds):
+        if c.words or c.redirects or c.inputs or not c.raw or not all(ASSIGN.match(w) for w in c.raw):
+            continue
+        if not (c.top and not c.orl and c.sep in ('', ';', '\n')):
+            continue
+        for k, w in enumerate(c.raw):
+            name, value = w.split('=', 1)
+            if name in values:
+                values[name] = None
+                continue
+            values[name] = (i, k, value)
+    out = {}
+    for name, found in values.items():
+        if found is None or name in SHELL_VARS or name == '_' or name.startswith('BASH'):
+            continue
+        i, k, value = found
+        if (not value or re.search(r'[\s$`\\*?\[\]{}!]', value) or value.startswith('~') or ':~' in value):
+            continue
+        if hidden is None:
+            hidden = _hidden_names(cmd)
+        if name in hidden:
+            continue
+        mention = re.compile(r'(?<![A-Za-z0-9_])' + name + r'(?![A-Za-z0-9_])')
+        use = re.compile(r'\$(?:\{' + name + r'\}|' + name + r'(?![A-Za-z0-9_]))')
+        ok = True
+        for j, ws in enumerate(words):
+            for m, w in enumerate(ws):
+                if j == i and m == k:
+                    continue
+                if mention.search(w if j <= i else use.sub('', w)):
+                    ok = False
+        if ok:
+            out[name] = (value, use)
+    if not out:
+        return cmds
+
+    def expand(w):
+        for value, use in out.values():
+            w = use.sub(lambda _: value, w)
+        return w
+
+    return [c._replace(words=[expand(w) for w in c.words], redirects=[expand(w) for w in c.redirects],
+                       inputs=[expand(w) for w in c.inputs]) for c in cmds]
 
 
 def write_targets(cmd: str, cwd: Path) -> Optional[List[Path]]:
@@ -487,7 +597,7 @@ def copy_sources(cmd: str, cwd: Path) -> List[Path]:
     """Source arguments of every cp, mv or rsync in `cmd` (all positional arguments but the last), relative ones
     resolved against the folders a `cd` gives (same rule as `_walk`; a `cd` it cannot name leaves `cwd`)."""
     try:
-        cmds = _commands(cmd)
+        cmds = _literal_vars(cmd, _commands(cmd))
     except ValueError:
         return []
     out = []
@@ -577,6 +687,8 @@ def _dumps_env(raw: List[str]) -> bool:
     if not rest:
         return bare_env
     name, args = os.path.basename(rest[0]), rest[1:]
+    if _python_env(rest):
+        return True
     if name == 'printenv':
         return True
     if name == 'set':
@@ -586,19 +698,123 @@ def _dumps_env(raw: List[str]) -> bool:
     return name == 'launchctl' and bool(args) and args[0] == 'getenv'
 
 
+PY_ENV = re.compile(r'os\.environb?\b|os\.getenvb?\b|from\s+os\s+import\s[^;\n]*\b(?:environb?|getenvb?)\b')
+PYTHON = re.compile(r'python(?:3(?:\.\d+)?)?$')
+PY_VALUE = {'-W', '-X'}
+SUBST = '__MASUBST%d__'
+
+
+def _python_env(rest: List[str]) -> bool:
+    """Whether `rest` (a command, prefixes off) is `python -c <code>` with code that names the environment. Textual
+    and best effort: code that reaches it another way (`importlib`, `exec` of a built string, `getattr(os, …)`) is
+    not seen."""
+    if not rest or not PYTHON.match(os.path.basename(rest[0])):
+        return False
+    args, i = rest[1:], 0
+    while i < len(args) and args[i].startswith('-') and args[i] != '-':
+        a = args[i]
+        if not a.startswith('--') and a.endswith('c'):
+            return i + 1 < len(args) and bool(PY_ENV.search(args[i + 1]))
+        i += 2 if a in PY_VALUE else 1
+    return False
+
+
+def _close(text: str, i: int) -> int:
+    """Index just past the `)` that closes a `$(` whose body starts at `i`; len(text) when it never closes."""
+    n, depth, quote = len(text), 0, None
+    while i < n:
+        c = text[i]
+        if quote == "'":
+            quote = None if c == "'" else quote
+        elif c == '\\':
+            i += 1
+        elif c == '$' and text[i + 1:i + 2] == '(':
+            i = _close(text, i + 2)
+            continue
+        elif c == '`':
+            i = _backtick(text, i + 1)
+            continue
+        elif quote == '"':
+            quote = None if c == '"' else quote
+        elif c in '\'"':
+            quote = c
+        elif c == '(':
+            depth += 1
+        elif c == ')':
+            if depth == 0:
+                return i + 1
+            depth -= 1
+        i += 1
+    return n
+
+
+def _backtick(text: str, i: int) -> int:
+    """Index just past the backtick that closes one whose body starts at `i`; len(text) when it never closes."""
+    while i < len(text):
+        if text[i] == '\\':
+            i += 1
+        elif text[i] == '`':
+            return i + 1
+        i += 1
+    return len(text)
+
+
+def _split_subst(text: str, subs: List[str]):
+    """(text with every top-level command substitution replaced by one placeholder word, the same for the body of
+    every substitution, nested ones included). Quote-aware like `_scan` but it collects instead of raising, so it
+    works on text that does not tokenize: single-quoted text and escapes are skipped, a substitution is found
+    inside double quotes, `$((…))` is arithmetic (scanned on), an unclosed one runs to the end of the text.
+    `subs` collects the original text of each substitution, placeholders index it."""
+    out, bodies, i, n, quote = [], [], 0, len(text), None
+    while i < n:
+        c = text[i]
+        if quote == "'":
+            quote = None if c == "'" else quote
+        elif c == '\\' and i + 1 < n:
+            out.append(text[i:i + 2])
+            i += 2
+            continue
+        elif c == '`' or (c == '$' and text[i + 1:i + 2] == '(' and text[i + 2:i + 3] != '('):
+            start = i + (1 if c == '`' else 2)
+            end = _backtick(text, start) if c == '`' else _close(text, start)
+            closed = end > start and text[end - 1] == ('`' if c == '`' else ')') and end - 1 >= start
+            body = text[start:end - 1 if closed else end]
+            if c == '`':
+                body = re.sub(r'\\([`\\$])', r'\1', body)
+            out.append(SUBST % len(subs))
+            subs.append(text[i:end])
+            inner, nested = _split_subst(body, subs)
+            bodies += [inner] + nested
+            i = end
+            continue
+        elif quote == '"':
+            quote = None if c == '"' else quote
+        elif c in '\'"':
+            quote = c
+        out.append(c)
+        i += 1
+    return ''.join(out), bodies
+
+
 def env_reads(cmd: str) -> List[str]:
-    """The simple commands of `cmd` (pipelines, `;`, `&&`, `||`, `bash -c` strings included) that read the process
-    environment: `env`/`printenv` with no command, `set`/`export`/`declare`/`typeset` with no name, `launchctl
-    getenv`, any word naming `/proc/<pid>/environ`. Each as written. [] when `cmd` does not tokenize (the read-path
-    rule denies that)."""
-    try:
-        cmds = _commands(cmd)
-    except ValueError:
-        return []
+    """The simple commands of `cmd` (pipelines, `;`, `&&`, `||`, `bash -c` strings, command substitutions included)
+    that read the process environment: `env`/`printenv` with no command, `set`/`export`/`declare`/`typeset` with no
+    name, `launchctl getenv`, `python -c` code that names `os.environ` (textual, see `_python_env`), any word naming
+    `/proc/<pid>/environ`. Each as written. A line with substitutions is judged in pieces, each body and the line with
+    every substitution replaced by a placeholder word (put back in the finding); a piece that does not tokenize gives
+    no finding (the read-path rule denies it)."""
+    subs: List[str] = []
+    outer, bodies = _split_subst(cmd, subs)
     out = []
-    for c in cmds:
-        if _dumps_env(c.raw) or any(PROC_ENVIRON.search(w) for w in c.raw + c.inputs):
-            out.append(' '.join(c.raw + [f'< {i}' for i in c.inputs]))
+    for piece in [outer] + bodies:
+        try:
+            cmds = _commands(piece)
+        except ValueError:
+            continue
+        for c in cmds:
+            if _dumps_env(c.raw) or any(PROC_ENVIRON.search(w) for w in c.raw + c.inputs):
+                text = ' '.join(c.raw + [f'< {i}' for i in c.inputs])
+                out.append(re.sub(r'__MASUBST(\d+)__', lambda m: subs[int(m.group(1))], text))
     return out
 
 

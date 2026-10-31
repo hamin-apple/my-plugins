@@ -41,6 +41,19 @@ def log_error(active, where: str, exc: BaseException) -> None:
         pass
 
 
+def guard_line(*values) -> str:
+    """A `guard:` line; `values` follow ma_schema.GUARD_FIELDS (hook, agent, id, tool, decision, why)."""
+    return format_line(ma_schema.GUARD, zip(ma_schema.GUARD_FIELDS, values))
+
+
+def log_guard(active, *values) -> None:
+    """Append a `guard:` line for a deny; any failure is swallowed (the decision never depends on the log)."""
+    try:
+        append(active.log, guard_line(*values))
+    except Exception:
+        pass
+
+
 def parse_line(text: str):
     """(kind, fields) of a run-log line, or None; the monitor reads with the same ma_schema.split_line."""
     parsed = ma_schema.split_line(text)
@@ -64,7 +77,7 @@ def unreadable(log: Path) -> list:
         return []
 
 
-HOOK_KINDS = {'call', 'start', 'stop', 'log-error'}
+HOOK_KINDS = {'call', 'start', 'stop', 'log-error', ma_schema.GUARD}
 
 
 def is_hook_line(kind: str, fields: dict) -> bool:

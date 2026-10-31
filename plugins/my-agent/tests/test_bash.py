@@ -222,21 +222,52 @@ class CdTest(unittest.TestCase):
 
 
 class VariableTest(unittest.TestCase):
-    """A path with a variable is unknown, even after `NAME=literal` (no variable is followed)."""
+    """`NAME=literal` is followed only when one closed rule holds (architecture 4.4); every other use stays unknown."""
 
-    def test_assigned_variable_paths_are_unknown(self):
-        for cmd in ['D=/x/y; cat $D/f', 'D=/x/y\ncat ${D}/f', 'D=/tmp/x/d; cat $D/f', 'D=~/x; cat $D/f',
-                    'D=..; cat $D/f', 'D=/x; cat "${D}/f"', "D='/tmp/x/d'; cat $D/f"]:
+    def test_unfollowed_variable_paths_are_unknown(self):
+        for cmd in ['P=/a; P=/b; cat $P/x', 'P=$(pwd); cat $P/x', 'cat $P/x; P=/a', 'P=/a cat $P/x', 'cat $HOME/x',
+                    'P=~/x; cat $P/y', 'false && P=/a; cat $P/x', 'ls /y && P=/a; cat $P/x',
+                    'true || P=/a; cat $P/x', '(P=/a); cat $P/x', 'P=/a; export P=/etc; cat $P/x',
+                    'P=/a; read P; cat $P/x', 'P=/a; P+=b; cat $P/x', 'P=/a; printf -v P /etc; cat $P/x',
+                    'P=/a; printf -vP /etc; cat $P/x', 'P="/a /etc"; cat $P/passwd', "P=/a; bash -c 'cat $P/x'",
+                    'P=/a; eval "cat $P/x"', 'P=/a; cat ${P:-/etc}/x', "P=/a; cat '$P'/x", 'IFS=/; P=/a; cat $P/x',
+                    'P=/a; cat \\$P/x', 'P=/a; export Q=1; cat $P/x', 'P=/a; for P in /etc; do cat $P/x; done',
+                    'P=/a\ncat $P/x | head; P=/b', 'P=/a *; cat $P/x',
+                    'P=a*; cat $P/x', 'P=/a; (cat $P/x)  ; unset P; cat $P/y', 'P=/a & cat $P/x',
+                    'PWD=/tmp; cd /etc; cat $PWD/x', 'OLDPWD=/a; cd /b; cat $OLDPWD/x', 'PWD=/tmp; cat ${PWD}/x',
+                    'RANDOM=1; cat $RANDOM/x', 'SECONDS=1; cat $SECONDS/x',
+                    '_=/a; cat $_/x', 'BASH_ARGV0=/a; cat $BASH_ARGV0/x']:
             with self.subTest(cmd=cmd):
                 self.assertIsNone(ma_bash.read_paths(cmd, CWD))
-        for cmd in ['D=/tmp/x/d; echo hi > $D/f', "D='/tmp/x/d'; echo hi > $D/f", 'D=/x/y && echo hi > $D/f',
-                    'D=/x/y; echo hi > "$D/f"', 'D=/x; E=/y; rm $D/a $E/b', 'D=/x; ls; cd $D && touch f',
-                    'D=/a && echo hi > ${D}/f']:
+        for cmd in ['P=/a; P=/b; echo hi > $P/x', 'false && P=/a; echo hi > $P/x', 'P=/a; export P=/etc; rm $P/x',
+                    'echo hi > $HOME/x', 'D=~/x; echo hi > $D/f', 'D=/x; ls; cd $E && touch f']:
             with self.subTest(cmd=cmd):
                 self.assertIsNone(ma_bash.write_targets(cmd, CWD))
 
-    def test_single_quoted_dollar_stays_unknown(self):
-        self.assertIsNone(ma_bash.read_paths("D=/x/y; cat '$D/f'", CWD))
+    def test_literal_variable_expands(self):
+        for cmd in ['D=/x/y; cat $D/f', 'D=/x/y\ncat ${D}/f', 'D=/x/y; cat "$D/f"', "D='/x/y'; cat $D/f",
+                    'D=/x/y; E=/z; cat $D/f']:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.read_paths(cmd, CWD), [P('/x/y/f')])
+        self.assertEqual(ma_bash.read_paths('D=..; cat $D/f', CWD), [P('/f')])
+        self.assertEqual(ma_bash.write_targets('D=/x/y; echo hi > $D/f', CWD), [P('/x/y/f')])
+        self.assertEqual(ma_bash.write_targets('D=/x/y && echo hi > "${D}/f"', CWD), [P('/x/y/f')])
+        self.assertEqual(ma_bash.write_targets('D=/x; E=/y; rm $D/a $E/b', CWD), [P('/x/a'), P('/y/b')])
+        self.assertEqual(ma_bash.write_targets('D=/x; ls; cd $D && touch f', CWD), [P('/x/f')])
+        self.assertEqual(ma_bash.copy_sources('D=/x; cp $D/a /y', CWD), [P('/x/a')])
+
+    def test_cd_to_a_literal_variable(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp).resolve() / 'dir'
+            d.mkdir()
+            (d / 'x').write_text('')
+            paths = ma_bash.read_paths(f'D={d} && cd "$D" && ls x', CWD)
+            self.assertIn(d / 'x', paths)
+            self.assertEqual(ma_bash.read_paths(f'P={d}; cat $P/x', CWD), [d / 'x'])
+            self.assertEqual(ma_bash.read_paths(f'P={d}; cat ${{P}}/x', CWD), [d / 'x'])
+            self.assertEqual(ma_bash.write_targets(f'P={d}; echo hi > $P/out', CWD), [d / 'out'])
+            self.assertIsNone(ma_bash.read_paths(f'D={d} && cd "$E" && ls x', CWD))
 
     def test_hash_inside_a_word_is_not_a_comment(self):
         self.assertEqual(ma_bash.write_targets('echo ${#D}; rm /etc/x', CWD), [P('/etc/x')])
@@ -259,6 +290,11 @@ class ReadPathsTest(unittest.TestCase):
         self.assertIsNone(ma_bash.read_paths('cat "x', CWD))
 
 
+class SetsidTest(unittest.TestCase):
+    def test_setsid_is_seen_through(self):
+        self.assertEqual(ma_bash.write_targets('setsid cp a /etc/b', CWD), [P('/etc/b')])
+
+
 class CopySourcesTest(unittest.TestCase):
     def test_copy_sources(self):
         self.assertEqual(ma_bash.copy_sources('cp -p docs/agent/t/work/note.md ~/notes/', CWD),
@@ -271,7 +307,8 @@ class CopySourcesTest(unittest.TestCase):
         self.assertEqual(sorted(ma_bash.copy_sources('cd T; cp work/f ~/out', CWD)),
                          sorted([P('/p/work/f'), P('/p/T/work/f')]))
         self.assertEqual(ma_bash.copy_sources('cd "$D" && cp work/f ~/out', CWD), [P('/p/work/f')])
-        self.assertEqual(ma_bash.copy_sources('D=/t; cp $D/f ~/out', CWD), [])     # a variable path is unknown
+        self.assertEqual(ma_bash.copy_sources('D=/t; cp $D/f ~/out', CWD), [P('/t/f')])   # a literal variable
+        self.assertEqual(ma_bash.copy_sources('cp $D/f ~/out', CWD), [])                # an unknown one
 
 
 class GitSubcommandsTest(unittest.TestCase):
@@ -321,6 +358,21 @@ class EnvReadsTest(unittest.TestCase):
             ('set -e', []), ('set -o pipefail', []), ('export VAR=x', []), ('declare -x VAR=1', []),
             ('declare -p HOME', []), ('ls $HOME/x', []), ('echo $HOME', []), ('cat /proc/cpuinfo', []),
             ('launchctl list', []), ('echo env printenv', []), ('ls', []), ('echo "unclosed', []),
+            ('echo $(printenv)', ['printenv']), ('echo `env`', ['env']), ('echo "$(printenv)"', ['printenv']),
+            ('echo $(echo $(printenv))', ['printenv']), ('echo $(printenv HOME)', ['printenv HOME']),
+            ('printenv $(date)', ['printenv $(date)']), ('echo $(date); env', ['env']), ('setsid env', ['setsid env']),
+            ('setsid -f printenv', ['setsid -f printenv']),
+            ('python3 -c "import os;print(os.environ)"', ['python3 -c import os;print(os.environ)']),
+            ('python -c \'import os; os.environ.get("X")\'', ['python -c import os; os.environ.get("X")']),
+            ('python3 -c "from os import environ; print(environ)"',
+             ['python3 -c from os import environ; print(environ)']),
+            ('python3 -Ic "import os; os.getenv(\'X\')"', ["python3 -Ic import os; os.getenv('X')"]),
+            ('python3.12 -c "import os; os.environb"', ['python3.12 -c import os; os.environb']),
+            ('echo "a $(env) b"', ['env']), ('echo $(date) $(env -i ls) `printenv`', ['printenv']),
+            ('echo $(date)', []), ('echo $((1+2))', []), ('echo $((1+$(date)))', []),
+            ('echo $(( $(printenv) ))', ['printenv']), ('python3 -c "print(1)"', []), ('setsid ls', []),
+            ("echo '$(printenv)'", []), ('python3 script.py -c os.environ', []),
+            ('echo $(printenv', ['printenv']), ('echo $(date', []),
         ]
         for cmd, expected in table:
             with self.subTest(cmd=cmd):

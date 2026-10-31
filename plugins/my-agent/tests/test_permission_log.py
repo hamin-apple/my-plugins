@@ -44,16 +44,17 @@ class PermissionLogTest(unittest.TestCase):
         f = parse(log_lines(self.task)[-1])
         self.assertEqual((f['agent'], f['id']), ('my-agent:coder', 'a7'))
 
-    def test_ask_guesses_running_agent(self):
+    def test_ask_without_agent_id_is_main_even_with_running_subagent(self):
         self.write_log('2026-10-25 09:00:01 start: agent=my-agent:coder id=c1 configured=sonnet effort=medium\n')
         self.ask()
         f = parse(log_lines(self.task)[-1])
-        self.assertEqual((f['agent'], f['id']), ('my-agent:coder', 'c1'))
-        self.write_log('2026-10-25 09:00:01 start: agent=my-agent:coder id=c1 configured=sonnet effort=medium\n'
-                       '2026-10-25 09:00:02 start: agent=my-agent:writer id=w1 configured=sonnet effort=medium\n')
-        self.ask()
-        f = parse(log_lines(self.task)[-1])
         self.assertEqual((f['agent'], f['id']), ('main', '-'))
+
+    def test_ask_with_agent_id_is_that_agent_despite_other_running(self):
+        self.write_log('2026-10-25 09:00:01 start: agent=my-agent:coder id=c1 configured=sonnet effort=medium\n')
+        self.ask(agent_type='my-agent:writer', agent_id='w1')
+        f = parse(log_lines(self.task)[-1])
+        self.assertEqual((f['agent'], f['id']), ('my-agent:writer', 'w1'))
 
     def test_ask_summary_for_other_tools(self):
         self.hook('ask', {'tool_name': 'Write', 'tool_input': {'file_path': '/tmp/x.md', 'content': 'long'}})

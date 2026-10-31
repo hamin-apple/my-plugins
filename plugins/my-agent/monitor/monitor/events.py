@@ -212,6 +212,9 @@ def build_events(lines) -> Events:
             item(l, 'note', 'scripts', f"stale · {f.get('id', '-')}{rev_s}")
         elif l.kind == 'log-error':  # a recording hook that could not write its line (never fails the session)
             item(l, 'note', 'hooks', f"log-error · {f.get('where', '-')}", sub=f.get('error') or None)
+        elif l.kind == ma_schema.GUARD:   # a guard deny (4.7.2): the hooks component, the reason as the detail line
+            item(l, 'note', 'hooks', f"{f.get('hook', '-')} {f.get('decision', '-')} · {f.get('tool', '-')}",
+                 sub=f.get('why') or None)
         elif l.kind == 'deliver':
             item(l, 'phase', 'recorder', f"deliver · {f.get('path', '')}".rstrip(' ·'))
         elif l.kind == 'abort':

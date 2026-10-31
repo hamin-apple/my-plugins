@@ -323,7 +323,7 @@ footer .disc { border-top: 0; }
     <div class="disc">
       <button class="disc-btn" type="button" id="src-btn" aria-expanded="false" aria-controls="src-body"><span class="mark" aria-hidden="true">▸</span><span class="lab">6. Sources</span></button>
       <div class="disc-body" id="src-body" hidden>
-        <p class="intro">Sources by comparison-table number. The my-agent cells (1 to 7) use paths relative to <code>~/dev/my-plugins</code>. The rest are URLs; for <code>Not in the docs</code> cells, the URLs that were checked are listed. Secondary sources are marked (secondary). Sources for the features in parts 1 to 3 are in the <code>Source:</code> line of each item.</p>
+        <p class="intro">Sources by comparison-table number. The my-agent cells (1 to 7) use paths relative to the repository root. The rest are URLs; for <code>Not in the docs</code> cells, the URLs that were checked are listed. Secondary sources are marked (secondary). Sources for the features in parts 1 to 3 are in the <code>Source:</code> line of each item.</p>
         <ol id="src-list"></ol>
       </div>
     </div>
@@ -432,7 +432,7 @@ footer .disc { border-top: 0; }
     ovList.appendChild(c);
   });
   document.getElementById('ov-note').appendChild(disc('Details: how sources are cited',
-    `<p>Every source path is relative to <code>~/dev/my-plugins</code>. A line number is given only when that one line (or range) supports the sentence. Sources for parts 1 to 3 are in the <code>Source:</code> line of each item; the numbers in the part 4 comparison table are resolved in part 6.</p>`));
+    `<p>Every source path is relative to the repository root. A line number is given only when that one line (or range) supports the sentence. Sources for parts 1 to 3 are in the <code>Source:</code> line of each item; the numbers in the part 4 comparison table are resolved in part 6.</p>`));
 
   /* ---------- 2. flow ---------- */
   document.getElementById('flow-note').appendChild(disc('Details: the example request',
@@ -912,7 +912,7 @@ footer .disc { border-top: 0; }
   });
 
   document.getElementById('cmp-note').appendChild(disc('Details: research basis',
-    `<p>The documents were read on 2026-10-30. The my-agent cells rest on the plugin files (version 0.4.5, <code>plugins/my-agent/.claude-plugin/plugin.json:3</code>), and the sources are paths relative to <code>~/dev/my-plugins</code>. The cells for other systems use only what was confirmed in each system's official documents and repository. Secondary sources (secondary) are marked separately in the cell descriptions and the source list.</p>`));
+    `<p>The documents were read on 2026-10-30. The my-agent cells rest on the plugin files (version 0.4.5, <code>plugins/my-agent/.claude-plugin/plugin.json:3</code>), and the sources are paths relative to the repository root. The cells for other systems use only what was confirmed in each system's official documents and repository. Secondary sources (secondary) are marked separately in the cell descriptions and the source list.</p>`));
 
   var cmpList = document.getElementById('cmp-list');
   function renderCmp() {

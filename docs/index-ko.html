@@ -323,7 +323,7 @@ footer .disc { border-top: 0; }
     <div class="disc">
       <button class="disc-btn" type="button" id="src-btn" aria-expanded="false" aria-controls="src-body"><span class="mark" aria-hidden="true">▸</span><span class="lab">6. 출처</span></button>
       <div class="disc-body" id="src-body" hidden>
-        <p class="intro">비교표 번호별 출처입니다. my-agent 칸(1~7)은 <code>~/dev/my-plugins</code> 기준 상대 경로입니다. 나머지는 URL이며, <code>문서에 없음</code> 칸은 확인한 URL을 적었습니다. 부차 출처는 (secondary)로 표시했습니다. 1~3장 특징별 출처는 각 항목의 <code>출처:</code> 줄에 있습니다.</p>
+        <p class="intro">비교표 번호별 출처입니다. my-agent 칸(1~7)은 저장소 루트 기준 상대 경로입니다. 나머지는 URL이며, <code>문서에 없음</code> 칸은 확인한 URL을 적었습니다. 부차 출처는 (secondary)로 표시했습니다. 1~3장 특징별 출처는 각 항목의 <code>출처:</code> 줄에 있습니다.</p>
         <ol id="src-list"></ol>
       </div>
     </div>
@@ -432,7 +432,7 @@ footer .disc { border-top: 0; }
     ovList.appendChild(c);
   });
   document.getElementById('ov-note').appendChild(disc('자세히: 출처 표기 안내',
-    `<p>모든 출처 경로는 <code>~/dev/my-plugins</code> 기준 상대 경로입니다. 줄 번호는 그 줄(또는 범위) 하나가 문장을 뒷받침할 때만 붙였습니다. 1~3장의 출처는 항목마다 <code>출처:</code> 줄에 있고, 4장 비교표의 번호는 6장에서 풀립니다.</p>`));
+    `<p>모든 출처 경로는 저장소 루트 기준 상대 경로입니다. 줄 번호는 그 줄(또는 범위) 하나가 문장을 뒷받침할 때만 붙였습니다. 1~3장의 출처는 항목마다 <code>출처:</code> 줄에 있고, 4장 비교표의 번호는 6장에서 풀립니다.</p>`));
 
   /* ---------- 2. flow ---------- */
   document.getElementById('flow-note').appendChild(disc('자세히: 예시 요청',
@@ -912,7 +912,7 @@ footer .disc { border-top: 0; }
   });
 
   document.getElementById('cmp-note').appendChild(disc('자세히: 조사 기준',
-    `<p>조사한 문서는 2026-10-30에 본 것입니다. my-agent 칸은 플러그인 파일(버전 0.4.5, <code>plugins/my-agent/.claude-plugin/plugin.json:3</code>)에 근거하며, 출처는 <code>~/dev/my-plugins</code> 기준 상대 경로입니다. 다른 시스템 칸은 각 시스템의 공식 문서·저장소에서 확인한 내용만 씁니다. 부차 출처(secondary)는 칸 설명과 출처 목록에 따로 표시했습니다.</p>`));
+    `<p>조사한 문서는 2026-10-30에 본 것입니다. my-agent 칸은 플러그인 파일(버전 0.4.5, <code>plugins/my-agent/.claude-plugin/plugin.json:3</code>)에 근거하며, 출처는 저장소 루트 기준 상대 경로입니다. 다른 시스템 칸은 각 시스템의 공식 문서·저장소에서 확인한 내용만 씁니다. 부차 출처(secondary)는 칸 설명과 출처 목록에 따로 표시했습니다.</p>`));
 
   var cmpList = document.getElementById('cmp-list');
   function renderCmp() {

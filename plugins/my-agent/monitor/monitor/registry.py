@@ -9,9 +9,8 @@ from .taskview import build_task, task_key
 from .transcript import TranscriptCache
 
 import ma_data
-import ma_prices
 import ma_usage
-from ma_prices import load_prices
+from ma_prices import load_prices, prices_file
 
 ROOT = Path(__file__).resolve().parent.parent
 SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed')
@@ -23,7 +22,7 @@ def default_projects_file() -> Path:
 
 def default_prices_file() -> Path:
     """`prices.json` in the data folder when it exists, else the bundled one (spec 6.1)."""
-    return ma_prices.prices_file()
+    return prices_file()
 
 
 def default_claude_root() -> Path:

@@ -134,7 +134,8 @@ def _deliver(project: Path, intake: dict, status: str):
 
 
 def _main(ev, tcache, prices, unpriced, running, task_dir):
-    """{(rev, step): usd} of the main session (None for a window whose models have no price row), or None if neither a snapshot nor a transcript was found.
+    """{(rev, step): usd} of the main session (None for a window whose models have no price row), or None if
+    neither a snapshot nor a transcript was found.
 
     A finished task reads `main-usage.json` (written by L1 at the end of the task, ma_usage) when it exists, since
     Claude Code deletes transcripts after `cleanupPeriodDays`; otherwise the transcript. A finished task's last window

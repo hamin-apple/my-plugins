@@ -6,7 +6,8 @@ model inside each step window: from a `step:` line to the next `step:` line; the
 (default 30 days), so at the end of a task L1 runs `usage-snapshot.py`, which writes the same sums to
 `<task>/main-usage.json` (architecture 4.8.2 "Task records over time"). The monitor reads that file for a finished task.
 The monitor also uses `parse_entry` and `windows` here, so both count the same way.
-`write_snapshot` prints the cost from `ma_prices` (the same table and override as the monitor).
+`write_snapshot` returns a message with the cost from `ma_prices` (the same table and override as the monitor); the
+scripts print it.
 """
 import json
 from datetime import datetime, timedelta

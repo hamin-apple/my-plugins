@@ -7,7 +7,7 @@ A Claude Code plugin marketplace by hamin-apple.
 | Plugin | Version | Description |
 |---|---|---|
 | `my-agent` | 0.5.2 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
-| `my-agent-tray` | 0.1.0 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
+| `my-agent-tray` | 0.1.1 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
 
@@ -86,7 +86,7 @@ claude plugin uninstall my-agent-tray@my-plugins   # if installed
 - `docs/index-ko.html`: the my-agent feature overview in Korean (maintained by hand)
 - `tests/`: tests for `tools/`
 - `docs/handoff/`: handoff notes for work continued in another environment
-- `.my-agent/` and `docs/agent/`: my-agent task records from this repository (`docs/agent` is the former layout). Excluded from git.
+- `.my-agent/`: my-agent task records from this repository. Excluded from git.
 - `plugins/my-agent/docs/reference.md`: sources of the reference documents. The local copies in `plugins/my-agent/docs/ref/` are excluded from git.
 
 ## License

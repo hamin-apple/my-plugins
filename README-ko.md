@@ -7,7 +7,7 @@ hamin-apple의 Claude Code 플러그인 마켓플레이스입니다.
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
 | `my-agent` | 0.5.2 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
-| `my-agent-tray` | 0.1.0 | my-agent 모니터용 macOS 메뉴바 앱 (선택; my-agent 0.5.0 이상 필요) |
+| `my-agent-tray` | 0.1.1 | my-agent 모니터용 macOS 메뉴바 앱 (선택; my-agent 0.5.0 이상 필요) |
 
 ## 요구 사항
 
@@ -86,7 +86,7 @@ claude plugin uninstall my-agent-tray@my-plugins   # 설치했다면
 - `docs/index-ko.html`: my-agent 기능 소개 한국어판(직접 관리)
 - `tests/`: `tools/` 테스트
 - `docs/handoff/`: 다른 환경에서 이어 할 작업의 handoff 문서
-- `.my-agent/`, `docs/agent/`: 이 저장소에서 돌린 my-agent 작업 기록(`docs/agent`는 이전 구조). git에서 제외됩니다.
+- `.my-agent/`: 이 저장소에서 돌린 my-agent 작업 기록. git에서 제외됩니다.
 - `plugins/my-agent/docs/reference.md`: 참고 문서의 출처 목록. 로컬 사본(`plugins/my-agent/docs/ref/`)은 git에서 제외됩니다.
 
 ## 라이선스

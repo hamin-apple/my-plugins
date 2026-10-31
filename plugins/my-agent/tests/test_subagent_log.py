@@ -79,7 +79,7 @@ class SubagentLogTest(unittest.TestCase):
 
     def test_unit_on_call_and_stop(self):
         """D3: the `Work unit: u<n>` line L1 puts in a worker's prompt lands on call: and stop: as unit=."""
-        prompt = 'Work unit: u2 CLI option\nplan.md: docs/agent/x/plan.md'
+        prompt = 'Work unit: u2 CLI option\nplan.md: .my-agent/x/plan.md'
         self.hook('call', dict(CALL, tool_input=dict(CALL['tool_input'], prompt=prompt)))
         self.assertEqual(self.last()['unit'], 'u2')
         self.start()

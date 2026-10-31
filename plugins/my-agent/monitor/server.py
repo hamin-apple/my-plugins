@@ -8,6 +8,8 @@ from pathlib import Path
 
 from monitor.registry import Registry
 
+import ma_data   # on sys.path through monitor/__init__.py
+
 HOST = '127.0.0.1'
 PORTS = range(8765, 8776)
 ROOT = Path(__file__).resolve().parent
@@ -36,7 +38,7 @@ class Handler(BaseHTTPRequestHandler):
             except OSError:
                 return self._json(404, {'error': 'web/index.html missing'})
         if path == '/api/health':
-            return self._json(200, {'app': 'my-agent-monitor', 'root': str(ROOT)})
+            return self._json(200, {'app': 'my-agent-monitor', 'root': str(ROOT), 'task_dir': ma_data.task_dir()})
         if path == '/api/tasks':
             return self._json(200, {'tasks': self.registry.list_tasks(), 'now': datetime.now().strftime('%H:%M')})
         if path.startswith('/api/tasks/'):

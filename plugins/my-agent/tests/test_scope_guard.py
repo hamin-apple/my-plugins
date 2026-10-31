@@ -5,9 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import make_task, run_hook
+from helpers import clean_task_env, make_task, records, rel, run_hook
 
 TASK = '261025-probe-task'
+L4 = Path(__file__).resolve().parents[1] / 'l4-tools-guards'
 
 
 class ScopeGuardTest(unittest.TestCase):
@@ -135,6 +136,7 @@ class ScopeGuardTest(unittest.TestCase):
 
     def test_writer_reference_files(self):
         ref = self.L / 'docs' / 'ref.md'
+        ref.parent.mkdir(exist_ok=True)
         ref.write_text('r')
         self.assertTrue(self.denied('my-agent:writer', 'Read', {'file_path': '/Applications/x'}))
         (self.T / 'plan.md').write_text('# Plan\n\n## Reference files\n\n- `docs/ref.md`\n\n## Approval\n')
@@ -226,24 +228,27 @@ class ScopeGuardTest(unittest.TestCase):
         self.assertFalse(self.denied('my-agent:coder', 'Write', {'file_path': str(W / 'src/a.py')}, cwd=W))
         self.assertFalse(self.denied('my-agent:coder', 'Bash', {'command': 'touch src/b.py'}, cwd=W))
         self.assertTrue(self.denied('my-agent:coder', 'Write', {'file_path': str(self.L / 'src/a.py')}, cwd=W))
-        self.assertTrue(self.denied('my-agent:coder', 'Write', {'file_path': str(self.L / 'docs/agent/x/y')}, cwd=W))
+        self.assertTrue(self.denied('my-agent:coder', 'Write', {'file_path': str(records(self.L) / 'x/y')}, cwd=W))
         self.assertFalse(self.denied('my-agent:coder', 'Read', {'file_path': str(self.T / 'plan.md')}, cwd=W))
 
     def test_coder_main_tree(self):
         self.assertFalse(self.denied('my-agent:coder', 'Edit', {'file_path': str(self.L / 'src/a.py')}))
         self.assertTrue(self.denied('my-agent:coder', 'Edit', {'file_path': str(self.T / 'plan.md')}))
-        self.assertTrue(self.denied('my-agent:coder', 'Bash', {'command': 'rm -rf docs/agent'}))
+        self.assertTrue(self.denied('my-agent:coder', 'Bash', {'command': f'rm -rf {rel()}'}))
         self.assertTrue(self.denied('my-agent:coder', 'Bash', {'command': 'echo x > "$OUT"'}))
         self.assertFalse(self.denied('my-agent:coder', 'Bash', {'command': 'python3 -m unittest'}))
 
-    def test_coder_cannot_reach_docs_agent_by_case_cd_or_link(self):
-        for raw in ('Docs/agent', 'docs/AGENT'):
+    def test_coder_cannot_reach_records_by_case_cd_or_link(self):
+        for raw in (rel().upper(), rel().swapcase()):
             with self.subTest(raw=raw):
                 self.assertTrue(self.denied('my-agent:coder', 'Write',
                                             {'file_path': str(self.L / raw / TASK / 'review.md'), 'content': 'x'}))
-        for cmd in (f'cd docs && echo "BLOCKER 0" > agent/{TASK}/review.md',
-                    f'ln -s docs/agent/{TASK} x && echo "BLOCKER 0" > x/review.md',
-                    'rm docs/agent/.ACTIVE'):
+        head, _, tail = rel().rpartition('/')
+        cd = f'cd {head} && echo "BLOCKER 0" > {tail}/{TASK}/review.md' if head else \
+            f'cd {tail} && echo "BLOCKER 0" > {TASK}/review.md'
+        for cmd in (cd,
+                    f'ln -s {rel()}/{TASK} x && echo "BLOCKER 0" > x/review.md',
+                    f'rm {rel()}/.ACTIVE'):
             with self.subTest(cmd=cmd):
                 self.assertTrue(self.denied('my-agent:coder', 'Bash', {'command': cmd}))
 
@@ -341,8 +346,70 @@ class ScopeGuardTest(unittest.TestCase):
     def test_unknown_agent_denied(self):
         self.assertTrue(self.denied('my-agent:probe-worker', 'Read', {'file_path': str(self.T / 'x')}))
 
+    def rules_of(self, env=None, location=None):
+        """The coder's main-tree deny list, loaded in-process with the given environment."""
+        import importlib.util
+        import sys
+        from unittest import mock
+        import ma_active
+        spec = importlib.util.spec_from_file_location('scope_guard_mod', L4 / 'hooks' / 'scope-guard.py')
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules.setdefault('scope_guard_mod', mod)
+        spec.loader.exec_module(mod)
+        with mock.patch.dict(os.environ):
+            os.environ.pop('MA_TASK_DIR', None)
+            os.environ.pop('CLAUDE_PLUGIN_OPTION_TASK_DIR', None)
+            os.environ.update(env or {})
+            active = ma_active.find_active(str(location or self.L))
+            return mod.rules('coder', active, location or self.L)
+
+    def test_coder_deny_list_follows_the_setting(self):
+        loc = self.root / 'other'
+        with clean_task_env():
+            make_task(loc, task=TASK, sub='notes/agent')
+        r = self.rules_of({'CLAUDE_PLUGIN_OPTION_TASK_DIR': 'notes/agent'}, loc)
+        self.assertEqual(r.deny_write, [loc / 'notes/agent', loc / '.git', loc / '.claude'])
+        loc2 = self.root / 'third'
+        with clean_task_env():
+            make_task(loc2, task=TASK, sub='.my-agent')
+        r = self.rules_of({}, loc2)
+        self.assertEqual(r.deny_write[0], loc2 / '.my-agent')
+
+    def test_case_folding_with_mixed_case_setting(self):
+        loc = self.root / 'cased'
+        with clean_task_env():
+            make_task(loc, task=TASK, sub='Notes/Agent')
+        env = {'MA_TASKS_DIR': str(self.root / 'agent-tasks'), 'CLAUDE_PLUGIN_OPTION_TASK_DIR': 'Notes/Agent'}
+
+        def hook(agent, path):
+            payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Write', 'tool_input': {'file_path': str(path)},
+                       'session_id': 'sess-1', 'agent_type': agent, 'agent_id': 'a1'}
+            r = run_hook('scope-guard.py', None, payload, loc, env=env, drop=('MA_TASK_DIR',))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            return r.stdout
+        self.assertIn('Outside the write scope of coder', hook('my-agent:coder', loc / 'notes/agent/x.md'))
+        self.assertEqual(hook('my-agent:verifier', loc / 'notes/agent' / TASK / 'verify.md'), '')
+
+    def test_link_layout_protects_and_allows_through_both_names(self):
+        loc = self.root / 'linked'
+        with clean_task_env():
+            make_task(loc, task=TASK, sub='docs/agent')
+        (loc / '.my-agent').symlink_to('docs/agent')
+        env = {'MA_TASKS_DIR': str(self.root / 'agent-tasks')}
+
+        def hook(agent, path):
+            payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Write', 'tool_input': {'file_path': str(path)},
+                       'session_id': 'sess-1', 'agent_type': agent, 'agent_id': 'a1'}
+            r = run_hook('scope-guard.py', None, payload, loc, env=env, drop=('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR'))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            return r.stdout
+        for base in ('.my-agent', 'docs/agent'):
+            with self.subTest(base=base):
+                self.assertEqual(hook('my-agent:verifier', loc / base / TASK / 'verify.md'), '')
+                self.assertIn('Outside the write scope of coder', hook('my-agent:coder', loc / base / TASK / 'x.md'))
+
     def test_no_active_denies_my_agent(self):
-        (self.L / 'docs' / 'agent' / '.active').unlink()
+        (records(self.L) / '.active').unlink()
         self.assertTrue(self.denied('my-agent:explorer', 'Read', {'file_path': str(self.L / 'src/a.py')}))
 
     def test_coder_git_mv(self):
@@ -352,8 +419,8 @@ class ScopeGuardTest(unittest.TestCase):
         # readable but not writable (the data folder): the write scope is what denies it
         self.assertIn('Outside the write scope of coder',
                       self.reason(coder, f'git mv src/a.py {self.root / "agent-tasks" / "b.py"}'))
-        self.assertIn('Outside the write scope of coder', self.reason(coder, 'git mv src/a.py docs/agent/x'))
-        for cmd in ('git mv -f a b', 'git mv a', 'git -C sub mv a b', 'echo docs/agent | xargs git mv src/a.py src/b.py',
+        self.assertIn('Outside the write scope of coder', self.reason(coder, f'git mv src/a.py {rel()}/x'))
+        for cmd in ('git mv -f a b', 'git mv a', 'git -C sub mv a b', f'echo {rel()} | xargs git mv src/a.py src/b.py',
                     'GIT_DIR=x git mv src/a.py src/b.py', 'GIT_WORK_TREE=/x git mv src/a.py src/b.py',
                     'git add .', 'git commit -m x', 'git checkout b', 'git reset --hard'):
             with self.subTest(cmd=cmd):

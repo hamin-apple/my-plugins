@@ -2,10 +2,11 @@
 """Save the main session's token usage per step to <task>/main-usage.json and print its cost at list prices
 (architecture 4.8.2 "Task records over time").
 
-usage: usage-snapshot.py [--cwd DIR] [--data-dir DIR]
+usage: usage-snapshot.py [--cwd DIR] [--data-dir DIR] [--task-dir DIR]
                                             the active task of DIR (L1, at the end of a task: accept.md
                                             "Retrospective", SKILL.md "Abort")
-       usage-snapshot.py --task-dir DIR     any task folder (archive-tasks.py, or by hand for an older task)
+       usage-snapshot.py --task-folder DIR  any task folder (archive-tasks.py, or by hand for an older task)
+--task-dir is the task subfolder (setting `task_dir`, default .my-agent).
 --data-dir is the data folder (its active-index.json finds the task of a run folder outside git; its prices.json
 overrides the bundled list prices, as for the monitor).
 Prints `saved: <path> (<n> rows, ≈ $<usd>)`; the cost comes from the shared table `lib/ma_prices.py`.
@@ -39,15 +40,20 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--cwd', default=os.getcwd())
     ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/log/my-agent)')
-    ap.add_argument('--task-dir')
+    ap.add_argument('--task-dir', help='the task subfolder, setting `task_dir` (default: the setting, else .my-agent)')
+    ap.add_argument('--task-folder')
     args = ap.parse_args(argv)   # argparse exits 2 on bad arguments
-    if args.task_dir:
-        task_dir = Path(args.task_dir).expanduser().resolve()
+    if args.task_dir and (os.path.isabs(args.task_dir) or args.task_dir.startswith('~')):
+        print('usage-snapshot: --task-dir is the task subfolder setting; for one task folder use --task-folder <path>',
+              file=sys.stderr)
+        return 2
+    if args.task_folder:
+        task_dir = Path(args.task_folder).expanduser().resolve()
         if not (task_dir / 'intake.md').is_file():
             print(f'usage-snapshot: {task_dir} is not a task folder (no intake.md)')
             return 1
     else:
-        active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir))
+        active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir), sub=args.task_dir)
         if active is None:
             print(f'usage-snapshot: no active my-agent task under {args.cwd}')
             return 1

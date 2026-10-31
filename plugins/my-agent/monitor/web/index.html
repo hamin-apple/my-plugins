@@ -556,13 +556,13 @@ try { st.sideMin = localStorage.getItem('ma-side-min') === '1'; const w = +local
 /* top bar and sidebar labels */
 function renderChrome() {
   document.documentElement.lang = LANG;
-  $('live-txt').textContent = st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks docs/agent/ every 2s', '실시간 · 2초마다 docs/agent/ 확인');
+  $('live-txt').textContent = st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks the task folders every 2s', '실시간 · 2초마다 작업 폴더 확인');
   $('live-dot').classList.toggle('run', !st.offline && !st.liveWait && TASKS.some(t => t.status === 'running'));
   $('task-select').setAttribute('aria-label', L('Select task', '작업 선택'));
   const F = { all: ['All', '전체'], running: ['Running', '진행 중'], done: ['Done', '완료'], stopped: ['Stopped', '중단'] };
   document.querySelectorAll('#filter button').forEach(b => b.textContent = L(...F[b.dataset.f]));
   const np = new Set(TASKS.map(t => t.project)).size;
-  $('side-note').innerHTML = TASKS.length ? L(`Tasks found in <code>docs/agent/</code> of ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳의 <code>docs/agent/</code>에서 찾은 작업입니다.`)
+  $('side-note').innerHTML = TASKS.length ? L(`Tasks found in ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳에서 찾은 작업입니다.`)
     : L('No tasks yet. my-agent lists projects in <code>projects.txt</code> in its data folder.', '아직 작업이 없습니다. my-agent가 데이터 폴더의 <code>projects.txt</code>에 프로젝트를 적습니다.');
   document.querySelectorAll('#lang-seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
 }
@@ -588,7 +588,7 @@ function renderList() {
 function renderHead() {
   const t = cur();
   // prompt and task folder live in a tooltip so a long request does not take over the head
-  const tip = escA(`${L('Request', '요청')}: ${t.title}\n${L('Folder', '작업 위치')}: ${t.project}/docs/agent/${t.id}/`);
+  const tip = escA(`${L('Request', '요청')}: ${t.title}\n${L('Folder', '작업 위치')}: ${t.folder}/`);
   $('task-head').innerHTML = `<h2 title="${tip}">${esc(t.id)}</h2>${statusBadge(t)}<span class="info" title="${tip}" aria-label="${tip}">ⓘ</span>
     <span class="where">${L('profile', '프로파일')} ${esc(prof(t))} · ${L('started', '시작')} ${esc(t.started)} · ${L('elapsed', '경과')} ${fmtMin(t.elapsed)}</span>`;
 }
@@ -777,7 +777,7 @@ function renderFiles() {
     <div class="ftree">${d.items.length ? d.items.map(i => `<div class="frow"><span class="fn">${esc(i[0])}</span><span class="fm">${esc(i[1])} · ${esc(i[2])}</span></div>`).join('') : `<p class="note">${L('none', '없음')}</p>`}</div>
     <div class="fgroup">Intermediate · mock-ups approved at G1b</div>
     <div class="ftree">${M.length > 1 ? `<button class="frow ${st.file === 'mockdiff' ? 'sel' : ''}" data-file="mockdiff"><span class="fn">⇄ ${L('compare mock-ups', 'mock-up 비교')} rev0 → rev${M.at(-1).r}</span><span class="fm">${L('what the revision changed', '수정이 바꾼 것')}</span></button>` : ''}${M.map((m, i) => `<button class="frow ${st.file === 'mock:' + i ? 'sel' : ''}" data-file="mock:${i}"><span class="fn">◇ mock-up${t.revs ? ' rev' + m.r : ''} · ${esc(m.kind)}${m.proto ? ' + prototype' : ''}</span><span class="fm">3. Plan · ${esc(m.at)}</span></button>`).join('') || `<p class="note">${L('none yet (made at 3. Plan)', '아직 없음 (3. Plan에서 생김)')}</p>`}</div>
-    <div class="fgroup">Task files · ${esc(t.project)}/docs/agent/${esc(t.id)}/</div>
+    <div class="fgroup">Task files · ${esc(t.folder)}/</div>
     <div class="ftree">${rows}</div></div>
     <div class="fside">${isDiff ? mockDiff(t, 0, M.length - 1) : mock ? mockBlock(t, mock) : `<div class="preview">${f.todo ? `<span class="h">${L('not created yet', '아직 만들어지지 않음')}</span>` : `<span class="h">── ${esc(f.p)} · ${esc(f.t)}\n</span>${esc(f.pv || L('(no preview sample)', '(미리보기 예시 없음)'))}`}</div>`}</div></div>`;
 }
@@ -897,7 +897,7 @@ function rpGo(i) { st.ri = Math.max(0, Math.min(cur().log.length - 1, i)); rende
 function renderAll() { renderChrome(); renderList();
   const t = cur();
   if (!t || t.error) {
-    $('task-head').innerHTML = t ? `<h2>${esc(t.id)}</h2><span class="where"><code>${esc(t.project)}/docs/agent/${esc(t.id)}/</code></span>` : '';
+    $('task-head').innerHTML = t ? `<h2>${esc(t.id)}</h2><span class="where"><code>${esc(t.folder)}/</code></span>` : '';
     $('p-status').innerHTML = t ? `<div class="now-box"><h4>${L('Could not read this task', '이 작업을 읽을 수 없음')}</h4><p class="note">${esc(t.error)}</p></div>`
       : `<p class="note">${st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : L('No tasks yet.', '아직 작업이 없습니다.')}</p>`;
     ['p-arch', 'p-files', 'p-log'].forEach(id => $(id).innerHTML = '');

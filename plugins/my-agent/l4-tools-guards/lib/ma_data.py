@@ -5,11 +5,17 @@ variable $CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/log/my-agent. `~` is expand
 (a placeholder that was never substituted) counts as "not set".
 Per-file overrides win first: $MA_PROJECTS_FILE, $MA_FEEDBACK_FILE, $MA_GATE_REPORT_DIR.
 The run index, monitor state, logs, open settings and price override sit directly in the data folder.
+
+Task subfolder (`task_dir()`): $MA_TASK_DIR (tests), else the setting (a script's `--task-dir` argument, or the
+environment variable $CLAUDE_PLUGIN_OPTION_TASK_DIR), else `.my-agent`. $MA_TASK_DIR is not $MA_TASKS_DIR (the data
+folder, an older name); the names differ by one letter.
 """
 import os
 from pathlib import Path
 
 SETTING_ENV = 'CLAUDE_PLUGIN_OPTION_DATA_DIR'
+TASK_SETTING_ENV = 'CLAUDE_PLUGIN_OPTION_TASK_DIR'
+TASK_DIR_DEFAULT = '.my-agent'
 
 
 def _value(raw):
@@ -43,3 +49,21 @@ def feedback_file(arg=None) -> Path:
 def report_dir(arg=None) -> Path:
     raw = _value(os.environ.get('MA_GATE_REPORT_DIR'))
     return _path(raw) if raw else data_dir(arg) / 'gate-report'
+
+
+def task_dir(arg=None) -> str:
+    """The task subfolder (a normalized relative path, case kept). The first set value of $MA_TASK_DIR, `arg`,
+    $CLAUDE_PLUGIN_OPTION_TASK_DIR is used; an invalid one (absolute, `~`, a `..` segment, no segment left, first
+    segment `.git` or `.claude`) gives the default, never the next source. $MA_TASK_DIR is not $MA_TASKS_DIR."""
+    raw = _value(os.environ.get('MA_TASK_DIR')) or _value(arg) or _value(os.environ.get(TASK_SETTING_ENV))
+    if not raw or raw.startswith(('/', '~')):
+        return TASK_DIR_DEFAULT
+    parts = [p for p in raw.split('/') if p not in ('', '.')]
+    if not parts or '..' in parts or parts[0].casefold() in ('.git', '.claude'):
+        return TASK_DIR_DEFAULT
+    return '/'.join(parts)
+
+
+def task_root(location, arg=None) -> Path:
+    """`location / task_dir(arg)`, not resolved."""
+    return Path(location) / task_dir(arg)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Start the my-agent monitor once and print its URL (architecture 4.7.4, monitor spec 6.1).
 
-usage: monitor-up.py [--open | --no-open] [--window | --tab] [--browser default|safari|chrome] [--task KEY] [--ports A-B] [--data-dir DIR]
+usage: monitor-up.py [--open | --no-open] [--window | --tab] [--browser default|safari|chrome] [--task KEY] [--ports A-B] [--data-dir DIR] [--task-dir DIR]
        monitor-up.py set-browser default|safari|chrome [--data-dir DIR]
-       monitor-up.py status [--ports A-B] [--data-dir DIR]
-       monitor-up.py stop [--ports A-B] [--data-dir DIR]
+       monitor-up.py status [--ports A-B] [--data-dir DIR] [--task-dir DIR]
+       monitor-up.py stop [--ports A-B] [--data-dir DIR] [--task-dir DIR]
 
 Prints exactly one line and always exits 0, so the my-agent Router can pass the
 line on and carry on when the monitor cannot start. A port that answers
@@ -12,7 +12,10 @@ line on and carry on when the monitor cannot start. A port that answers
 left alone. State goes to the data folder (ma_data.data_dir: $MA_TASKS_DIR, else
 --data-dir, else $CLAUDE_PLUGIN_OPTION_DATA_DIR, else ~/dev/log/my-agent): monitor.json
 (port, pid, root, started) and monitor.log. The server child gets the resolved
-folder in CLAUDE_PLUGIN_OPTION_DATA_DIR.
+folder in CLAUDE_PLUGIN_OPTION_DATA_DIR and the task subfolder (ma_data.task_dir:
+$MA_TASK_DIR, else --task-dir, else $CLAUDE_PLUGIN_OPTION_TASK_DIR, else .my-agent) in
+CLAUDE_PLUGIN_OPTION_TASK_DIR. A running server of ours is reused; when its /api/health
+`task_dir` (missing: docs/agent) differs from the setting, `start` says so and changes nothing.
 
 `"autostart": false` in monitor-config.json (default true; missing, unreadable or any
 other value means true) makes a call without --open print `monitor: not started
@@ -41,6 +44,8 @@ WAIT_SECS = 3.0
 
 
 DATA_DIR_ARG = None   # --data-dir, set by main()
+TASK_DIR_ARG = None   # --task-dir, set by main()
+OLD_TASK_DIR = 'docs/agent'   # what a server that does not report task_dir lists
 
 
 def tasks_dir() -> Path:
@@ -111,6 +116,10 @@ def start(ports, open_browser, mode=None, task=None, browser=None):
     if port is not None:
         if open_browser is True:
             show(port)
+        theirs, mine = (health(port) or {}).get('task_dir') or OLD_TASK_DIR, ma_data.task_dir(TASK_DIR_ARG)
+        if theirs != mine:
+            return (f'monitor: {url(port)} (task folder mismatch: the server lists {theirs}, the setting is {mine}; '
+                    'run /my-agent:monitor stop, then start the monitor again)')
         return f'monitor: {url(port)} (running)'
     free = next((p for p in ports if port_free(p)), None)
     if free is None:
@@ -118,7 +127,7 @@ def start(ports, open_browser, mode=None, task=None, browser=None):
     d = tasks_dir()
     d.mkdir(parents=True, exist_ok=True)
     with open(d / 'monitor.log', 'ab') as log:
-        env = dict(os.environ, **{ma_data.SETTING_ENV: str(d)})
+        env = dict(os.environ, **{ma_data.SETTING_ENV: str(d), ma_data.TASK_SETTING_ENV: ma_data.task_dir(TASK_DIR_ARG)})
         proc = subprocess.Popen([sys.executable, str(ROOT / 'server.py'), '--port', str(free)], cwd=str(ROOT), env=env,
                                 stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
     deadline = time.monotonic() + WAIT_SECS
@@ -196,9 +205,10 @@ def main(argv=None):
     ap.add_argument('--task', default=None, metavar='KEY', help='open with this task selected (<sha1 8>/<task-id>)')
     ap.add_argument('--ports', default='8765-8775')
     ap.add_argument('--data-dir', default=None, metavar='DIR', help='the my-agent data folder (the plugin setting)')
+    ap.add_argument('--task-dir', default=None, metavar='DIR', help='the task subfolder, setting `task_dir` (default: the setting, else .my-agent)')
     args = ap.parse_args(argv)
-    global DATA_DIR_ARG
-    DATA_DIR_ARG = args.data_dir
+    global DATA_DIR_ARG, TASK_DIR_ARG
+    DATA_DIR_ARG, TASK_DIR_ARG = args.data_dir, args.task_dir
     try:
         ports = parse_ports(args.ports)
         line = {'start': lambda: start(ports, args.open_browser, args.mode, args.task, args.browser), 'status': lambda: status(ports),

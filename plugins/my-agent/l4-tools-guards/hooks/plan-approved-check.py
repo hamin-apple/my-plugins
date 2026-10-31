@@ -9,7 +9,7 @@ whose `session:` differs from the input `session_id` (both set) passes. Only the
 While a task is active and its `plan.md` has no `Approved` line under `## Approval`, deny delegation and ask (the G2
 dialog) for writes, whatever the phase: a write outside the task folder, or a Bash command whose write target cannot be
 told, is the person's call, allowed only for their own request. Allowed before approval: my-agent:explorer / architect / plan-reviewer (and writer once
-`Prototype: requested` is under plan.md's `## Prototype`), and writes under `<location>/docs/agent/` or to the data folder's
+`Prototype: requested` is under plan.md's `## Prototype`), and writes under `<location>/<task_dir>/` or to the data folder's
 `active-index.json` / `projects.txt` (and `mkdir -p` of the data folder itself, Intake step 7). A `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with a
 warning. A data-folder write other than those two files is asked like any other outside write. Any error → exit 2, so the tool call is blocked (and `onFailure: block` covers a crash or timeout).
 
@@ -42,7 +42,7 @@ RESULT_LINE = re.compile(r'(?m)^\s*-\s*(?:Deliverable location|Save path)\s*:\s*
 
 
 def allowed_write(p: Path, active, tasks_dir: Path) -> bool:
-    return (under(p, active.location / 'docs' / 'agent')
+    return (under(p, active.task_dir.parent)   # the records folder, resolved by the reader
             or any(same(p, tasks_dir / n) for n in ('', 'active-index.json', 'projects.txt')))  # '' = mkdir -p
 
 

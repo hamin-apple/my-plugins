@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import L4, run_script
+from helpers import L4, records, run_script
 import ma_logline
 
 SCRIPT = L4 / 'scripts' / 'check-run.py'
@@ -22,7 +22,7 @@ def steps(*ns):
 class CheckRunTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.T = Path(self.tmp.name) / 'docs' / 'agent' / '261025-scn-general'
+        self.T = records(Path(self.tmp.name)) / '261025-scn-general'
         self.T.mkdir(parents=True)
         (self.T / 'intake.md').write_text('Status: done\nProfile: general\nTask: 261025-scn-general\n')
         (self.T / 'plan.md').write_text('# Plan\n\n## Approval\n\n- Approved 2026-10-25 10:00 G1b\n')

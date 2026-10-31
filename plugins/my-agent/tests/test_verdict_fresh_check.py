@@ -7,7 +7,7 @@ import time
 import unittest
 from pathlib import Path
 
-from helpers import make_task, run_hook
+from helpers import clean_task_env, make_task, records, rel, run_hook
 
 TASK = '261025-probe-task'
 
@@ -63,7 +63,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
 
     def test_not_applicable_is_silent(self):
         self.assertPassed(self.bash('git status && git diff'))
-        (self.L / 'docs' / 'agent' / '.active').unlink()
+        (records(self.L) / '.active').unlink()
         self.assertPassed(self.bash('git commit -m x'))
 
     def test_other_session_and_subagent_pass(self):
@@ -114,14 +114,14 @@ class VerdictFreshCheckTest(unittest.TestCase):
 
     def test_deliver_copy_checked(self):
         self.file(self.T / 'work' / 'note.md', 'n', 0)
-        self.assertDenied(self.bash(f'cp -p docs/agent/{TASK}/work/note.md ~/notes/'))
+        self.assertDenied(self.bash(f'cp -p {rel()}/{TASK}/work/note.md ~/notes/'))
         self.verdicts()
-        self.assertPassed(self.bash(f'cp -p docs/agent/{TASK}/work/note.md ~/notes/'))
+        self.assertPassed(self.bash(f'cp -p {rel()}/{TASK}/work/note.md ~/notes/'))
         self.file(self.T / 'work' / 'note.md', 'edited', 20)
-        self.assertDenied(self.bash(f'cp -p docs/agent/{TASK}/work/note.md ~/notes/'))
+        self.assertDenied(self.bash(f'cp -p {rel()}/{TASK}/work/note.md ~/notes/'))
 
     def test_copy_inside_work_ignored(self):
-        self.assertPassed(self.bash(f'cp docs/agent/{TASK}/work/a.md docs/agent/{TASK}/work/b.md'))
+        self.assertPassed(self.bash(f'cp {rel()}/{TASK}/work/a.md {rel()}/{TASK}/work/b.md'))
         self.assertPassed(self.bash('cp src/a.py src/b.py'))
 
     def tool(self, name, tool_input):
@@ -131,23 +131,23 @@ class VerdictFreshCheckTest(unittest.TestCase):
     def test_deliver_into_deliverable_checked(self):
         self.file(self.T / 'work' / 'final.md', 'f', 0)
         self.verdicts(verify='Verdict: FAIL\n', review='BLOCKER 3\n')
-        work, out = f'docs/agent/{TASK}/work/final.md', f'docs/agent/{TASK}/deliverable/final.md'
+        work, out = f'{rel()}/{TASK}/work/final.md', f'{rel()}/{TASK}/deliverable/final.md'
         self.assertDenied(self.bash(f'cp {work} {out}'))
         self.assertDenied(self.tool('Write', {'file_path': str(self.L / out), 'content': 'f'}))
-        self.assertDenied(self.bash(f'cp DOCS/agent/{TASK}/work/final.md ~/notes/'))
+        self.assertDenied(self.bash(f'cp {rel().upper()}/{TASK}/work/final.md ~/notes/'))
         self.verdicts()
         self.assertPassed(self.tool('Write', {'file_path': str(self.L / out), 'content': 'f'}))
         self.assertPassed(self.tool('Write', {'file_path': str(self.L / 'src/a.py'), 'content': 'x'}))
 
     def test_read_only_forms_are_not_a_deliver(self):
         self.file(self.T / 'work' / 'x.md', 'x', 0)
-        T = f'docs/agent/{TASK}'
+        T = f'{rel()}/{TASK}'
         self.assertPassed(self.bash(f'cat {T}/work/x.md > {self.root}/out/y.md'))
         self.assertPassed(self.bash(f'cat {T}/work/x.md | tee {self.root}/out/y.md'))
 
     def test_copy_forms_are_a_deliver(self):
         self.file(self.T / 'work' / 'f', 'f', 0)
-        T = f'docs/agent/{TASK}'
+        T = f'{rel()}/{TASK}'
         self.assertDenied(self.bash(f'cp {T}/work/f ~/out'))
         self.assertDenied(self.bash(f'cd {T} && cp work/f ~/out'))
         self.assertDenied(self.bash(f'mv {T}/work/f {self.root}/out'))
@@ -155,12 +155,12 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.assertPassed(self.bash(f'cd {T} && cp work/f ~/out'))
 
     def test_write_into_deliverable_is_a_deliver(self):
-        self.assertDenied(self.bash(f'echo x > docs/agent/{TASK}/deliverable/a.md'))
+        self.assertDenied(self.bash(f'echo x > {rel()}/{TASK}/deliverable/a.md'))
         self.verdicts()
-        self.assertPassed(self.bash(f'echo x > docs/agent/{TASK}/deliverable/a.md'))
+        self.assertPassed(self.bash(f'echo x > {rel()}/{TASK}/deliverable/a.md'))
 
     def test_copy_of_task_records_is_not_a_deliver(self):
-        T, out = f'docs/agent/{TASK}', self.root / 'out'
+        T, out = f'{rel()}/{TASK}', self.root / 'out'
         self.file(self.T / 'review.md', 'BLOCKER 3\n', 0)
         self.file(self.T / 'run-log.md', 'log', 0)
         self.file(self.T / 'verify.md', 'Verdict: FAIL\n', 0)
@@ -170,7 +170,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.assertPassed(self.bash(f'rsync {T}/verify.md {out}/'))
 
     def test_copy_from_work_still_denied_with_stale_verdicts(self):
-        T, out = f'docs/agent/{TASK}', self.root / 'out'
+        T, out = f'{rel()}/{TASK}', self.root / 'out'
         self.file(self.T / 'review.md', 'BLOCKER 3\n', 0)
         self.file(self.T / 'work' / 'a.md', 'a', 20)
         self.assertDenied(self.bash(f'cp {T}/work/a.md {out}/'))
@@ -178,7 +178,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.assertDenied(self.bash(f'cd {T} && cp work/a.md {out}/'))
 
     def test_compound_commit_and_stale_deliver_is_denied(self):
-        T, out = f'docs/agent/{TASK}', self.root / 'out'
+        T, out = f'{rel()}/{TASK}', self.root / 'out'
         self.file(self.T / 'review.md', 'BLOCKER 3\n', 0)
         self.file(self.T / 'work' / 'a.md', 'a', 20)
         self.assertDenied(self.bash(f'git commit -m x && cp {T}/work/a.md {out}/'))
@@ -204,8 +204,24 @@ class VerdictFreshCheckTest(unittest.TestCase):
         why = mod.ask_reason(A, ('older', 'verify.md', file), False)
         self.assertIn('verify.md is older than', why)
 
+    def test_link_layout_copy_from_the_task_is_a_deliver(self):
+        loc = self.root / 'linked'
+        loc.mkdir()
+        subprocess.run(['git', 'init', '-q', str(loc)], check=True)
+        with clean_task_env():
+            make_task(loc, task=TASK, git=False, sub='docs/agent')
+        (loc / '.my-agent').symlink_to('docs/agent')
+        self.file(loc / 'docs/agent' / TASK / 'work' / 'a.md', 'a', 0)
+        for base in ('.my-agent', 'docs/agent'):
+            with self.subTest(base=base):
+                payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'session_id': 's-test',
+                           'tool_input': {'command': f'cp {loc}/{base}/{TASK}/work/a.md {self.root}/out/a.md'}}
+                r = run_hook('verdict-fresh-check.py', None, payload, loc, env=self.env,
+                             drop=('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR'))
+                self.assertDenied(r)
+
     def test_git_mv_work_to_deliverable_checked(self):
-        T = f'docs/agent/{TASK}'
+        T = f'{rel()}/{TASK}'
         self.file(self.T / 'work' / 'a.md', 'a', 0)
         self.assertDenied(self.bash(f'git mv {T}/work/a.md {T}/deliverable/a.md'))
         self.verdicts()
@@ -220,7 +236,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.file(self.T / 'work' / 'b.md', 'b', 0)
         self.verdicts()
         self.file(self.T / 'deliverable' / 'a.md', 'a', 40)     # the first copy, made just now
-        self.assertPassed(self.bash(f'cp docs/agent/{TASK}/work/b.md docs/agent/{TASK}/deliverable/b.md'))
+        self.assertPassed(self.bash(f'cp {rel()}/{TASK}/work/b.md {rel()}/{TASK}/deliverable/b.md'))
 
     def test_substitution_without_git_is_not_a_commit(self):
         self.file(self.L / 'src/a.py', 'x', 0)

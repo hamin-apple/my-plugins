@@ -32,6 +32,17 @@ class RunLogTest(unittest.TestCase):
         self.assertEqual(events(self.task).step_enter[-1][1], 3)
         self.assertIn(log_lines(self.task)[-1], r.stdout)
 
+    def test_task_dir_option_finds_docs_agent_task(self):
+        other = self.root / 'other'
+        task = make_task(other, sub='docs/agent')
+        drop = ('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')
+        r = run_script(SCRIPT, 'step', 'n=1', 'name=Intake', '--cwd', str(other), env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        r = run_script(SCRIPT, 'step', 'n=1', 'name=Intake', '--task-dir', 'docs/agent', '--cwd', str(other),
+                       env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(len(log_lines(task)), 1)
+
     def test_step_session_from_active_without_env(self):
         r = self.run_log('step', 'n=1', 'name=Intake', env={'CLAUDE_CODE_SESSION_ID': ''})
         self.assertEqual(r.returncode, 0, r.stderr)

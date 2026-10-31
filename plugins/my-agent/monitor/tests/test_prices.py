@@ -63,7 +63,7 @@ class PricesTest(unittest.TestCase):
             self.assertEqual(ma_prices.prices_file(), ma_prices.BUNDLED)
             Path(d, 'prices.json').write_text('{"models": {}}')
             self.assertEqual(ma_prices.prices_file(), Path(d, 'prices.json'))
-        keep = {k: v for k, v in os.environ.items() if not k.startswith('MA_') and k != 'CLAUDE_PLUGIN_OPTION_DATA_DIR'}
+        keep = {k: v for k, v in os.environ.items() if not k.startswith('MA_') and k not in ('CLAUDE_PLUGIN_OPTION_DATA_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')}
         with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, keep, clear=True):
             Path(d, 'prices.json').write_text('{"models": {}}')
             self.assertEqual(ma_prices.prices_file(d), Path(d, 'prices.json'))

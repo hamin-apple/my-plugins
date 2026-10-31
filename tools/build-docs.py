@@ -35,7 +35,7 @@ import ma_schema  # noqa: E402
 import ma_usage  # noqa: E402
 
 PROFILES = ('general', 'research', 'dev')
-LOC, TASK = Path('/LOC'), Path('/LOC/docs/agent/TASK')   # stand-ins for scope-guard's rules()
+LOC, TASK = Path('/LOC'), Path('/LOC/.my-agent/TASK')   # stand-ins for scope-guard's rules()
 
 # Task-folder files (architecture 4.7 tree) → steps, who writes, where the format is written down.
 # A source is (file relative to the plugin, kind, key): kind 'h' = heading, 'b' = bold paragraph title,
@@ -381,7 +381,8 @@ def scope_guard():
 
 def show_path(p: Path, sg) -> str:
     s = str(p)
-    s = s.replace(str(TASK), '<task folder>').replace(str(LOC), '<task location>')
+    s = s.replace(str(TASK), '<task folder>').replace(str(TASK.parent), '<task location>/<task_dir>')
+    s = s.replace(str(LOC), '<task location>')
     s = s.replace(str(sg.data_root()), '<data folder>').replace(str(sg.PLUGIN), '<plugin folder>')
     return s
 
@@ -544,7 +545,7 @@ def tree_files(arch: str) -> list:
     """(name, comment) of the task-folder entries in the 4.7 file layout."""
     block = re.search(r'```text\n(~/dev/my-plugins.*?)```', cut(arch, '4.7 File layout', 'arch'), re.S).group(1)
     lines = block.splitlines()
-    start = next(i for i, l in enumerate(lines) if l.startswith('<task project>/docs/agent/'))
+    start = next(i for i, l in enumerate(lines) if l.startswith('<task project>/<task_dir>/'))
     out = []
     for line in lines[start + 1:]:
         if not line.strip():

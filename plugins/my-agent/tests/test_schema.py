@@ -34,7 +34,7 @@ class SchemaTest(unittest.TestCase):
 
     def test_scope_guard_has_rules_for_every_agent(self):
         guard = hook_module('scope-guard')
-        active = type('A', (), {'location': Path('/p'), 'task_dir': Path('/p/docs/agent/t')})()
+        active = type('A', (), {'location': Path('/p'), 'task_dir': Path('/p/.my-agent/t')})()
         for name in ma_schema.AGENTS:
             with self.subTest(agent=name):
                 self.assertIsNotNone(guard.rules(name, active, Path('/p')))

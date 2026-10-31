@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pass condition of a scenario run (architecture 4.13 scenarios): did a finished task go through the design's path?
 
-usage: check-run.py <task folder>   (docs/agent/<task-id>/)
+usage: check-run.py <task folder>   (<task_dir>/<task-id>/, default .my-agent/<task-id>/)
 Prints `ok <check>` / `FAIL <check>: <why>` per check and `info …` lines (popup count against 4.1 principle 6).
 Exit 0 all ok, 1 a check failed, 2 bad arguments.
 """

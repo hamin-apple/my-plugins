@@ -175,7 +175,7 @@ def build_task(project: Path, task_dir: Path, prices, tcache, now: datetime) -> 
     try:
         return _build(project, task_dir, tid, key, prices, tcache, now)
     except Exception as exc:   # one broken task must not take the list down (Global Constraints)
-        return {'id': tid, 'key': key, 'project': show_path(project), 'error': f'{type(exc).__name__}: {exc}'}
+        return {'id': tid, 'key': key, 'project': show_path(project), 'folder': show_path(task_dir), 'error': f'{type(exc).__name__}: {exc}'}
 
 
 def _build(project, task_dir, tid, key, prices, tcache, now):
@@ -220,7 +220,7 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
     started = ev.started or datetime.fromtimestamp((task_dir / 'intake.md').stat().st_mtime)
     end = now if status == 'running' else (ev.last or started)
     task = {
-        'id': tid, 'key': key, 'project': show_path(project), 'profile': profile, 'title': intake['title'] or tid,
+        'id': tid, 'key': key, 'project': show_path(project), 'folder': show_path(task_dir), 'profile': profile, 'title': intake['title'] or tid,
         'status': status,
         'step': 9 if status == 'done' else (ev.step_enter[-1][1] if ev.step_enter else None),
         'started': _hm(started, now), 'elapsed': round((end - started).total_seconds() / 60),

@@ -2,7 +2,7 @@
 # Judge check (architecture 4.13 "judge checks"): run my-agent:verifier on each fixture note and compare the first
 # line of the verify.md it writes with expected.json. Paid (one verifier run per note, capped by --max-budget-usd);
 # run it by hand after changing verifier.md or reviewer.md. Each note gets its own throwaway git project with a
-# docs/agent/.active, so scope-guard applies exactly as in a real task.
+# <task_dir>/.active (${MA_TASK_DIR:-.my-agent}), so scope-guard applies exactly as in a real task.
 # usage: run-judge-check.sh [note.md ...]   (default: every note in expected.json)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -15,10 +15,10 @@ fail=0
 for note in "${NOTES[@]}"; do
   want=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$HERE/expected.json" "$note")
   proj="$WORK/${note%.md}"
-  T="$proj/docs/agent/$TASK"
+  T="$proj/${MA_TASK_DIR:-.my-agent}/$TASK"
   mkdir -p "$T/work"
   git init -q "$proj"
-  printf 'task: %s\nphase: 4\nsession: judge\nstarted: 2026-10-25 00:00\n' "$TASK" > "$proj/docs/agent/.active"
+  printf 'task: %s\nphase: 4\nsession: judge\nstarted: 2026-10-25 00:00\n' "$TASK" > "$proj/${MA_TASK_DIR:-.my-agent}/.active"
   printf 'Status: active\nProfile: research\nTask: %s\nRequest: shlex summary note\n' "$TASK" > "$T/intake.md"
   cp "$HERE/scope.md" "$T/scope.md"
   printf '# Plan\n\n## Approval\n\n- Approved 2026-10-25 09:30 G1b\n' > "$T/plan.md"   # Verify runs after G1b

@@ -12,6 +12,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 CORE = Path(__file__).resolve().parents[2] / 'my-agent' / 'monitor'   # tests -> my-agent-tray -> plugins
@@ -73,6 +74,9 @@ class MenubarTest(unittest.TestCase):
         for p in range(8791, 8795):
             if port_open(p):
                 self.skipTest(f'port {p} is in use on this machine')
+        patch = mock.patch.dict(os.environ, {'MA_TASK_DIR': 'docs/agent'})   # the monitor fixtures live under docs/agent
+        patch.start()
+        self.addCleanup(patch.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.dir = Path(self.tmp.name)

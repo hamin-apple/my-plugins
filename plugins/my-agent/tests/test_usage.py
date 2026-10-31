@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from helpers import L4, make_task, run_script
+from helpers import L4, clean_task_env, make_task, records, run_script
 
 import ma_prices
 import ma_usage
@@ -128,7 +128,7 @@ class SnapshotScriptTest(Base):
     def test_no_transcript_writes_nothing_and_keeps_old(self):
         d = self.task()
         (d / ma_usage.SNAPSHOT).write_text('{"windows": []}', encoding='utf-8')
-        r = run_script(SNAP, '--task-dir', str(d), env=self.env)
+        r = run_script(SNAP, '--task-folder', str(d), env=self.env)
         self.assertEqual(r.returncode, 3)
         self.assertIn('no transcript', r.stdout)
         self.assertEqual((d / ma_usage.SNAPSHOT).read_text(encoding='utf-8'), '{"windows": []}')
@@ -151,15 +151,35 @@ class SnapshotScriptTest(Base):
         data = self.root / 'data'
         data.mkdir()
         (data / 'prices.json').write_text('{"models": {"claude-opus-5-5": {"input": 1000.0}}}', encoding='utf-8')
-        r = run_script(SNAP, '--task-dir', str(d), env=dict(self.env, MA_TASKS_DIR=str(data)))
+        r = run_script(SNAP, '--task-folder', str(d), env=dict(self.env, MA_TASKS_DIR=str(data)))
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertTrue(r.stdout.strip().endswith('(1 rows, \u2248 $1.00)'), r.stdout)
-        r = run_script(SNAP, '--task-dir', str(d), env=self.env)
+        r = run_script(SNAP, '--task-folder', str(d), env=self.env)
         self.assertTrue(r.stdout.strip().endswith('(1 rows, \u2248 $0.00)'), r.stdout)
+
+    def test_task_dir_setting_finds_docs_agent_task(self):
+        d = make_task(self.root / 'proj', task='261001-probe', sub='docs/agent')
+        (d / 'intake.md').write_text('Status: active\nProfile: general\nRequest: probe\n', encoding='utf-8')
+        (d / 'run-log.md').write_text('\n'.join(LOG) + '\n', encoding='utf-8')
+        self.transcript(entry('2026-10-01 10:01:00', 'a'))
+        drop = ('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')
+        r = run_script(SNAP, '--cwd', str(self.root / 'proj'), env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        r = run_script(SNAP, '--task-dir', 'docs/agent', '--cwd', str(self.root / 'proj'), env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue((d / ma_usage.SNAPSHOT).is_file())
+
+    def test_absolute_task_dir_is_refused(self):
+        d = self.task(status='active')
+        for value in (str(d), '~/x'):
+            r = run_script(SNAP, '--task-dir', value, env=self.env)
+            self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+            self.assertIn('use --task-folder', r.stderr)
+        self.assertFalse((d / ma_usage.SNAPSHOT).exists())
 
     def test_no_task(self):
         self.assertEqual(run_script(SNAP, '--cwd', str(self.root), env=self.env).returncode, 1)
-        self.assertEqual(run_script(SNAP, '--task-dir', str(self.root), env=self.env).returncode, 1)
+        self.assertEqual(run_script(SNAP, '--task-folder', str(self.root), env=self.env).returncode, 1)
 
 
 class ArchiveTest(Base):
@@ -173,7 +193,7 @@ class ArchiveTest(Base):
         return run_script(ARCHIVE, *args, env=self.env)
 
     def agent(self):
-        return self.root / 'proj' / 'docs' / 'agent'
+        return records(self.root / 'proj')
 
     def test_moves_old_finished_tasks_only(self):
         self.task(task='261001-done')
@@ -234,6 +254,36 @@ class ArchiveTest(Base):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn('no usage snapshot', r.stdout)
         self.assertTrue((self.agent() / '.archived' / '261001-done-b' / 'intake.md').is_file())
+
+    def two_layouts(self):
+        """A finished task in .my-agent/ and one in docs/agent/; the active task of each layout is a third one."""
+        with clean_task_env():   # $MA_TASK_DIR would win over `sub`
+            return self.build_layouts()
+
+    def build_layouts(self):
+        old = make_task(self.root / 'proj', task='261001-old', sub='docs/agent')
+        new = make_task(self.root / 'proj', task='261001-new', sub='.my-agent')
+        for d in (old, new):
+            (d / 'intake.md').write_text('Status: done\nProfile: general\nRequest: probe\n', encoding='utf-8')
+            (d / 'run-log.md').write_text('\n'.join(LOG) + '\n', encoding='utf-8')
+        for sub, name in (('docs/agent', '261001-cur-old'), ('.my-agent', '261001-cur-new')):
+            cur = make_task(self.root / 'proj', task=name, sub=sub)
+            (cur / 'intake.md').write_text('Status: done\nProfile: general\nRequest: probe\n', encoding='utf-8')
+            (cur / 'run-log.md').write_text('\n'.join(LOG) + '\n', encoding='utf-8')
+        return self.root / 'proj'
+
+    def test_both_layouts_default_and_setting(self):
+        proj = self.two_layouts()
+        drop = ('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')
+        r = run_script(ARCHIVE, '--days', '7', env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue((proj / '.my-agent/.archived/261001-new').is_dir())
+        self.assertTrue((proj / 'docs/agent/261001-old').is_dir())
+        self.assertTrue((proj / '.my-agent/261001-cur-new').is_dir())   # the active task never moves
+        r = run_script(ARCHIVE, '--days', '7', '--task-dir', 'docs/agent', env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue((proj / 'docs/agent/.archived/261001-old').is_dir())
+        self.assertTrue((proj / 'docs/agent/261001-cur-old').is_dir())
 
     def test_bad_days(self):
         self.assertEqual(self.run_archive('--days', '-1').returncode, 2)

@@ -11,9 +11,9 @@ deliver stays `deny`, also when the same command line holds a commit.
 
 Applies while a task is active, to a `git commit` and to the G3 deliver: any write into the task folder's
 `deliverable/` (the default save place, accept.md), and a Bash cp, mv or rsync from the task folder's `work/` or `deliverable/` to a place outside
-`<location>/docs/agent/` (other copy forms and plain reads do not count). It needs `verify.md` starting
+`<location>/<task_dir>/` (other copy forms and plain reads do not count). It needs `verify.md` starting
 `Verdict: ALL PASS` and `review.md` starting
-`BLOCKER 0`, both no older than the newest changed file: git changes outside `docs/agent/`, plus the task folder's
+`BLOCKER 0`, both no older than the newest changed file: git changes outside `<task_dir>/`, plus the task folder's
 `work/` (and `deliverable/` when the deliver leaves the task folder; a copy into `deliverable/` does not count the
 copies made just before it). A `verify.md` older than a change is accepted when `review.md` is newer than every change
 and has `## Applied after review`. No `.active`, or another command → exit 0 at once (a `.active` without `task:`
@@ -52,7 +52,7 @@ def files_in(d: Path):
 
 def changed_files(active, with_deliverable: bool = True) -> list:
     """Files the verdicts must be newer than (see module docstring)."""
-    L, agent = active.location, active.location / 'docs' / 'agent'
+    L, agent = active.location, active.task_dir.parent   # agent: the records folder, resolved by the reader
     out = files_in(active.task_dir / 'work') + (files_in(active.task_dir / 'deliverable') if with_deliverable else [])
     if (L / '.git').exists():
         r = subprocess.run(['git', '-C', str(L), 'status', '--porcelain', '-uall', '-z'],
@@ -118,7 +118,7 @@ def ask_reason(active, stale, unparsed: bool) -> str:
 
 def applies(tool: str, ti: dict, cwd: Path, active, commit: bool = True):
     """None when the call is neither a commit nor a deliver (`commit=False`: not a deliver); else whether `deliverable/` counts as changed."""
-    T, agent = active.task_dir, active.location / 'docs' / 'agent'
+    T, agent = active.task_dir, active.task_dir.parent   # agent: the records folder, resolved by the reader
     deliverable = T / 'deliverable'
     if tool in ('Edit', 'Write', 'NotebookEdit'):
         raw = ti.get('file_path') or ti.get('notebook_path') or ''

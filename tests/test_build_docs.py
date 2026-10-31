@@ -57,7 +57,7 @@ class BuildDocsTest(unittest.TestCase):
     def test_scope_comes_from_scope_guard(self):
         coder = next(a for a in self.data['agents'] if a['id'] == 'coder')
         self.assertTrue(coder['scope']['bashWrites'])
-        self.assertIn('<task location>/docs/agent', coder['scope']['denyWrite'])
+        self.assertIn('<task location>/<task_dir>', coder['scope']['denyWrite'])
         gate = next(a for a in self.data['agents'] if a['id'] == 'gate-analyst')
         self.assertEqual(gate['scope']['write'], ['<task folder>/gate-report.md'])
 

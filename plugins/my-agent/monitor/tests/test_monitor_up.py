@@ -344,7 +344,7 @@ class DataDirTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.d = Path(self.tmp.name) / 'data'
         self.env = {k: v for k, v in os.environ.items()
-                    if not k.startswith('MA_') and k != 'CLAUDE_PLUGIN_OPTION_DATA_DIR'}
+                    if not k.startswith('MA_') and k not in ('CLAUDE_PLUGIN_OPTION_DATA_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')}
         self.env.update(HOME=self.tmp.name, MA_CLAUDE_PROJECTS=str(Path(self.tmp.name) / 'claude'))
         self.addCleanup(self.kill_server)
 
@@ -374,8 +374,7 @@ class DataDirTest(unittest.TestCase):
 
     def test_data_dir_option_places_state_and_server_reads_its_projects(self):
         project = Path(self.tmp.name) / 'proj'
-        (project / 'docs' / 'agent' / '261029-x').mkdir(parents=True)
-        (project / 'docs' / 'agent' / '261029-x' / 'intake.md').write_text('# Intake\n')
+        self.make_task(project, '.my-agent')
         self.d.mkdir()
         (self.d / 'projects.txt').write_text(f'{project}\n')
         self.assertEqual(self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d)),
@@ -383,6 +382,64 @@ class DataDirTest(unittest.TestCase):
         self.assertEqual(json.loads((self.d / 'monitor.json').read_text())['port'], 8791)
         self.assertTrue((self.d / 'monitor.log').exists())
         self.assertEqual([t['id'] for t in self.tasks(8791)], ['261029-x'])
+
+    def make_task(self, project, sub):
+        (project / sub / '261029-x').mkdir(parents=True)
+        (project / sub / '261029-x' / 'intake.md').write_text('# Intake\n')
+
+    def test_task_dir_option_reaches_the_server_and_health(self):
+        project = Path(self.tmp.name) / 'proj'
+        self.make_task(project, 'docs/agent')
+        self.d.mkdir()
+        (self.d / 'projects.txt').write_text(f'{project}\n')
+        self.assertEqual(self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d), '--task-dir', 'docs/agent'),
+                         'monitor: http://127.0.0.1:8791/ (started)')
+        import http.client
+        c = http.client.HTTPConnection('127.0.0.1', 8791, timeout=2)
+        c.request('GET', '/api/health')
+        self.assertEqual(json.loads(c.getresponse().read())['task_dir'], 'docs/agent')
+        tasks = self.tasks(8791)
+        self.assertEqual([t['id'] for t in tasks], ['261029-x'])
+        self.assertTrue(tasks[0]['folder'].endswith('/proj/docs/agent/261029-x'), tasks[0]['folder'])
+
+    def test_default_task_dir_lists_dot_my_agent(self):
+        project = Path(self.tmp.name) / 'proj'
+        self.make_task(project, '.my-agent')
+        self.d.mkdir()
+        (self.d / 'projects.txt').write_text(f'{project}\n')
+        self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d))
+        self.assertEqual([t['id'] for t in self.tasks(8791)], ['261029-x'])
+
+    def test_task_dir_after_subcommand(self):
+        self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d), '--task-dir', 'docs/agent')
+        self.assertRegex(self.up('status', '--ports', PORTS, '--data-dir', str(self.d), '--task-dir', 'docs/agent'), r'\(running, since ')
+
+    def test_reuse_with_other_task_dir_names_the_mismatch(self):
+        self.assertEqual(self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d)),
+                         'monitor: http://127.0.0.1:8791/ (started)')
+        pid = json.loads((self.d / 'monitor.json').read_text())['pid']
+        out = self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d), '--task-dir', 'docs/agent')
+        self.assertEqual(out, 'monitor: http://127.0.0.1:8791/ (task folder mismatch: the server lists .my-agent, '
+                              'the setting is docs/agent; run /my-agent:monitor stop, then start the monitor again)')
+        self.assertFalse(out.startswith('monitor: http://127.0.0.1:8791/ (running'))
+        self.assertEqual(json.loads((self.d / 'monitor.json').read_text())['pid'], pid)
+        self.assertFalse(port_open(8792))
+        self.assertEqual(self.up('--no-open', '--ports', PORTS, '--data-dir', str(self.d), '--task-dir', '.my-agent'),
+                         'monitor: http://127.0.0.1:8791/ (running)')
+
+    def test_health_without_task_dir_counts_as_docs_agent(self):
+        spec = importlib.util.spec_from_file_location('monitor_up_health', SCRIPT)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        old = {'app': 'my-agent-monitor', 'root': str(mod.ROOT)}
+        env = {k: v for k, v in self.env.items() if k not in ('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')}
+        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(mod, 'health', return_value=old):
+            mod.DATA_DIR_ARG, mod.TASK_DIR_ARG = str(self.d), 'docs/agent'
+            self.assertEqual(mod.start([8791], False), 'monitor: http://127.0.0.1:8791/ (running)')
+            mod.TASK_DIR_ARG = None
+            self.assertEqual(mod.start([8791], False), 'monitor: http://127.0.0.1:8791/ (task folder mismatch: '
+                             'the server lists docs/agent, the setting is .my-agent; run /my-agent:monitor stop, '
+                             'then start the monitor again)')
 
     def test_ma_tasks_dir_beats_data_dir_option(self):
         other = Path(self.tmp.name) / 'other'

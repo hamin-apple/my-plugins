@@ -13,7 +13,7 @@ import ma_usage
 from ma_prices import load_prices, prices_file
 
 ROOT = Path(__file__).resolve().parent.parent
-SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed')
+SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed', 'folder')
 
 
 def default_projects_file() -> Path:
@@ -67,7 +67,7 @@ class Registry:
 
     def _task_dirs(self):
         for project in self._projects():
-            for intake in sorted((project / 'docs' / 'agent').glob('*/intake.md')):
+            for intake in sorted(ma_data.task_root(project).glob('*/intake.md')):
                 yield project, intake.parent
 
     def _prices_now(self):

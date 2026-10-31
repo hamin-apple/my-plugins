@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import L4, make_task, parse, run_script
+from helpers import L4, make_task, parse, records, rel, run_script
 
 SCRIPT = L4 / 'scripts' / 'gate-report.py'
 TASK = '261025-probe-task'
@@ -41,6 +41,17 @@ class GateReportTest(unittest.TestCase):
         r = self.run_gr('tally')
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
+
+    def test_task_dir_option_finds_docs_agent_task(self):
+        other = self.root / 'other'
+        task = make_task(other, task=TASK, sub='docs/agent')
+        (task / 'run-log.md').write_text('2026-10-26 23:00:00 ask: gate=Q q="X" rec=-\n', encoding='utf-8')
+        drop = ('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')
+        r = run_script(SCRIPT, 'tally', '--cwd', str(other), env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        r = run_script(SCRIPT, 'tally', '--task-dir', 'docs/agent', '--cwd', str(other), env=self.env, drop=drop)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue((task / 'gate-tally.md').is_file())
 
     def test_rec_same_or_different(self):
         out = self.tally('2026-10-26 23:00:00 ask: gate=G1a q="Scope confirmation" rec=Confirm',
@@ -244,7 +255,7 @@ class GateReportTest(unittest.TestCase):
     def test_no_decisions_and_no_log(self):
         r = self.run_gr('tally')   # no run-log at all
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn(f'run-log: docs/agent/{TASK}/run-log.md missing', r.stdout)
+        self.assertIn(f'run-log: {rel()}/{TASK}/run-log.md missing', r.stdout)
         self.assertIn('No decisions (no ask/answer lines)', r.stdout)
         self.assertIn('| Model mismatches | 0 (main session 0 · by step lines, subagents 0) |', r.stdout)
         self.assertTrue(r.stdout.rstrip().endswith('## Cost and tokens per stretch\nNot recorded'))
@@ -271,7 +282,7 @@ class GateReportTest(unittest.TestCase):
     def test_saved_to_task_folder(self):
         out = self.tally('2026-10-26 23:00:00 ask: gate=Q q=x rec=a', '2026-10-26 23:00:30 answer: gate=Q choice=a')
         saved = self.task / 'gate-tally.md'
-        self.assertIn(f'saved: docs/agent/{TASK}/gate-tally.md', out)
+        self.assertIn(f'saved: {rel()}/{TASK}/gate-tally.md', out)
         text = saved.read_text(encoding='utf-8')
         self.assertIn(f'gate-report tally: {TASK}', text)
         self.assertIn('| 1 | Q | x | a | a | yes | |', text)
@@ -279,7 +290,7 @@ class GateReportTest(unittest.TestCase):
         self.assertFalse((self.task / 'work').exists())
 
     def test_other_task_run_log_is_not_read(self):
-        other = self.proj / 'docs' / 'agent' / '261025-other'
+        other = records(self.proj) / '261025-other'
         other.mkdir()
         (other / 'run-log.md').write_text('2026-10-26 23:00:00 ask: gate=Q q=elsewhere rec=a\n', encoding='utf-8')
         out = self.tally('2026-10-26 23:00:00 ask: gate=Q q=mine rec=a')
@@ -313,7 +324,7 @@ class GateReportTest(unittest.TestCase):
         self.assertFalse(self.reports.exists())
         r = self.run_gr('copy')
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.strip(), f'copied docs/agent/{TASK}/gate-report.md -> {self.reports / (TASK + ".md")}')
+        self.assertEqual(r.stdout.strip(), f'copied {rel()}/{TASK}/gate-report.md -> {self.reports / (TASK + ".md")}')
         self.assertEqual((self.reports / f'{TASK}.md').read_text(encoding='utf-8'), '# Gate report\n')
         (self.task / 'gate-report.md').write_text('# second\n', encoding='utf-8')
         self.assertEqual(self.run_gr('copy').returncode, 0)
@@ -352,10 +363,11 @@ class GateReportTest(unittest.TestCase):
 
     def test_report_dir_default_and_env(self):
         import ma_gate_report
-        names = ('MA_GATE_REPORT_DIR', 'MA_TASKS_DIR', 'CLAUDE_PLUGIN_OPTION_DATA_DIR', 'HOME')
+        names = ('MA_GATE_REPORT_DIR', 'MA_TASKS_DIR', 'CLAUDE_PLUGIN_OPTION_DATA_DIR', 'HOME',
+                 'CLAUDE_PLUGIN_OPTION_TASK_DIR')
         saved = {k: os.environ.get(k) for k in names}
         try:
-            for k in names[:3]:
+            for k in names[:3] + names[4:]:
                 os.environ.pop(k, None)
             os.environ['HOME'] = str(self.root)
             self.assertEqual(ma_gate_report.report_dir(), self.root / 'dev/log/my-agent/gate-report')

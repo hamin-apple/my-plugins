@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from helpers import make_task, parse  # also puts lib/ on sys.path
+from helpers import clean_task_env, make_task, parse, records  # also puts lib/ on sys.path
 
 import ma_active
 import ma_logline
@@ -57,6 +57,18 @@ class FindActiveTest(unittest.TestCase):
         self.assertEqual(a.log, task_dir / 'run-log.md')
         self.assertEqual((a.phase, a.session, a.started), ('1', 's-test', '2026-10-25 09:00'))
 
+    def test_task_value_with_path_parts_is_broken(self):
+        """A `task:` of `..`, `.` or with a separator would move the records folder: broken, not found."""
+        for bad in ('..', '.', 'a/b', 'a\\b'):
+            with self.subTest(task=bad):
+                repo = self.root / ('repo-' + str(len(list(self.root.iterdir()))))
+                make_task(repo)
+                path = records(repo) / '.active'
+                path.write_text(f'task: {bad}\nphase: 1\n', encoding='utf-8')
+                broken = []
+                self.assertIsNone(ma_active.find_active(str(repo), self.tasks, broken))
+                self.assertEqual(broken, [path])
+
     def test_index_found_via_setting(self):
         """No tasks_dir argument and no MA_TASKS_DIR: the data folder setting locates active-index.json."""
         task_dir = make_task(self.root / 'loc', git=False)
@@ -64,7 +76,7 @@ class FindActiveTest(unittest.TestCase):
         data = self.root / 'data'
         data.mkdir()
         (data / 'active-index.json').write_text(json.dumps({str(self.root / 'run'): str(self.root / 'loc')}))
-        saved = {k: os.environ.pop(k, None) for k in ('MA_TASKS_DIR', 'CLAUDE_PLUGIN_OPTION_DATA_DIR')}
+        saved = {k: os.environ.pop(k, None) for k in ('MA_TASKS_DIR', 'CLAUDE_PLUGIN_OPTION_DATA_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')}
         try:
             os.environ['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = str(data)
             self.assertEqual(ma_active.find_active(str(self.root / 'run')).task_dir, task_dir)
@@ -113,7 +125,7 @@ class FindActiveTest(unittest.TestCase):
 
     def test_isolation_worktree_falls_back_to_main_task(self):
         task_a, task_b, agent = self.layout()
-        (self.root / 'loc' / 'docs' / 'agent' / '.active').unlink()
+        (records(self.root / 'loc') / '.active').unlink()
         self.assertEqual(ma_active.find_active(str(agent / 'src'), self.tasks).task_dir, task_a)
 
     def test_containing_checkout_of_another_repository_is_ignored(self):
@@ -126,8 +138,8 @@ class FindActiveTest(unittest.TestCase):
 
     def test_isolation_worktree_index_entry_of_containing_worktree(self):
         task_a, task_b, agent = self.layout()
-        (self.root / 'main' / 'docs' / 'agent' / '.active').unlink()
-        (self.root / 'loc' / 'docs' / 'agent' / '.active').unlink()
+        (records(self.root / 'main') / '.active').unlink()
+        (records(self.root / 'loc') / '.active').unlink()
         store = self.root / 'store'
         task_c = make_task(store, task='261003-task-c', git=False)
         (self.tasks / 'active-index.json').write_text(json.dumps({str(self.root / 'loc'): str(store)}))
@@ -175,8 +187,32 @@ class FindActiveTest(unittest.TestCase):
         (self.root / 'plain').mkdir()
         self.assertIsNone(ma_active.find_active(str(self.root / 'plain'), self.tasks))
         make_task(self.root / 'repo')
-        (self.root / 'repo' / 'docs' / 'agent' / '.active').write_text('phase: 1\n')
+        (records(self.root / 'repo') / '.active').write_text('phase: 1\n')
         self.assertIsNone(ma_active.find_active(str(self.root / 'repo'), self.tasks))
+
+    def test_default_folder_found_and_former_layout_ignored(self):
+        with clean_task_env():
+            task_dir = make_task(self.root / 'new')
+            make_task(self.root / 'old', sub='docs/agent')
+            self.assertEqual(ma_active.find_active(str(self.root / 'new'), self.tasks).task_dir,
+                             self.root / 'new' / '.my-agent' / '261025-probe-task')
+            self.assertIsNone(ma_active.find_active(str(self.root / 'old'), self.tasks))
+        with clean_task_env(CLAUDE_PLUGIN_OPTION_TASK_DIR='docs/agent'):
+            self.assertIsNone(ma_active.find_active(str(self.root / 'new'), self.tasks))
+            self.assertEqual(ma_active.find_active(str(self.root / 'old'), self.tasks).task_dir,
+                             self.root / 'old' / 'docs' / 'agent' / '261025-probe-task')
+        with clean_task_env():
+            self.assertEqual(ma_active.find_active(str(self.root / 'old'), self.tasks, sub='docs/agent').task,
+                             '261025-probe-task')
+        self.assertTrue(task_dir.is_dir())
+
+    def test_linked_records_folder_gives_the_resolved_task_folder(self):
+        with clean_task_env():
+            make_task(self.root / 'lnk', sub='docs/agent')
+            (self.root / 'lnk' / '.my-agent').symlink_to('docs/agent')
+            a = ma_active.find_active(str(self.root / 'lnk'), self.tasks)
+        self.assertEqual(a.task_dir, self.root / 'lnk' / 'docs' / 'agent' / '261025-probe-task')
+        self.assertEqual(a.location, self.root / 'lnk')
 
     def test_bad_index_json_ignored(self):
         (self.root / 'plain').mkdir()

@@ -1,11 +1,11 @@
 """Find the active my-agent task for a folder (architecture 4.8.2 "the order in which hooks find .active").
 
-1. the git root of `cwd` (nearest ancestor with a `.git` entry, file or folder) → `<root>/docs/agent/.active`;
+1. the git root of `cwd` (nearest ancestor with a `.git` entry, file or folder) → `<root>/<task_dir>/.active` (`ma_data.task_dir()`, default `.my-agent`);
    when that root is a linked worktree (`.git` file, e.g. an isolation:worktree agent in
    `<loc>/.claude/worktrees/agent-<id>`, probe r2) and has no `.active`, the `.active` of the checkout that
    contains it (the nearest ancestor with a `.git` entry of the same repository, main or linked), then the main
    worktree's `.active`; a root whose `.git` is a folder never looks at parent folders;
-   outside any git repo, the nearest of `cwd` and its ancestors with `docs/agent/.active` (a location such as
+   outside any git repo, the nearest of `cwd` and its ancestors with `<task_dir>/.active` (a location such as
    the data folder run from itself, which Intake writes no index line for);
 2. `<tasks_dir>/active-index.json` (`{"<run folder>": "<task location>"}`): inside a git repo, only the entry for
    its root (or containing / main checkout), so a run folder such as ~/dev never reaches the repos below it; outside git, the
@@ -22,6 +22,8 @@ import ma_path
 
 
 class Active(NamedTuple):
+    """`location` is as given (not resolved); `task_dir` is resolved (the records folder may be a link), so it compares
+    equal to resolved tool paths. The records folder is `task_dir.parent`."""
     location: Path
     task: str
     phase: str
@@ -54,10 +56,11 @@ def default_tasks_dir() -> Path:
     return ma_data.data_dir()
 
 
-def read_active(location: Path, broken: list = None):
-    """The Active task of `location`, or None. A `.active` that exists but cannot be read or has no `task:` line is
-    appended to `broken` (C9: hooks warn instead of passing silently)."""
-    path = location / 'docs' / 'agent' / '.active'
+def read_active(location: Path, broken: list = None, sub: str = None):
+    """The Active task of `location`, or None. A `.active` that exists but cannot be read or has no usable `task:` line (empty, `.`, `..`, or with a separator) is
+    appended to `broken` (C9: hooks warn instead of passing silently). `sub` is the raw `--task-dir` value."""
+    root = ma_data.task_root(location, sub)
+    path = root / '.active'
     try:
         text = path.read_text(encoding='utf-8')
     except (FileNotFoundError, NotADirectoryError):
@@ -69,12 +72,17 @@ def read_active(location: Path, broken: list = None):
         key, sep, value = line.partition(':')
         if sep:
             f[key.strip()] = value.strip()
-    if not f.get('task'):
+    task = f.get('task', '')
+    if not task or '/' in task or '\\' in task or task in ('.', '..'):   # empty or a path: never derive from it
         if broken is not None:
             broken.append(path)
         return None
-    task_dir = location / 'docs' / 'agent' / f['task']
-    return Active(location, f['task'], f.get('phase', ''), f.get('session', ''), f.get('started', ''),
+    try:
+        root = root.resolve()
+    except (OSError, RuntimeError):
+        pass
+    task_dir = root / task
+    return Active(location, task, f.get('phase', ''), f.get('session', ''), f.get('started', ''),
                   task_dir, task_dir / 'run-log.md')
 
 
@@ -128,7 +136,7 @@ def containing_checkout(root: Path):
     return None
 
 
-def find_active(cwd: str, tasks_dir: Path = None, broken: list = None):
+def find_active(cwd: str, tasks_dir: Path = None, broken: list = None, sub: str = None):
     """The Active task for `cwd`, or None. Never raises. `broken` collects `.active` files it met without a task."""
     try:
         start = Path(cwd).expanduser().resolve()
@@ -136,15 +144,15 @@ def find_active(cwd: str, tasks_dir: Path = None, broken: list = None):
         return None
     root = git_root(start)
     if root is not None:
-        found = read_active(root, broken)
+        found = read_active(root, broken, sub)
         if found:
             return found
         container = containing_checkout(root)
-        found = read_active(container, broken) if container is not None else None
+        found = read_active(container, broken, sub) if container is not None else None
         if found:
             return found
         main = main_worktree(root)
-        found = read_active(main, broken) if main is not None else None
+        found = read_active(main, broken, sub) if main is not None else None
         if found:
             return found
         candidates = []   # a repo never takes a parent's index entry
@@ -153,7 +161,7 @@ def find_active(cwd: str, tasks_dir: Path = None, broken: list = None):
                 candidates.append(d)
     else:
         for d in (start, *start.parents):
-            found = read_active(d, broken)
+            found = read_active(d, broken, sub)
             if found:
                 return found
         candidates = [start, *start.parents]
@@ -171,5 +179,5 @@ def find_active(cwd: str, tasks_dir: Path = None, broken: list = None):
             pass
     for d in candidates:
         if d in keys and isinstance(keys[d], str):
-            return read_active(Path(keys[d]).expanduser().resolve(), broken)
+            return read_active(Path(keys[d]).expanduser().resolve(), broken, sub)
     return None

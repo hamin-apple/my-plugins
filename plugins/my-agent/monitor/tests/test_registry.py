@@ -16,10 +16,15 @@ def reg(projects_file):
 
 
 class RegistryTest(unittest.TestCase):
+    def setUp(self):   # the fixtures live under docs/agent
+        patch = mock.patch.dict(os.environ, {'MA_TASK_DIR': 'docs/agent'})
+        patch.start()
+        self.addCleanup(patch.stop)
+
     def test_lists_all_fixture_tasks(self):
         tasks = reg(PROJECTS_TXT).list_tasks()
         self.assertEqual(len(tasks), 5)
-        self.assertEqual(set(tasks[0]), {'id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed'})
+        self.assertEqual(set(tasks[0]), {'id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed', 'folder'})
         self.assertEqual(tasks[0]['id'], '261024-cli-json-output')   # newest first
 
     def test_summary_elapsed_matches_detail_for_running(self):
@@ -100,11 +105,39 @@ class PricesFileTest(unittest.TestCase):
             self.assertEqual(registry.default_prices_file(), ma_prices.BUNDLED)
 
 
+class TaskFolderTest(unittest.TestCase):
+    """The folder listed per project is the task_dir setting; unset means .my-agent."""
+
+    def project(self, d):
+        for sub in ('.my-agent', 'docs/agent'):
+            t = Path(d, 'proj', sub, '261030-' + sub.replace('/', '-').strip('.'))
+            t.mkdir(parents=True)
+            (t / 'intake.md').write_text('# Intake\n\n## Request\nx\n')
+        Path(d, 'projects.txt').write_text(f'{Path(d, "proj")}\n')
+        return Path(d, 'projects.txt')
+
+    def env(self, **extra):
+        keep = {k: v for k, v in os.environ.items() if not k.startswith('MA_') and k != 'CLAUDE_PLUGIN_OPTION_TASK_DIR'}
+        return mock.patch.dict(os.environ, dict(keep, **extra), clear=True)
+
+    def test_unset_lists_only_dot_my_agent(self):
+        with tempfile.TemporaryDirectory() as d, self.env():
+            tasks = reg(self.project(d)).list_tasks()
+            self.assertEqual([t['id'] for t in tasks], ['261030-my-agent'])
+            self.assertTrue(tasks[0]['folder'].endswith('/proj/.my-agent/261030-my-agent'), tasks[0]['folder'])
+
+    def test_setting_lists_only_docs_agent(self):
+        with tempfile.TemporaryDirectory() as d, self.env(CLAUDE_PLUGIN_OPTION_TASK_DIR='docs/agent'):
+            tasks = reg(self.project(d)).list_tasks()
+            self.assertEqual([t['id'] for t in tasks], ['261030-docs-agent'])
+            self.assertTrue(tasks[0]['folder'].endswith('/proj/docs/agent/261030-docs-agent'), tasks[0]['folder'])
+
+
 class SettingFolderTest(unittest.TestCase):
     """Without MA_* overrides, projects.txt and prices.json are read from the data folder setting."""
 
     def env(self, d):
-        keep = {k: v for k, v in os.environ.items() if not k.startswith('MA_') and k != 'CLAUDE_PLUGIN_OPTION_DATA_DIR'}
+        keep = {k: v for k, v in os.environ.items() if not k.startswith('MA_') and k not in ('CLAUDE_PLUGIN_OPTION_DATA_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')}
         return mock.patch.dict(os.environ, dict(keep, CLAUDE_PLUGIN_OPTION_DATA_DIR=d), clear=True)
 
     def test_projects_file_under_setting(self):

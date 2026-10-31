@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import L4, REPO, make_task
+from helpers import L4, REPO, make_task, rel
 
 SKILL = REPO / 'SKILL.md'
 L1 = REPO / 'l1-orchestration'
@@ -127,9 +127,9 @@ class SkillMdTest(unittest.TestCase):
             proj = Path(tmp).resolve() / 'proj'
             make_task(proj)
             for name, args in found:
-                argv = shlex.split(re.sub(r'<[^>]*>', 'x', args))
+                argv = shlex.split(re.sub(r'<[^>]*>', 'x', args.replace('<task_dir>', rel())))
                 r = subprocess.run([sys.executable, str(L4 / 'scripts' / 'run-log.py'), *argv, '--cwd', str(proj)],
-                                   capture_output=True, text=True, env={'MA_TASKS_DIR': tmp, 'PATH': '/usr/bin:/bin'})
+                                   capture_output=True, text=True, env={'MA_TASKS_DIR': tmp, 'MA_TASK_DIR': rel(), 'PATH': '/usr/bin:/bin'})
                 self.assertEqual(r.returncode, 0, f'{name}: {args}\n{r.stdout}{r.stderr}')
 
     def test_gate_answers_use_choice(self):
@@ -162,9 +162,9 @@ class SkillMdTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             proj = Path(tmp).resolve() / 'proj'
             make_task(proj)
-            argv = ['ask', 'gate=G3', 'q=x', 'rec=x']
+            argv = ['ask', 'gate=G3', 'q=x', 'rec=x', '--task-dir', rel()]
             r = subprocess.run([sys.executable, str(L4 / 'scripts' / 'run-log.py'), *argv, '--cwd', str(proj)],
-                               capture_output=True, text=True, env={'MA_TASKS_DIR': tmp, 'PATH': '/usr/bin:/bin'})
+                               capture_output=True, text=True, env={'MA_TASKS_DIR': tmp, 'MA_TASK_DIR': rel(), 'PATH': '/usr/bin:/bin'})
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
     def test_revision_edits_use_headings_and_edit_tool(self):
@@ -311,8 +311,8 @@ class SkillMdTest(unittest.TestCase):
         intake = self.text[self.text.index('## Intake'):self.text.index('## status')]
         self.assertIn('delegate state=on how=flag', intake)
         self.assertIn('Delegated approval: on (--auto)', intake)
-        self.assertIn('5 lines or fewer', intake)
-        self.assertNotIn('4 lines or fewer', intake)
+        self.assertIn('6 lines or fewer', intake)
+        self.assertNotIn('5 lines or fewer', intake)
         self.assertIn('item 1–5', intake[intake.index('Delegation covers'):])
 
     def test_delegated_approval_core_rules(self):
@@ -422,3 +422,43 @@ class SkillMdTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TaskDirRulesTest(unittest.TestCase):
+    """Criterion 5: the rule texts say <task_dir>, resolved once at Intake, never the literal records folder."""
+    MONITOR_SKILL = REPO / 'skills' / 'monitor' / 'SKILL.md'
+    AGENTS = [REPO / 'l2-design-judge' / 'agents' / 'architect.md'] + [REPO / 'l3-workers' / 'agents' / f'{n}.md' for n in ('coder', 'researcher', 'writer')]
+    TASK_SCRIPTS = ('run-log', 'usage-snapshot', 'gate-report', 'monitor-up')
+
+    def spans(self, path, scripts):
+        text = path.read_text(encoding='utf-8')
+        for m in re.finditer(r'`(python3 "\$\{CLAUDE_PLUGIN_ROOT\}/[^"`]*/(%s)\.py"[^`\n]*)`' % '|'.join(scripts), text):
+            yield m.group(2), m.group(1)
+
+    def test_task_scripts_carry_task_dir(self):
+        seen = 0
+        for path in [SKILL, self.MONITOR_SKILL] + L1_FILES:
+            for script, cmd in self.spans(path, self.TASK_SCRIPTS):
+                seen += 1
+                self.assertIn('--task-dir', cmd, f'{path.name}: {cmd}')
+                self.assertLess(cmd.index('--data-dir'), cmd.index('--task-dir'), f'{path.name}: {cmd}')
+            for script, cmd in self.spans(path, ('feedback',)):
+                self.assertNotIn('--task-dir', cmd, f'{path.name}: {cmd}')
+        self.assertGreaterEqual(seen, 30)
+
+    def test_task_dir_placeholder_single_quoted(self):
+        for path in (SKILL, self.MONITOR_SKILL):
+            text = path.read_text(encoding='utf-8')
+            self.assertIn('${user_config.task_dir}', text, path.name)
+            for m in re.finditer(r'.{0,1}\$\{user_config\.task_dir\}.{0,1}', text):
+                self.assertEqual(m.group(0), "'${user_config.task_dir}'", path.name)
+
+    def test_no_fixed_records_folder(self):
+        for path in [SKILL, self.MONITOR_SKILL] + L1_FILES + self.AGENTS:
+            self.assertNotIn('docs/agent', path.read_text(encoding='utf-8'), path.name)
+        text = SKILL.read_text(encoding='utf-8')
+        i = text.index('11. **Report:**')
+        self.assertIn('Task folder: <task_dir>', text[i:text.index('\n', i)])
+
+    def test_monitor_skill_names_mismatch_case(self):
+        self.assertIn('(task folder mismatch', self.MONITOR_SKILL.read_text(encoding='utf-8'))

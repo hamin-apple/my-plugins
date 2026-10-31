@@ -11,7 +11,7 @@ import ma_data
 
 SCRIPT = L4 / 'scripts' / 'data-dir.py'
 VARS = ('MA_TASKS_DIR', 'CLAUDE_PLUGIN_OPTION_DATA_DIR', 'MA_PROJECTS_FILE', 'MA_FEEDBACK_FILE',
-        'MA_GATE_REPORT_DIR', 'HOME')
+        'MA_GATE_REPORT_DIR', 'HOME', 'MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR')
 PLACEHOLDER = '${user_config.data_dir}'
 
 
@@ -66,6 +66,38 @@ class DataDirTest(unittest.TestCase):
         os.environ['CLAUDE_PLUGIN_OPTION_DATA_DIR'] = '~/hook'
         self.assertEqual(ma_data.data_dir(), self.home / 'hook')
 
+    def test_task_dir_default_and_unset_values(self):
+        self.assertEqual(ma_data.task_dir(), '.my-agent')
+        for value in ('', '  ', '${user_config.task_dir}'):
+            self.assertEqual(ma_data.task_dir(value), '.my-agent', value)
+            os.environ['CLAUDE_PLUGIN_OPTION_TASK_DIR'] = value   # hook path: no argument
+            self.assertEqual(ma_data.task_dir(), '.my-agent', value)
+
+    def test_task_dir_invalid_values_fall_back(self):
+        for value in ('/x', '~/x', 'a/../b', '..', '/', '//', './', '.git', '.claude/x', '.GIT'):
+            self.assertEqual(ma_data.task_dir(value), '.my-agent', value)
+
+    def test_task_dir_normalized(self):
+        for value, want in (('notes/agent/', 'notes/agent'), ('./x/', 'x'), ('docs//agent', 'docs/agent'),
+                            ('Notes/Agent', 'Notes/Agent'), ('  docs/agent  ', 'docs/agent')):
+            self.assertEqual(ma_data.task_dir(value), want, value)
+
+    def test_task_dir_order(self):
+        os.environ['CLAUDE_PLUGIN_OPTION_TASK_DIR'] = 'c'
+        self.assertEqual(ma_data.task_dir(), 'c')
+        self.assertEqual(ma_data.task_dir('b'), 'b')
+        os.environ['MA_TASK_DIR'] = 'a'
+        self.assertEqual(ma_data.task_dir('b'), 'a')
+
+    def test_task_dir_invalid_argument_does_not_fall_to_the_next_source(self):
+        os.environ['CLAUDE_PLUGIN_OPTION_TASK_DIR'] = 'docs/agent'
+        self.assertEqual(ma_data.task_dir('/x'), '.my-agent')
+        self.assertEqual(ma_data.task_dir(), 'docs/agent')
+
+    def test_task_root(self):
+        self.assertEqual(ma_data.task_root(Path('/L'), 'docs/agent'), Path('/L/docs/agent'))
+        self.assertEqual(ma_data.task_root(Path('/L')), Path('/L/.my-agent'))
+
     def test_file_defaults_under_data_dir(self):
         d = self.root / 'd'
         self.assertEqual(ma_data.projects_file(str(d)), d / 'projects.txt')
@@ -95,6 +127,32 @@ class DataDirTest(unittest.TestCase):
         self.assertEqual(r.stdout, f'{self.home}/dev/log/my-agent\n')
         r = self.run_clean('--data-dir', '~/x', MA_TASKS_DIR='/tmp/t')
         self.assertEqual(r.stdout, '/tmp/t\n')
+
+    def test_script_task_dir_second_line(self):
+        want = (('', '.my-agent'), ('   ', '.my-agent'), ('${user_config.task_dir}', '.my-agent'),
+                ('.my-agent', '.my-agent'), ('docs/agent', 'docs/agent'), ('notes/agent/', 'notes/agent'),
+                ('./x/', 'x'), ('docs//agent', 'docs/agent'), ('Notes/Agent', 'Notes/Agent'),
+                ('/x', '.my-agent'), ('~/x', '.my-agent'), ('a/../b', '.my-agent'), ('..', '.my-agent'),
+                ('/', '.my-agent'), ('//', '.my-agent'), ('.git', '.my-agent'), ('.claude/x', '.my-agent'))
+        for value, second in want:
+            r = self.run_clean('--data-dir', '~/dev/agent-tasks', '--task-dir', value)
+            self.assertEqual((r.returncode, r.stdout), (0, f'{self.home}/dev/agent-tasks\n{second}\n'), value)
+
+    def test_script_task_dir_env_wins(self):
+        r = self.run_clean('--data-dir', '~/d', '--task-dir', '.x', MA_TASK_DIR='docs/agent')
+        self.assertEqual(r.stdout.splitlines()[1], 'docs/agent')
+        r = self.run_clean('--data-dir', '~/d', '--task-dir', '/x', CLAUDE_PLUGIN_OPTION_TASK_DIR='docs/agent')
+        self.assertEqual(r.stdout.splitlines()[1], '.my-agent')
+
+    def test_script_without_task_dir_is_one_line(self):
+        r = self.run_clean('--data-dir', '~/d', CLAUDE_PLUGIN_OPTION_TASK_DIR='docs/agent')
+        self.assertEqual(len(r.stdout.splitlines()), 1)
+
+    def test_plugin_json_task_dir_setting(self):
+        manifest = json.loads((L4.parent / '.claude-plugin' / 'plugin.json').read_text())
+        entry = manifest['userConfig']['task_dir']
+        self.assertEqual((entry['default'], entry['required']), ('.my-agent', False))
+        self.assertEqual(ma_data.task_dir(entry['default']), '.my-agent')
 
 
 if __name__ == '__main__':

@@ -447,14 +447,14 @@ function viewArtifacts(id) {
   const link = x => `<a href="#artifacts/${encodeURIComponent(x.id)}" aria-current="${x.id === a.id}">${esc(x.id)}<span class="tag">${x.steps.length > 3 ? 'all' : x.steps.join(' ')}</span></a>`;
   const opts = D.artifacts.map(x => `<option value="${encodeURIComponent(x.id)}"${x.id === a.id ? ' selected' : ''}>${esc(x.id)}</option>`).join('');
   const agents = D.agents.filter(g => a.writer.includes('my-agent:' + g.id));
-  return `<div class="split"><aside class="side"><div class="list tree"><h3>&lt;task location&gt;/docs/agent/</h3>${top.map(link).join('')}
+  return `<div class="split"><aside class="side"><div class="list tree"><h3>&lt;task location&gt;/&lt;task_dir&gt;/</h3>${top.map(link).join('')}
       <div class="root">&lt;task-id&gt;/</div>${inTask.map(link).join('')}</div>
       <select onchange="location.hash='artifacts/'+this.value" aria-label="File">${opts}</select></aside>
     <div><div class="panel"><div class="dhead"><h1>${esc(a.id)}</h1></div>
       ${a.comment ? `<p class="desc">${a.comment}</p>` : ''}
       <div class="kv"><div>Written by</div><div>${esc(a.writer)} ${agents.map(g => `<a class="chip" href="#levels/${g.id}">${g.call}</a>`).join(' ')}</div>
         <div>Steps</div><div class="chips">${a.steps.map(stepChip).join('')}</div>
-        <div>Path</div><div><code>${esc(a.id.startsWith('.') ? `<task location>/docs/agent/${a.id}` : `<task location>/docs/agent/<task-id>/${a.id}`)}</code></div></div></div>
+        <div>Path</div><div><code>${esc(a.id.startsWith('.') ? `<task location>/<task_dir>/${a.id}` : `<task location>/<task_dir>/<task-id>/${a.id}`)}</code></div></div></div>
       <div class="panel"><h2>Format and rules <small>${a.sources.length} source${a.sources.length > 1 ? 's' : ''}</small></h2>${a.sources.map(s => src(s, true)).join('') || '<p class="muted">No format is written down for this file.</p>'}</div></div></div>`;
 }
 

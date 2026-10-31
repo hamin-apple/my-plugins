@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Move finished task folders out of the monitor's list (architecture 4.8.2 "Task records over time").
 
-usage: archive-tasks.py [--days N] [--dry-run] [--projects FILE] [--data-dir DIR]
-For each project in the project list, a task folder `<project>/docs/agent/<task-id>/` whose `intake.md` says
+usage: archive-tasks.py [--days N] [--dry-run] [--projects FILE] [--data-dir DIR] [--task-dir DIR]
+For each project in the project list, a task folder `<project>/<task_dir>/<task-id>/` whose `intake.md` says
 `Status: done` or `Status: aborted`, and whose last run-log line (or `intake.md` change, without a run-log) is N days
-old or more (default 30), moves to `<project>/docs/agent/.archived/<task-id>/` (`-b`, `-c` … when the name is taken).
+old or more (default 30), moves to `<project>/<task_dir>/.archived/<task-id>/` (`-b`, `-c` … when the name is taken).
 The task named in that project's `.active` never moves. Before a move, a task without `main-usage.json` gets one
 (usage-snapshot) while its transcript still exists; a task whose transcript is gone moves anyway.
-The monitor, the menu bar app and `/my-agent status` read only `docs/agent/*/`, so moved tasks leave them without any
-change there. To bring a task back, move its folder back to `docs/agent/`.
+The monitor, the menu bar app and `/my-agent status` read only `<task_dir>/*/`, so moved tasks leave them without any
+change there. To bring a task back, move its folder back to `<task_dir>/`. --task-dir is the task subfolder (setting `task_dir`, default .my-agent).
 --dry-run prints what would move and changes nothing. The project list is $MA_PROJECTS_FILE, else
 <data folder>/projects.txt ($MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/log/my-agent). Transcripts: $MA_CLAUDE_PROJECTS.
 Run by the person (not by L1). exit: 0 done (also when nothing was due), 2 bad arguments, 3 a move failed.
@@ -78,10 +78,10 @@ def free_dest(folder: Path, name: str) -> Path:
     raise OSError(f'no free name for {name} in {folder}')
 
 
-def due(project: Path, cutoff: datetime) -> list:
+def due(project: Path, cutoff: datetime, sub=None) -> list:
     """(task folder, status, last activity) of every task in `project` that may move, oldest first."""
-    agent = project / 'docs' / 'agent'
-    active = ma_active.read_active(project)
+    agent = ma_data.task_root(project, sub)
+    active = ma_active.read_active(project, sub=sub)
     out = []
     for intake in sorted(agent.glob('*/intake.md')):
         task_dir = intake.parent
@@ -102,6 +102,7 @@ def main(argv=None) -> int:
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--projects')
     ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/log/my-agent)')
+    ap.add_argument('--task-dir', help='the task subfolder, setting `task_dir` (default: the setting, else .my-agent)')
     args = ap.parse_args(argv)   # argparse exits 2 on bad arguments
     if args.days < 0:
         ap.error('--days must be 0 or more')
@@ -111,7 +112,7 @@ def main(argv=None) -> int:
     prices = ma_prices.load_prices(ma_prices.prices_file(args.data_dir))
     moved, failed = 0, 0
     for project in projects(Path(args.projects).expanduser() if args.projects else projects_file(args.data_dir)):
-        for task_dir, st, when in due(project, cutoff):
+        for task_dir, st, when in due(project, cutoff, args.task_dir):
             folder = task_dir.parent / ARCHIVED
             head = f'{task_dir} ({st}, last {when:%Y-%m-%d})'
             if args.dry_run:

@@ -30,7 +30,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 | G3 Final acceptance | Verify ALL PASS, Review BLOCKER 0 | Accept / Rework / Abort (dev profile: Commit / Rework / Abort) |
 | E Escalation | Verify FAIL 3 times in a row, the same work unit stopped twice, a workflow error, a merge conflict exposes a plan error | Give direction / Change scope / Abort |
 
-- Before G1b approval, delegate only to `my-agent:explorer`, `my-agent:architect`, `my-agent:plan-reviewer`, and write nothing outside the task folder (`docs/agent/<task-id>/`). While `plan.md` has no approval line, the plugin hook `plan-approved-check.py` blocks delegation other than these in the `.active` session, and asks (the G2 dialog) for a write outside the task folder, which the person allows only for their own request. If delegation is blocked, do not work around it; go to G1b.
+- Before G1b approval, delegate only to `my-agent:explorer`, `my-agent:architect`, `my-agent:plan-reviewer`, and write nothing outside the task folder (`<task_dir>/<task-id>/`). While `plan.md` has no approval line, the plugin hook `plan-approved-check.py` blocks delegation other than these in the `.active` session, and asks (the G2 dialog) for a write outside the task folder, which the person allows only for their own request. If delegation is blocked, do not work around it; go to G1b.
 - At G2, never recommend "Allow for the session". Allow risky actions one at a time.
 
 ### Delegated approval
@@ -55,7 +55,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 
 ### `.active` rules
 
-- `docs/agent/.active` in the task location marks the running task: four lines, `task:`, `phase:` (1–4), `session:`, `started:`.
+- `<task_dir>/.active` in the task location marks the running task: four lines, `task:`, `phase:` (1–4), `session:`, `started:`.
 - Write it once Intake sets the task location. Update `phase:` on each phase change. Delete it when the retrospective after G3 acceptance ends, on abort, and when switching to another task.
 - If it already exists, overwrite it only after a popup. `session:` is the value of `$CLAUDE_CODE_SESSION_ID`.
 
@@ -76,7 +76,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
   - `${CLAUDE_SKILL_DIR}/l1-orchestration/phases/accept.md` (④ Accept: 7 Verify, 8 Review → G3)
   - Profile (`Profile:` in `intake.md`): `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/general.md`, `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/research.md`, `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/dev.md`
 - Read does not expand the plugin path variables in these files. When you run a command, replace the variable with this plugin's folder, `${CLAUDE_PLUGIN_ROOT}`.
-- Data folder: every time you (re)read a phase file (phase start, `continue`, after compaction, a direct `define|plan|build|accept`) and at the start of Intake and status, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/data-dir.py" --data-dir '${user_config.data_dir}'`. Its output line is `<data folder>`. Use it for the popup, the folder of `projects.txt` and `<data folder>/active-index.json`, and as `--data-dir "<data folder>"` at the end of every run-log, usage-snapshot, gate-report, feedback and monitor-up call.
+- Data folder: every time you (re)read a phase file (phase start, `continue`, after compaction, a direct `define|plan|build|accept`) and at the start of Intake and status, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/data-dir.py" --data-dir '${user_config.data_dir}' --task-dir '${user_config.task_dir}'`. Its two output lines are `<data folder>` and `<task_dir>`. Use it for the popup, the folder of `projects.txt` and `<data folder>/active-index.json`, and as `--data-dir "<data folder>"` at the end of every run-log, usage-snapshot, gate-report, feedback and monitor-up call (all but feedback then take `--task-dir "<task_dir>"`).
 
 ## Arguments
 
@@ -108,16 +108,16 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
 2. **Task location:**
    - If run inside a git repository, it is that repository's root (`git rev-parse --show-toplevel`). Do not ask.
    - Otherwise, popup every time: `<data folder> (Recommended)` / `Current folder` / `Other path`. For `Other path`, show one more popup that asks for the path in the Other field.
-   - The task folder is `<task location>/docs/agent/<task-id>/`.
+   - The task folder is `<task location>/<task_dir>/<task-id>/`.
 3. **Profile:** If the call has a valid profile flag (Arguments), use that profile; the Router does not pick. If the flag is `--dev` and the task location is not a git repository, show the reason and popup: `Proceed as general (Recommended)` / `Abort` (`Abort` stops the call and creates nothing). After `Proceed as general`, `Request:` in `intake.md` keeps `--dev` as its first word while `Profile:` is general, and the label is `(set by you)` because the person chose general; this is intended. Without a flag, the Router picks it from the request and does not ask. Show it in the Intake report and the first gate popup with `(set by you)` or `(Router)` (change it if the person picks a revision, see "Profile change at the first gate"). To tell which, `(set by you)` if a profile flag is among the leading flags of `Request:` in `intake.md` or the run-log has a `profile` line, otherwise `(Router)`; this holds after compaction or `continue` too. The rules below are for the Router's pick:
    - `dev`: requests that change code in a git repository (feature, bug fix, refactoring). The deliverable is a commit. If the task location is not a git repository, do not pick `dev`; pick `general` and write the reason in the Intake report.
    - `research`: requests to research a topic into a note or report with sources (mainly web research).
    - `general`: any other multi-step task.
 4. **Task ID:** `<YYMMDD>-<slug>`. Set the date once with `date +%y%m%d`. The slug is 2–4 English words for the request without the profile flag: lowercase letters, digits and hyphens, 30 characters or fewer. If the same folder exists, add `-b`, `-c`. Do not ask; show it in the first gate popup.
-5. **`.gitignore`:** Only when the task location is a git repository and `docs/agent/.gitignore` does not exist, popup: `Don't commit (Recommended)` / `Commit`. For Don't commit, write the single line `*`; for Commit, the single line `# my-agent: commit`.
+5. **`.gitignore`:** Only when the task location is a git repository and `<task_dir>/.gitignore` does not exist, popup: `Don't commit (Recommended)` / `Commit`. For Don't commit, write the single line `*`; for Commit, the single line `# my-agent: commit`.
 6. **`.active` and index:** Create the task folder. Run `date '+%Y-%m-%d %H:%M'` first, then write the four lines of `.active` (`phase: 1`, `started:` with that value) with the Write tool, without command substitution. If the task location differs from the folder you ran in (or its git root), add one line to `<data folder>/active-index.json` (`{"<run folder>": "<task location>"}`). Leave other lines as they are.
 7. **Project list:** If `<data folder>/projects.txt` lacks the task location's absolute path, add one line. Never delete lines.
-8. **Monitor:** Run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" --data-dir "<data folder>"` and carry its one output line into the Intake report as `Monitor: <URL>`. If it does not start, write only `Monitor: not started (<reason>)` and continue; `"autostart": false` in `<data folder>/monitor-config.json` gives the reason `autostart off`. Do not record it in the run-log.
+8. **Monitor:** Run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" --data-dir "<data folder>" --task-dir "<task_dir>"` and carry its one output line as it is into the Intake report as `Monitor: <line>`. If it does not start, write only `Monitor: not started (<reason>)` and continue; `"autostart": false` in `<data folder>/monitor-config.json` gives the reason `autostart off`. Do not record it in the run-log.
 9. **`intake.md`:** Write it in the task folder.
 
    ```text
@@ -130,13 +130,13 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
    ```
 
    For a follow-up task, add `Follows: <previous task ID>`.
-10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID> --data-dir "<data folder>"`. Record the profile-flag popups (Arguments) and the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist). With `--auto`, then write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=flag --data-dir "<data folder>"`. Delegation covers popups after that line; the item 1–5 popups and the flag popups go to the person.
-11. **Report:** Show the task ID, task location, profile (with `(set by you)` or `(Router)`) and monitor line, plus the line `Delegated approval: on (--auto)` only when it is on, in 5 lines or fewer, then go to step 2 in `define.md`.
+10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"`. Record the profile-flag popups (Arguments) and the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist). With `--auto`, then write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=flag --data-dir "<data folder>" --task-dir "<task_dir>"`. Delegation covers popups after that line; the item 1–5 popups and the flag popups go to the person.
+11. **Report:** Show the task ID, task location, profile (with `(set by you)` or `(Router)`) and monitor line, plus the line `Task folder: <task_dir>` only when it is not `.my-agent`, and the line `Delegated approval: on (--auto)` only when it is on, in 6 lines or fewer, then go to step 2 in `define.md`.
 
 ## status
 
 1. Find the task location: the git root of the folder you ran in → `<data folder>/active-index.json` → `<data folder>`.
-2. Collect `Status:` and `Request:` from `docs/agent/*/intake.md` and show them as a table. Only the running task and the 4 with the most recent task ID dates; `status all` shows every task.
+2. Collect `Status:` and `Request:` from `<task_dir>/*/intake.md` and show them as a table. Only the running task and the 4 with the most recent task ID dates; `status all` shows every task.
 3. If `.active` exists, add that task's phase and gate state: G1b from the `Approved` line in `plan.md` `## Approval`, G3 from `intake.md` `Status: done`.
 4. Add the number of open improvements per level: the output of `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/feedback.py" count --data-dir "<data folder>"` (and its `REVIEW:` lines, if any).
 5. If there are more than 20 task folders, add one line: "N task folders. To clean up, delete or move them yourself". Delete nothing.
@@ -145,20 +145,20 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
 ## continue
 
 1. Find `.active` (order of status item 1) and check that the task's `intake.md` says `Status: active`. If not, say so and stop. But if it says `Status: done`, the retrospective was cut off: delete only `.active` and that task's line in `<data folder>/active-index.json`, report the one line "Task `<id>` is already accepted. The retrospective may not have finished, so only `.active` cleared", and stop. Do not touch the task folder or the run-log, and do not redo the retrospective. For `Status: aborted`, say so and stop.
-2. If the `my-agent:` value in `intake.md` differs from the current value (same command as Intake item 9), show `git -C "${CLAUDE_PLUGIN_ROOT}" diff --stat <old value> -- .` and popup: `Proceed as is (Recommended)` / `Abort`. To proceed, update that line and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" rules-changed from=<old value> to=<new value> --data-dir "<data folder>"`.
+2. If the `my-agent:` value in `intake.md` differs from the current value (same command as Intake item 9), show `git -C "${CLAUDE_PLUGIN_ROOT}" diff --stat <old value> -- .` and popup: `Proceed as is (Recommended)` / `Abort`. To proceed, update that line and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" rules-changed from=<old value> to=<new value> --data-dir "<data folder>" --task-dir "<task_dir>"`.
 3. If `session:` in `.active` differs from `$CLAUDE_CODE_SESSION_ID`, popup: `Take over (Recommended)` / `Cancel`. To take over, update `session:`.
 4. Re-read that phase file and the profile file. Rerun the monitor command (Intake item 8).
 5. In `plan.md` `## Work units`, match each unit with `Status: running` (`### u<n>`) against `unit=` in the run-log `call:`/`stop:` lines. If that unit's `stop:` is `end=ok` and, for a writer or researcher unit, its result file exists, set it to `done` (a coder unit has no result file); otherwise set it back to `pending`. If `git worktree list` shows a leftover coder worktree not tied to a work unit, popup: `Merge` / `Redo` / `Discard`.
 6. If the run-log has a `revision` line with `state=pending` and no `state=done` line with the same `rev=`, the revision was cut off. Archiving finished before that line, so do not redo it; only check that the line's `archive=` folder exists and is not empty (if missing or empty, stop and report). Then go through items 4 and 5 of "In-flight revision" → Revise this task in order, skip what is already done, and finish: the `rev<new rev>` line in `plan.md` `## Revisions`, deleting the judgment files, clearing `## Approval` (and `## Confirmation` for ①), `phase:` in `.active` (the `to=` value), and last the `state=done` line.
-7. Write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" resume session=<session ID> --data-dir "<data folder>"` and continue from the remaining step.
+7. Write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" resume session=<session ID> --data-dir "<data folder>" --task-dir "<task_dir>"` and continue from the remaining step.
 
 ## Abort
 
 When `Abort` was picked in a popup, or Intake decided to abort the previous task.
 
 1. Start no new delegation. Wait until background subagents finish; stop a workflow with TaskStop.
-2. If delegated approval is on, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=end --data-dir "<data folder>"`. Change `intake.md` to `Status: aborted <YYYY-MM-DD HH:MM> <reason>` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" abort why="<reason>" --data-dir "<data folder>"`.
-   Then run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/usage-snapshot.py" --data-dir "<data folder>"` (saves the main session's tokens per step to `main-usage.json`; on exit 3, state the printed cause in one line and go on).
+2. If delegated approval is on, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=end --data-dir "<data folder>" --task-dir "<task_dir>"`. Change `intake.md` to `Status: aborted <YYYY-MM-DD HH:MM> <reason>` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" abort why="<reason>" --data-dir "<data folder>" --task-dir "<task_dir>"`.
+   Then run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/usage-snapshot.py" --data-dir "<data folder>" --task-dir "<task_dir>"` (saves the main session's tokens per step to `main-usage.json`; on exit 3, state the printed cause in one line and go on).
 3. Delete `.active`, and if `<data folder>/active-index.json` has a line for this task location, delete only that line.
 4. Leave the task folder as is. Report the leftover worktrees and the list of uncommitted changes this task left in the main tree.
 5. Popup: `Leave as is (Recommended)` / `Clean up worktrees`. Do not revert changes in the main tree.
@@ -171,25 +171,25 @@ The run-log is `run-log.md` in the task folder, and only `run-log.py` writes its
 
 | When | Command |
 |---|---|
-| On entering each step (1–8) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=<1-8> name=<step name> --model <main session model ID> --data-dir "<data folder>"` |
-| Right before a popup | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=<G1a/G1b/G3/E/Q> q="<question summary>" rec="<recommended choice>" --data-dir "<data folder>"` (`Q` for a popup that is not a gate; `rec=-` if there is no recommendation. A popup with several questions gets one `ask` per question with `qn=1`, `qn=2`, ...; a single question needs no `qn=`) |
-| After the answer | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<same value> choice="<chosen choice>" --data-dir "<data folder>"` (if the answer was typed in (Other), add `other=1` at the end; for a prose reply sent while the popup is pending, add `prose=1`; for an answer the person gave in advance, add `pre=1`; with several questions, add the same `qn=` as its `ask`. Do not add `(Recommended)` to choice; if present, the tally strips it before comparing) |
-| On a phase change | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" cost --data-dir "<data folder>"` (see Cost below) |
-| Start of an in-flight revision (Revise this task) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<new rev> why="<what changed>" archive=<archive folder> to=<phase to go back to, 1 or 2> invalidated=<judgment files to delete, comma-separated> keep="<what was kept>" state=pending --data-dir "<data folder>"` |
-| In-flight revision cleanup done | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<new rev> state=done --data-dir "<data folder>"` |
-| Rewrite before approval (architect rewrites before G1b) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<current rev> before=G1b why="<what changed>" archive=<archive folder> --data-dir "<data folder>"` |
-| Plan edit by L1 before approval (small change: Plan Review finding or G1b `Request changes`) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="<finding or request>" files=plan.md before=G1b archive=<archive folder> --data-dir "<data folder>"` |
-| Delegated approval starts (message) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=message --data-dir "<data folder>"` (by `--auto`: `how=flag`, Intake item 10) |
-| Delegated approval ends | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=<person or end> --data-dir "<data folder>"` (`person`: take-back message; `end`: G3 acceptance or Abort) |
-| Popup answered by L1 (delegated approval) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<same value> choice="<recommended choice>" by=L1 --data-dir "<data folder>"` (an `answer` line without `by=` is the person's) |
-| Profile change at the first gate | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" profile from=<old> to=<new> back=<1, 2 or -> archive=<archive folder or -> --data-dir "<data folder>"` |
-| Adjust within approved scope | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="Scope change: <content>" files=plan.md --data-dir "<data folder>"` |
-| A background result becomes stale in a revision | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" stale id=<agent_id> rev=<new rev> --data-dir "<data folder>"` |
-| Execute start (dev profile) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" base commit=<git rev-parse HEAD> dirty="<git status --porcelain summary>" --data-dir "<data folder>"` |
-| A merge conflict was handled | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" merge unit=<work unit> files="<files>" how="<how it was resolved>" by=<L1 or coder> --data-dir "<data folder>"` |
-| L1 made a small fix (other than `Scope change:` above) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="<what was fixed>" files="<files>" --data-dir "<data folder>"` |
-| The deliverable was saved after G3 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" deliver path=<saved path> --data-dir "<data folder>"` (for a commit, `path=commit:<short sha>`) |
-| Back to Execute (Verify FAIL, Review BLOCKER, G3 Rework) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=5 name=Execute back="<reason>" archive=<archive folder> --model <main session model ID> --data-dir "<data folder>"` (`accept.md` "Back to Execute") |
+| On entering each step (1–8) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=<1-8> name=<step name> --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| Right before a popup | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=<G1a/G1b/G3/E/Q> q="<question summary>" rec="<recommended choice>" --data-dir "<data folder>" --task-dir "<task_dir>"` (`Q` for a popup that is not a gate; `rec=-` if there is no recommendation. A popup with several questions gets one `ask` per question with `qn=1`, `qn=2`, ...; a single question needs no `qn=`) |
+| After the answer | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<same value> choice="<chosen choice>" --data-dir "<data folder>" --task-dir "<task_dir>"` (if the answer was typed in (Other), add `other=1` at the end; for a prose reply sent while the popup is pending, add `prose=1`; for an answer the person gave in advance, add `pre=1`; with several questions, add the same `qn=` as its `ask`. Do not add `(Recommended)` to choice; if present, the tally strips it before comparing) |
+| On a phase change | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" cost --data-dir "<data folder>" --task-dir "<task_dir>"` (see Cost below) |
+| Start of an in-flight revision (Revise this task) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<new rev> why="<what changed>" archive=<archive folder> to=<phase to go back to, 1 or 2> invalidated=<judgment files to delete, comma-separated> keep="<what was kept>" state=pending --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| In-flight revision cleanup done | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<new rev> state=done --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| Rewrite before approval (architect rewrites before G1b) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" revision rev=<current rev> before=G1b why="<what changed>" archive=<archive folder> --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| Plan edit by L1 before approval (small change: Plan Review finding or G1b `Request changes`) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="<finding or request>" files=plan.md before=G1b archive=<archive folder> --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| Delegated approval starts (message) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=message --data-dir "<data folder>" --task-dir "<task_dir>"` (by `--auto`: `how=flag`, Intake item 10) |
+| Delegated approval ends | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=<person or end> --data-dir "<data folder>" --task-dir "<task_dir>"` (`person`: take-back message; `end`: G3 acceptance or Abort) |
+| Popup answered by L1 (delegated approval) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<same value> choice="<recommended choice>" by=L1 --data-dir "<data folder>" --task-dir "<task_dir>"` (an `answer` line without `by=` is the person's) |
+| Profile change at the first gate | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" profile from=<old> to=<new> back=<1, 2 or -> archive=<archive folder or -> --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| Adjust within approved scope | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="Scope change: <content>" files=plan.md --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| A background result becomes stale in a revision | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" stale id=<agent_id> rev=<new rev> --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| Execute start (dev profile) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" base commit=<git rev-parse HEAD> dirty="<git status --porcelain summary>" --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| A merge conflict was handled | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" merge unit=<work unit> files="<files>" how="<how it was resolved>" by=<L1 or coder> --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| L1 made a small fix (other than `Scope change:` above) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="<what was fixed>" files="<files>" --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| The deliverable was saved after G3 | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" deliver path=<saved path> --data-dir "<data folder>" --task-dir "<task_dir>"` (for a commit, `path=commit:<short sha>`) |
+| Back to Execute (Verify FAIL, Review BLOCKER, G3 Rework) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=5 name=Execute back="<reason>" archive=<archive folder> --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"` (`accept.md` "Back to Execute") |
 
 Step names: 1 `Intake`, 2 `Explore-Scope`, 3 `Plan`, 4 `Plan-Review`, 5 `Execute`, 6 `Merge`, 7 `Verify`, 8 `Review-Deliver`.
 
@@ -221,7 +221,7 @@ Read the lines the command prints:
 
 ## Check before anything leaves
 
-Right before a deliverable leaves the task folder, scan it for secret patterns: publishing a prototype artifact, copying the deliverable after G3, copying `gate-report.md` in the retrospective, committing (dev profile, or a project that chose to commit `docs/agent/`).
+Right before a deliverable leaves the task folder, scan it for secret patterns: publishing a prototype artifact, copying the deliverable after G3, copying `gate-report.md` in the retrospective, committing (dev profile, or a project that chose to commit `<task_dir>/`).
 
 1. `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/secret-scan.py" <file or folder that leaves>`. If there is no output (exit 0), proceed. Exit 2 (`no such path`) means the path is wrong; fix the path and scan again.
 2. On a hit, show the location (`<file>:<line>: <kind>`) and popup: `Remove those parts and proceed (Recommended)` / `Proceed as is` / `Abort`. Before and after the popup, write `ask gate=Q … rec="Remove those parts and proceed"`/`answer gate=Q` lines.

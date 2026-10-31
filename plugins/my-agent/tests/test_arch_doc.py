@@ -64,9 +64,9 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v038(self):
+    def test_status_line_starts_with_v039(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.38 ('), line[:60])
+        self.assertTrue(line.startswith('- Status: design draft v0.39 ('), line[:60])
 
     def test_cost_only_texts(self):
         lines = self.text.splitlines()
@@ -131,6 +131,11 @@ class ArchDocTest(unittest.TestCase):
         rows = [l for l in self.text.splitlines() if l.startswith('| Q24 |')]
         self.assertEqual(len(rows), 1, rows)
         self.assertIn('2026-10-30', rows[0])
+
+    def test_decision_log_has_q25_row(self):
+        rows = [l for l in self.text.splitlines() if l.startswith('| Q25 |')]
+        self.assertEqual(len(rows), 1, rows)
+        self.assertIn('2026-10-31', rows[0])
 
     def test_reference_articles_list_both_local_copies(self):
         ref = (REPO / 'docs' / 'reference.md').read_text(encoding='utf-8')

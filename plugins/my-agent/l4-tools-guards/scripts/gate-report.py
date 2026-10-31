@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Gate decision tally and report copy for the retrospective (architecture 4.11).
 
-usage: gate-report.py tally [--cwd DIR] [--data-dir DIR]   print the decision table, counters and cost/tokens per stretch of the
+usage: gate-report.py tally [--cwd DIR] [--data-dir DIR] [--task-dir DIR]   print the decision table, counters and cost/tokens per stretch of the
                                           active task's run-log, and save them to <task>/gate-tally.md
-       gate-report.py copy [--cwd DIR] [--data-dir DIR]    copy <task>/gate-report.md to the report folder as <task-id>.md
+       gate-report.py copy [--cwd DIR] [--data-dir DIR] [--task-dir DIR]    copy <task>/gate-report.md to the report folder as <task-id>.md
                                           (-2, -3 … when the name is taken; the folder is made if missing)
+--task-dir is the task subfolder (setting `task_dir`, default .my-agent).
 $MA_GATE_REPORT_DIR sets the report folder (default <data folder>/gate-report;
 the data folder is $MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/log/my-agent).
 tally exit: 0 printed (also with no decisions), 1 no active task, 2 bad arguments,
@@ -72,8 +73,9 @@ def main(argv=None) -> int:
     ap.add_argument('command', choices=('tally', 'copy'))
     ap.add_argument('--cwd', default=os.getcwd())
     ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/log/my-agent)')
+    ap.add_argument('--task-dir', help='the task subfolder, setting `task_dir` (default: the setting, else .my-agent)')
     args = ap.parse_args(argv)   # argparse exits 2 on bad arguments
-    active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir))
+    active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir), sub=args.task_dir)
     if active is None:
         print(f'gate-report: no active my-agent task under {args.cwd}')
         return 1

@@ -3,7 +3,7 @@
 A read-only local web page that shows every my-agent task: Dashboard, Architecture, Deliverables and Log replay.
 Spec: `~/dev/my-plugins/plugins/my-agent/docs/build-guide/my-agent-monitor-design.md` (v0.4, 6.1: this folder lives inside the my-agent plugin). Plan: `~/dev/my-plugins/plugins/my-agent/docs/build-guide/my-agent-monitor-plan.md`. The monitor reads run-log lines and task files with the plugin's `l4-tools-guards/lib/ma_schema.py` (added to `sys.path` by `monitor/__init__.py`).
 
-The monitor only reads. It never writes to a project's `docs/agent/`, a transcript, or the my-agent data folder.
+The monitor only reads. It never writes to a project's task folder (`<task_dir>`: the setting `task_dir`, default `.my-agent`; `docs/agent` is the former layout), a transcript, or the my-agent data folder.
 
 ## Run
 
@@ -44,7 +44,7 @@ The data folder is the my-agent plugin setting `data_dir` (default `~/dev/log/my
 
 The main session's usage of a finished task is read from `main-usage.json` in its task folder when it exists (my-agent writes it at the end of a task with `usage-snapshot.py`) and costed with the current `prices.json`, because Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days). Without it, they come from the transcript, and turn into `–` once the transcript is gone.
 The dashboard, Models table, step cards and replay show USD only (no token counts); the raw counts stay in the run-log `stop:` lines and `main-usage.json`.
-Only `docs/agent/*/` is listed. Finished tasks moved to `docs/agent/.archived/` by `l4-tools-guards/scripts/archive-tasks.py` leave the list (architecture 4.8.2 "Task records over time").
+Only `<task_dir>/*/` is listed. The server keeps the `task_dir` value `monitor-up.py` started it with; after you change the setting, run `/my-agent:monitor stop` once (`monitor-up.py` names a mismatch instead of reusing the server silently). A server started by the menu bar app uses the default. Finished tasks moved to `<task_dir>/.archived/` by `l4-tools-guards/scripts/archive-tasks.py` leave the list (architecture 4.8.2 "Task records over time").
 
 Real data needs my-agent v0.19 (run-log `step:` lines, `ask:`/`answer:` lines, G2 hook, token split on `stop:`).
 Older task folders still show, with steps as `–`.

@@ -44,6 +44,12 @@ class ReadmeVersionTest(unittest.TestCase):
             for line in lines:
                 self.assertIn('--data-dir', line, path.name)
 
+    def test_readmes_name_the_task_folder_setting(self):
+        for path in READMES:
+            text = path.read_text(encoding='utf-8')
+            for token in ('task_dir', '.my-agent', 'docs/agent'):
+                self.assertIn(token, text, '%s: %s' % (path.name, token))
+
 
 if __name__ == '__main__':
     unittest.main()

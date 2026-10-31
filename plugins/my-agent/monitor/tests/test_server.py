@@ -1,7 +1,9 @@
 import json
+import os
 from pathlib import Path
 import threading
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.request
 
@@ -13,12 +15,15 @@ from tests.fixtures.build_fixtures import CLAUDE, PROJECTS_TXT
 class ServerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.env = mock.patch.dict(os.environ, {'MA_TASK_DIR': 'docs/agent'})   # the fixtures live under docs/agent
+        cls.env.start()
         cls.httpd = server.make_server(0, Registry(PROJECTS_TXT, claude_root=CLAUDE))
         cls.base = f'http://127.0.0.1:{cls.httpd.server_address[1]}'
         threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
 
     @classmethod
     def tearDownClass(cls):
+        cls.env.stop()
         cls.httpd.shutdown()
         cls.httpd.server_close()
 
@@ -36,7 +41,8 @@ class ServerTest(unittest.TestCase):
     def test_health(self):
         status, _, body = self.get('/api/health')
         self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body), {'app': 'my-agent-monitor', 'root': str(Path(server.__file__).resolve().parent)})
+        self.assertEqual(json.loads(body), {'app': 'my-agent-monitor', 'root': str(Path(server.__file__).resolve().parent),
+                                                'task_dir': 'docs/agent'})
 
     def test_task_by_key(self):
         key = json.loads(self.get('/api/tasks')[2])['tasks'][0]['key']

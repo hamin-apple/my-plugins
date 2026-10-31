@@ -11,7 +11,7 @@ the JSON is even parsed. For a my-agent agent: secrets are denied for everyone, 
 roots, writes in its write roots. The rules start from the agent's level (ma_schema.AGENTS): an L2 agent writes only
 its own file and its Bash only reads; an L3 agent writes nothing. Roles then widen or narrow that: the verifier and
 researcher may use the web, the researcher and writer write `work/` (writer also `prototype/`), the coder writes the
-location or its worktree (also one inside a linked-worktree location) but not `docs/agent/`, `.git/` or `.claude/`
+location or its worktree (also one inside a linked-worktree location) but not `<task_dir>/`, `.git/` or `.claude/`
 (hooks and settings run in L1's context), and the gate-analyst reads only gate-tally.md and gate-report.md. The
 architect may not add the `Approved` or
 `Prototype: requested` line L1 writes into plan.md (4.4 G1b) nor drop a `## Revisions` line (4.8.1).
@@ -136,9 +136,10 @@ def rules(role: str, active, cwd: Path) -> Optional[Rules]:
     if role == 'coder':
         W = worktree(cwd, L)
         own = W or L
+        records = T.parent   # the records folder, resolved by the reader
         return r._replace(read=r.read + ([W] if W else []), write=[own], bash_writes=True,
-                          deny_write=[L / 'docs' / 'agent', L / '.git', L / '.claude', own / 'docs' / 'agent',
-                                      own / '.git'] if W is None else [own / 'docs' / 'agent', own / '.git'])
+                          deny_write=[records, L / '.git', L / '.claude'] if W is None
+                          else [W / ma_data.task_dir(), W / '.git'])
     return r
 
 

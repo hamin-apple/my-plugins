@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by hamin-apple.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.5.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.5.1 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 | `my-agent-tray` | 0.1.0 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
@@ -31,7 +31,7 @@ The repository is private, so you must be signed in with a GitHub account that h
 
 A plugin cannot ship permission rules. For the risky-action prompts (G2: `git commit`, `git push`, `rm -rf`, package installs) and the denied commands (secret files, `--no-verify`, `git push --force`), merge the `ask` and `deny` lists of `plugins/my-agent/l4-tools-guards/permissions/permissions.json` into `permissions` in `~/.claude/settings.json` by hand. Without them those actions are not asked or blocked.
 
-When you enable the plugin, Claude Code asks for one setting, the data folder (default `~/dev/log/my-agent`; change it later in `/config`). It holds everything my-agent keeps outside task folders: the project list (`projects.txt`), the run index (`active-index.json`), the monitor state, log and settings, the price override, the improvement list (`feedback.md`) and the retrospective report copies (`gate-report/`). A leading `~` is expanded. Nothing is written into the plugin's own folder. If the folder is changed, the old one is left as is and the new one is used from then on. If the setting is missing (for example with `--plugin-dir`), `~/dev/log/my-agent` is used. The environment variables `MA_TASKS_DIR` (data folder), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE` and `MA_GATE_REPORT_DIR` win over the setting. A folder from an earlier version (`~/my-agent`) is not moved: move it to the new place, or set the Data folder to the old path.
+When you enable the plugin, Claude Code asks for two settings. The first is the data folder (default `~/dev/log/my-agent`; change it later in `/config`). It holds everything my-agent keeps outside task folders: the project list (`projects.txt`), the run index (`active-index.json`), the monitor state, log and settings, the price override, the improvement list (`feedback.md`) and the retrospective report copies (`gate-report/`). A leading `~` is expanded. Nothing is written into the plugin's own folder. If the folder is changed, the old one is left as is and the new one is used from then on. If the setting is missing (for example with `--plugin-dir`), `~/dev/log/my-agent` is used. The environment variables `MA_TASKS_DIR` (data folder), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE` and `MA_GATE_REPORT_DIR` win over the setting. A folder from an earlier version (`~/my-agent`) is not moved: move it to the new place, or set the Data folder to the old path. The second setting, `task_dir`, is the task folder inside the task location (default `.my-agent`; change it later in `/config`). Task records were kept in `docs/agent` in earlier versions: they are not moved or read unless you set `task_dir` to `docs/agent` (or move the folder: `mv docs/agent .my-agent`). It must be a relative path without `..`; otherwise the default is used. The environment variable `MA_TASK_DIR` wins over the setting.
 
 ## my-agent
 
@@ -55,15 +55,15 @@ The whole architecture — each level's components, their roles and permissions,
 | `/my-agent status` | Shows the task in progress and recent tasks. |
 | `/my-agent:monitor` | Opens a local, read-only web page of task records. Also `status`, `stop`. |
 
-Task records are kept in `docs/agent/<task ID>/` in the task location.
-Finished tasks pile up there and in the monitor's list. To move tasks finished 30 days ago or more to `docs/agent/.archived/` (out of the list; move a folder back to bring it back):
+Task records are kept in `<task location>/<task_dir>/<task ID>/` (by default `.my-agent/<task ID>/`; `docs/agent` is the former layout).
+Finished tasks pile up there and in the monitor's list. To move tasks finished 30 days ago or more to `<task_dir>/.archived/` (out of the list; move a folder back to bring it back):
 
 ```bash
-python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py --dry-run [--data-dir <folder>]   # list only
-python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py [--days N] [--data-dir <folder>]
+python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py --dry-run [--data-dir <folder>] [--task-dir <folder>]   # list only
+python3 ~/dev/my-plugins/plugins/my-agent/l4-tools-guards/scripts/archive-tasks.py [--days N] [--data-dir <folder>] [--task-dir <folder>]
 ```
 
-Run by hand in a shell, the script does not know the setting. Unless your data folder is the default `~/dev/log/my-agent`, pass it with `--data-dir <folder>` so the script finds the project list.
+Run by hand in a shell, the script does not know the setting. Unless your data folder is the default `~/dev/log/my-agent`, pass it with `--data-dir <folder>` so the script finds the project list; likewise pass `--task-dir <folder>` if you changed `task_dir`.
 
 ## Update and remove
 
@@ -86,7 +86,7 @@ claude plugin uninstall my-agent-tray@my-plugins   # if installed
 - `docs/index-ko.html`: the my-agent feature overview in Korean (maintained by hand)
 - `tests/`: tests for `tools/`
 - `docs/handoff/`: handoff notes for work continued in another environment
-- `docs/agent/`: my-agent task records from this repository. Excluded from git.
+- `.my-agent/` and `docs/agent/`: my-agent task records from this repository (`docs/agent` is the former layout). Excluded from git.
 - `plugins/my-agent/docs/reference.md`: sources of the reference documents. The local copies in `plugins/my-agent/docs/ref/` are excluded from git.
 
 ## License

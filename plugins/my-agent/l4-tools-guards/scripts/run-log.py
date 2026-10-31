@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Append one L1 Recorder line to the active task's run-log.md (architecture 4.7.2).
 
-usage: run-log.py <kind> [key=value ...] [--model MODEL_ID] [--cwd DIR] [--data-dir DIR]
+usage: run-log.py <kind> [key=value ...] [--model MODEL_ID] [--cwd DIR] [--data-dir DIR] [--task-dir DIR]
 
 The time comes from the clock. `step` needs n= and name=; rev= (latest revision:
 line, else 0) and session= ($CLAUDE_CODE_SESSION_ID, else .active) are filled in.
@@ -18,7 +18,8 @@ Prints the line, then one MISMATCH line per subagent stop: line with
 mismatch=1 written since the previous L1 line, and PARTIAL lines (with unit=)
 for workers the sweep closed. Unreadable record lines are named on stderr.
 --data-dir is the data folder, where the run index (active-index.json) is read for a run folder
-outside git. Exit 0 written, 1 no active task, 2 bad arguments.
+outside git. --task-dir is the task subfolder (setting `task_dir`, default .my-agent): the records are in
+<task location>/<task_dir>/. Exit 0 written, 1 no active task, 2 bad arguments.
 """
 import argparse
 import json
@@ -77,6 +78,7 @@ def main(argv=None) -> int:
     ap.add_argument('--model')
     ap.add_argument('--cwd', default=os.getcwd())
     ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/log/my-agent)')
+    ap.add_argument('--task-dir', help='the task subfolder, setting `task_dir` (default: the setting, else .my-agent)')
     args = ap.parse_args(argv)
     if args.kind not in KINDS:
         print(f"run-log: unknown kind {args.kind!r}; one of: {' '.join(KINDS)}", file=sys.stderr)
@@ -102,7 +104,7 @@ def main(argv=None) -> int:
     if args.kind == 'profile' and not {'from', 'to'} <= keys:
         print('run-log: profile needs from= and to=', file=sys.stderr)
         return 2
-    active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir))
+    active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir), sub=args.task_dir)
     if active is None:
         print(f'run-log: no active my-agent task under {args.cwd}')
         return 1

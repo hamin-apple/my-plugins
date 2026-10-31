@@ -162,7 +162,7 @@ class TaskViewTest(unittest.TestCase):
                 t = task('work-notes', '261022-weekly-report', Path(d))
             finally:
                 os.chmod(intake, 0o644)
-            self.assertEqual(set(t), {'id', 'key', 'project', 'error'})
+            self.assertEqual(set(t), {'id', 'key', 'project', 'folder', 'error'})
 
 
 if __name__ == '__main__':

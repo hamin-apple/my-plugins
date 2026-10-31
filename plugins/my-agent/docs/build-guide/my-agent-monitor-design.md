@@ -1,13 +1,13 @@
 # my-agent monitor design
 
-- Status: design v0.4 (2026-10-31, aligned with architecture v0.38: the menu bar app moves to the separate `my-agent-tray` plugin and finds the monitor on its own (6.1); the price table moves to `l4-tools-guards/lib/prices.json` (5.4); other platforms open one browser tab; the `autostart` setting). v0.3 (2026-10-28, aligned with architecture v0.27: code location corrected; 5.2 line format gains `unit=`, the `revision` state, `Scope change`, and the back-to-Execute `back=`/`archive=`; the monitor reads through L4 `lib/ma_schema.py`). v0.2 (2026-10-25). Built after v0.1 was approved (`~/dev/my-agent-monitor/`). v0.2 adds the decision to put it in the plugin (section 6.1, architecture v0.20 Q14). The same day, probe results (architecture v0.21) added `session=` to `start:` and `mode=` and `effort=` to `stop:`. The monitor does not need to read these fields.
+- Status: design v0.5 (2026-10-31, aligned with architecture v0.39: the task folder is the setting `task_dir` (default `.my-agent`, formerly `docs/agent`); every task carries the field `folder` (its real path) and `/api/health` the field `task_dir`; a running server keeps the `task_dir` it started with, and `monitor-up.py` reports a mismatch instead of restarting it (5.1)). v0.4 (2026-10-31, aligned with architecture v0.38: the menu bar app moves to the separate `my-agent-tray` plugin and finds the monitor on its own (6.1); the price table moves to `l4-tools-guards/lib/prices.json` (5.4); other platforms open one browser tab; the `autostart` setting). v0.3 (2026-10-28, aligned with architecture v0.27: code location corrected; 5.2 line format gains `unit=`, the `revision` state, `Scope change`, and the back-to-Execute `back=`/`archive=`; the monitor reads through L4 `lib/ma_schema.py`). v0.2 (2026-10-25). Built after v0.1 was approved (`~/dev/my-agent-monitor/`). v0.2 adds the decision to put it in the plugin (section 6.1, architecture v0.20 Q14). The same day, probe results (architecture v0.21) added `session=` to `start:` and `mode=` and `effort=` to `stop:`. The monitor does not need to read these fields.
 - Code location: `monitor/` inside the plugin (`~/dev/my-plugins/plugins/my-agent/monitor/`, section 6.1); the menu bar app is in the `my-agent-tray` plugin (`plugins/my-agent-tray/macos/menubar/`). The first build lived in `~/dev/my-agent-monitor/`.
 - Screen reference: mock-up v22 `~/dev/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html`
 - Related document: `my-agent-architecture.md` v0.19. The "changes on the my-agent side" in section 7 are applied in v0.19.
 
 ## 1. What it is and why it is needed
 
-my-agent runs several subagents in parallel through 4 phases, 8 steps and 5 gates (G1a, G1b, G2, G3, E). Progress is spread over the files in the task folder (`<project>/docs/agent/<task-id>/`) and `run-log.md`, so a terminal alone does not show the following at a glance.
+my-agent runs several subagents in parallel through 4 phases, 8 steps and 5 gates (G1a, G1b, G2, G3, E). Progress is spread over the files in the task folder (`<project>/<task_dir>/<task-id>/`; the setting `task_dir`, default `.my-agent`) and `run-log.md`, so a terminal alone does not show the following at a glance.
 
 1. Which step it is in now, who is working, and whether it is waiting for the person's answer
 2. Which components of the my-agent architecture (L1~L4) were used
@@ -107,7 +107,7 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 |---|---|
 | Projects to watch | project list file (5.1) |
 | Task list, status, title, profile, location, start | `intake.md` (`Status:`, `Profile:`, `Location:`, the request line), folder name (task-id) |
-| Running task | `docs/agent/.active` (task, phase, session, started) |
+| Running task | `<task_dir>/.active` (task, phase, session, started) |
 | Step entry, time per step | run-log `step:` lines (5.2, changes on the my-agent side) |
 | Subagent calls · model · effort · cost · time · result · MISMATCH | run-log `call:` / `start:` / `stop:` lines (architecture section 4.7.2); cost from the `stop:` token split × `prices.json` |
 | Main session cost | main transcript or `main-usage.json` (5.3) × `prices.json` (5.4); a step window with no priced model is `null` |
@@ -125,7 +125,7 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 
 - File: `<data folder>/projects.txt` (`$MA_PROJECTS_FILE` overrides the file). One project path (task location) per line
 - After my-agent sets the task location in Intake, it adds a line if the path is not listed. It never removes lines.
-- For each line the monitor looks for `<path>/docs/agent/*/intake.md`. If the path is gone, it skips it.
+- For each line the monitor looks for `<path>/<task_dir>/*/intake.md` (`task_dir` is the setting, default `.my-agent`, read once when the server starts). If the path is gone, it skips it. Each task dict carries `folder`, the real `<path>/<task_dir>/<task-id>` path, and `/api/health` carries `task_dir`. A server started with another `task_dir` keeps its value until `/my-agent:monitor stop`; `monitor-up.py start` names the mismatch and does not restart it.
 
 ### 5.2 run-log lines (the contract the monitor reads)
 
@@ -192,7 +192,7 @@ The detailed behavior is in section 4.7.4 of the architecture document. Only the
 
 - **Location:** the code moved to `monitor/` inside the plugin (now `~/dev/my-plugins/plugins/my-agent/monitor/`). The reading code was renamed from `reader/` to the `monitor/` package.
 - **`GET /api/health`:** returns `{"app": "my-agent-monitor", "root": <absolute path of the monitor folder>}`. The launch script uses it to recognize a server that is already up.
-- **`monitor-up.py`:** if already up, prints only the URL; otherwise starts the server on a free port. Takes `--open`, `--no-open`, `--window`, `--tab`, `--task <key>`, `status`, `stop`. The open mode (`window`/`tab`) is chosen from the option, then `<data folder>/monitor-config.json`, then the default `window`. The browser (`default`/`safari`/`chrome`) is chosen from the `--browser` option, then `browser` in the config file, then the default `default` (detects the default browser); `monitor-up.py set-browser <value>` rewrites only `browser` in the config file. If the chosen browser does not open, a tab in the default browser is used instead. It exits 0 in every case.
+- **`monitor-up.py`:** if already up, prints only the URL; otherwise starts the server on a free port. It takes `--data-dir` and `--task-dir` (the setting `task_dir`, default `.my-agent`) and passes them to the server in `CLAUDE_PLUGIN_OPTION_DATA_DIR` and `CLAUDE_PLUGIN_OPTION_TASK_DIR`; when a running server's `/api/health` `task_dir` (missing: `docs/agent`) differs from the setting, `start` adds `(task folder mismatch: …)` to its line and changes nothing. Takes `--open`, `--no-open`, `--window`, `--tab`, `--task <key>`, `status`, `stop`. The open mode (`window`/`tab`) is chosen from the option, then `<data folder>/monitor-config.json`, then the default `window`. The browser (`default`/`safari`/`chrome`) is chosen from the `--browser` option, then `browser` in the config file, then the default `default` (detects the default browser); `monitor-up.py set-browser <value>` rewrites only `browser` in the config file. If the chosen browser does not open, a tab in the default browser is used instead. It exits 0 in every case.
 - **Task link:** opening `/#task=<key>` (key is `<8-char sha1>/<task-id>`, URL-encoded) selects that task. If the key is wrong or the task is finished, the usual selection rules apply.
 - **Menu bar app:** a small app shows the number of running tasks and a line per task, and runs `monitor-up.py`. It lives in the separate `my-agent-tray` plugin (`plugins/my-agent-tray/macos/menubar/`, `windows/tray/` reserved; README: `plugins/my-agent-tray/macos/menubar/README.md`) and needs my-agent 0.5.0 or later.
 - **How a shell finds the monitor:** the port comes from `port` in `<data folder>/monitor.json`, then the port range 8765 to 8775; a port counts only when `/api/health` answers `app == "my-agent-monitor"`. The launch folder is the `/api/health` `root` of the monitor it found, else `root` in `monitor.json`, and it counts only when `<root>/monitor-up.py` exists. With neither, the shell shows the server as off and cannot launch it.

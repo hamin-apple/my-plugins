@@ -7,6 +7,7 @@ from pathlib import Path
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.home() / 'dev/my-plugins/plugins/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html'
 DST = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).resolve().parent.parent / 'web' / 'index.html'
 s = SRC.read_text(encoding='utf-8')
+OLD_DIR = 'docs' + '/agent/'   # the prototype names the former layout; the page takes the folder from the API (`folder`)
 
 def rep(old, new, count=1):
     global s
@@ -54,12 +55,12 @@ rep("const st = { task: TASKS[0].id, tab: 'status', filter: 'all', comp: 'coder'
     "const cur = () => FULL[st.task];")
 rep('data-task="${t.id}" aria-current="${t.id === st.task}"', 'data-task="${t.key}" aria-current="${t.key === st.task}"', 2)
 rep('<option value="${t.id}" ${t.id === st.task ? \'selected\' : \'\'}>', '<option value="${t.key}" ${t.key === st.task ? \'selected\' : \'\'}>')
-rep("  $('side-note').innerHTML = L('Tasks found in <code>docs/agent/</code> of 3 projects.', '프로젝트 3곳의 <code>docs/agent/</code>에서 찾은 작업입니다.');",
+rep(f"  $('side-note').innerHTML = L('Tasks found in <code>{OLD_DIR}</code> of 3 projects.', '프로젝트 3곳의 <code>{OLD_DIR}</code>에서 찾은 작업입니다.');",
     "  const np = new Set(TASKS.map(t => t.project)).size;\n"
-    "  $('side-note').innerHTML = TASKS.length ? L(`Tasks found in <code>docs/agent/</code> of ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳의 <code>docs/agent/</code>에서 찾은 작업입니다.`)\n"
+    "  $('side-note').innerHTML = TASKS.length ? L(`Tasks found in ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳에서 찾은 작업입니다.`)\n"
     "    : L('No tasks yet. my-agent lists projects in <code>projects.txt</code> in its data folder.', '아직 작업이 없습니다. my-agent가 데이터 폴더의 <code>projects.txt</code>에 프로젝트를 적습니다.');")
-rep("  $('live-txt').textContent = st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks docs/agent/ every 2s', '실시간 · 2초마다 docs/agent/ 확인');",
-    "  $('live-txt').textContent = st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks docs/agent/ every 2s', '실시간 · 2초마다 docs/agent/ 확인');\n"
+rep(f"  $('live-txt').textContent = st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks {OLD_DIR} every 2s', '실시간 · 2초마다 {OLD_DIR} 확인');",
+    "  $('live-txt').textContent = st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : st.liveWait ? L('Live · waiting for your answer', '실시간 · 사람의 답을 기다리는 중') : L('Live · checks the task folders every 2s', '실시간 · 2초마다 작업 폴더 확인');\n"
     "  $('live-dot').classList.toggle('run', !st.offline && !st.liveWait && TASKS.some(t => t.status === 'running'));")
 
 # null-safe numbers and missing records
@@ -102,7 +103,7 @@ rep("function renderAll() { renderChrome(); renderList(); renderHead(); renderSt
     "function renderAll() { renderChrome(); renderList();\n"
     "  const t = cur();\n"
     "  if (!t || t.error) {\n"
-    "    $('task-head').innerHTML = t ? `<h2>${esc(t.id)}</h2><span class=\"where\"><code>${esc(t.project)}/docs/agent/${esc(t.id)}/</code></span>` : '';\n"
+    "    $('task-head').innerHTML = t ? `<h2>${esc(t.id)}</h2><span class=\"where\"><code>${esc(t.folder)}/</code></span>` : '';\n"
     "    $('p-status').innerHTML = t ? `<div class=\"now-box\"><h4>${L('Could not read this task', '이 작업을 읽을 수 없음')}</h4><p class=\"note\">${esc(t.error)}</p></div>`\n"
     "      : `<p class=\"note\">${st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : L('No tasks yet.', '아직 작업이 없습니다.')}</p>`;\n"
     "    ['p-arch', 'p-files', 'p-log'].forEach(id => $(id).innerHTML = '');\n"

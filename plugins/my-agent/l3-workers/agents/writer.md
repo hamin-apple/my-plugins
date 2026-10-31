@@ -30,7 +30,7 @@ The `plan.md` path and the work unit name, the files to read, the result path, a
 
 - **Draft:** follow the structure shown in `## Mock-up` of `plan.md`.
 - **Synthesis note (research 6 Merge):** place the notes in `work/` into the synthesis structure in `plan.md`. Write each claim as `<claim> · <source URL> · "<quote>"`. If the deliverable is in another language than the English notes, translate the claim faithfully and keep the source and the quote as they are; make no new claims. If notes contradict each other, keep both and mark them `To confirm`.
-- **Prototype:** a single HTML file, `docs/agent/<task-id>/prototype/index.html`. It opens with no external files, reads well in light and dark themes and at phone width (about 400px), and uses real content. It only shows the mock-up visually; it adds no new requirements.
+- **Prototype:** a single HTML file, `<task_dir>/<task-id>/prototype/index.html`. It opens with no external files, reads well in light and dark themes and at phone width (about 400px), and uses real content. It only shows the mock-up visually; it adds no new requirements.
 
 ## When done
 

@@ -25,7 +25,8 @@ class FeedbackTest(unittest.TestCase):
 
     def run_dd(self, *args):
         """No MA_* overrides: the data folder comes from --data-dir (empty values count as not set)."""
-        env = {'MA_FEEDBACK_FILE': '', 'MA_TASKS_DIR': '', 'CLAUDE_PLUGIN_OPTION_DATA_DIR': ''}
+        env = {'MA_FEEDBACK_FILE': '', 'MA_TASKS_DIR': '', 'CLAUDE_PLUGIN_OPTION_DATA_DIR': '',
+               'CLAUDE_PLUGIN_OPTION_TASK_DIR': ''}
         return run_script(SCRIPT, *args, env=env)
 
     def test_data_dir_feedback_file(self):

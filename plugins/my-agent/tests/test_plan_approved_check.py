@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import L4, make_task, run_hook
+from helpers import L4, clean_task_env, make_task, records, rel, run_hook
 
 TASK = '261025-probe-task'
 
@@ -67,7 +67,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
 
     def test_define_phase_allows_task_folder_write(self):
         self.assertPassed(self.hook('Write', {'file_path': str(self.task / 'explore.md')}))
-        self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'docs/agent/.active')}))
+        self.assertPassed(self.hook('Edit', {'file_path': str(records(self.proj) / '.active')}))
 
     def test_allows_index_and_projects(self):
         for name in ('active-index.json', 'projects.txt'):
@@ -91,7 +91,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
 
     def test_broken_active_warns(self):
         """C9: a `.active` without `task:` passes, but says so instead of passing silently."""
-        (self.proj / 'docs' / 'agent' / '.active').write_text('phase: 2\n')
+        (records(self.proj) / '.active').write_text('phase: 2\n')
         r = self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn('task:', json.loads(r.stdout)['systemMessage'])
@@ -103,7 +103,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertAsked(self.hook('Bash', {'command': 'rm -rf src'}), str(self.proj / 'src'))
         self.assertAsked(self.hook('Bash', {'command': 'git checkout -- a'}), 'cannot tell: git checkout -- a')
         self.assertAsked(self.hook('Bash', {'command': 'echo x > "$F"'}), 'cannot tell: echo x > "$F"')
-        self.assertPassed(self.hook('Bash', {'command': f'mkdir -p docs/agent/{TASK}/work'}))
+        self.assertPassed(self.hook('Bash', {'command': f'mkdir -p {rel()}/{TASK}/work'}))
         self.assertPassed(self.hook('Bash', {'command': f'echo "{self.proj}" >> {self.tasks_dir}/projects.txt'}))
         self.assertPassed(self.hook('Bash', {'command': 'ls -la && git status --porcelain'}))
 
@@ -204,7 +204,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
 
     def setting_env(self, data):
         """Env with only the plugin setting (what a plugin hook gets): no MA_* overrides."""
-        env = {k: '' for k in os.environ if k.startswith('MA_')}   # run_script merges os.environ; empty = not set
+        env = {k: '' for k in os.environ if k.startswith('MA_') and k != 'MA_TASK_DIR'}   # run_script merges os.environ; empty = not set
         env.update({k: '' for k in ('MA_TASKS_DIR', 'MA_PROJECTS_FILE', 'MA_FEEDBACK_FILE', 'MA_GATE_REPORT_DIR')})
         return dict(env, CLAUDE_PLUGIN_OPTION_DATA_DIR=str(data))
 
@@ -216,18 +216,54 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, agent_id='ag1'))
 
     def test_missing_session_still_applies(self):
-        (self.proj / 'docs/agent/.active').write_text(f'task: {TASK}\nphase: 1\nsession: \nstarted: x\n')
+        (records(self.proj) / '.active').write_text(f'task: {TASK}\nphase: 1\nsession: \nstarted: x\n')
         self.assertAsked(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other'))
-        (self.proj / 'docs/agent/.active').write_text(f'task: {TASK}\nphase: 1\nsession: s-test\nstarted: x\n')
+        (records(self.proj) / '.active').write_text(f'task: {TASK}\nphase: 1\nsession: s-test\nstarted: x\n')
         r = run_hook('plan-approved-check.py', None, {'tool_name': 'Edit', 'tool_input': {'file_path': str(self.proj / 'src/a.py')}},
                      self.proj, env=self.env)
         self.assertAsked(r)
 
     def test_broken_active_warns_before_session_compare(self):
-        (self.proj / 'docs/agent/.active').write_text('phase: 1\nsession: s-test\n')
+        (records(self.proj) / '.active').write_text('phase: 1\nsession: s-test\n')
         r = self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other')
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn('no `task:` line', json.loads(r.stdout)['systemMessage'])
+
+    def layout_hook(self, proj, tool, tool_input, env=None):
+        payload = {'hook_event_name': 'PreToolUse', 'tool_name': tool, 'tool_input': tool_input, 'session_id': 's-test'}
+        return run_hook('plan-approved-check.py', None, payload, proj, env=dict(self.env, **(env or {})),
+                        drop=('MA_TASK_DIR', 'CLAUDE_PLUGIN_OPTION_TASK_DIR') if not env else ('MA_TASK_DIR',))
+
+    def test_default_layout_reads_only_the_default_folder(self):
+        proj = self.root / 'dflt'
+        with clean_task_env():
+            task = make_task(proj, task=TASK)
+        self.assertPassed(self.layout_hook(proj, 'Write', {'file_path': str(task / 'plan.md')}))
+        self.assertAsked(self.layout_hook(proj, 'Write', {'file_path': str(proj / 'src/a.py')}))
+        only_old = self.root / 'old-only'
+        with clean_task_env():
+            make_task(only_old, task=TASK, sub='docs/agent')
+        self.assertPassed(self.layout_hook(only_old, 'Write', {'file_path': str(only_old / 'src/a.py')}))
+
+    def test_setting_selects_the_former_layout(self):
+        env = {'CLAUDE_PLUGIN_OPTION_TASK_DIR': 'docs/agent'}
+        proj = self.root / 'former'
+        with clean_task_env():
+            task = make_task(proj, task=TASK, sub='docs/agent')
+            make_task(self.root / 'new-only', task=TASK)
+        self.assertPassed(self.layout_hook(proj, 'Write', {'file_path': str(task / 'plan.md')}, env))
+        self.assertAsked(self.layout_hook(proj, 'Write', {'file_path': str(proj / 'src/a.py')}, env))
+        self.assertPassed(self.layout_hook(self.root / 'new-only', 'Write',
+                                           {'file_path': str(self.root / 'new-only' / 'src/a.py')}, env))
+
+    def test_link_layout_passes_through_both_names(self):
+        proj = self.root / 'linked'
+        with clean_task_env():
+            make_task(proj, task=TASK, sub='docs/agent')
+        (proj / '.my-agent').symlink_to('docs/agent')
+        for base in ('.my-agent', 'docs/agent'):
+            with self.subTest(base=base):
+                self.assertPassed(self.layout_hook(proj, 'Write', {'file_path': str(proj / base / TASK / 'plan.md')}))
 
     def test_no_active_anywhere_with_setting_only(self):
         other = self.root / 'other'

@@ -2,8 +2,8 @@
 
 ## 3. Plan
 
-1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=3 name=Plan --model <main session model ID> --data-dir "<data folder>"`
-2. Hand it to `my-agent:architect`. Pass: the paths of `intake.md`, `explore.md` (and `scope.md`), the scope summary in the general profile, and the result path `docs/agent/<task-id>/plan.md`.
+1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=3 name=Plan --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"`
+2. Hand it to `my-agent:architect`. Pass: the paths of `intake.md`, `explore.md` (and `scope.md`), the scope summary in the general profile, and the result path `<task_dir>/<task-id>/plan.md`.
 3. Sections `plan.md` must have (if one is missing, have architect rewrite only that section):
    - `## Scope summary` (general profile): purpose, non-goals, deliverable location
    - `## Completion criteria`: numbered list `1.`, `2.`, each criterion line ending with its check tag (general profile; other profiles have it in `scope.md`)
@@ -19,11 +19,11 @@
 
 ## 4. Plan Review
 
-1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=4 name=Plan-Review --model <main session model ID> --data-dir "<data folder>"`
+1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=4 name=Plan-Review --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"`
 2. Whether to skip follows the profile file. If skipped, write `SKIPPED <reason>` in `plan-review.md`.
 3. Hand it to `my-agent:plan-reviewer`. Pass: the paths of `plan.md`, `intake.md`, `explore.md` and the result path `plan-review.md`. Do not pass architect's explanation.
 4. Handle the judgment the same way in every profile. "Small" is the SKILL.md level-table size (2 task files or fewer, about 10 lines); a finding that turns out larger goes to architect.
-   - **L1 edit of `plan.md`** (small): archive per SKILL.md "In-flight revision" → "Rewrite before approval", edit `plan.md` with Edit, then record `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="Plan Review <severity> <path>:<line>" files=plan.md before=G1b archive=<archive folder> --data-dir "<data folder>"`. **Architect rewrite** (larger): archive and write the `revision … before=G1b` line as in that section, then pass the `plan-review.md` path to architect.
+   - **L1 edit of `plan.md`** (small): archive per SKILL.md "In-flight revision" → "Rewrite before approval", edit `plan.md` with Edit, then record `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="Plan Review <severity> <path>:<line>" files=plan.md before=G1b archive=<archive folder> --data-dir "<data folder>" --task-dir "<task_dir>"`. **Architect rewrite** (larger): archive and write the `revision … before=G1b` line as in that section, then pass the `plan-review.md` path to architect.
    - `REVISE` (any BLOCKER): small → L1 edit, otherwise architect rewrite; then judge again. If the third `REVISE` comes, show that judgment in the G1b popup and leave it to the person, even while delegated approval is on (SKILL.md "Delegated approval"; the popup is unchanged).
    - `READY FOR APPROVAL`: never another Plan Review round. Apply what is chosen below, then go to G1b.
      - NIT only: apply them without a popup (L1 edit if small, else architect) and go to G1b.
@@ -35,12 +35,12 @@
 1. **Paste into the chat:** the full `## Mock-up` (no summary), the flow diagram if any, a summary of the work units, `## Estimate`, the task ID. In the general profile, also `## Scope summary` and `## Completion criteria`. Mark parts that change because of the judgment, and list the findings applied after Plan Review ("Applied after Plan Review: 2 NIT (plan.md:41, plan.md:77)"). If a work unit has a `- Plugin reload: needed (<what>)` line, tell the person that `/reload-plugins` (or a new session) is needed after that unit.
 2. If `## Prototype` is "needed", popup: `Make a prototype (Recommended)` / `Mock-up is enough` / `Plan change`.
    - `Plan change` is the same as item 5, Request changes.
-   - To make one, add a `Prototype: requested` line inside the `plan.md` `## Prototype` section with Edit and hand `docs/agent/<task-id>/prototype/index.html` to `my-agent:writer` (per `artifact-design`).
+   - To make one, add a `Prototype: requested` line inside the `plan.md` `## Prototype` section with Edit and hand `<task_dir>/<task-id>/prototype/index.html` to `my-agent:writer` (per `artifact-design`).
    - L1 reads that file to check it, does SKILL.md "Check before anything leaves", then publishes it as a private artifact and shows the link and the local path.
 3. Record before and after the approval popup.
-   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1b q="Plan approval: <task-id>" rec="Approve" --data-dir "<data folder>"`
+   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1b q="Plan approval: <task-id>" rec="Approve" --data-dir "<data folder>" --task-dir "<task_dir>"`
    - Popup: `Approve (Recommended)` / `Request changes` / `Abort`
-   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1b choice="<chosen choice>" --data-dir "<data folder>"`
+   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1b choice="<chosen choice>" --data-dir "<data folder>" --task-dir "<task_dir>"`
 4. **Approve:** Write `- Approved <YYYY-MM-DD HH:MM> G1b` under `## Approval`. Get the time first with `date '+%Y-%m-%d %H:%M'`, then write the value with the Edit tool, without command substitution (the G1b hook asks for a Bash write containing `$(…)` as a command whose write target it cannot tell). Change `phase:` in `.active` to `3` and read `build.md`.
 5. **Request changes:** a small change (SKILL.md level-table size) is an L1 edit of `plan.md`; otherwise architect rewrites. Both follow "Rewrite before approval" in SKILL.md "In-flight revision" (archive, then a `fix … before=G1b` line for an L1 edit or a `revision … before=G1b` line for architect). Go back to item 1; Plan Review runs again only after a BLOCKER fix. In the general profile and the dev small task G1b is the first gate: if the person wants a different profile, follow SKILL.md "Profile change at the first gate". If the request changes the confirmed scope, take Revise this task in that section. Remake the prototype only if the mock-up changed.
 6. **Abort:** the "Abort" procedure in SKILL.md.

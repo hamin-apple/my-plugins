@@ -147,10 +147,6 @@ class AutostartTest(MonitorUpTest):
         self.assertEqual(self.up('--no-open', '--ports', PORTS), self.OFF)
         self.assert_closed()
 
-    def test_off_open_starts(self):
-        self.config('{"autostart": false}')
-        self.assertRegex(self.up('--open', '--ports', PORTS), r'\(started\)$')
-
     def test_off_status_stop_set_browser(self):
         self.config('{"autostart": false}')
         self.assertEqual(self.up('status', '--ports', PORTS), 'monitor: not running')
@@ -258,6 +254,17 @@ class OpenModeTest(unittest.TestCase):
     def test_running_without_flag_opens_nothing(self):
         self.up('--no-open')
         self.assertEqual(self.up(), 'monitor: http://127.0.0.1:8791/ (running)')
+        self.assertEqual(self.calls, [])
+
+    def test_autostart_off_open_starts_and_opens(self):
+        # in-process (opener stubbed): a subprocess --open would open a real browser window on every test run
+        self.config('{"autostart": false}')
+        self.assertRegex(self.up('--open'), r'\(started\)$')
+        self.assertEqual(self.calls, [('http://127.0.0.1:8791/', 'window')])
+
+    def test_autostart_off_without_open_opens_nothing(self):
+        self.config('{"autostart": false}')
+        self.assertEqual(self.up(), 'monitor: not started (autostart off)')
         self.assertEqual(self.calls, [])
 
     def test_running_open_tab(self):

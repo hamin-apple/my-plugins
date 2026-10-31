@@ -13,6 +13,10 @@ left alone. State goes to the data folder (ma_data.data_dir: $MA_TASKS_DIR, else
 --data-dir, else $CLAUDE_PLUGIN_OPTION_DATA_DIR, else ~/dev/log/my-agent): monitor.json
 (port, pid, root, started) and monitor.log. The server child gets the resolved
 folder in CLAUDE_PLUGIN_OPTION_DATA_DIR.
+
+`"autostart": false` in monitor-config.json (default true; missing, unreadable or any
+other value means true) makes a call without --open print `monitor: not started
+(autostart off)` and start nothing. --open, status, stop and set-browser ignore it.
 """
 import argparse
 import http.client
@@ -86,7 +90,18 @@ def read_state():
         return None
 
 
+def read_autostart(tasks_dir) -> bool:
+    """False only when monitor-config.json is a JSON object whose `autostart` is JSON false."""
+    try:
+        cfg = json.loads((Path(tasks_dir) / 'monitor-config.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return True
+    return not (isinstance(cfg, dict) and cfg.get('autostart') is False)
+
+
 def start(ports, open_browser, mode=None, task=None, browser=None):
+    if open_browser is not True and not read_autostart(tasks_dir()):
+        return 'monitor: not started (autostart off)'
     def show(port):
         link = url(port) + ('#task=' + urllib.parse.quote(task, safe='') if task else '')
         open_monitor(link, mode or read_mode(tasks_dir()),

@@ -1,4 +1,5 @@
 """monitor.opener: open mode, default-browser detection, per-browser commands. Nothing here opens a window."""
+import functools
 import json
 import plistlib
 import subprocess
@@ -8,6 +9,8 @@ from pathlib import Path
 from unittest import mock
 
 from monitor import opener
+
+open_darwin = functools.partial(opener.open_monitor, platform='darwin')
 
 URL = 'http://127.0.0.1:8765/'
 
@@ -136,47 +139,47 @@ class KindTest(unittest.TestCase):
 class OpenMonitorTest(unittest.TestCase):
     def test_safari_window(self):
         run = FakeRun(0)
-        self.assertEqual(opener.open_monitor(URL, 'window', run, 'com.apple.safari'), 'window')
+        self.assertEqual(open_darwin(URL, 'window', run, 'com.apple.safari'), 'window')
         self.assertEqual(len(run.argvs), 1)
         self.assertEqual(run.argvs[0][0], 'osascript')
         self.assertEqual(run.argvs[0][-1], URL)
 
     def test_safari_rc1_falls_back_to_tab(self):
         run = FakeRun(1, 0)
-        self.assertEqual(opener.open_monitor(URL, 'window', run, 'com.apple.safari'), 'tab')
+        self.assertEqual(open_darwin(URL, 'window', run, 'com.apple.safari'), 'tab')
         self.assertEqual(run.argvs[1], ['open', URL])
 
     def test_safari_timeout_falls_back_to_tab(self):
         run = FakeRun(subprocess.TimeoutExpired('osascript', 5), 0)
-        self.assertEqual(opener.open_monitor(URL, 'window', run, 'com.apple.safari'), 'tab')
+        self.assertEqual(open_darwin(URL, 'window', run, 'com.apple.safari'), 'tab')
         self.assertEqual(run.argvs[1], ['open', URL])
 
     def test_chromium_app_window(self):
         for bundle in ('com.google.chrome', 'com.microsoft.edgemac'):
             run = FakeRun(0)
-            self.assertEqual(opener.open_monitor(URL, 'window', run, bundle), 'window')
+            self.assertEqual(open_darwin(URL, 'window', run, bundle), 'window')
             self.assertEqual(run.argvs, [['open', '-n', '-b', bundle, '--args', f'--app={URL}',
                                           '--window-size=1200,800']])
 
     def test_single_tab_open(self):
         for mode, bundle in (('window', 'org.mozilla.firefox'), ('window', None), ('tab', 'com.google.chrome')):
             run = FakeRun(0)
-            self.assertEqual(opener.open_monitor(URL, mode, run, bundle), 'tab')
+            self.assertEqual(open_darwin(URL, mode, run, bundle), 'tab')
             self.assertEqual(run.argvs, [['open', URL]])
 
     def test_oserror_gives_failed(self):
         run = FakeRun(OSError('no open'))
-        self.assertEqual(opener.open_monitor(URL, 'window', run, 'com.google.chrome'), 'failed')
-        self.assertEqual(opener.open_monitor(URL, 'tab', run, None), 'failed')
+        self.assertEqual(open_darwin(URL, 'window', run, 'com.google.chrome'), 'failed')
+        self.assertEqual(open_darwin(URL, 'tab', run, None), 'failed')
 
     def test_all_nonzero_gives_failed(self):
-        self.assertEqual(opener.open_monitor(URL, 'window', FakeRun(1), 'com.google.chrome'), 'failed')
+        self.assertEqual(open_darwin(URL, 'window', FakeRun(1), 'com.google.chrome'), 'failed')
 
     def test_default_browser_detected_per_call(self):
         with mock.patch.object(opener, 'default_browser', side_effect=['com.google.chrome', 'org.mozilla.firefox']):
             a, b = FakeRun(0), FakeRun(0)
-            opener.open_monitor(URL, 'window', a)
-            opener.open_monitor(URL, 'window', b)
+            open_darwin(URL, 'window', a)
+            open_darwin(URL, 'window', b)
         self.assertEqual(a.argvs[0][:2], ['open', '-n'])
         self.assertEqual(b.argvs, [['open', URL]])
 
@@ -186,7 +189,7 @@ class ForcedBrowserTest(unittest.TestCase):
 
     def open(self, mode, browser, run, bundle='org.mozilla.firefox'):
         with mock.patch.object(opener, 'default_browser', side_effect=AssertionError('must not detect')):
-            return opener.open_monitor(URL, mode, run, bundle if bundle else opener._DETECT, browser=browser)
+            return open_darwin(URL, mode, run, bundle if bundle else opener._DETECT, browser=browser)
 
     def test_safari_window_and_tab(self):
         run = FakeRun(0)
@@ -217,8 +220,41 @@ class ForcedBrowserTest(unittest.TestCase):
     def test_default_and_unknown_use_detection(self):
         for browser in ('default', 'bogus', None):
             run = FakeRun(0)
-            opener.open_monitor(URL, 'window', run, 'com.google.chrome', browser=browser)
+            open_darwin(URL, 'window', run, 'com.google.chrome', browser=browser)
             self.assertEqual(run.argvs[0][:2], ['open', '-n'], browser)
+
+
+class OtherPlatformTest(unittest.TestCase):
+    """Not macOS: one tab through webbrowser.open; mode, browser and run are not used."""
+
+    def open(self, web_open, platform='linux', mode='window', **kw):
+        run = FakeRun(0)
+        with mock.patch.object(opener, 'default_browser', side_effect=AssertionError('must not detect')):
+            result = opener.open_monitor(URL, mode, run, platform=platform, web_open=web_open, **kw)
+        self.assertEqual(run.argvs, [])
+        return result
+
+    def test_true_is_tab_called_once(self):
+        seen = []
+        self.assertEqual(self.open(lambda u: seen.append(u) or True), 'tab')
+        self.assertEqual(seen, [URL])
+
+    def test_false_is_failed(self):
+        self.assertEqual(self.open(lambda u: False), 'failed')
+
+    def test_raise_is_failed(self):
+        def boom(u):
+            raise RuntimeError('no browser')
+        self.assertEqual(self.open(boom), 'failed')
+
+    def test_win32_and_window_mode_go_the_tab_path(self):
+        self.assertEqual(self.open(lambda u: True, platform='win32'), 'tab')
+        self.assertEqual(self.open(lambda u: True, mode='window', browser='chrome'), 'tab')
+
+    def test_default_web_open_is_webbrowser(self):
+        with mock.patch('webbrowser.open', return_value=True) as w:
+            self.assertEqual(opener.open_monitor(URL, 'window', FakeRun(0), platform='linux'), 'tab')
+        w.assert_called_once_with(URL)
 
 
 if __name__ == '__main__':

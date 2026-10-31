@@ -9,6 +9,11 @@
       "name": "my-agent",
       "source": "./plugins/my-agent",
       "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks"
+    },
+    {
+      "name": "my-agent-tray",
+      "source": "./plugins/my-agent-tray",
+      "description": "macOS menu bar app for the my-agent monitor (build it yourself with swiftc; no skills or commands; needs my-agent 0.5.0 or later)"
     }
   ]
 }

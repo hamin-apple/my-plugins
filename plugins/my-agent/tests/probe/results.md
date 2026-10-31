@@ -49,7 +49,7 @@
 1. In the same session, temporarily set the status line command to save the JSON it receives to a file (wrap `statusLine.command` with `tee`, in the practice project's `.claude/settings.json`)
 2. Note `cost.total_cost_usd` before the subagent call
 3. Call `my-agent:probe-worker` once, and note the value after it ends
-4. Compare the difference with the run-log `stop:` line's `in`/`out`/`cw`/`cr` × the list prices in `monitor/prices.json`. If close, included; if near 0, not included
+4. Compare the difference with the run-log `stop:` line's `in`/`out`/`cw`/`cr` × the list prices in `l4-tools-guards/lib/prices.json`. If close, included; if near 0, not included
 5. Write the result in section 4.8 and in row 9 of this table
 
 ### 6. Session end and background agents

@@ -5,7 +5,7 @@ __pycache__/
 
 # my-agent
 plugins/my-agent/.superpowers/
-plugins/my-agent/monitor/menubar/build/
+plugins/my-agent-tray/macos/menubar/build/
 plugins/my-agent/feedback.md
 plugins/my-agent/docs/dev/
 # reference copies, kept locally (sources: plugins/my-agent/docs/reference.md)

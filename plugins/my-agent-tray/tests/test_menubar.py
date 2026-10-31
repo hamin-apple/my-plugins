@@ -1,9 +1,11 @@
 """Menu bar app: builds with the system swiftc, then --print-menu shows menu lines and the commands they run."""
+import importlib.util
 import json
 import os
 import re
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import urllib.parse
@@ -11,15 +13,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import unittest
 from pathlib import Path
 
-import server
-from monitor.registry import Registry
-from tests.fixtures.build_fixtures import CLAUDE, PROJECTS_TXT
-
 ROOT = Path(__file__).resolve().parent.parent
-MENUBAR = ROOT / 'menubar'
+CORE = Path(__file__).resolve().parents[2] / 'my-agent' / 'monitor'   # tests -> my-agent-tray -> plugins
+MENUBAR = ROOT / 'macos' / 'menubar'
 BINARY = MENUBAR / 'build' / 'my-agent-menubar'
 PORTS = '8791-8794'
-BROWSER_LINE = r'^Browser: (\*?default) (\*?safari) (\*?chrome)\trun: \S+ \S+/monitor-up\.py set-browser$'
+BROWSER_LINE = (r'^Browser: (\*?default) (\*?safari) (\*?chrome)\t'
+                r'(run: \S+ \S+/monitor-up\.py set-browser|disabled)$')
+CLAUDE = PROJECTS_TXT = server = Registry = None   # set in setUpClass from the my-agent monitor core
 TASK_LINE = re.compile(r'^\S+ · (\d\. .+|–)\t([0-9a-f]{8}/\S+)\trun: \S+ \S+/monitor-up\.py --open --task \2$')
 
 
@@ -36,17 +37,37 @@ def swiftc_works():
         return False
 
 
+def load_core():
+    """Import the my-agent monitor core (server, Registry, fixtures) by path; skip when it is not installed."""
+    global CLAUDE, PROJECTS_TXT, server, Registry
+    if server is not None:
+        return
+    if not (CORE / 'server.py').exists():
+        raise unittest.SkipTest(f'my-agent monitor core not found at {CORE}')
+    sys.path.insert(0, str(CORE))
+    import server as core_server
+    from monitor.registry import Registry as core_registry
+    # by file path: the core's own `tests` package must not take the name `tests`
+    spec = importlib.util.spec_from_file_location('core_build_fixtures', CORE / 'tests' / 'fixtures' / 'build_fixtures.py')
+    fixtures = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fixtures)
+    fixtures.build()
+    CLAUDE, PROJECTS_TXT = fixtures.CLAUDE, fixtures.PROJECTS_TXT
+    server, Registry = core_server, core_registry
+
+
 class MenubarTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not swiftc_works():
             raise unittest.SkipTest('swiftc unavailable')
+        load_core()
         try:
             r = subprocess.run(['sh', str(MENUBAR / 'build.sh')], capture_output=True, text=True, timeout=300)
         except subprocess.TimeoutExpired:
-            raise AssertionError('menubar/build.sh timed out after 300 s')
+            raise AssertionError('macos/menubar/build.sh timed out after 300 s')
         if r.returncode != 0:
-            raise AssertionError(f'menubar/build.sh failed: {r.stdout}{r.stderr}')
+            raise AssertionError(f'macos/menubar/build.sh failed: {r.stdout}{r.stderr}')
 
     def setUp(self):
         for p in range(8791, 8795):
@@ -63,10 +84,20 @@ class MenubarTest(unittest.TestCase):
         self.addCleanup(httpd.shutdown)
         return httpd.server_address[1]
 
-    def print_menu(self, port, config=None):
+    def write_state(self, port, root):
+        """monitor.json as monitor-up.py writes it: port and root. port None writes no file; root None leaves the key out."""
+        if port is None:
+            (self.dir / 'monitor.json').unlink(missing_ok=True)
+            return
+        state = {'port': port}
+        if root is not None:
+            state['root'] = str(root)
+        (self.dir / 'monitor.json').write_text(json.dumps(state))
+
+    def print_menu(self, port, config=None, root=CORE):
         if config is not None:
             (self.dir / 'monitor-config.json').write_text(config)
-        (self.dir / 'monitor.json').write_text(json.dumps({'port': port}))
+        self.write_state(port, root)
         env = dict(os.environ, MA_TASKS_DIR=str(self.dir))
         r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True,
                            env=env, timeout=30)
@@ -125,7 +156,7 @@ class MenubarTest(unittest.TestCase):
         self.check_footer(lines)
 
     def browser_marks(self, lines):
-        return [bool(g.startswith('*')) for g in re.match(BROWSER_LINE, lines[-3]).groups()]
+        return [bool(g.startswith('*')) for g in re.match(BROWSER_LINE, lines[-3]).groups()[:3]]
 
     def test_browser_line_marks_current_value(self):
         port = self.serve(PROJECTS_TXT)
@@ -158,10 +189,14 @@ class MenubarTest(unittest.TestCase):
 
     # ---- List / Detail logic (no GUI) ----
 
-    def stub(self, tasks):
+    def stub(self, tasks, root=None):
+        health = {'app': 'my-agent-monitor'}
+        if root is not None:
+            health['root'] = str(root)
+
         class H(BaseHTTPRequestHandler):
             def do_GET(self):
-                body = {'/api/health': {'app': 'my-agent-monitor'}, '/api/tasks': {'tasks': tasks}}.get(self.path)
+                body = {'/api/health': health, '/api/tasks': {'tasks': tasks}}.get(self.path)
                 self.send_response(200 if body is not None else 404)
                 self.end_headers()
                 if body is not None:
@@ -177,7 +212,7 @@ class MenubarTest(unittest.TestCase):
         return httpd.server_address[1]
 
     def print_list(self, port, *extra):
-        (self.dir / 'monitor.json').write_text(json.dumps({'port': port}))
+        self.write_state(port, CORE)
         env = dict(os.environ, MA_TASKS_DIR=str(self.dir))
         r = subprocess.run([str(BINARY), '--print-list', '--ports', PORTS, *extra], capture_output=True, text=True,
                            env=env, timeout=30)
@@ -366,7 +401,7 @@ class MenubarTest(unittest.TestCase):
             'stop\t#4b5563\t#c9d1d9', 'past\t#1d7a3e\t#5fd08a'])
 
     def test_palette_matches_web(self):
-        html = (ROOT / 'web' / 'index.html').read_text(encoding='utf-8')
+        html = (CORE / 'web' / 'index.html').read_text(encoding='utf-8')
         dark_at = html.index('prefers-color-scheme: dark')
         values = {}
         for scheme, block in (('light', html[:dark_at]), ('dark', html[dark_at:])):
@@ -425,7 +460,7 @@ class MenubarTest(unittest.TestCase):
 
     def test_setting_env_locates_state_and_config(self):
         (self.dir / 'monitor-config.json').write_text('{"browser": "chrome"}')
-        (self.dir / 'monitor.json').write_text(json.dumps({'port': self.serve(PROJECTS_TXT)}))
+        (self.dir / 'monitor.json').write_text(json.dumps({'port': self.serve(PROJECTS_TXT), 'root': str(CORE)}))
         env = self.clean_env(CLAUDE_PLUGIN_OPTION_DATA_DIR=str(self.dir), HOME=str(self.dir / 'home'))
         r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True, env=env, timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -457,6 +492,104 @@ class MenubarTest(unittest.TestCase):
         env = self.clean_env(HOME=str(home), CLAUDE_PLUGIN_OPTION_DATA_DIR='~/cfg')
         r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True, env=env, timeout=30)
         self.assertEqual(self.browser_marks(r.stdout.splitlines()), [False, True, False])
+
+    # ---- monitor folder lookup ----
+
+    def fake_root(self, name='plugin'):
+        root = self.dir / name
+        root.mkdir()
+        (root / 'monitor-up.py').write_text('')
+        return root
+
+    def py_path(self, lines):
+        return re.match(r'^launch: (\S+) ', lines[-1]).group(1)
+
+    def assert_runs_from(self, lines, root):
+        py = self.py_path(lines)
+        self.assertEqual(lines[-1], f'launch: {py} {root}/monitor-up.py --no-open')
+        self.assertEqual(lines[-4], f'Open Monitor\trun: {py} {root}/monitor-up.py --open')
+        self.assertEqual(lines[-3].split('\t')[1], f'run: {py} {root}/monitor-up.py set-browser')
+        for line in lines[1:-5]:
+            self.assertTrue(line.endswith(f'run: {py} {root}/monitor-up.py --open --task ' + line.split('\t')[1]), line)
+
+    def test_root_from_state_file_is_not_compiled_in(self):
+        root = self.fake_root()
+        port = self.stub(self.MIXED[1:2])   # health has no root
+        lines = self.print_menu(port, root=root)
+        self.assertEqual(lines[0], 'icon: 1')
+        self.assert_runs_from(lines, root)
+
+    def test_root_from_health_without_state_file(self):
+        root = self.fake_root()
+        port = self.stub(self.MIXED[1:2], root=root)
+        self.write_state(None, None)
+        env = dict(os.environ, MA_TASKS_DIR=str(self.dir))
+        r = subprocess.run([str(BINARY), '--print-menu', '--ports', f'{port}-{port}'], capture_output=True, text=True,
+                           env=env, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[0], 'icon: 1')
+        self.assert_runs_from(lines, root)
+
+    def test_health_root_beats_state_root(self):
+        health_root = self.fake_root('from-health')
+        state_root = self.fake_root('from-state')
+        port = self.stub(self.MIXED[1:2], root=health_root)
+        lines = self.print_menu(port, root=state_root)
+        self.assert_runs_from(lines, health_root)
+
+    def test_invalid_health_root_falls_back_to_state_root(self):
+        state_root = self.fake_root('from-state')
+        port = self.stub(self.MIXED[1:2], root=self.dir / 'no-such-folder')
+        lines = self.print_menu(port, root=state_root)
+        self.assert_runs_from(lines, state_root)
+
+    def unknown_folder_lines(self, lines):
+        self.assertEqual(lines[:4], ['icon: off', 'Monitor server is off',
+                                     'Monitor folder unknown: run /my-agent:monitor once', '---'])
+        self.assertEqual(lines[4], 'Open Monitor\tdisabled')
+        self.assertRegex(lines[5], BROWSER_LINE)
+        self.assertTrue(lines[5].endswith('\tdisabled'))
+        self.assertEqual(lines[6:], ['Quit', 'launch: none (monitor folder unknown)'])
+
+    def test_nothing_answers_and_no_state_file(self):
+        self.unknown_folder_lines(self.print_menu(None, root=None))
+
+    def test_state_root_without_monitor_up_is_unknown(self):
+        empty = self.dir / 'empty'
+        empty.mkdir()
+        self.unknown_folder_lines(self.print_menu(8792, root=empty))
+        self.unknown_folder_lines(self.print_menu(8792, root=self.dir / 'missing'))
+
+    def test_state_root_not_a_string_is_unknown(self):
+        (self.dir / 'monitor.json').write_text(json.dumps({'port': 8792, 'root': 5}))
+        env = dict(os.environ, MA_TASKS_DIR=str(self.dir))
+        r = subprocess.run([str(BINARY), '--print-menu', '--ports', PORTS], capture_output=True, text=True, env=env, timeout=30)
+        self.unknown_folder_lines(r.stdout.splitlines())
+
+    def test_stale_state_file_still_runs_open(self):
+        lines = self.print_menu(8792, root=CORE)
+        self.assertEqual(lines[:3], ['icon: off', 'Monitor server is off', '---'])
+        self.assertRegex(lines[3], r'^Open Monitor\trun: \S+ ' + re.escape(str(CORE)) + r'/monitor-up\.py --open$')
+        self.check_footer(lines)
+
+    def test_running_tasks_disabled_when_folder_unknown(self):
+        port = self.stub(self.MIXED[1:2])   # a monitor answers, but neither it nor monitor.json names a folder
+        lines = self.print_menu(port, root=None)
+        self.assertEqual(lines[0], 'icon: 1')
+        self.assertEqual(lines[1], 'b-run · 5. Execute\tk/b-run\tdisabled')
+        self.assertEqual(lines[2], 'Monitor folder unknown: run /my-agent:monitor once')
+        self.assertEqual(lines[3], '---')
+        self.assertEqual(lines[-1], 'launch: none (monitor folder unknown)')
+        self.assertEqual(lines[-5], '---')
+
+    def test_config_swift_holds_no_monitor_folder(self):
+        text = (MENUBAR / 'build' / 'Config.swift').read_text()
+        self.assertNotIn('monitorRoot', text)
+        self.assertNotIn('monitor-up', text)
+        self.assertNotIn(str(CORE), text)
+        self.assertNotIn(str(ROOT), text)
+        self.assertIn('pythonPath', text)
 
     # ---- login item ----
 

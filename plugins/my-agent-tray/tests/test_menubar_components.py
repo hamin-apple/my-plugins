@@ -2,7 +2,7 @@
 import subprocess
 import unittest
 
-from tests import test_menubar as tm
+import test_menubar as tm
 
 SOURCES = tm.MENUBAR / 'Sources'
 
@@ -14,7 +14,7 @@ class CompFrameTest(unittest.TestCase):
             raise unittest.SkipTest('swiftc unavailable')
         r = subprocess.run(['sh', str(tm.MENUBAR / 'build.sh')], capture_output=True, text=True, timeout=300)
         if r.returncode != 0:
-            raise AssertionError(f'menubar/build.sh failed: {r.stdout}{r.stderr}')
+            raise AssertionError(f'macos/menubar/build.sh failed: {r.stdout}{r.stderr}')
 
     def comp(self, *argv):
         r = subprocess.run([str(tm.BINARY), '--comp-frame', *argv], capture_output=True, text=True, timeout=30)

@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest import mock
 
 import monitor  # puts l4-tools-guards/lib on sys.path
+import ma_prices
 from ma_prices import cost, load_prices
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,7 +31,7 @@ class PricesTest(unittest.TestCase):
         self.assertAlmostEqual(cost(P, 'claude-sonnet-5', u), 18.0 + 3.75 + 0.3)
 
     def test_shipped_table_loads(self):
-        p = load_prices(ROOT / 'prices.json')
+        p = load_prices(ma_prices.BUNDLED)
         for m in ['claude-fable-5-1', 'claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5']:
             self.assertIsNotNone(cost(p, m, U), m)
 
@@ -43,7 +44,13 @@ class PricesTest(unittest.TestCase):
         self.assertIs(taskview.cost, ma_prices.cost)
         self.assertIs(registry.load_prices, ma_prices.load_prices)
         self.assertFalse((ROOT / 'monitor' / 'prices.py').exists())
-        self.assertEqual(ma_prices.BUNDLED, (ROOT / 'prices.json').resolve())
+        self.assertEqual(ma_prices.BUNDLED, (ROOT.parent / 'l4-tools-guards' / 'lib' / 'prices.json').resolve())
+
+    def test_bundled_table_lives_in_the_lib_folder(self):
+        self.assertTrue(ma_prices.BUNDLED.is_file())
+        self.assertEqual(ma_prices.BUNDLED, (ROOT.parent / 'l4-tools-guards' / 'lib' / 'prices.json').resolve())
+        self.assertNotIn('monitor', ma_prices.BUNDLED.parts)
+        self.assertFalse(ROOT.joinpath('prices.json').exists())
 
     def test_snapshot_uses_the_lib_module(self):
         import ma_prices

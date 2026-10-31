@@ -1,7 +1,9 @@
-"""How monitor-up.py opens the monitor: a new window where the default browser allows it, else a tab (macOS only)."""
+"""How monitor-up.py opens the monitor. macOS: a new window where the default browser allows it, else a tab. Other platforms: one tab through webbrowser."""
 import json
 import plistlib
 import subprocess
+import sys
+import webbrowser
 from pathlib import Path
 
 LS_PLIST = Path.home() / 'Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist'
@@ -106,9 +108,12 @@ def commands(url, mode, bundle_id, browser='default'):
     return [tab]
 
 
-def open_monitor(url, mode, run=subprocess.run, bundle_id=_DETECT, browser='default') -> str:
-    """Open url; return 'window', 'tab' or 'failed'. Never raises: the monitor must not stop my-agent."""
+def open_monitor(url, mode, run=subprocess.run, bundle_id=_DETECT, browser='default', platform=None, web_open=None) -> str:
+    """Open url; return 'window', 'tab' or 'failed'. Never raises: the monitor must not stop my-agent.
+    Not macOS: one tab through webbrowser.open ('tab' when it returns true, else 'failed'); mode and browser are not used."""
     try:
+        if (platform or sys.platform) != 'darwin':
+            return 'tab' if (web_open or webbrowser.open)(url) else 'failed'
         if bundle_id is _DETECT and browser not in ('safari', 'chrome'):
             bundle_id = default_browser()
         for method, argv in commands(url, mode, bundle_id, browser):

@@ -117,7 +117,7 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
 5. **`.gitignore`:** Only when the task location is a git repository and `docs/agent/.gitignore` does not exist, popup: `Don't commit (Recommended)` / `Commit`. For Don't commit, write the single line `*`; for Commit, the single line `# my-agent: commit`.
 6. **`.active` and index:** Create the task folder. Run `date '+%Y-%m-%d %H:%M'` first, then write the four lines of `.active` (`phase: 1`, `started:` with that value) with the Write tool, without command substitution. If the task location differs from the folder you ran in (or its git root), add one line to `<data folder>/active-index.json` (`{"<run folder>": "<task location>"}`). Leave other lines as they are.
 7. **Project list:** If `<data folder>/projects.txt` lacks the task location's absolute path, add one line. Never delete lines.
-8. **Monitor:** Run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" --data-dir "<data folder>"` and carry its one output line into the Intake report as `Monitor: <URL>`. If it fails, write only `Monitor: not started (<reason>)` and continue. Do not record it in the run-log.
+8. **Monitor:** Run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/monitor-up.py" --data-dir "<data folder>"` and carry its one output line into the Intake report as `Monitor: <URL>`. If it does not start, write only `Monitor: not started (<reason>)` and continue; `"autostart": false` in `<data folder>/monitor-config.json` gives the reason `autostart off`. Do not record it in the run-log.
 9. **`intake.md`:** Write it in the task folder.
 
    ```text

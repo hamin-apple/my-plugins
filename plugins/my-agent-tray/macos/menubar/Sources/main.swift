@@ -18,8 +18,10 @@ func launch(_ argv: [String]) {
 }
 
 if args.contains("--print-menu") {
-    let state = queryState(ports: portRange, env: env)
-    print(renderMenu(state, browser: readBrowser(env: env), python: pythonPath, root: monitorRoot))
+    let found = queryTasks(ports: portRange, env: env)
+    let state = found.flatMap { parseRunning($0.data) }.map { MenuState.on($0) } ?? .off
+    let root = launchRoot(healthRoot: found?.root, env: env)
+    print(renderMenu(state, browser: readBrowser(env: env), python: pythonPath, root: root))
     exit(0)
 }
 
@@ -123,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let queue = DispatchQueue(label: "poll")
     var shown: [MenuItem]?
     var menuOpen = false
-    var pending: MenuState?
+    var pending: (state: MenuState, root: String?)?
     var menu: NSMenu?   // kept here, hung on the item only for a right/Ctrl click
     let store = Store()
     lazy var windows = WindowController(store: store)
@@ -137,8 +139,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // The window order is read again when the pointer enters the icon, before a click can change it.
         item.button?.addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                                     owner: self, userInfo: nil))
-        render(.off)
-        launch(command(.start, python: pythonPath, root: monitorRoot))   // server only, no window
+        render(.off, root: launchRoot(healthRoot: nil, env: env))
+        queue.async {
+            // server only, no window; only when the monitor folder is known
+            let found = queryTasks(ports: portRange, env: env)
+            if let root = launchRoot(healthRoot: found?.root, env: env) { launch(command(.start, python: pythonPath, root: root)) }
+        }
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in self?.poll() }
     }
@@ -153,19 +159,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 if let running = parseRunning(f.data) { state = .on(running) }
                 if let rows = parseTasks(f.data) { list = .on(rows) }
             }
+            let root = launchRoot(healthRoot: found?.root, env: env)
             DispatchQueue.main.async {
-                self.render(state)
+                self.render(state, root: root)
                 self.store.update(port: found?.port, list: list)
             }
         }
     }
 
-    func render(_ state: MenuState) {
+    func render(_ state: MenuState, root: String?) {
         item.button?.title = " " + iconText(state)
         item.button?.appearsDisabled = (state == .off)
-        let items = menuItems(state, browser: readBrowser(env: env), python: pythonPath, root: monitorRoot)
+        let items = menuItems(state, browser: readBrowser(env: env), python: pythonPath, root: root)
         if items == shown { pending = nil; return }   // unchanged: keep the current menu, drop a stale pending state
-        if menuOpen { pending = state; return }   // never rebuild while the menu is open
+        if menuOpen { pending = (state, root); return }   // never rebuild while the menu is open
         shown = items
         let menu = NSMenu()
         menu.delegate = self
@@ -180,8 +187,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             case .browser:
                 let sub = NSMenu()
                 for c in m.choices {
-                    let ci = NSMenuItem(title: c.title, action: #selector(run(_:)), keyEquivalent: "")
+                    let ci = NSMenuItem(title: c.title, action: c.argv == nil ? nil : #selector(run(_:)), keyEquivalent: "")
                     ci.target = self
+                    ci.isEnabled = c.argv != nil
                     ci.state = c.selected ? .on : .off
                     ci.representedObject = c.argv
                     sub.addItem(ci)
@@ -218,7 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuDidClose(_ menu: NSMenu) {
         menuOpen = false
         DispatchQueue.main.async { self.item.menu = nil }   // later, so the chosen item still runs
-        if let s = pending { pending = nil; render(s) }
+        if let p = pending { pending = nil; render(p.state, root: p.root) }
     }
 
     @objc func run(_ sender: NSMenuItem) {

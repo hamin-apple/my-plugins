@@ -1,7 +1,6 @@
 #!/bin/sh
-# Build the menu bar app with the system swiftc. Writes only under menubar/build/.
+# Build the menu bar app with the system swiftc. Writes only under macos/menubar/build/.
 here=$(cd "$(dirname "$0")" && pwd)
-root=$(dirname "$here")
 out="$here/build"
 
 if ! /usr/bin/swiftc -version >/dev/null 2>&1; then
@@ -17,7 +16,6 @@ fi
 mkdir -p "$out/module-cache" || { echo "build failed: cannot create $out"; exit 1; }
 esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 {
-  printf 'let monitorRoot = "%s"\n' "$(esc "$root")"
   printf 'let pythonPath = "%s"\n' "$(esc "$py")"
 } > "$out/Config.swift"
 

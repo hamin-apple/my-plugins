@@ -1,4 +1,4 @@
-"""plugin.json and both READMEs agree on the my-agent version and on the data folder setting."""
+"""plugin.json and both READMEs agree on the my-agent and my-agent-tray versions and on the data folder setting."""
 import json
 import re
 import unittest
@@ -6,6 +6,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 MANIFEST = REPO / 'plugins' / 'my-agent' / '.claude-plugin' / 'plugin.json'
+TRAY_MANIFEST = REPO / 'plugins' / 'my-agent-tray' / '.claude-plugin' / 'plugin.json'
 READMES = [REPO / 'README.md', REPO / 'README-ko.md']
 
 
@@ -20,6 +21,13 @@ class ReadmeVersionTest(unittest.TestCase):
         version = json.loads(MANIFEST.read_text(encoding='utf-8'))['version']
         for path in READMES:
             row = re.search(r'^\| `my-agent` \| ([^ |]+) \|', path.read_text(encoding='utf-8'), re.M)
+            self.assertIsNotNone(row, path.name)
+            self.assertEqual(row.group(1), version, path.name)
+
+    def test_tray_versions_match(self):
+        version = json.loads(TRAY_MANIFEST.read_text(encoding='utf-8'))['version']
+        for path in READMES:
+            row = re.search(r'^\| `my-agent-tray` \| ([^ |]+) \|', path.read_text(encoding='utf-8'), re.M)
             self.assertIsNotNone(row, path.name)
             self.assertEqual(row.group(1), version, path.name)
 

@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import ma_prices
 from monitor import registry
 from monitor.registry import Registry
 from tests.fixtures.build_fixtures import CLAUDE, PROJECTS, PROJECTS_TXT
@@ -96,7 +97,7 @@ class PricesFileTest(unittest.TestCase):
 
     def test_prices_default_when_absent(self):
         with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ, {'MA_TASKS_DIR': d}):
-            self.assertEqual(registry.default_prices_file(), registry.ROOT / 'prices.json')
+            self.assertEqual(registry.default_prices_file(), ma_prices.BUNDLED)
 
 
 class SettingFolderTest(unittest.TestCase):
@@ -112,7 +113,7 @@ class SettingFolderTest(unittest.TestCase):
 
     def test_prices_override_under_setting(self):
         with tempfile.TemporaryDirectory() as d, self.env(d):
-            self.assertEqual(registry.default_prices_file(), registry.ROOT / 'prices.json')
+            self.assertEqual(registry.default_prices_file(), ma_prices.BUNDLED)
             Path(d, 'prices.json').write_text('{"models": {}}')
             self.assertEqual(registry.default_prices_file(), Path(d, 'prices.json'))
 

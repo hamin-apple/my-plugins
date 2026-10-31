@@ -35,9 +35,54 @@ class EventsTest(unittest.TestCase):
     def test_phase_items(self):
         e = ev('claude-sessions', '261024-cli-json-output')
         ph = [x for x in e.log if x['k'] == 'phase']
-        self.assertEqual([(x['s'], x['a']) for x in ph], [(1, 'router'), (3, 'recorder'), (5, 'recorder')])
-        self.assertEqual(ph[0]['tx'], '① Define start')
+        self.assertEqual([(x['s'], x['a']) for x in ph],
+                         [(1, 'router'), (2, 'orchestrator'), (3, 'orchestrator'), (4, 'orchestrator'), (5, 'orchestrator')])
+        self.assertEqual([x['tx'] for x in ph],
+                         ['① Define start', 'step 2 · Explore-Scope', '② Plan start', 'step 4 · Plan-Review', '③ Build start'])
         self.assertEqual(e.step_enter[-1][1:], (5, 0, 's-cli'))
+
+    def test_orchestrator_items(self):
+        """Delegation, L1 fixes and back-to-Execute belong to the orchestrator (monitor design 4 "2 Architecture")."""
+        e = synth('2026-10-24 15:42:00 step: n=3 name=Plan rev=0 session=s',
+                  '2026-10-24 15:42:05 call: agent=my-agent:architect model=- effort=- isolation=- background=false',
+                  '2026-10-24 15:49:00 fix: what="Plan Review NIT plan.md:12" files=plan.md before=G1b archive=x/archive/a-rev0-draft',
+                  '2026-10-24 15:56:00 step: n=5 name=Execute rev=0 session=s',
+                  '2026-10-24 15:56:05 call: agent=my-agent:coder model=- effort=- isolation=worktree background=true unit=u1',
+                  '2026-10-24 16:20:00 fix: what="Scope change: skip the --json flag" files=scope.md',
+                  '2026-10-24 16:30:00 fix: what="verify.md typo in README" files=README.md',
+                  '2026-10-24 16:40:00 step: n=5 name=Execute rev=0 session=s back="Review SHOULD-FIX" archive=archive/261024-164000-run1/')
+        orch = [(x['k'], x['tx'], x.get('sub')) for x in e.log if x['a'] == 'orchestrator']
+        self.assertEqual(orch, [
+            ('phase', '② Plan start', None),
+            ('delegate', 'delegate → my-agent:architect', None),
+            ('phase', 'plan edit by L1 · Plan Review NIT plan.md:12', None),
+            ('phase', '③ Build start', None),
+            ('delegate', 'delegate → my-agent:coder · u1', None),
+            ('phase', 'Scope change: skip the --json flag', None),
+            ('phase', 'fix · verify.md typo in README', None),
+            ('phase', 'back to Execute · Review SHOULD-FIX', 'archive archive/261024-164000-run1/')])
+        self.assertEqual([x['a'] for x in e.log if x['k'] == 'agent'], ['architect', 'coder'])
+        self.assertEqual([x['a'] for x in e.log if x['k'] == 'phase' and x['a'] == 'recorder'], [])
+
+    def test_l4_items(self):
+        """Script bookkeeping lines go to the scripts chip, a hook's own failure to hooks, a merge to the orchestrator."""
+        e = synth('2026-10-26 02:23:37 base: commit=7c5a898e7fba0db648abfb48ae92de681eb1faf5 dirty="35 entries: docs/ref renames"',
+                  '2026-10-26 01:46:55 cost: session=3eded7bb-320b-42c0-af6f-f4f1210110be usd=3.3040307',
+                  '2026-10-26 01:47:00 cost: session=3eded7bb-320b-42c0-af6f-f4f1210110be usd=oops',
+                  '2026-10-27 01:25:16 merge: unit=S1,S2 files="S2 plan-approved-check.py" how="applied the diff first" by=L1',
+                  '2026-10-27 01:30:00 resume: session=94305e07-60b5-4770-988f-6c3b4d596b8d',
+                  '2026-10-27 01:31:00 rules-changed: from=6e165bd to=19dce9a',
+                  '2026-10-27 01:32:00 stale: id=a81c rev=1',
+                  '2026-10-27 01:33:00 log-error: where=subagent-log error="OSError: disk full"')
+        self.assertEqual([(x['a'], x['tx'], x.get('sub')) for x in e.log], [
+            ('scripts', 'base · 7c5a898', '35 entries: docs/ref renames'),
+            ('scripts', 'cost · 3.30 USD (statusline)', None),
+            ('orchestrator', 'merge · S1,S2 by L1', 'S2 plan-approved-check.py'),
+            ('scripts', 'resume · session 94305e07', None),
+            ('scripts', 'rules changed · 6e165bd → 19dce9a', None),
+            ('scripts', 'stale · a81c rev1', None),
+            ('hooks', 'log-error · subagent-log', 'OSError: disk full')])
+        self.assertEqual({x['k'] for x in e.log if x['a'] in ('scripts', 'hooks')}, {'note'})
 
     def test_mismatch(self):
         w, = agents(ev('obsidian-notes', '261023-hooks-notify-note'), 'writer')
@@ -167,9 +212,9 @@ class EventsTest(unittest.TestCase):
                   '2026-10-29 03:13:00 profile: from=research to=dev back=- archive=-',
                   '2026-10-29 03:14:00 fix: what="Plan Review NIT plan.md:41" files=plan.md before=G1b archive=archive/b',
                   '2026-10-29 03:15:00 fix: what=plain')
-        self.assertEqual([x['tx'] for x in e.log],
-                         ['profile dev → general · back to ② Plan', 'profile research → dev',
-                          'plan edit by L1 · Plan Review NIT plan.md:41'])
+        self.assertEqual([(x['a'], x['tx']) for x in e.log],
+                         [('recorder', 'profile dev → general · back to ② Plan'), ('recorder', 'profile research → dev'),
+                          ('orchestrator', 'plan edit by L1 · Plan Review NIT plan.md:41'), ('orchestrator', 'fix · plain')])
 
     def test_cost_usd(self):
         self.assertEqual(ev('claude-sessions', '261024-cli-json-output').cost_usd, '2.41')

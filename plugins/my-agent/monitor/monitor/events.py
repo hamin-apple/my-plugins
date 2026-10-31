@@ -81,15 +81,23 @@ def build_events(lines) -> Events:
             if back_wanted is not None:
                 back_wanted['back'] = n
                 back_wanted = None
-            if n in PHASE_START and (n, rev) not in phases_seen:
+            first = n in PHASE_START and (n, rev) not in phases_seen
+            if first:
                 phases_seen.add((n, rev))
-                item(l, 'phase', 'router' if n == 1 else 'recorder', f'{PHASE_START[n]} start')
+            # step progress is the orchestrator's; step 1 (Intake) is the router's
             if f.get('back'):        # back to Execute after a Verify FAIL, Review BLOCKER or G3 rework (B2)
-                item(l, 'phase', 'recorder', f"back to {f.get('name') or n} · {f['back']}",
+                item(l, 'phase', 'orchestrator', f"back to {f.get('name') or n} · {f['back']}",
                      sub=f"archive {f['archive']}" if f.get('archive') else None)
+            elif first:
+                item(l, 'phase', 'router' if n == 1 else 'orchestrator', f'{PHASE_START[n]} start')
+            else:
+                item(l, 'phase', 'orchestrator', f"step {n} · {f.get('name') or ''}".rstrip(' ·'))
         elif l.kind == 'call':
             a = f.get('agent', '').removeprefix('my-agent:')
             iso = f.get('isolation')
+            unit = f.get('unit')
+            item(l, 'delegate', 'orchestrator',
+                 f"delegate → {f.get('agent', '')}" + (f" · {unit}" if unit not in (None, '', '-') else ''))
             it = item(l, 'agent', a, f.get('agent', ''), sub=f'isolation: {iso}' if iso not in (None, '-') else None,
                       model=None, actual=None, effort=None, dur=None, c=None, res=None, end=None,
                       live=True, mm=False, id=None)
@@ -165,10 +173,15 @@ def build_events(lines) -> Events:
             back_wanted = entry
             verdicts.append(None)
             item(l, 'rev', 'gatekeeper', f"rev{rev} {f.get('why', '')}".strip(), sub=f.get('keep'))
-        elif l.kind == 'fix' and (f.get('what') or '').startswith('Scope change:'):
-            item(l, 'phase', 'recorder', f.get('what'))
-        elif l.kind == 'fix' and f.get('before') == ma_schema.PLAN_EDIT_GATE:
-            item(l, 'phase', 'recorder', f"plan edit by L1 · {f.get('what', '')}".rstrip(' ·'))
+        elif l.kind == 'fix':         # L1's own small fixes: plan edits before G1b, scope adjustments, judged fixes
+            what = f.get('what') or ''
+            if f.get('before') == ma_schema.PLAN_EDIT_GATE:
+                tx = f"plan edit by L1 · {what}".rstrip(' ·')
+            elif what.startswith('Scope change:'):
+                tx = what
+            else:
+                tx = f"fix · {what}".rstrip(' ·')
+            item(l, 'phase', 'orchestrator', tx)
         elif l.kind == 'delegate' and f.get('state') in ma_schema.DELEGATE_STATES:
             how = f" ({f['how']})" if f.get('how') else ''
             item(l, 'phase', 'recorder', f"delegated approval {f['state']}{how}")
@@ -183,6 +196,22 @@ def build_events(lines) -> Events:
             except (TypeError, ValueError):
                 continue
             costs.setdefault(s, [usd, usd])[1] = usd
+            item(l, 'note', 'scripts', f"cost · {usd:.2f} USD (statusline)")
+        elif l.kind == 'merge':      # a merge conflict resolved by L1 or a coder (4.8): the orchestrator's merge step
+            who = f" by {f['by']}" if f.get('by') else ''
+            item(l, 'phase', 'orchestrator', f"merge · {f.get('unit') or '-'}{who}", sub=f.get('files') or None)
+        elif l.kind == 'base':       # the dev profile's base commit before Execute
+            commit = (f.get('commit') or '')[:7]
+            item(l, 'note', 'scripts', f"base · {commit or '-'}", sub=f.get('dirty') or None)
+        elif l.kind == 'resume':
+            item(l, 'note', 'scripts', f"resume · session {(f.get('session') or '-')[:8]}")
+        elif l.kind == 'rules-changed':
+            item(l, 'note', 'scripts', f"rules changed · {f.get('from', '-')} → {f.get('to', '-')}")
+        elif l.kind == 'stale':      # a worker result marked stale after a revision (4.8.1)
+            rev_s = f" rev{f['rev']}" if f.get('rev') else ''
+            item(l, 'note', 'scripts', f"stale · {f.get('id', '-')}{rev_s}")
+        elif l.kind == 'log-error':  # a recording hook that could not write its line (never fails the session)
+            item(l, 'note', 'hooks', f"log-error · {f.get('where', '-')}", sub=f.get('error') or None)
         elif l.kind == 'deliver':
             item(l, 'phase', 'recorder', f"deliver · {f.get('path', '')}".rstrip(' ·'))
         elif l.kind == 'abort':

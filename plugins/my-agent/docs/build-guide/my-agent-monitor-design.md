@@ -1,6 +1,6 @@
 # my-agent monitor design
 
-- Status: design v0.5 (2026-10-31, aligned with architecture v0.39: the task folder is the setting `task_dir` (default `.my-agent`, formerly `docs/agent`); every task carries the field `folder` (its real path) and `/api/health` the field `task_dir`; a running server keeps the `task_dir` it started with, and `monitor-up.py` reports a mismatch instead of restarting it (5.1)). v0.4 (2026-10-31, aligned with architecture v0.38: the menu bar app moves to the separate `my-agent-tray` plugin and finds the monitor on its own (6.1); the price table moves to `l4-tools-guards/lib/prices.json` (5.4); other platforms open one browser tab; the `autostart` setting). v0.3 (2026-10-28, aligned with architecture v0.27: code location corrected; 5.2 line format gains `unit=`, the `revision` state, `Scope change`, and the back-to-Execute `back=`/`archive=`; the monitor reads through L4 `lib/ma_schema.py`). v0.2 (2026-10-25). Built after v0.1 was approved (`~/dev/my-agent-monitor/`). v0.2 adds the decision to put it in the plugin (section 6.1, architecture v0.20 Q14). The same day, probe results (architecture v0.21) added `session=` to `start:` and `mode=` and `effort=` to `stop:`. The monitor does not need to read these fields.
+- Status: design v0.6 (2026-11-01: the L1 run-log lines are attributed per component in section 4 "2 Architecture"; the orchestrator gets step progress, delegation and L1 fixes, which it had never received). v0.5 (2026-10-31, aligned with architecture v0.39: the task folder is the setting `task_dir` (default `.my-agent`, formerly `docs/agent`); every task carries the field `folder` (its real path) and `/api/health` the field `task_dir`; a running server keeps the `task_dir` it started with, and `monitor-up.py` reports a mismatch instead of restarting it (5.1)). v0.4 (2026-10-31, aligned with architecture v0.38: the menu bar app moves to the separate `my-agent-tray` plugin and finds the monitor on its own (6.1); the price table moves to `l4-tools-guards/lib/prices.json` (5.4); other platforms open one browser tab; the `autostart` setting). v0.3 (2026-10-28, aligned with architecture v0.27: code location corrected; 5.2 line format gains `unit=`, the `revision` state, `Scope change`, and the back-to-Execute `back=`/`archive=`; the monitor reads through L4 `lib/ma_schema.py`). v0.2 (2026-10-25). Built after v0.1 was approved (`~/dev/my-agent-monitor/`). v0.2 adds the decision to put it in the plugin (section 6.1, architecture v0.20 Q14). The same day, probe results (architecture v0.21) added `session=` to `start:` and `mode=` and `effort=` to `stop:`. The monitor does not need to read these fields.
 - Code location: `monitor/` inside the plugin (`~/dev/my-plugins/plugins/my-agent/monitor/`, section 6.1); the menu bar app is in the `my-agent-tray` plugin (`plugins/my-agent-tray/macos/menubar/`). The first build lived in `~/dev/my-agent-monitor/`.
 - Screen reference: mock-up v22 `~/dev/my-agent/.superpowers/brainstorm/29416-1792798606/content/webapp-v22.html`
 - Related document: `my-agent-architecture.md` v0.19. The "changes on the my-agent side" in section 7 are applied in v0.19.
@@ -81,6 +81,15 @@ Mock-up v22 is the reference for the screen. The build starts from the mock-up's
 - Names are lowercase: L1 router · orchestrator · gatekeeper · recorder, L4 tools · hooks · permissions · scripts
 - L2 and L3 cells have two lines (role / model · effort)
 - Clicking one shows, on the right, a description, model and effort, and its records in this task
+- Which run-log lines count as a component's records (`events.py`; L2 and L3 components get their own `call:`/`start:`/`stop:` records):
+  - router: the `step: n=1` line (`① Define start`)
+  - orchestrator: every other `step:` line (`② Plan start`, `step 4 · Plan-Review`, `back to Execute · <reason>`), every `call:` line as a `delegate → <agent> · <unit>` item next to the agent's own item, every `fix:` line (`plan edit by L1 · …` for `before=G1b`, the `Scope change: …` text as is, `fix · …` otherwise), and `merge:` lines (`merge · <units> by <L1|coder>`)
+  - gatekeeper: `ask:`/`answer:` popups other than G2, and `revision:` lines that open a new rev
+  - recorder: `revision … before=G1b` (plan rewrite before approval), `delegate`, `profile`, `deliver`, `abort`
+  - permissions: `ask: gate=G2` / `answer: gate=G2`
+  - hooks: `log-error` lines (a recording hook that could not write; `start:`/`stop:` and the G2 lines the hooks write count for the agent and for permissions). A guard's deny leaves no run-log line (architecture F24), so a task with no recording failure shows the hooks chip faded even when scope-guard blocked something
+  - scripts: the bookkeeping lines `cost:` (`cost · <usd> USD (statusline)`), `base:`, `resume`, `rules-changed` and `stale:` (hooks and scripts items have the kind `note`; the step items the kind `phase`)
+  - tools: no run-log line of its own; always faded
 
 **3 Deliverables**
 
@@ -150,9 +159,9 @@ The monitor's parser interprets only the lines below and ignores lines it does n
 | `ask: gate=G2` / `answer: gate=G2` **(new)** | plugin hooks `PermissionRequest` / `PostToolUse` | requesting agent, tool, input summary, `result=allowed`. If there is no `answer:` by the time that agent ends, show "not run (denied?)" |
 | `call:` / `start:` / `stop:` | subagent-log.py | agent_type, agent_id, work unit (`unit=`), model (expected and actual), effort, isolation, tokens, time, first line of the result, MISMATCH, how it ended (`end=ok|partial|error`). Consecutive FAILs count verifier lines whose `result=` starts with `Verdict: FAIL` and restart when the rev changes; worker stops count per (rev, `unit=`) |
 | `revision:` | run-log.py | rev number, what changed, archive folder. `before=G1b` means a plan rewrite before approval (rev unchanged). A `state=pending` line and the `state=done` line with the same rev merge into one revision |
-| `fix:` | run-log.py | what was fixed. `what="Scope change: …"` shows as an adjustment within the approved scope |
-| `cost:` | run-log.py | `session=`, `usd=` (cost_usd) |
-| `stale:`, `abort`, `deliver`, `resume`, `base:`, `log-error` | architecture document | for display |
+| `fix:` | run-log.py | what was fixed. `what="Scope change: …"` shows as an adjustment within the approved scope; every `fix:` line is an orchestrator item (section 4 "2 Architecture") |
+| `cost:` | run-log.py | `session=`, `usd=` (cost_usd); also a scripts item |
+| `stale:`, `abort`, `deliver`, `resume`, `rules-changed`, `base:`, `merge:`, `log-error` | architecture document | for display, one item each (section 4 "2 Architecture" names the component) |
 
 ### 5.3 Main session tokens
 

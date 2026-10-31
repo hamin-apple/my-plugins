@@ -195,6 +195,27 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn('archive folder', sec)
         self.assertIn('failed criterion numbers', sec)
 
+    def test_define_plan_gate_reports_and_prototype(self):
+        phases = REPO / 'l1-orchestration' / 'phases'
+        define = (phases / 'define.md').read_text(encoding='utf-8')
+        plan = (phases / 'plan.md').read_text(encoding='utf-8')
+        g1a = define.split('4. **Confirm the scope:**')[1]
+        self.assertIn('Gate reports', g1a)
+        self.assertIn('### Details', g1a)
+        interview = define.split('3. **Scope interview:**')[1].split('4. **Confirm the scope:**')[0]
+        self.assertIn('Question rules', interview)
+        self.assertIn('screen behavior', interview)
+        self.assertIn('Prototype before G1a', interview)
+        self.assertIn('Prototype: requested', define)
+        self.assertIn('`## Prototype`', define)
+        g1b = plan.split('## G1b plan approval')[1].split('2. If `## Prototype`')[0]
+        self.assertIn('Gate reports', g1b)
+        self.assertIn('### Details', g1b)
+        self.assertIn('remake it only if the mock-up changed', plan)
+        step4 = plan.split('## 4. Plan Review')[1].split('## G1b plan approval')[0]
+        self.assertIn('L1 writes the `## Decisions` lines in `plan-review.md`; architect does not write that file', step4)
+        self.assertGreaterEqual(plan.count('Tool choice'), 3)
+
 
 if __name__ == '__main__':
     unittest.main()

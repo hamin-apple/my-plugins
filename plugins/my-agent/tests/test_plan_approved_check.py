@@ -132,6 +132,22 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.plan('# Plan\n\n## Prototype\n\nPrototype: requested\n\n## Approval\n')
         self.assertPassed(self.hook('Agent', {'subagent_type': 'my-agent:writer', 'prompt': 'x'}))
 
+    def test_writer_at_g1a_prototype_from_scope(self):
+        """Criterion 9: scope.md `Prototype: requested` opens the writer before approval, and only the writer."""
+        writer = {'subagent_type': 'my-agent:writer', 'prompt': 'x'}
+        self.assertDenied(self.hook('Agent', writer))
+        scope = self.task / 'scope.md'
+        scope.write_text('# Scope\n\nPrototype: requested\n\n## Prototype\n\nneeded\n', encoding='utf-8')   # outside the section
+        self.assertDenied(self.hook('Agent', writer))
+        scope.write_text('# Scope\n\n## Prototype\n\nPrototype: requested\n\n## Next\n', encoding='utf-8')
+        self.assertPassed(self.hook('Agent', writer))
+        self.assertDenied(self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'}))
+        self.assertDenied(self.hook('Workflow', {'script': 'x'}))
+
+    def test_deny_line_carries_cwd(self):
+        self.hook('Agent', {'subagent_type': 'my-agent:coder', 'prompt': 'x'})
+        self.assertTrue(self.guard_lines()[0].endswith(f'cwd={self.proj}'))
+
     def test_broken_active_warns(self):
         """C9: a `.active` without `task:` passes, but says so instead of passing silently."""
         (records(self.proj) / '.active').write_text('phase: 2\n')

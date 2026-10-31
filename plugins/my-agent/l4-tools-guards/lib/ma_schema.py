@@ -42,7 +42,7 @@ def plan_review_skipped(first_line) -> bool:
 # --- run-log kinds written by the L4 hooks ---
 
 GUARD = 'guard'                                        # run-log kind of a guard deny (scope-guard, plan-approved-check)
-GUARD_FIELDS = ('hook', 'agent', 'id', 'tool', 'decision', 'why')   # guard: field order; why = the reason as printed
+GUARD_FIELDS = ('hook', 'agent', 'id', 'tool', 'decision', 'why', 'cwd')   # guard: field order; why = the reason as printed, cwd = the hook input's cwd (older lines end at why)
 
 # --- status values ---
 

@@ -63,7 +63,19 @@ class ScopeGuardTest(unittest.TestCase):
         kind, f = ma_logline.parse_line(lines[0])
         self.assertEqual(kind, 'guard')
         self.assertEqual(f, {'hook': 'scope-guard', 'agent': 'my-agent:coder', 'id': 'a1', 'tool': 'Bash',
-                             'decision': 'deny', 'why': why})
+                             'decision': 'deny', 'why': why, 'cwd': str(self.L)})
+
+    def test_deny_line_ends_with_input_cwd(self):
+        self.hook('my-agent:coder', 'Bash', {'command': 'cat /etc/hosts'}, cwd=self.L / 'src')
+        self.assertTrue(self.guard_lines()[0].endswith(f'cwd={self.L / "src"}'))
+
+    def test_heredoc_with_backticked_word_is_allowed(self):
+        bt = chr(96)
+        cmd = f"cat > src/notes.md <<'EOF'\nrun {bt}export{bt} first\nEOF"
+        self.assertFalse(self.denied('my-agent:coder', 'Bash', {'command': cmd}))
+        self.assertEqual(self.guard_lines(), [])
+        unquoted = "cat > src/notes.md <<EOF\n$(printenv)\nEOF"
+        self.assertTrue(self.denied('my-agent:coder', 'Bash', {'command': unquoted}))
 
     def test_allowed_call_writes_no_guard_line(self):
         self.assertFalse(self.denied('my-agent:coder', 'Bash', {'command': 'ls src'}))

@@ -1,4 +1,5 @@
 """gate-report.py: the decision tally and the report copy (architecture 4.11 "retrospective")."""
+import json
 import os
 import tempfile
 import unittest
@@ -18,7 +19,9 @@ class GateReportTest(unittest.TestCase):
         self.task = make_task(self.root / 'proj', task=TASK)
         self.proj = self.root / 'proj'
         self.reports = self.root / 'reports'
-        self.env = {'MA_GATE_REPORT_DIR': str(self.reports), 'MA_TASKS_DIR': str(self.root / 'none')}
+        self.claude = self.root / 'claude-projects'
+        self.env = {'MA_GATE_REPORT_DIR': str(self.reports), 'MA_TASKS_DIR': str(self.root / 'none'),
+                    'MA_CLAUDE_PROJECTS': str(self.claude), 'MA_STATUSLINE_DIR': str(self.root / 'statusline')}
         # no test may write into the real default data folder
         self.assertTrue(self.env['MA_GATE_REPORT_DIR'].startswith(str(self.root)))
         self.assertFalse(self.reports.is_relative_to(DEFAULT_COPY))
@@ -284,6 +287,130 @@ class GateReportTest(unittest.TestCase):
         self.assertIn('| 23:20–23:40 | 5 Execute | not recorded | 2,500 |', out)
         self.assertIn('| 23:40–23:55 | 7 Verify | 0.50 | 0 |', out)
         self.assertIn('| 23:55– | - | not recorded | 7 |', out)
+
+    def test_cost_baseline_gives_intake_a_value(self):
+        out = self.tally(
+            '2026-10-26 23:00:00 step: n=1 name=Intake',
+            '2026-10-26 23:00:00 cost: session=s1 usd=0.40 baseline=1',
+            '2026-10-26 23:01:00 step: n=2 name=Explore-Scope',
+            '2026-10-26 23:10:00 step: n=3 name=Plan',
+            '2026-10-26 23:20:00 cost: session=s1 usd=2.90',
+            '2026-10-26 23:21:00 step: n=4 name=Plan-Review',
+            '2026-10-26 23:30:00 cost: session=s1 usd=3.00')
+        self.assertIn('| 23:00–23:20 | 1 Intake, 2 Explore-Scope, 3 Plan | 2.50 | 0 |', out)
+        self.assertIn('| 23:20–23:30 | 4 Plan-Review | 0.10 | 0 |', out)
+
+    def test_cost_baseline_is_per_session(self):
+        out = self.tally(
+            '2026-10-26 23:00:00 step: n=1 name=Intake',
+            '2026-10-26 23:00:00 cost: session=s1 usd=0.40 baseline=1',
+            '2026-10-26 23:10:00 cost: session=s2 usd=5.00',
+            '2026-10-26 23:20:00 step: n=3 name=Plan',
+            '2026-10-26 23:30:00 cost: session=s1 usd=1.40')
+        self.assertIn('| 23:00–23:10 | 1 Intake | not recorded | 0 |', out)
+        self.assertIn('| 23:10–23:30 | 3 Plan | 1.00 | 0 |', out)
+
+    def test_cost_every_step_stretch_has_a_value(self):
+        out = self.tally(
+            '2026-11-01 09:00:00 step: n=1 name=Intake',
+            '2026-11-01 09:00:00 cost: session=s1 usd=0.40 baseline=1',
+            '2026-11-01 09:10:00 step: n=2 name=Explore-Scope',
+            '2026-11-01 09:20:00 step: n=3 name=Plan',
+            '2026-11-01 09:20:01 cost: session=s1 usd=1.00',
+            '2026-11-01 09:30:00 step: n=4 name=Plan-Review',
+            '2026-11-01 09:40:00 step: n=5 name=Execute',
+            '2026-11-01 09:40:01 cost: session=s1 usd=2.00',
+            '2026-11-01 10:00:00 step: n=6 name=Merge',
+            '2026-11-01 10:10:00 step: n=7 name=Verify',
+            '2026-11-01 10:10:01 cost: session=s1 usd=3.00',
+            '2026-11-01 10:30:00 step: n=8 name=Review-Deliver',
+            '2026-11-01 10:50:00 cost: session=s1 usd=4.00',
+            '2026-11-01 10:50:01 ask: gate=G3 q=Accept?',
+            '2026-11-01 11:00:00 answer: gate=G3 choice=Accept',
+            '2026-11-01 11:05:00 stop: id=a1 tokens=5')
+        table = out.split('## Cost and tokens per stretch')[1]
+        rows = [[c.strip() for c in l.strip('|').split(' | ')] for l in table.splitlines()[3:]]
+        self.assertEqual(len(rows), 5, table)
+        with_steps = [r for r in rows if r[1] != '-']
+        self.assertEqual(len(with_steps), 4, table)
+        for cells in with_steps:
+            self.assertNotEqual(cells[2], 'not recorded', cells)
+        self.assertIn('| 09:00–09:20 | 1 Intake, 2 Explore-Scope, 3 Plan | 0.60 | 0 |', out)
+
+    def agent_files(self, session, agent_id, agent_type='my-agent:coder', meta=True):
+        folder = self.claude / '-proj' / session / 'subagents'
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f'agent-{agent_id}.jsonl').write_text('{}\n', encoding='utf-8')
+        if meta:
+            body = {'finished': True} if agent_type is None else {'agentType': agent_type, 'finished': True}
+            (folder / f'agent-{agent_id}.meta.json').write_text(json.dumps(body), encoding='utf-8')
+
+    def check(self, *lines, expect=0):
+        self.log(*lines)
+        r = self.run_gr('check')
+        self.assertEqual(r.returncode, expect, r.stdout + r.stderr)
+        self.assertEqual(list((self.task).glob('gate-*.md')), [])   # writes no file
+        return r.stdout
+
+    def test_check_clean(self):
+        self.agent_files('s-test', 'c1')
+        out = self.check('2026-11-01 05:00:00 start: agent=my-agent:coder id=c1 session=s-test',
+                         '2026-11-01 05:01:00 stop: id=c1 mode=auto',
+                         '2026-11-01 05:02:00 stop: id=c0')   # an old line without mode= is skipped
+        self.assertIn(f'gate-report check: {TASK}', out)
+        self.assertIn('summary: transcripts 1 (other 0, untyped 0), start lines 1, missing 0, non-auto stops 0', out)
+        self.assertNotIn('missing start:', out)
+
+    def test_check_missing_start_and_non_auto(self):
+        self.agent_files('s-test', 'c1')
+        self.agent_files('s-test', 'c2')
+        out = self.check('2026-11-01 05:00:00 start: agent=my-agent:coder id=c1 session=s-test',
+                         '2026-11-01 05:01:00 stop: id=c1 mode=acceptEdits')
+        missing = [l for l in out.splitlines() if l.startswith('missing start:')]
+        self.assertEqual(len(missing), 1, out)
+        self.assertIn('id=c2 agent=my-agent:coder transcript=', missing[0])
+        bad = [l for l in out.splitlines() if l.startswith('mode not auto:')]
+        self.assertEqual(len(bad), 1, out)
+        self.assertIn('stop: id=c1 mode=acceptEdits', bad[0])
+        self.assertTrue(out.rstrip().splitlines()[-1].startswith('summary: transcripts 2 (other 0, untyped 0), '
+                                                                 'start lines 1, missing 1, non-auto stops 1'))
+
+    def test_check_session_from_start_lines(self):
+        self.agent_files('s-old', 'c9')
+        out = self.check('2026-11-01 05:00:00 start: agent=my-agent:coder id=c1 session=s-old')
+        self.assertIn('missing start: id=c9', out)
+
+    def test_check_other_agent_type_is_counted_not_compared(self):
+        self.agent_files('s-test', 'g1', agent_type='general-purpose')
+        out = self.check('2026-11-01 05:00:00 step: n=1 name=Intake')
+        self.assertNotIn('missing start:', out)
+        self.assertIn('summary: transcripts 1 (other 1, untyped 0), start lines 0, missing 0, non-auto stops 0', out)
+
+    def test_check_no_meta_is_compared_as_unknown(self):
+        self.agent_files('s-test', 'u1', meta=False)
+        self.agent_files('s-test', 'u2', agent_type=None)   # meta without agentType
+        out = self.check('2026-11-01 05:00:00 step: n=1 name=Intake')
+        self.assertIn('missing start: id=u1 agent=unknown', out)
+        self.assertIn('missing start: id=u2 agent=unknown', out)
+        self.assertIn('transcripts 2 (other 0, untyped 2), start lines 0, missing 2', out)
+
+    def test_check_no_transcripts_folder(self):
+        out = self.check('2026-11-01 05:00:00 step: n=1 name=Intake')
+        self.assertIn('summary: transcripts 0 (other 0, untyped 0), start lines 0, missing 0, non-auto stops 0', out)
+
+    def test_check_without_run_log(self):
+        r = self.run_gr('check')
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn('transcripts 0', r.stdout)
+
+    def test_check_no_active_task(self):
+        r = self.run_gr('check', cwd=self.root / 'nowhere')
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn('no active my-agent task', r.stdout)
+
+    def test_check_bad_arguments(self):
+        r = run_script(SCRIPT, 'check', '--bogus', env=self.env)
+        self.assertEqual(r.returncode, 2)
 
     def test_no_cost_lines(self):
         out = self.tally('2026-10-26 23:00:00 step: n=1 name=Intake',

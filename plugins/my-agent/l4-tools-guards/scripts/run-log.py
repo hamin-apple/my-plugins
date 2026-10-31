@@ -13,13 +13,18 @@ and a main-session MISMATCH is printed once per task and model.
 session= is refused): it reads `cost_usd` from the statusline file `<session>.json` in $MA_STATUSLINE_DIR (default
 ~/.cache/claude-sessions/statusline), session from .active first, else $CLAUDE_CODE_SESSION_ID. A missing or
 unreadable file prints `run-log: no cost line (<reason>)` and writes nothing (exit 0); a value below the previous
-`cost:` line of that session gets reset=1.
+`cost:` line of that session gets reset=1. `cost` also refuses baseline=.
+After the `step` line with n=1 the script writes a second line `cost: session=<sid> usd=<value> baseline=1` (the
+baseline the tally measures the Intake stretch against), when the statusline file gives a value (same lookup as `cost`)
+and the run-log has no `cost:` line yet; otherwise it writes and prints nothing extra. Other `step` lines never do.
+`ask` takes no prose=, other= or pre= (they belong on the `answer` line): one line on stderr, exit 1, nothing written.
 Prints the line, then one MISMATCH line per subagent stop: line with
 mismatch=1 written since the previous L1 line, and PARTIAL lines (with unit=)
 for workers the sweep closed. Unreadable record lines are named on stderr.
 --data-dir is the data folder, where the run index (active-index.json) is read for a run folder
 outside git. --task-dir is the task subfolder (setting `task_dir`, default .my-agent): the records are in
-<task location>/<task_dir>/. Exit 0 written, 1 no active task, 2 bad arguments.
+<task location>/<task_dir>/. Exit 0 written, 1 no active task (or an `ask` with prose=/other=/pre=, the one
+argument error that exits 1), 2 bad arguments.
 """
 import argparse
 import json
@@ -32,6 +37,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_data  # noqa: E402
+import ma_gate_report  # noqa: E402
 import ma_logline  # noqa: E402
 import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
@@ -95,9 +101,13 @@ def main(argv=None) -> int:
         print('run-log: step needs n= and name=', file=sys.stderr)
         return 2
     fields_d = dict(fields)
-    if args.kind == 'cost' and keys & {'usd', 'session'}:
-        print('run-log: cost takes no usd= or session=; it reads the statusline file', file=sys.stderr)
+    if args.kind == 'cost' and keys & {'usd', 'session', ma_gate_report.BASELINE}:
+        print('run-log: cost takes no usd=, session= or baseline=; it reads the statusline file', file=sys.stderr)
         return 2
+    if args.kind == 'ask' and keys & {'prose', 'other', 'pre'}:
+        got = ' '.join(f'{k}={v}' for k, v in fields if k in ('prose', 'other', 'pre'))
+        print(f'run-log: prose=, other= and pre= go on the answer line, not on ask (got {got})', file=sys.stderr)
+        return 1
     if args.kind == 'delegate' and fields_d.get('state') not in ma_schema.DELEGATE_STATES:
         print('run-log: delegate needs state=on|off', file=sys.stderr)
         return 2
@@ -152,6 +162,16 @@ def main(argv=None) -> int:
         print(f'run-log: cannot write {active.log}: {exc}', file=sys.stderr)
         return 1
     print(line)
+    if args.kind == 'step' and dict(fields).get('n') == '1' and not any(k == 'cost' for k, _ in lines):
+        sid = active.session or os.environ.get('CLAUDE_CODE_SESSION_ID')
+        usd, why = statusline_cost(sid)
+        if not why:   # no statusline value: no baseline, nothing printed
+            base = ma_logline.format_line('cost', [('session', sid), ('usd', usd), (ma_gate_report.BASELINE, '1')])
+            try:
+                ma_logline.append(active.log, base)
+                print(base)
+            except OSError as exc:
+                print(f'run-log: cannot write {active.log}: {exc}', file=sys.stderr)
     if model:
         fam = ma_schema.family(model)
         seen = any(f.get('model') == model for k, f in lines if not ma_logline.is_hook_line(k, f))

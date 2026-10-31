@@ -33,5 +33,10 @@ def prototype_requested(plan_md: Path) -> bool:
     return prototype_text(read(plan_md))
 
 
+def scope_prototype_requested(scope_md: Path) -> bool:
+    """`Prototype: requested` under `## Prototype` in scope.md (the G1a prototype); same shape as plan.md's."""
+    return prototype_text(read(scope_md))
+
+
 def units(plan_md: Path) -> list:
     return ma_schema.units(read(plan_md))

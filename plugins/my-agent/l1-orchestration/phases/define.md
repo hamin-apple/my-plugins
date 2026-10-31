@@ -14,11 +14,15 @@ Step 1 Intake is the "Intake" procedure in SKILL.md. This file starts at step 2.
    - If the profile file has an exception that skips the interview and G1a (the dev profile's small-task exception), judge it from the explore result and follow it as written.
    - Ask one question at a time in a popup. When free input is needed, offer the Other field along with the choices.
    - Do not ask about items the request already answers.
+   - Scope questions follow SKILL.md "Question rules" (multi-select or the Other field when the single recommended answer is likely to be replaced).
+   - For a task with a screen, ask once about screen behavior and look (filters, progress graphics, animation), or put them in the recommendation. This question has the choice `Prototype before G1a`, which triggers a G1a prototype. A G1a `Revise` answer that asks for a prototype does the same.
+   - **G1a prototype:** L1 adds `## Prototype` with the line `Prototype: requested` to `scope.md` with Edit (the plan-approved check then allows `my-agent:writer` to write the prototype). It hands `<task_dir>/<task-id>/prototype/index.html` to `my-agent:writer` with `scope.md`, checks and publishes it as plan.md "G1b plan approval" item 2 describes, then shows G1a. The G1a popup keeps its three choices.
 4. **Confirm the scope:**
    - General profile: do not ask G1a separately. Pass the scope summary you settled (purpose, numbered completion criteria, non-goals, deliverable location) to architect in ② Plan; it goes at the top of `plan.md` and is approved together at G1b.
      - Check tags: every criterion in the scope summary ends with one check tag (`[check: command]`, `[check: file]`, `[check: URL]` or `[check: person]`): how the verifier will check it.
      - Before the scope summary goes to architect, do the "Person-check popup" below for each `[check: person]` criterion.
    - Profiles with G1a: write `scope.md` (`## Completion criteria` as a numbered list `1.`, `2.`; every criterion ends with one check tag: `[check: command]`, `[check: file]`, `[check: URL]` or `[check: person]`), and record before and after the popup.
+     - Chat report: the overview table from SKILL.md "Gate reports", then `### Details` with the `scope.md` text. The popup question repeats the first two rows.
      - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G1a q="Scope confirmation: <task-id>" rec="Confirm" --data-dir "<data folder>" --task-dir "<task_dir>"`
      - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G1a choice="<Confirm/Revise/Abort>" --data-dir "<data folder>" --task-dir "<task_dir>"`
      - On `Revise` with a profile change, follow SKILL.md "Profile change at the first gate".

@@ -250,7 +250,7 @@ def main() -> int:
             reason = why if why.startswith('my-agent scope-guard:') else f'scope-guard: {why}'
             if active is not None:
                 ma_logline.log_guard(active, 'scope-guard', agent, inp.get('agent_id') or '-',
-                                     inp.get('tool_name') or '-', 'deny', reason)
+                                     inp.get('tool_name') or '-', 'deny', reason, inp.get('cwd') or '-')
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
                                                      'permissionDecisionReason': reason}},
                              ensure_ascii=False))

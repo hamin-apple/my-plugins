@@ -379,6 +379,50 @@ class EnvReadsTest(unittest.TestCase):
                 self.assertEqual(ma_bash.env_reads(cmd), expected)
 
 
+class EnvReadsHeredocTest(unittest.TestCase):
+    """Criterion 12: the body of a quoted-delimiter heredoc is data (a note with a backticked `export`)."""
+    BT = chr(96)
+
+    def test_quoted_body_is_data(self):
+        bt = self.BT
+        cases = [
+            f"cat > notes.md <<'EOF'\nuse {bt}export{bt} here\nEOF",
+            "python3 - <<'EOF'\nexport\nEOF",
+            f"cat << 'EOF'\n{bt}export{bt}\nEOF",
+            f"cat <<-'EOF'\n\t{bt}export{bt}\n\tEOF",
+            f'cat <<"EOF"\n{bt}export{bt}\nEOF',
+            f"cat <<\\EOF\n{bt}export{bt}\nEOF",
+            f"cat <<'EOF'\n$(printenv)\nEOF",
+            f"cat <<'A' <<'B'\n{bt}export{bt}\nA\n{bt}env{bt}\nB",
+            f"cat > a <<'EOF'\n{bt}export{bt}\nEOF\necho hi",
+            f"python3 - <<'EOF'\nimport sys\nprint('{bt}export{bt}')\nEOF",
+            f"cat <<'EOF' | wc -l\n{bt}export{bt}\nEOF",
+        ]
+        for cmd in cases:
+            with self.subTest(cmd=cmd):
+                self.assertEqual(ma_bash.env_reads(cmd), [])
+
+    def test_commands_around_the_body_are_still_read(self):
+        bt = self.BT
+        self.assertEqual(ma_bash.env_reads(f"cat <<'EOF'\n{bt}export{bt}\nEOF\nenv"), ['env'])
+        self.assertEqual(ma_bash.env_reads("env <<'EOF'\nx\nEOF"), ['env'])
+
+    def test_unquoted_body_keeps_substitution(self):
+        bt = self.BT
+        self.assertEqual(ma_bash.env_reads("cat <<EOF\n$(printenv)\nEOF"), ['printenv'])
+        self.assertEqual(ma_bash.env_reads(f"cat <<EOF\n{bt}env{bt}\nEOF"), ['env'])
+        self.assertEqual(ma_bash.env_reads(f'cat <<"EOF"\n$(printenv)\nEOF'), [])
+
+    def test_heredoc_inside_quotes_is_not_trusted(self):
+        bt = self.BT
+        self.assertNotEqual(ma_bash.env_reads(f'bash -c "cat <<\'EOF\'\n{bt}export{bt}\nEOF"'), [])
+        self.assertNotEqual(ma_bash.env_reads(f"echo \"<<'EOF'\"\n{bt}export{bt}\nEOF"), [])
+
+    def test_here_string_is_not_a_heredoc(self):
+        self.assertEqual(ma_bash.env_reads("cat <<< '$(printenv)'"), [])
+        self.assertEqual(ma_bash.env_reads('cat <<< "$(printenv)"'), ['printenv'])
+
+
 class GitMutatesTest(unittest.TestCase):
     def test_git_mutates(self):
         for cmd in ('git commit -m x', 'git push', 'git -C a checkout b', 'git reset --hard', 'git add .',

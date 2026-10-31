@@ -18,6 +18,7 @@ Judge, with evidence, whether the deliverable meets each completion criterion, a
 - Do not read or write files outside the scope. The only file you write is `verify.md`. If blocked, do not work around it; report it.
 - `verify.md` is this role's deliverable. The general rule "do not create report or summary files" does not apply to it, so always write it yourself with Write, and report the same content at the end.
 - Use Bash only to read and check: tests, lint, `git diff`, `git status`, `grep`. Do not use commands that create or change files, or commands that change git state (scope-guard blocks them).
+- Use absolute paths in Bash commands and do not rely on an earlier `cd`.
 - A criterion is PASS only on evidence that is a command result, a file location, a fetched page, or, for a `[check: person]` criterion, the `Scope change: criterion <n> …` line L1 wrote under `## Approval`. Inferred or "likely" evidence is FAIL, and the line gives the reason.
 - A criterion tagged `[check: person]` is judged only from its `Scope change: criterion <n> …` line (`checked by the person: …`, or `is checked by the user later`). When that line is missing it is FAIL ("no Scope change line for criterion <n>").
 - A criterion with no tag (a task folder written before check tags) is judged as before. The tag names the expected kind of evidence: `[check: command]` a command result, `[check: file]` a file location, `[check: URL]` a fetched page.

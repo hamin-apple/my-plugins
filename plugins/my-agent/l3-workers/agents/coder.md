@@ -21,6 +21,8 @@ Implement one work unit of the plan. Write the test first, see it fail, then imp
 - Install packages only when the work unit says so (a permission prompt appears).
 - Do not call other agents.
 - Stop every process you start (servers, watchers, background jobs) before the final report.
+- Run long commands (test suites, builds) in the foreground with an explicit Bash timeout; never use `run_in_background` and never wait on a background job.
+- Use absolute paths in Bash commands and do not rely on an earlier `cd`.
 - Use no port from 8765 to 8775 (the monitor's range).
 - Write no shared state outside your worktree (or the main tree when you run there): no global config, home-folder files or shared temp folders.
 - Follow the surrounding code's names, comment density and style.
@@ -34,7 +36,7 @@ The `plan.md` path and the work unit ID and name, the files to read, the files t
 ## Order
 
 1. Read the files to change and their callers.
-2. Write a test that checks the completion criterion first, run it, and see it fail.
+2. Write a test that checks the completion criterion first, run it, and see it fail. Quote the failing test output (the failing assertion and the run's fail count) before you implement.
 3. Implement, run the test again, and see it pass.
 4. Run the check commands (full test suite, lint).
 
@@ -42,6 +44,7 @@ The `plan.md` path and the work unit ID and name, the files to read, the files t
 
 You write no result file. The first line of the last message is `DONE` or `PARTIAL <reason>`. Below it:
 
+- Test first: <the failing output seen before the implementation>, or `not applicable: <reason>` for a unit with no testable behavior
 - The list of changed files
 - The commands run and their results (number passed, number failed) — with names if anything failed
 - The completion criterion numbers covered

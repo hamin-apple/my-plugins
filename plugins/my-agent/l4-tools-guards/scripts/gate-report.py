@@ -5,6 +5,8 @@ usage: gate-report.py tally [--cwd DIR] [--data-dir DIR] [--task-dir DIR]   prin
                                           active task's run-log, and save them to <task>/gate-tally.md
        gate-report.py copy [--cwd DIR] [--data-dir DIR] [--task-dir DIR]    copy <task>/gate-report.md to the report folder as <task-id>.md
                                           (-2, -3 … when the name is taken; the folder is made if missing)
+       gate-report.py check [--cwd DIR] [--data-dir DIR] [--task-dir DIR]   compare the subagent transcripts of the task's sessions with the
+                                          run-log `start:` lines and list `stop:` lines whose `mode=` is not auto; writes no file
 --task-dir is the task subfolder (setting `task_dir`, default .my-agent).
 $MA_GATE_REPORT_DIR sets the report folder (default <data folder>/gate-report;
 the data folder is $MA_TASKS_DIR, else the setting (--data-dir or CLAUDE_PLUGIN_OPTION_DATA_DIR), else ~/dev/log/my-agent).
@@ -12,9 +14,20 @@ tally exit: 0 printed (also with no decisions), 1 no active task, 2 bad argument
             3 gate-tally.md could not be written (the cause is printed).
 copy exit: 0 copied, 1 no active task or no gate-report.md, 2 bad arguments,
            3 the copy could not be written (the cause is printed).
+check: the task's session ids are the `.active` `session:` and every `session=` on a `start:` line. Transcripts are
+       <claude projects>/*/<session>/subagents/agent-<id>.jsonl ($MA_CLAUDE_PROJECTS), the agent type is `agentType` in the
+       sibling agent-<id>.meta.json. One starting `my-agent:` is compared; another type is counted as `other`; a missing,
+       unreadable or typeless meta is compared as `agent=unknown` and counted as `untyped`. Prints a `missing start:` line per
+       compared transcript with no `start:` line, a `mode not auto:` line per `stop:` line whose `mode=` is present and not
+       `auto`, then a `summary:` line.
+check exit: 0 printed (also with findings; no transcripts folder gives a summary of zeros, and transcripts without any
+            `start:` line are each a `missing start:` finding), 1 no active task,
+            2 bad arguments.
 """
 import argparse
+import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -23,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_data  # noqa: E402
 import ma_gate_report  # noqa: E402
+import ma_subagent  # noqa: E402
 
 
 def shown(path: Path, active) -> str:
@@ -51,6 +65,35 @@ def tally(active) -> int:
     return 0
 
 
+def agent_type(transcript: Path):
+    """`agentType` of the sibling meta file, or None when it is missing, unreadable or has none."""
+    meta = transcript.with_name(transcript.name[:-len('.jsonl')] + '.meta.json')
+    try:
+        value = json.loads(meta.read_text(encoding='utf-8')).get('agentType')
+    except (OSError, ValueError, AttributeError):
+        return None
+    return value if isinstance(value, str) and value else None
+
+
+def transcripts(sessions) -> list:
+    """(id, path, agent type or None) of every subagent transcript of the sessions."""
+    out = []
+    root = ma_subagent.claude_projects()
+    for sid in sessions:
+        if re.search(r'[/\\\0*?\[]', sid) or sid in ('.', '..'):
+            continue
+        for path in sorted(root.glob(f'*/{sid}/subagents/agent-*.jsonl')):
+            out.append((path.name[len('agent-'):-len('.jsonl')], path, agent_type(path)))
+    return out
+
+
+def check(active) -> int:
+    raw = ma_gate_report.read_raw(active.log)
+    found = transcripts(ma_gate_report.session_ids(active.session, raw))
+    print('\n'.join([f'gate-report check: {active.task}'] + ma_gate_report.check_lines(raw, found)))
+    return 0
+
+
 def copy(active, data_dir=None) -> int:
     src = active.task_dir / 'gate-report.md'
     if not src.is_file():
@@ -70,7 +113,7 @@ def copy(active, data_dir=None) -> int:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument('command', choices=('tally', 'copy'))
+    ap.add_argument('command', choices=('tally', 'copy', 'check'))
     ap.add_argument('--cwd', default=os.getcwd())
     ap.add_argument('--data-dir', help='the my-agent data folder (default: the setting, else ~/dev/log/my-agent)')
     ap.add_argument('--task-dir', help='the task subfolder, setting `task_dir` (default: the setting, else .my-agent)')
@@ -79,6 +122,8 @@ def main(argv=None) -> int:
     if active is None:
         print(f'gate-report: no active my-agent task under {args.cwd}')
         return 1
+    if args.command == 'check':
+        return check(active)
     return tally(active) if args.command == 'tally' else copy(active, args.data_dir)
 
 

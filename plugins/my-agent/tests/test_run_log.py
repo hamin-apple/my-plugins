@@ -14,8 +14,10 @@ class RunLogTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name).resolve()
         self.task = make_task(self.root, session='s-active')
+        (self.root / 'statusline-empty').mkdir()   # no test reads the real ~/.cache statusline file
         self.env = {'MA_TASKS_DIR': str(self.root / 'none'), 'CLAUDE_CODE_SESSION_ID': 's-9',
-                    'MA_CLAUDE_PROJECTS': str(self.root / 'projects')}
+                    'MA_CLAUDE_PROJECTS': str(self.root / 'projects'),
+                    'MA_STATUSLINE_DIR': str(self.root / 'statusline-empty')}
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -130,6 +132,62 @@ class RunLogTest(unittest.TestCase):
             self.assertEqual(r.returncode, 2, arg)
             self.assertEqual(len(r.stderr.strip().splitlines()), 1)
         self.assertEqual(log_lines(self.task), [])
+
+    def test_cost_rejects_baseline(self):
+        env = self.statusline('s-active', '{"cost_usd": 1}')
+        r = self.run_log('cost', 'baseline=1', env=env)
+        self.assertEqual(r.returncode, 2)
+        self.assertEqual(len(r.stderr.strip().splitlines()), 1)
+        self.assertEqual(log_lines(self.task), [])
+
+    def test_step_1_writes_baseline_cost_line(self):
+        env = self.statusline('s-active', '{"cost_usd": 0.4}')
+        r = self.run_log('step', 'n=1', 'name=Intake', env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = log_lines(self.task)
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(lines[1].split()[2], 'cost:')
+        f = parse(lines[1])
+        self.assertEqual((f['session'], f['usd'], f['baseline']), ('s-active', '0.4', '1'))
+        self.assertEqual(r.stdout.splitlines()[:2], lines)
+
+    def test_step_1_without_statusline_file_writes_one_line(self):
+        r = self.run_log('step', 'n=1', 'name=Intake')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(log_lines(self.task)), 1)
+        self.assertEqual(len(r.stdout.strip().splitlines()), 1)
+        r = self.run_log('step', 'n=1', 'name=Intake', env=self.statusline('s-active', '{oops'))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(log_lines(self.task)), 2)
+
+    def test_other_steps_never_write_baseline(self):
+        env = self.statusline('s-active', '{"cost_usd": 0.4}')
+        self.assertEqual(self.run_log('step', 'n=3', 'name=Plan', env=env).returncode, 0)
+        self.assertEqual(len(log_lines(self.task)), 1)
+
+    def test_second_step_1_after_a_cost_line_writes_no_baseline(self):
+        env = self.statusline('s-active', '{"cost_usd": 0.4}')
+        self.run_log('step', 'n=1', 'name=Intake', env=env)
+        self.run_log('step', 'n=1', 'name=Intake', env=env)
+        self.assertEqual([l.split()[2] for l in log_lines(self.task)], ['step:', 'cost:', 'step:'])
+
+    def test_ask_rejects_answer_only_fields(self):
+        for field in ('prose=1', 'other=1', 'pre=1'):
+            r = self.run_log('ask', 'gate=Q', 'q=Change kind', field)
+            self.assertEqual(r.returncode, 1, field)
+            self.assertIn('prose=, other= and pre= go on the answer line, not on ask', r.stderr)
+            self.assertEqual(len(r.stderr.strip().splitlines()), 1)
+            self.assertEqual(log_lines(self.task), [], field)
+
+    def test_ask_rejection_comes_before_the_task_lookup(self):
+        r = run_script(SCRIPT, 'ask', 'gate=Q', 'q=x', 'pre=1', '--cwd', str(self.root / 'nowhere'), env=self.env)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('go on the answer line', r.stderr)
+
+    def test_answer_still_takes_prose(self):
+        r = self.run_log('answer', 'gate=Q', 'choice=a', 'prose=1')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(parse(log_lines(self.task)[-1])['prose'], '1')
 
     def test_value_with_quotes(self):
         self.run_log('fix', 'what=say "hi" \\ there')

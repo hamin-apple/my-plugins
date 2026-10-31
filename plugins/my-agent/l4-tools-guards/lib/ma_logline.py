@@ -41,9 +41,10 @@ def log_error(active, where: str, exc: BaseException) -> None:
         pass
 
 
-def guard_line(*values) -> str:
-    """A `guard:` line; `values` follow ma_schema.GUARD_FIELDS (hook, agent, id, tool, decision, why)."""
-    return format_line(ma_schema.GUARD, zip(ma_schema.GUARD_FIELDS, values))
+def guard_line(hook, agent, id_, tool, decision, why, cwd='-') -> str:
+    """A `guard:` line; the arguments follow ma_schema.GUARD_FIELDS. `cwd` is optional (`-`), so a six-argument
+    caller keeps working."""
+    return format_line(ma_schema.GUARD, zip(ma_schema.GUARD_FIELDS, (hook, agent, id_, tool, decision, why, cwd or '-')))
 
 
 def log_guard(active, *values) -> None:

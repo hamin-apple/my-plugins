@@ -26,7 +26,7 @@ TABLE = {   # name: (model, effort, tools, maxTurns)
     'gate-analyst': ('sonnet', 'high', 'Read, Write', None),
     'explorer': ('sonnet', 'low', 'Read, Grep, Glob, Bash', '30'),
     'researcher': ('sonnet', 'medium', 'Read, WebSearch, WebFetch, Write', '40'),
-    'writer': ('sonnet', 'medium', 'Read, Write, Edit', '40'),
+    'writer': ('sonnet', 'medium', 'Read, Grep, Write, Edit', '40'),
     'coder': ('sonnet', 'medium', 'Read, Edit, Write, Bash', '60'),
 }
 FIRST_LINES = {
@@ -238,6 +238,49 @@ class AgentsTest(unittest.TestCase):
         self.assertIn('**Check tags:**', rev)
         self.assertIn('a missing tag or a value other than the four is a BLOCKER', rev)
         self.assertIn('carry no tag at all', rev)
+
+    def _agent(self, name):
+        for rel in MANIFEST:
+            if rel.endswith(f'/{name}.md'):
+                return split(REPO / rel)[1]
+
+    def test_coder_test_first_and_foreground(self):
+        """Criterion 11: coder quotes the failing output, runs long commands in the foreground with a timeout."""
+        coder = self._agent('coder')
+        self.assertIn('Test first', coder)
+        self.assertIn('foreground', coder)
+        self.assertIn('explicit', coder)
+        self.assertIn('timeout', coder)
+        self.assertIn('run_in_background', coder)
+
+    def test_bash_agents_use_absolute_paths(self):
+        """Criterion 12: every agent with Bash uses absolute paths and does not rely on an earlier cd."""
+        for name in ('coder', 'explorer', 'verifier', 'reviewer'):
+            with self.subTest(agent=name):
+                self.assertIn('absolute paths', self._agent(name))
+
+    def test_writer_negative_claim_and_to_confirm(self):
+        """Criterion 11: negative claims are searched with Grep; approved plans drop `To confirm` lines."""
+        w = self._agent('writer')
+        self.assertIn('negative claim', w)
+        self.assertIn('Grep', w)
+        self.assertIn('`Approved` line', w)
+        self.assertIn('drop the `To confirm` lines', w)
+
+    def test_reviewer_nitpick_new_or_carried(self):
+        r = self._agent('reviewer')
+        self.assertIn('(new)', r)
+        self.assertIn('(carried)', r)
+        self.assertIn('the previous `review.md` path', r)
+
+    def test_plan_reviewer_counts_and_mockup_colours(self):
+        p = self._agent('plan-reviewer')
+        self.assertIn('read it back', p)
+        self.assertIn('not from memory', p)
+        self.assertIn('colours, states and labels', p)
+
+    def test_architect_keeps_coder_files_in_task_location(self):
+        self.assertIn('inside the task location', self._agent('architect'))
 
 
 if __name__ == '__main__':

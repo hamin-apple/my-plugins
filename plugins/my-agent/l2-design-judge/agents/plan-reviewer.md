@@ -45,7 +45,7 @@ Run: <n>
 ## Common checks (all profiles)
 
 1. **Traceability:** every completion criterion has a work unit that produces it, and every work unit has a completion criterion number. If one is missing, BLOCKER.
-2. **Mock-up:** `## Mock-up` exists, shows both the normal case and the scope's exception cases, and each case has a criterion number. If it adds requirements not in the scope, BLOCKER.
+2. **Mock-up:** `## Mock-up` exists, shows both the normal case and the scope's exception cases, and each case has a criterion number. If it adds requirements not in the scope, BLOCKER. Check the colours, states and labels in the mock-up against the existing UI files (CSS variables, class names, labels) with Grep; a mismatch is a SHOULD-FIX.
 3. **Scope:** the plan does nothing listed in the non-goals. If there is work outside the scope, BLOCKER.
 4. **Parallel groups:** within a group, the files to change do not overlap. If they overlap, BLOCKER. A group without a workflow has 4 units or fewer.
 5. **Required sections:** `## Work units` (each unit with a unique `### u<n> <name>` heading and `- Status: pending`), `## Reference files`, `## Mock-up` (first line `Kind: <kind of example>`), `## Prototype`, `## Estimate` (number of subagents), an empty `## Approval`. If one is missing, BLOCKER. For a rewritten plan, also check that every BLOCKER in the previous `plan-review.md` is resolved.
@@ -73,5 +73,7 @@ Run: <n>
 - **Design sketch and mock-up:** the behavior after the change is concrete (command output, sample response). If vague, SHOULD-FIX.
 
 ## When done
+
+After writing `plan-review.md`, read it back and print the count per severity taken from the file (Grep the finding lines), not from memory.
 
 The first line of the last message is the same verdict word as the first line of `plan-review.md`. Below it, write only the number of BLOCKERs.

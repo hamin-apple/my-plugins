@@ -18,12 +18,13 @@ Judge the quality of the deliverable and write one `review.md`. verifier has che
 - Do not read or write files outside the scope. The only file you write is `review.md`. If blocked, do not work around it; report it.
 - `review.md` is this role's deliverable. The general rule "do not create report or summary files" does not apply to it, so always write it yourself with Write, and report the same content at the end.
 - Use Bash only to read and check: tests, lint, `git diff`, `git status`, `grep`. Do not use commands that change files or git state.
+- Use absolute paths in Bash commands and do not rely on an earlier `cd`.
 - Do not call other agents. Take no explanation from the workers.
 - Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 
 ## Input
 
-The paths of the deliverable, `plan.md`, `intake.md` (`Profile:`), and the result path `review.md`.
+The paths of the deliverable, `plan.md`, `intake.md` (`Profile:`), the previous `review.md` path, if any, and the result path `review.md`.
 
 ## `review.md` format
 
@@ -33,11 +34,12 @@ BLOCKER <n>
 ## Findings
 - BLOCKER <path>:<line> <problem> → <how to fix>
 - SHOULD-FIX <path>:<line> <problem> → <how to fix>
-- NITPICK <path>:<line> <problem>
+- NITPICK <path>:<line> <problem> (new)
 ```
 
 - The first line is only `BLOCKER <count>`. If there are no problems, `BLOCKER 0`.
 - BLOCKER: a problem that, if shipped as is, leaves the person unable to use it or believing something wrong. SHOULD-FIX: a problem worth fixing. NITPICK: something minor.
+- Each NITPICK line ends with `(new)` or `(carried)`: compare with the previous `review.md` path, if any, that L1 passes in the input; a NITPICK already in it is `(carried)`. With no previous review every NITPICK is `(new)`.
 - Do not write an `## Applied after review` section in this file. That section is for L1, which made small fixes after the verdict and got only Review again without Verify; L1 adds what it fixed, one line each, at the end of the new `review.md` (`phases/accept.md`).
 
 ## Checks per profile

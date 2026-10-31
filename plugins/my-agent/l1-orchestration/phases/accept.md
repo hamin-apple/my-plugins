@@ -5,30 +5,34 @@ Verify and Review are never skipped, in any profile.
 ## 7. Verify
 
 1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=7 name=Verify --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"`
+   - Right after the step line (start of Verify) run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" cost --data-dir "<data folder>" --task-dir "<task_dir>"` (SKILL.md Recorder `cost` row; one cost line is enough when it coincides with the phase change).
+   - Before the verifier call, compare `git status --porcelain` with the changed files the coder reports listed plus the `fix` lines of L1. Show unexpected paths in the chat and in the "Open risks" row of the next overview; no extra popup.
 2. Hand it to `my-agent:verifier`. Pass: the file with the completion criteria (`scope.md` if it exists, otherwise `plan.md`; `plan.md` in the general profile and for a dev small task), the `Scope change:` lines under `## Approval`, the deliverable path, and the result path `verify.md`. Do not pass the workers' explanations.
    - For each `[check: person]` criterion the person reported on, first write `Scope change: criterion <n> checked by the person: <what they reported>` under `plan.md` `## Approval` with the SKILL.md "Adjust within approved scope" record (`fix what="Scope change: …" files=plan.md`). A `[check: person]` criterion with neither this line nor a `Scope change: criterion <n> is checked by the user later` line is FAIL.
 3. `verify.md` format: first line `Verdict: ALL PASS` or `Verdict: FAIL`, then one line per criterion, `- <n>. PASS|FAIL <evidence>`.
-4. On FAIL, do "Back to Execute" below and go to Execute in ③ Build with the list of failed criteria. On 3 FAILs in a row, go to E (SKILL.md "Failure handling"). The count in a row is the number of `Verdict: FAIL` since the last `Verdict: ALL PASS` (or Revise this task). Count the `result=` of verifier `stop:` lines in the run-log from the end (the monitor counts the same way). `Run:` is only the judgment round, so it goes up after a PASS too.
+4. On FAIL, do "Back to Execute" below and go to Execute in ③ Build with the list of failed criteria. After the second FAIL on the same criterion, the new coder call asks for a structural argument (why no other failing form remains) before the fix, or L1 offers `Change scope` (E). On 3 FAILs in a row, go to E (SKILL.md "Failure handling"). The count in a row is the number of `Verdict: FAIL` since the last `Verdict: ALL PASS` (or Revise this task). Count the `result=` of verifier `stop:` lines in the run-log from the end (the monitor counts the same way). `Run:` is only the judgment round, so it goes up after a PASS too.
 
 ## Back to Execute
 
 Do this every time you go back to ③ Build for Verify FAIL, Review BLOCKER (when it is not a small fix), or G3 `Rework`. The next judgment overwrites `verify.md`·`review.md`, so keep the current judgment first.
 
-1. Copy `verify.md` and `review.md` (if present) with `cp -p` (absolute paths) to `archive/<date +%y%m%d-%H%M%S value>-run<Run: value of verify.md>/` and compare with `cmp`. If they differ, stop and report.
+1. Copy `verify.md` and `review.md` (if present) with `cp -p` (absolute paths, SKILL.md "Tool choice") to `archive/<date +%y%m%d-%H%M%S value>-run<Run: value of verify.md>/` and compare with `cmp`. If they differ, stop and report.
 2. In `plan.md`, set `Status:` to `pending` for the work units tied to the failed criteria (or the shortfalls named at G3). If there is a last writer unit that combines a document deliverable, set it to `pending` too when any earlier unit becomes `pending`. Leave the rest as `done`. Hand the units set back to `pending` out again each as a new worker call, never a resume of the earlier worker, passing the archive folder paths from item 1 and the failed criterion numbers (`build.md` step 5 item 3).
 3. Change `phase:` in `.active` to `3` and read `build.md`. Add the reason and the archive folder to the Execute step line: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=5 name=Execute back="<Verify FAIL criterion numbers / Review BLOCKER / G3 Rework>" archive=<archive folder> --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"` (instead of `build.md` step 5 item 1). In an Execute reached this way, skip `build.md` step 5 item 2 (base point, uncommitted-changes popup), and run coder in sequence in the main tree without a worktree (the already merged changes are uncommitted, so a worktree cannot see them).
 
 ## 8. Review → Deliver
 
 1. Record: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=8 name=Review-Deliver --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"`
-2. Hand it to `my-agent:reviewer`. Pass: the deliverable path, the `plan.md` path, and the result path `review.md`. The first line of the result is `BLOCKER <count>`.
+2. Hand it to `my-agent:reviewer`. Pass: the deliverable path, the `plan.md` path, the previous `review.md` path, if any (the latest `archive/<ts>-run<N>/review.md`), and the result path `review.md`. The first line of the result is `BLOCKER <count>`.
 3. If there is 1 BLOCKER or more: if it is a small fix (the L1 exception in the SKILL.md level table), L1 fixes it (`fix` line) and gets a new judgment. If only Review was redone, without Verify, add a `## Applied after review` section at the end of the new `review.md` with Edit and list each fix on its own line as `- <what was fixed> (<file>)` (without this section, the hook blocks the G3 save and asks before the commit because `verify.md` is older than the change). If it is not a small fix, do "Back to Execute".
-4. **G3 report (chat):** summary of the result, list of failures and unhandled items, the diff or the deliverable, cost (reference), and **the exact path it will be saved to**.
+4. **G3 report (chat):** the overview table from SKILL.md "Gate reports", then `### Details` with the summary of the result, list of failures and unhandled items, the diff or the deliverable, cost (reference), and **the exact path it will be saved to**. The popup question repeats the first two rows.
    - List the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
    - Save location: the deliverable location in `## Scope summary` (or `scope.md`). If none, `deliverable/` in the task folder.
    - File names are lowercase English with hyphens. If the same name exists, do not overwrite; add `-2`. If the task changes an existing file, show the diff.
    - If the path is outside `~/dev`, state in the popup question that picking `Accept` counts as approval of that write.
 5. **G3 popup:** always to the person, even while delegated approval is on (SKILL.md "Delegated approval").
+   - Run, right before the G3 popup, `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" cost --data-dir "<data folder>" --task-dir "<task_dir>"`.
+   - The popup body lists the open SHOULD-FIX and NITPICK items of `review.md`.
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G3 q="Final acceptance: <task-id> → <save path>" rec="Accept" --data-dir "<data folder>" --task-dir "<task_dir>"`
    - Popup: `Accept (Recommended)` / `Rework` / `Abort`
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G3 choice="<chosen choice>" --data-dir "<data folder>" --task-dir "<task_dir>"`
@@ -40,7 +44,7 @@ Do this every time you go back to ③ Build for Verify FAIL, Review BLOCKER (whe
    - If delegated approval is on, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=end --data-dir "<data folder>" --task-dir "<task_dir>"` before the retrospective.
    - Retrospective: do "Retrospective" below. After the retrospective ends, last of all delete `.active` and this task's line in `<data folder>/active-index.json` (the retrospective needs `.active`).
    - The dev profile follows "G3 in the dev profile" below instead of this item 6.
-7. **Rework:** If the criteria stay the same, do "Back to Execute" and go to ③ Build with the shortfalls as failed criteria. If the request changes the criteria, take SKILL.md "In-flight revision".
+7. **Rework:** If the criteria stay the same, do "Back to Execute" and go to ③ Build with the shortfalls as failed criteria. Small scope adjustments the person asks for after the G3 report are collected into one `Scope change:` round and re-judged once (one Execute, one Verify, one Review). If the request changes the criteria, take SKILL.md "In-flight revision".
 8. **Abort:** the "Abort" procedure in SKILL.md.
 
 ## G3 in the dev profile (commit approval)
@@ -49,11 +53,11 @@ The deliverable is a commit, so do this instead of items 4–6.
 
 G3 always goes to the person, even while delegated approval is on.
 
-1. **Paste into the chat:** `git status --porcelain`, `git diff --stat` and the main diffs, the list of new files, the judgment summary (`verify.md` `Run:`, SHOULD-FIX·NITPICK in `review.md`), the proposed commit message (first line says what changed; the body lists completion criterion numbers `criteria: 1, 2, 3`), cost (reference), and the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3.
-2. Commit only the files this task changed (changes since the `base` line, excluding `<task_dir>/`; if `<task_dir>/.gitignore` is `# my-agent: commit`, include the task folder too).
-3. Record before and after the popup.
+1. **Chat report:** the overview table from SKILL.md "Gate reports", then `### Details` with `git status --porcelain`, `git diff --stat` and the main diffs, the list of new files, the judgment summary (`verify.md` `Run:`, SHOULD-FIX·NITPICK in `review.md`), the proposed commit message (first line says what changed; the body lists completion criterion numbers `criteria: 1, 2, 3`), cost (reference), and the `[check: person]` criteria whose `Scope change:` line says `checked by the user later`, so the person decides on them at G3. The popup question repeats the first two rows of the table.
+2. Compare `git status --porcelain` with the changed files the coder reports listed plus the `fix` lines of L1; show unexpected paths in the chat and in the "Open risks" row (no extra popup). Commit only the files this task changed (changes since the `base` line, excluding `<task_dir>/`; if `<task_dir>/.gitignore` is `# my-agent: commit`, include the task folder too).
+3. Record before and after the popup. Run, right before the G3 popup, `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" cost --data-dir "<data folder>" --task-dir "<task_dir>"`.
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=G3 q="Commit approval: <task-id>" rec="Commit" --data-dir "<data folder>" --task-dir "<task_dir>"`
-   - Popup: `Commit (Recommended)` / `Rework` / `Abort`
+   - Popup: `Commit (Recommended)` / `Rework` / `Abort`. The body lists the open SHOULD-FIX and NITPICK items of `review.md` and says what happens next: one commit on the current branch with the shown message, then the retrospective; any push is a separate action the permission dialog asks about.
    - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=G3 choice="<chosen choice>" --data-dir "<data folder>" --task-dir "<task_dir>"`
 4. **Commit:**
    - Do SKILL.md "Check before anything leaves" on the files to commit.
@@ -65,8 +69,9 @@ G3 always goes to the person, even while delegated approval is on.
 ## E escalation
 
 - Conditions: Verify FAIL 3 times in a row, the same work unit stopped twice (`stop:` with the same `unit=` is `end=partial` or `end=error`), a workflow ended with an error, a merge conflict exposes a plan error.
-- E always goes to the person, even while delegated approval is on. Show in the chat where it is stuck and what was tried, then record and ask in a popup.
+- E always goes to the person, even while delegated approval is on. Chat report: the overview table from SKILL.md "Gate reports" (the "Approving" row says what is stuck), then `### Details` with where it is stuck and what was tried. Then record and ask in a popup; its question repeats the first two rows.
   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" ask gate=E q="<where it is stuck>" rec="<recommended choice>" --data-dir "<data folder>" --task-dir "<task_dir>"`
+  - For Verify FAIL in a row use `q="Verify FAIL x<n>: criterion <n> <one-line reason>"`; the popup body names the criterion and the reason.
   - Popup: `Give direction` / `Change scope` / `Abort` (put the one that fits first, with `(Recommended)`)
   - `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=E choice="<chosen choice>" --data-dir "<data folder>" --task-dir "<task_dir>"`
 
@@ -80,6 +85,6 @@ After Accept (or Commit) and before deleting `.active`, do these in this order. 
 4. Do SKILL.md "Check before anything leaves" on `gate-report.md` and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/gate-report.py" copy --data-dir "<data folder>" --task-dir "<task_dir>"` (the copy goes to `<data folder>/gate-report/`; if the copy folder already has the same name, `-2` is added). In the chat, show only the two paths (`gate-report.md` in the task folder, and the copy) and the 3 lines of `## Summary` in `gate-report.md`. If copy ends with exit 1 (no report) or exit 3 (could not write the copy), do not undo the Accept or Commit; state the cause in one line and go to item 5.
 5. If there is no report (item 1 exit 1·3) or it was PARTIAL·an error (item 3), skip filing the `clear` suggestions. Otherwise, file the items in `gate-report.md` `## Suggested improvements` marked `clear` with `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/feedback.py" add L1 <task-id> "<improvement>" --data-dir "<data folder>"` (not shown in the chat). File other improvements from this task with `add L<1-4>` too. Whenever `gate-tally.md` was written, also when the gate report was skipped or PARTIAL: if its `Judge misses` row is above 0, file one L2 item with `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/feedback.py" add L2 <task-id> "<text>" --data-dir "<data folder>"`, whose text names the criterion the person named at G3, or says the criterion was not named.
 6. `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/feedback.py" count --data-dir "<data folder>"`. If a `REVIEW: L<n> …` line appears (4 or more open improvements at one level), tell the person in one line.
-7. Missing-call check: compare the list of this session's subagent transcripts (`~/.claude/projects/<project>/<session>/subagents/`) with the `id` of `start:` lines in the run-log. If a call is missing, file it as an L4 improvement.
-8. If any `stop:` line in the run-log has a `mode=` other than auto, note it in the retrospective.
+7. Missing-call check: run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/gate-report.py" check --data-dir "<data folder>" --task-dir "<task_dir>"`. It compares this session's subagent transcripts with the `id` of `start:` lines in the run-log. File each `missing start:` line as an L4 improvement with `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/feedback.py" add L4 <task-id> "<improvement>" --data-dir "<data folder>"`; for an `agent=unknown` line, name the meta key problem (no `agentType`) in it.
+8. Note in the retrospective each `mode not auto:` line from the item 7 output (a `stop:` line whose `mode=` is not auto).
 9. Last, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/usage-snapshot.py" --data-dir "<data folder>" --task-dir "<task_dir>"`. It saves the main session's tokens per step to `main-usage.json` in the task folder, because Claude Code deletes transcripts after a while (architecture 4.8.2 "Task records over time"). On exit 3, state the printed cause in one line; do not undo the Accept or Commit.

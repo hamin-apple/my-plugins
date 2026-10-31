@@ -10,7 +10,7 @@ While a task is active and its `plan.md` has no `Approved` line under `## Approv
 dialog) for writes, whatever the phase: a write outside the active task folder (a sibling task's folder too), or a
 Bash command whose write target cannot be told, is the person's call, allowed only for their own request. Allowed
 before approval: my-agent:explorer / architect / plan-reviewer (and writer once `Prototype: requested` is under
-plan.md's `## Prototype`), and writes under the active task folder (`<location>/<task_dir>/<task>/`), to the records
+plan.md's or scope.md's `## Prototype`: the G1a prototype), and writes under the active task folder (`<location>/<task_dir>/<task>/`), to the records
 folder's `.active`, or to the data folder's `active-index.json` / `projects.txt` (and `mkdir -p` of the data folder
 itself, Intake step 7). A `.active` without `task:` → pass with a warning (C9). A task folder that is gone → pass with
 a warning. A data-folder write other than those two files is asked like any other outside write. Any error → exit 2,
@@ -20,7 +20,7 @@ After approval, a write outside the location, the data folder and the result pat
 declare (`- Deliverable location: `…`` or `- Save path: `…``) gets `ask`: auto mode lets such a write through without a
 prompt (probe 2026-10-25); the same holds for the ask before approval. A Bash write whose target cannot be told
 passes, as before (git commit asks via G2). A deny appends one `guard:` line (hook=plan-approved-check agent=main
-id=-, ma_schema.GUARD_FIELDS) to the task's run-log; an ask writes none, and a failed write never changes the
+id=-, ma_schema.GUARD_FIELDS, `cwd` the input's) to the task's run-log; an ask writes none, and a failed write never changes the
 decision.
 The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
 """
@@ -98,7 +98,8 @@ def decide(inp: dict, active, tasks_dir: Path):
     ask = lambda slot: (PLAN_ASK.format(paths=slot), 'ask')  # noqa: E731
     if tool == 'Agent':
         agent = ti.get('subagent_type') or ''
-        if agent in BEFORE_APPROVAL or (agent == 'my-agent:writer' and ma_plan.prototype_requested(plan_md)):
+        if agent in BEFORE_APPROVAL or (agent == 'my-agent:writer' and (
+                ma_plan.prototype_requested(plan_md) or ma_plan.scope_prototype_requested(active.task_dir / 'scope.md'))):
             return None, None
         return reason(f'Before approval only explorer, architect and plan-reviewer get work (requested: {agent or "-"}).')
     if tool == 'Workflow':
@@ -142,7 +143,8 @@ def main() -> int:
         if not why and ma_plan.approved(active.task_dir / 'plan.md'):
             why, decision = outside_ask(inp, active, tasks_dir), 'ask'
         if why and decision == 'deny':   # an ask writes no line; this hook only sees the main session
-            ma_logline.log_guard(active, 'plan-approved-check', 'main', '-', inp.get('tool_name') or '-', 'deny', why)
+            ma_logline.log_guard(active, 'plan-approved-check', 'main', '-', inp.get('tool_name') or '-', 'deny', why,
+                                 inp.get('cwd') or '-')
         if why:
             print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
                                                      'permissionDecisionReason': why}}, ensure_ascii=False))

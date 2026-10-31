@@ -65,13 +65,23 @@ class SchemaTest(unittest.TestCase):
 
     def test_guard_kind(self):
         self.assertEqual(ma_schema.GUARD, 'guard')
-        self.assertEqual(ma_schema.GUARD_FIELDS, ('hook', 'agent', 'id', 'tool', 'decision', 'why'))
+        self.assertEqual(ma_schema.GUARD_FIELDS, ('hook', 'agent', 'id', 'tool', 'decision', 'why', 'cwd'))
         self.assertTrue(ma_logline.is_hook_line('guard', {}))
         line = ma_logline.guard_line('scope-guard', 'my-agent:coder', 'a1', 'Bash', 'deny', 'scope-guard: Outside "x"')
         kind, fields = ma_logline.parse_line(line)
         self.assertEqual(kind, 'guard')
         self.assertEqual(list(fields), list(ma_schema.GUARD_FIELDS))
         self.assertEqual(fields['why'], 'scope-guard: Outside "x"')
+        self.assertEqual(fields['cwd'], '-')   # the trailing cwd defaults to `-`
+        line = ma_logline.guard_line('scope-guard', 'my-agent:coder', 'a1', 'Bash', 'deny', 'why', '/a b/c')
+        self.assertEqual(ma_logline.parse_line(line)[1]['cwd'], '/a b/c')
+
+    def test_old_six_field_guard_line_parses(self):
+        line = '2026-11-01 02:40:27 guard: hook=scope-guard agent=my-agent:coder id=a1 tool=Bash decision=deny why="x y"'
+        kind, fields = ma_logline.parse_line(line)
+        self.assertEqual(kind, 'guard')
+        self.assertEqual(list(fields), list(ma_schema.GUARD_FIELDS[:6]))
+        self.assertEqual(fields['why'], 'x y')
 
     def test_one_line_parser(self):
         line = ma_logline.format_line('ask', [('gate', 'G3'), ('q', 'a "b" c'), ('rec', 'Accept')])

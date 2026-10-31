@@ -83,6 +83,49 @@ def _delimiters(line: str) -> List[tuple]:
     return out
 
 
+def _quote_at(line: str, quote: Optional[str]) -> tuple:
+    """(quote state at each `<<` start of `line`, state at its end), given the state at its start."""
+    at, i, n = [], 0, len(line)
+    marks = {m.start() for m in HEREDOC.finditer(line)}
+    while i < n:
+        c = line[i]
+        if i in marks:
+            at.append(quote)
+        if quote == "'":
+            quote = None if c == "'" else quote
+        elif c == '\\':
+            i += 1
+        elif quote == '"':
+            quote = None if c == '"' else quote
+        elif c in '\'"':
+            quote = c
+        i += 1
+    return at, quote
+
+
+def _drop_quoted_bodies(cmd: str) -> str:
+    """`cmd` without the body lines of heredocs whose delimiter is quoted (`<<'EOF'`, `<<"EOF"`, `<<\\EOF`): the shell
+    does not expand them, so a backticked word there is text (`env_reads` must not read it as a substitution). The
+    opening and closing lines stay. Bodies of unquoted delimiters stay too (real substitutions). A `<<` inside quotes
+    (`bash -c "cat <<'EOF' …"`) or a heredoc never closed leaves `cmd` as it is."""
+    out, waiting, quote = [], [], None
+    for line in cmd.split('\n'):
+        if waiting:
+            if line.strip() == waiting[0][0]:
+                waiting.pop(0)
+                out.append(line)
+            elif not waiting[0][1]:
+                out.append(line)
+            continue
+        at, quote_after = _quote_at(line, quote)
+        if any(q is not None for q in at) or (quote is not None and HEREDOC.search(line)):
+            return cmd
+        quote = quote_after
+        out.append(line)
+        waiting = _delimiters(line)
+    return '\n'.join(out) if not waiting else cmd
+
+
 def _strip_heredocs(cmd: str) -> str:
     """`cmd` without heredoc bodies; ValueError when a heredoc is never closed (`echo "<<EOF"` would hide the rest)
     or when the body of an unquoted heredoc (expanded by the shell) has `$(` or a backtick."""
@@ -804,7 +847,7 @@ def env_reads(cmd: str) -> List[str]:
     every substitution replaced by a placeholder word (put back in the finding); a piece that does not tokenize gives
     no finding (the read-path rule denies it)."""
     subs: List[str] = []
-    outer, bodies = _split_subst(cmd, subs)
+    outer, bodies = _split_subst(_drop_quoted_bodies(cmd), subs)
     out = []
     for piece in [outer] + bodies:
         try:

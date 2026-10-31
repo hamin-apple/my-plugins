@@ -3,6 +3,9 @@
 `tally_text` only counts what the active task's run-log says: the ask/answer decision table, a few counters and
 the cost/tokens per stretch between `cost:` lines. It does not interpret anything (the gate-analyst does).
 `report_dir` is the folder `gate-report.py copy` writes to; plan-approved-check lets writes there pass unasked.
+A `cost:` line with `baseline=1` (run-log.py writes one after the Intake step line) is not a cut between stretches: it
+only gives its session the value the next cost line is measured against, so the stretch holding `1 Intake` has a cost.
+`check_lines` compares the run-log with the subagent transcripts of the task's sessions (`gate-report.py check`).
 """
 import re
 from pathlib import Path
@@ -16,6 +19,8 @@ SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustm
 NOTE_BY_L1 = 'answered by L1'
 VERIFIER = 'my-agent:verifier'   # the `agent=` value of the verifier's `start:` line
 PLAN_REVIEWER = 'my-agent:plan-reviewer'   # the `agent=` value subagent-log.py writes on `start:` lines
+BASELINE = 'baseline'   # `cost:` field (value 1): the cost before the task's first step, not a cut
+PLUGIN_AGENT = 'my-agent:'   # `agentType` prefix of this plugin's subagents
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
 
 
@@ -117,13 +122,20 @@ def _segments(lines) -> list:
     """Stretches between `cost:` lines: [start, end, step names, usd or None, tokens].
 
     The cost of a stretch is the gain of the cost line that ends it over the previous cost line of the same
-    session (a drop is a reset); the stretch after the last cost line has none."""
-    cuts = [i for i, (_, k, _) in enumerate(lines) if k == 'cost']
+    session (a drop is a reset); the stretch after the last cost line has none. A cost line with `baseline=1` is
+    no cut: it only sets its session's previous value, so the stretch it sits in is measured against it."""
+    cuts = [i for i, (_, k, f) in enumerate(lines) if k == 'cost' and f.get(BASELINE) != '1']
     prev, segs = {}, []
     for n in range(len(cuts) + 1):
         lo = cuts[n - 1] if n else 0
         hi = cuts[n] if n < len(cuts) else len(lines) - 1
         body = lines[lo:hi + 1]
+        for _, k, f in body:
+            if k == 'cost' and f.get(BASELINE) == '1':
+                try:
+                    prev[f.get('session')] = float(f.get('usd'))
+                except (TypeError, ValueError):
+                    pass
         usd = None
         if n < len(cuts):
             f = lines[hi][2]
@@ -209,6 +221,48 @@ def tally_text(lines) -> str:
     else:
         out.append('Not recorded')
     return '\n'.join(out)
+
+
+def read_raw(log) -> list:
+    """(line text, kind, fields) of every readable run-log line; [] when the file is missing."""
+    try:
+        text = Path(log).read_text(encoding='utf-8', errors='replace')
+    except OSError:
+        return []
+    return [(line.strip(), *parsed) for line, parsed in ((l, ma_logline.parse_line(l)) for l in text.splitlines()) if parsed]
+
+
+def session_ids(active_session, raw) -> list:
+    """The task's session ids: the `.active` session, then every `session=` of a `start:` line (first seen first)."""
+    ids = [active_session] if active_session else []
+    for _, kind, f in raw:
+        if kind == 'start' and f.get('session') and f['session'] not in ids:
+            ids.append(f['session'])
+    return ids
+
+
+def check_lines(raw, transcripts) -> list:
+    """Output lines of `gate-report.py check`: raw is `read_raw` of the run-log, transcripts a list of
+    (id, path, agent type or None) for the task's sessions.
+
+    A transcript of another agent type (`agentType` without the plugin prefix) is counted, not compared; one without
+    an agent type is compared as `agent=unknown`. `missing start:` is a compared transcript with no `start:` line;
+    `mode not auto:` a `stop:` line whose `mode=` is present and not `auto`."""
+    started = {f.get('id') for _, k, f in raw if k == 'start'}
+    out, other, untyped, missing = [], 0, 0, 0
+    for agent_id, path, agent in transcripts:
+        if agent is not None and not agent.startswith(PLUGIN_AGENT):
+            other += 1
+            continue
+        untyped += agent is None
+        if agent_id not in started:
+            missing += 1
+            out.append(f'missing start: id={agent_id} agent={agent or "unknown"} transcript={path}')
+    bad = [text for text, k, f in raw if k == 'stop' and f.get('mode') not in (None, 'auto')]
+    out += [f'mode not auto: {text}' for text in bad]
+    out.append(f'summary: transcripts {len(transcripts)} (other {other}, untyped {untyped}), '
+               f'start lines {sum(1 for _, k, _ in raw if k == "start")}, missing {missing}, non-auto stops {len(bad)}')
+    return out
 
 
 def counts(lines) -> tuple:

@@ -197,10 +197,13 @@ class SkillMdTest(unittest.TestCase):
         """Criterion 7: tally -> gate-analyst -> copy -> chat -> feedback add L1; before the .active cleanup on both accept paths."""
         accept = (L1 / 'phases' / 'accept.md').read_text(encoding='utf-8')
         retro = accept[accept.index('## Retrospective'):]
-        marks = ['gate-report.py" tally', 'my-agent:gate-analyst', 'gate-report.py" copy', 'two paths', 'feedback.py" add L1']
+        marks = ['gate-report.py" tally', 'my-agent:gate-analyst', 'gate-report.py" copy', 'two paths', 'feedback.py" add L1',
+                 'gate-report.py" check']
         pos = [retro.index(m) for m in marks]
         self.assertEqual(pos, sorted(pos))
         self.assertIn('Summary', retro[pos[3]:pos[4]])
+        self.assertIn('missing start:', retro[pos[5]:])
+        self.assertIn('mode not auto:', retro[pos[5]:])
         self.assertIn('Profile:', retro)
         self.assertIn('PARTIAL', retro)
         general = accept[accept.index('6. **Accept:**'):accept.index('7. **Rework:**')]
@@ -412,6 +415,119 @@ class SkillMdTest(unittest.TestCase):
 
     def test_intake_popup_recommends_data_folder(self):
         self.assertIn('`<data folder> (Recommended)`', self.text)
+
+    # --- apply open feedback (task 261101-apply-open-feedback, u1) ---
+    def section(self, start, end):
+        return self.text[self.text.index(start):self.text.index(end, self.text.index(start) + 1)]
+
+    def intake_item(self, n):
+        i = self.text.index(f'\n{n}. **') + 1
+        return self.text[i:self.text.index(f'\n{n + 1}. ', i)]
+
+    def test_tool_choice_rule(self):
+        self.assertLess(self.text.index('### Tool choice'), self.text.index('## Arguments'))
+        rule = self.section('### Tool choice', '### Change requests')
+        for word in ('Read', 'Grep', 'Glob', 'Edit', 'Write', 'one command per call', '`sed -i`', '`$(`',
+                     'unittest discover -s'):
+            self.assertIn(word, rule, word)
+        self.assertNotIn('plan-approved-check.py', rule)
+
+    def test_question_rules_popup_topics(self):
+        rules = self.section('### Question rules', '### Gates')
+        for word in ('one popup per topic', 'plain explanation', 'multi-select', 'Popup bodies'):
+            self.assertIn(word, rules, word)
+
+    def test_intake_worktree_and_gitignore_rules(self):
+        self.assertIn('`New task in a worktree`', self.intake_item(1))
+        self.assertIn('git check-ignore', self.intake_item(5))
+        section = self.section('## Task worktree', '## Abort')
+        for word in ('my-agent-task/', 'git worktree add', 'task ID'):
+            self.assertIn(word, section, word)
+        self.assertIn('my-agent-task/', self.section('## continue', '## Task worktree'))
+        self.assertIn('baseline', self.intake_item(10))
+
+    def test_flags_em_dash(self):
+        flags = self.section('**Flags:**', '## Intake')
+        self.assertIn('em dash', flags)
+        self.assertIn('`—dev`', flags)
+
+    def test_cost_row_baseline_and_moments(self):
+        row = next(l for l in self.text.splitlines() if l.startswith('|') and 'run-log.py" cost' in l)
+        for word in ('baseline=1', 'start of Verify', 'right before the G3 popup'):
+            self.assertIn(word, row, word)
+
+    def test_failure_row_structural_argument(self):
+        row = next(l for l in self.text.splitlines() if l.startswith('| Verify FAIL 1–2 times'))
+        self.assertIn('structural argument', row)
+
+    def test_gate_reports_section(self):
+        section = self.section('## Gate reports', '## In-flight revision')
+        for word in ('### Details', 'first two rows', 'G1a', 'G1b', 'G3', 'E'):
+            self.assertIn(word, section, word)
+        self.assertLess(self.text.index('## Check before anything leaves'), self.text.index('## Gate reports'))
+
+    def phase(self, name):
+        return (L1 / 'phases' / f'{name}.md').read_text(encoding='utf-8')
+
+    def test_accept_gate_reports_overview_first(self):
+        accept = self.phase('accept')
+        general = accept[accept.index('4. **G3 report (chat):**'):accept.index('5. **G3 popup:**')]
+        dev = accept[accept.index('## G3 in the dev profile'):accept.index('## E escalation')]
+        esc = accept[accept.index('## E escalation'):accept.index('## Retrospective')]
+        for part in (general, dev, esc):
+            self.assertIn('Gate reports', part)
+            self.assertIn('### Details', part)
+        self.assertIn('Tool choice', accept)
+
+    def test_accept_popup_bodies(self):
+        accept = self.phase('accept')
+        self.assertGreaterEqual(accept.count('SHOULD-FIX and NITPICK items of `review.md`'), 2)
+        self.assertIn('Verify FAIL x<n>: criterion <n> <one-line reason>', accept)
+        dev = accept[accept.index('## G3 in the dev profile'):accept.index('## E escalation')]
+        self.assertIn('then the retrospective', dev)
+        self.assertIn('separate action', dev)
+
+    def test_accept_loop_and_scope_rules(self):
+        accept = self.phase('accept')
+        self.assertIn('structural argument', accept)
+        self.assertIn('Change scope', accept)
+        self.assertIn('one `Scope change:` round', accept)
+        self.assertGreaterEqual(accept.count('git status --porcelain'), 2)
+        self.assertIn('Open risks', accept)
+        self.assertIn('the previous `review.md` path, if any', accept)
+
+    def test_accept_cost_calls(self):
+        accept = self.phase('accept')
+        cmd = 'run-log.py" cost'
+        verify = accept[accept.index('## 7. Verify'):accept.index('## Back to Execute')]
+        self.assertIn(cmd, verify)
+        self.assertLess(verify.index('step n=7'), verify.index(cmd))
+        general = accept[accept.index('5. **G3 popup:**'):accept.index('6. **Accept:**')]
+        dev = accept[accept.index('3. Record before and after the popup.'):accept.index('4. **Commit:**')]
+        for part in (general, dev):
+            self.assertIn('right before the G3 popup', part)
+            self.assertLess(part.index(cmd), part.index('ask gate=G3'))
+
+    def test_build_prototype_and_worktree_session(self):
+        build = self.phase('build')
+        self.assertIn('prototype/index.html', build)
+        self.assertIn('--git-common-dir', build)
+        self.assertIn('every unit in sequence', build)
+
+    def test_dev_merge_row_output_and_copy_fallback(self):
+        dev = (L1 / 'profiles' / 'dev.md').read_text(encoding='utf-8')
+        merge = next(l for l in dev.splitlines() if l.startswith('| 6 Merge'))
+        self.assertIn('--output=', merge)
+        self.assertIn('cp -p', merge)
+        self.assertIn('cmp', merge)
+        self.assertNotIn('\\|', merge)
+        execute = next(l for l in dev.splitlines() if l.startswith('| 5 Execute'))
+        self.assertIn('--git-common-dir', execute)
+
+    def test_l1_row_popup_first_and_syntax_check(self):
+        row = next(l for l in self.text.splitlines() if l.startswith('| L1 |'))
+        self.assertIn('popup first', row)
+        self.assertIn('syntax check', row)
 
     def test_no_author_machine_paths(self):
         for path in [SKILL, self.MONITOR_SKILL] + L1_FILES:

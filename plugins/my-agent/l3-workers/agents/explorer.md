@@ -18,6 +18,7 @@ Find and report where the relevant files are in the task location, how things wo
 - Do not ask the person. Write what you could not find under `## Unverified`.
 - Do not read files outside the scope. Read the task location (the project), the files under `## Reference files` in `plan.md`, the data folder, the plugin folder and the session scratchpad, and do not read secret files (`.env`, key files). If blocked, do not work around it; report it.
 - Use Bash only to read: `ls`, `grep`, `git log`, `git status`, `git diff`, listing tests. Do not use commands that change files or git state.
+- Use absolute paths in Bash commands and do not rely on an earlier `cd`.
 - Do not call other agents. Do not propose designs or solutions.
 - Write working files and reports in English; keep the headings and marker lines of the file formats as they are.
 

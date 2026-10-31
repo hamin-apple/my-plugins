@@ -65,6 +65,7 @@ If `## Revisions` exists, leave it at the very end as is (rule above).
 - A work unit is one piece of code. For each unit, write the files to change, the tests to add, the matching completion criterion number, and the check commands (tests, lint, from `explore.md`).
 - Use a worktree only for the first parallel group (L1 passes `isolation: "worktree"` when it calls). Later groups run in order on the main tree. If `explore.md` says there are uncommitted changes, use no parallel groups and put everything in order. Here and in the Execute popup, count only real uncommitted work, not `- Derived:` files; derived files alone do not force one sequence.
 - When a work unit adds or renames an agent, skill or hook of a loaded plugin, add a `- Plugin reload: needed (<what>)` line to that unit. L1 reports it at G1b.
+- Keep coder files inside the task location (the files to change and their tests); plan no one-off scripts in the session scratchpad or other folders outside the coder's write scope.
 - A small task (if `plan.md` has the 5-line summary L1 put at the top) is one work unit.
 - The mock-up is an example of the behavior after the change (command output, screen layout, API response). Both the normal case and the exception cases.
 

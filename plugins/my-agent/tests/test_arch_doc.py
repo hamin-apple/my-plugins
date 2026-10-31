@@ -65,10 +65,10 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v041(self):
+    def test_status_line_starts_with_v042(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.41 ('), line[:60])
-        self.assertIn('v0.40 (', line)
+        self.assertTrue(line.startswith('- Status: design draft v0.42 ('), line[:60])
+        self.assertIn('v0.41 (', line)
 
     def test_run_log_kinds_name_the_guard_line(self):
         section = self.section('### 4.7.2 ', '### 4.7.3 ')

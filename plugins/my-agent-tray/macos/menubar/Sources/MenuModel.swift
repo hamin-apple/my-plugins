@@ -78,6 +78,12 @@ func taskTitle(_ t: RunningTask) -> String {
     return "\(t.id) · \(n). \(name)"
 }
 
+/// SF Symbol of the menu bar icon: the plain display while the monitor is off or idle, the play display while a task runs.
+func iconSymbol(_ state: MenuState) -> String {
+    if case .on(let tasks) = state, !tasks.isEmpty { return "play.display" }
+    return "display"
+}
+
 func iconText(_ state: MenuState) -> String {
     switch state {
     case .off: return "off"

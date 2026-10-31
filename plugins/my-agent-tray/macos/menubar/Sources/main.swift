@@ -131,7 +131,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     lazy var windows = WindowController(store: store)
 
     func applicationDidFinishLaunching(_ note: Notification) {
-        item.button?.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: "my-agent monitor")
+        item.button?.image = NSImage(systemSymbolName: iconSymbol(.off), accessibilityDescription: "my-agent monitor")?
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .heavy))
         item.button?.imagePosition = .imageLeft
         item.button?.target = self
         item.button?.action = #selector(clicked(_:))
@@ -168,7 +169,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func render(_ state: MenuState, root: String?) {
-        item.button?.title = " " + iconText(state)
+        let running: Bool
+        if case .on(let tasks) = state { running = !tasks.isEmpty } else { running = false }
+        let symbol = NSImage(systemSymbolName: iconSymbol(state), accessibilityDescription: "my-agent monitor")
+        let heavy = NSImage.SymbolConfiguration(pointSize: 13, weight: .heavy)
+        if running {
+            // The menu bar ignores contentTintColor on a template image, so the running icon is drawn in orange itself.
+            let orange = symbol?.withSymbolConfiguration(heavy.applying(NSImage.SymbolConfiguration(paletteColors: [.systemOrange])))
+            orange?.isTemplate = false
+            item.button?.image = orange
+        } else {
+            item.button?.image = symbol?.withSymbolConfiguration(heavy)   // template image: the menu bar tints it for light/dark mode
+        }
+        item.button?.contentTintColor = nil
+        let text = " " + iconText(state)
+        item.button?.attributedTitle = running
+            ? NSAttributedString(string: text, attributes: [.foregroundColor: NSColor.systemOrange])
+            : NSAttributedString(string: text)
         item.button?.appearsDisabled = (state == .off)
         let items = menuItems(state, browser: readBrowser(env: env), python: pythonPath, root: root)
         if items == shown { pending = nil; return }   // unchanged: keep the current menu, drop a stale pending state

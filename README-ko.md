@@ -6,7 +6,7 @@ hamin-apple의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| `my-agent` | 0.6.0 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent` | 0.7.0 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
 | `my-agent-tray` | 0.1.2 | my-agent 모니터용 macOS 메뉴바 앱 (선택; my-agent 0.5.0 이상 필요) |
 
 ## 요구 사항
@@ -33,6 +33,8 @@ claude plugin install my-agent-tray@my-plugins   # 선택: macOS 메뉴바 앱
 
 플러그인을 켤 때 Claude Code가 설정 두 가지를 묻습니다. 첫째는 데이터 폴더입니다(기본값 `~/dev/log/my-agent`, 나중에 `/config`에서 바꿀 수 있습니다). my-agent가 작업 폴더 밖에 두는 모든 것이 여기에 들어갑니다: 프로젝트 목록(`projects.txt`), 실행 색인(`active-index.json`), 모니터 상태·로그·설정, 가격 재정의, 개선 목록(`feedback.md`), 회고 보고서 사본(`gate-report/`). 앞의 `~`는 홈 폴더로 펼쳐집니다. 플러그인 자기 폴더에는 아무것도 쓰지 않습니다. 폴더를 바꾸면 이전 폴더는 그대로 두고 그때부터 새 폴더를 씁니다. 설정이 없으면(예: `--plugin-dir`로 불러온 경우) `~/dev/log/my-agent`를 씁니다. 환경변수 `MA_TASKS_DIR`(데이터 폴더), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE`, `MA_GATE_REPORT_DIR`이 설정보다 먼저 적용됩니다. 이전 버전의 폴더(`~/my-agent`)는 옮겨 주지 않습니다. 새 위치로 직접 옮기거나, 데이터 폴더를 옛 경로로 지정하세요. 둘째 설정 `task_dir`은 작업 위치 안의 작업 폴더입니다(기본값 `.my-agent`, 나중에 `/config`에서 바꿀 수 있습니다). 이전 버전은 작업 기록을 `docs/agent`에 두었습니다. 이 기록은 옮기거나 읽어 주지 않으므로, `task_dir`을 `docs/agent`로 지정하거나 폴더를 직접 옮기세요(`mv docs/agent .my-agent`). `..`가 없는 상대 경로여야 하며, 아니면 기본값을 씁니다. 환경변수 `MA_TASK_DIR`이 설정보다 먼저 적용됩니다.
 
+데이터 폴더에는 선택적으로 `agent-models.json`을 둘 수 있습니다. 프로필별로 이름 붙인 모델 프리셋(에이전트마다 모델과 effort)을 정의하는 파일이며, `plugins/my-agent/docs/agent-models.example.json`을 복사해서 시작하세요. 프로필에 프리셋이 둘 이상이면 작업을 시작할 때 어느 것을 쓸지 묻습니다. 파일이 없으면 아무것도 바뀌지 않습니다. 모든 에이전트가 정의 파일의 모델과 effort로 실행됩니다.
+
 ## my-agent
 
 메인 세션(L1)이 요청을 받아 계획 → 실행 → 검증 → 리뷰를 차례로 돌리고, 정해진 지점마다 팝업으로 사람에게 묻습니다.
@@ -53,7 +55,7 @@ claude plugin install my-agent-tray@my-plugins   # 선택: macOS 메뉴바 앱
 | `/my-agent --dev <요청>` | 지정한 프로필로 새 작업을 시작합니다: `--general`, `--research`, `--dev`. 플래그가 없으면 요청을 보고 프로필을 고릅니다. |
 | `/my-agent continue` | 진행 중인 작업을 이어 갑니다. |
 | `/my-agent status` | 진행 중인 작업과 최근 작업을 보여 줍니다. |
-| `/my-agent:monitor` | 작업 기록을 보는 로컬 웹 페이지(읽기 전용)를 띄웁니다. `status`, `stop` |
+| `/my-agent:monitor` | 작업 기록을 보는 로컬 웹 페이지(읽기 전용)를 띄웁니다. 선택한 작업의 범위·계획·결과를 한 페이지로 요약하는 Report 탭이 있습니다. `status`, `stop` |
 
 작업 기록은 작업 위치의 `<task location>/<task_dir>/<작업 ID>/`에 남습니다(기본값은 `.my-agent/<작업 ID>/`, `docs/agent`는 이전 구조).
 끝난 작업은 그곳과 모니터 목록에 계속 쌓입니다. 끝난 지 30일 이상 된 작업을 `<task_dir>/.archived/`로 옮겨 목록에서 빼려면 다음을 실행합니다(되돌리려면 폴더를 다시 옮깁니다):

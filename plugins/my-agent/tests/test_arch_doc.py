@@ -65,10 +65,70 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v042(self):
+    def test_status_line_starts_with_v043(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.42 ('), line[:60])
-        self.assertIn('v0.41 (', line)
+        self.assertTrue(line.startswith('- Status: design draft v0.43 ('), line[:60])
+        self.assertIn('v0.42 (', line)
+        self.assertIn('plugin 0.7.0', line)
+
+    def test_preset_mechanism_is_described(self):
+        section = self.section('### 4.5 ', '### 4.5.1 ')
+        for word in ('`agent-models.json`', 'agent-models.py', 'agent-models.example.json',
+                     'pass=', 'CLAUDE_CODE_EFFORT_LEVEL', 'beats'):
+            self.assertIn(word, section, word)
+        self.assertNotIn('does not pass an `effort` argument in calls', section)
+        f13 = [l for l in self.text.splitlines() if l.startswith('| F13 |')][0]
+        self.assertIn('preset', f13)
+        self.assertIn('retry', f13)
+
+    def test_preset_rules_in_intake_and_plan(self):
+        for word in ('`Models:`', '`## Models`', 'presets --profile', '`Models` row'):
+            self.assertIn(word, self.text, word)
+        profile = [l for l in self.text.splitlines() if l.startswith('- **Profile change at the first gate')][0]
+        self.assertIn('`Models:`', profile)
+        self.assertIn('preset', profile)
+
+    def test_run_log_section_names_the_models_line(self):
+        section = self.section('### 4.7.2 ', '### 4.7.3 ')
+        self.assertIn('`models:`', section)
+        self.assertIn('preset=', section)
+        self.assertIn('source=file', section)
+
+    def test_retry_beats_the_preset(self):
+        section = self.section('### 4.8 ', '### 4.8.1 ')
+        self.assertIn('beats the preset', section)
+
+    def test_monitor_section_names_report_tab_and_open_html(self):
+        section = self.section('### 4.7.4 ', '### 4.8 ')
+        for word in ('Report', '/api/tasks/<key>/report', 'open-html.py', 'monitor-up.py'):
+            self.assertIn(word, section, word)
+
+    def test_gate_reports_open_with_overview_and_takeaway(self):
+        self.assertIn('### Overview', self.text)
+        self.assertIn('### Takeaway', self.text)
+
+    def test_prototype_is_a_local_file_opened_by_open_html(self):
+        a = self.text.index('**What G1b shows: mock-up and prototype**')
+        section = self.text[a:self.text.index('**What a prototype is**')]
+        self.assertIn('open-html.py', section)
+        for stale in ('claude.ai', 'private artifact', 'artifact link', 'publishes it'):
+            self.assertNotIn(stale, section, stale)
+        self.assertNotIn('prototype link', self.section('### 4.4 ', '### 4.5 '))
+
+    def test_check_before_anything_leaves_has_two_places(self):
+        a = self.text.index('**check before anything leaves**')
+        section = self.text[a:self.text.index('### 4.13 ')]
+        self.assertIn('two places', section)
+        self.assertNotIn('three places', section)
+        self.assertNotIn('prototype', section)
+        self.assertNotIn('artifact', section)
+
+    def test_decision_log_has_q26_to_q28(self):
+        for q in ('Q26', 'Q27', 'Q28'):
+            rows = [l for l in self.text.splitlines() if l.startswith(f'| {q} |')]
+            self.assertEqual(len(rows), 1, q)
+        q28 = [l for l in self.text.splitlines() if l.startswith('| Q28 |')][0]
+        self.assertIn('open-html.py', q28)
 
     def test_run_log_kinds_name_the_guard_line(self):
         section = self.section('### 4.7.2 ', '### 4.7.3 ')

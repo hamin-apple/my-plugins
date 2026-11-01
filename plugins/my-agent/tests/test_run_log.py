@@ -205,6 +205,19 @@ class RunLogTest(unittest.TestCase):
             self.assertEqual(self.run_log(*args).returncode, 2, args)
         self.assertEqual(log_lines(self.task), [])
 
+    def test_models_kind(self):
+        self.assertEqual(self.run_log('models', 'preset=economy', 'source=file').returncode, 0)
+        f = parse(log_lines(self.task)[-1])
+        self.assertEqual((f['preset'], f['source']), ('economy', 'file'))
+        self.assertIn('models: preset=economy source=file', log_lines(self.task)[-1])
+
+    def test_models_needs_preset_and_source(self):
+        for args in (('models', 'source=file'), ('models', 'preset=economy'), ('models',)):
+            r = self.run_log(*args)
+            self.assertEqual(r.returncode, 2, args)
+            self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
+        self.assertEqual(log_lines(self.task), [])
+
     def test_unknown_kind(self):
         r = self.run_log('bogus', 'a=1')
         self.assertEqual(r.returncode, 2)

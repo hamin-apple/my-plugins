@@ -173,3 +173,166 @@ def unit_of_prompt(prompt):
     """`u1` from a `Work unit: u1 …` line in a worker's prompt, or None."""
     m = UNIT_MARK.search(prompt or '')
     return m.group(1) if m else None
+
+
+# --- report parsers (monitor Report tab; each returns None or [] for a missing or empty text) ---
+
+CRITERION_LINE = re.compile(r'^\s*(\d+)\.\s+(.*\S)\s*$')
+CHECK_TAG = re.compile(r'\s*\[check:\s*([^\]]*?)\s*\]\s*$')
+VERIFY_ROW = re.compile(r'^\s*-\s*(\d+)\.\s+([A-Z]+)\b\s*(.*)$')
+RUN_LINE = re.compile(r'(?m)^Run:\s*(\d+)\s*$')
+REVIEW_BLOCKERS = re.compile(r'^BLOCKER\s+(\d+)\b')
+SEVERITIES = ('BLOCKER', 'SHOULD-FIX', 'NITPICK')
+FINDING_LINE = re.compile(r'^-\s*(BLOCKER|SHOULD-FIX|NITPICK)\s+(\S+)\s*(.*)$')
+FINDING_MARK = re.compile(r'\s*\((new|carried)\)\s*$')
+IMPROVEMENT_LINE = re.compile(r'^-\s*\[(L\d),\s*([a-z]+)\]\s*(.*\S)\s*$')
+SUMMARY_ITEM = re.compile(r'^\s*\d+\.\s+(.*\S)\s*$')
+UNIT_KEY = re.compile(r'^(?:-\s*)?([A-Z][A-Za-z ]*?):\s*(.*)$')
+PATH_TOKEN = re.compile(r'[\w./\-]+\.\w+(?::\d+)?')
+LINE_SUFFIX = re.compile(r':\d+$')
+
+
+def criteria(text: str) -> list:
+    """[(n, text without the `[check: …]` tag, tag or None)] from `## Completion criteria` (scope.md, or plan.md for the general profile)."""
+    rows = []
+    for line in section_lines(text, 'Completion criteria') or []:
+        m = CRITERION_LINE.match(line)
+        if m:
+            rows.append([int(m.group(1)), m.group(2)])
+        elif rows and line.strip() and line[:1].isspace():
+            rows[-1][1] += ' ' + line.strip()
+    out = []
+    for n, body in rows:
+        tag = CHECK_TAG.search(body)
+        out.append((n, CHECK_TAG.sub('', body) if tag else body, tag.group(1) if tag else None))
+    return out
+
+
+def purpose(text: str):
+    """The paragraph under `## Purpose and users` (scope.md) or `## Scope summary` (plan.md), or None."""
+    joined = ' '.join(l.strip() for l in section_lines(text, 'Purpose and users', 'Scope summary') or [] if l.strip())
+    return joined or None
+
+
+def verify_rows(text: str) -> list:
+    """[(n, verdict, evidence)] of the `- <n>. PASS|FAIL <evidence>` rows before the first `## ` heading of verify.md."""
+    out = []
+    for line in (text or '').splitlines():
+        if heading_name(line) is not None:
+            break
+        m = VERIFY_ROW.match(line)
+        if m:
+            out.append((int(m.group(1)), m.group(2), m.group(3).strip()))
+    return out
+
+
+def run_number(text: str):
+    """The `Run: <n>` of a verify.md or plan-review.md, or None."""
+    m = RUN_LINE.search(text or '')
+    return int(m.group(1)) if m else None
+
+
+def review_blockers(text: str):
+    """The n of the `BLOCKER n` first line of review.md, or None."""
+    for line in (text or '').splitlines():
+        if line.strip():
+            m = REVIEW_BLOCKERS.match(line.strip())
+            return int(m.group(1)) if m else None
+    return None
+
+
+def review_findings(text: str) -> list:
+    """[(severity, where, text, mark)] of the `## Findings` bullets of review.md; mark is `new`, `carried` or None."""
+    out = []
+    for line in section_lines(text, 'Findings') or []:
+        m = FINDING_LINE.match(line.strip())
+        if m:
+            body = m.group(3).strip()
+            mark = FINDING_MARK.search(body)
+            out.append((m.group(1), m.group(2), FINDING_MARK.sub('', body) if mark else body, mark.group(1) if mark else None))
+    return out
+
+
+def review_applied(text: str) -> list:
+    """The bullet lines (without the dash) under `## Applied after review` in review.md."""
+    return [l.strip()[1:].strip() for l in section_lines(text, APPLIED_AFTER_REVIEW) or [] if l.strip().startswith('-')]
+
+
+def finding_applied(where: str, applied_lines) -> bool:
+    """A finding is applied when an `Applied after review` line names its `<file>:<line>` or its file path
+    (a path in the line may be cut at the front)."""
+    file = LINE_SUFFIX.sub('', where)
+    for line in applied_lines:
+        for tok in PATH_TOKEN.findall(line):
+            if tok == where or where.endswith('/' + tok):
+                return True
+            if not LINE_SUFFIX.search(tok) and (file == tok or file.endswith('/' + tok)):
+                return True
+    return False
+
+
+def plan_review(text: str):
+    """{verdict, run, blockers, should_fix, nitpicks} of a plan-review.md, or None when the text is empty."""
+    lines = [l for l in (text or '').splitlines() if l.strip()]
+    if not lines:
+        return None
+    counts = {s: 0 for s in SEVERITIES}
+    for line in section_lines(text, 'Findings') or []:
+        m = FINDING_LINE.match(line.strip())
+        if m:
+            counts[m.group(1)] += 1
+    return {'verdict': lines[0].strip(), 'run': run_number(text), 'blockers': counts['BLOCKER'],
+            'should_fix': counts['SHOULD-FIX'], 'nitpicks': counts['NITPICK']}
+
+
+def gate_report_summary(text: str) -> list:
+    """The numbered items under `## Summary` of gate-report.md."""
+    return [m.group(1) for m in map(SUMMARY_ITEM.match, section_lines(text, 'Summary') or []) if m]
+
+
+def gate_report_improvements(text: str) -> list:
+    """[(level, strength, text)] of the `- [L1, weak] …` bullets under `## Suggested improvements`."""
+    lines = (l.strip() for l in section_lines(text, 'Suggested improvements') or [])
+    return [m.groups() for m in map(IMPROVEMENT_LINE.match, lines) if m]
+
+
+def criterion_numbers(line: str) -> list:
+    """Criterion numbers of a plan unit's `Completion criteria:` value: the integers outside parentheses, sorted, once each."""
+    out, depth = [], 0
+    for ch in line or '':
+        depth = depth + 1 if ch == '(' else max(0, depth - 1) if ch == ')' else depth
+        out.append(' ' if depth or ch in '()' else ch)
+    return sorted({int(n) for n in re.findall(r'(?<![\w.])\d+(?![\w.])', ''.join(out))})
+
+
+def unit_details(text: str) -> list:
+    """[{id, name, status, group, files, criteria}] of the `### u<n>` units under ## Work units
+    (files: the backticked paths of `Files to change:`, on its line or in its nested bullets)."""
+    units, in_files = [], False
+    for line in section_lines(text, 'Work units') or []:
+        head = UNIT_HEAD.match(line)
+        if head:
+            units.append({'id': head.group(1), 'name': head.group(2).strip(), 'status': None, 'group': None,
+                          'files': [], 'criteria': []})
+            in_files = False
+            continue
+        if not units:
+            continue
+        unit = units[-1]
+        key = None if line[:1].isspace() else UNIT_KEY.match(line)
+        if key:
+            name, value = key.groups()
+            in_files = name == 'Files to change'
+            if name == 'Status' and unit['status'] is None and value.split():
+                unit['status'] = value.split()[0]
+            elif name == 'Parallel group':
+                unit['group'] = value.strip() or None
+            elif name == 'Completion criteria':
+                unit['criteria'] = criterion_numbers(value)
+            elif in_files:
+                unit['files'] += re.findall(r'`([^`]+)`', value)
+        elif in_files and re.match(r'\s+-\s', line):
+            m = re.search(r'`([^`]+)`', line)
+            if m:
+                unit['files'].append(m.group(1))
+    return units

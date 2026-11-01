@@ -215,6 +215,59 @@ class ProfilesTest(unittest.TestCase):
         step4 = plan.split('## 4. Plan Review')[1].split('## G1b plan approval')[0]
         self.assertIn('L1 writes the `## Decisions` lines in `plan-review.md`; architect does not write that file', step4)
         self.assertGreaterEqual(plan.count('Tool choice'), 3)
+        # prototype: opened locally by the plugin script, not published
+        stale = ('publishes it', 'private artifact', 'artifact link', 'claude.ai')
+        proto3 = define.split('**G1a prototype:**')[1].split('4. **Confirm the scope:**')[0]
+        item2 = plan.split('2. If `## Prototype`')[1].split('3. Record before and after')[0]
+        for sec in (proto3, item2):
+            self.assertIn('open-html.py', sec)
+            self.assertIn('local path', sec)
+            for phrase in stale:
+                self.assertNotIn(phrase, sec)
+        self.assertIn('failed:', item2)
+        self.assertIn('--data-dir', item2)
+        self.assertNotIn('Check before anything leaves', item2)
+        self.assertIn('Nothing is published', item2)
+        # G1a / G1b chat reports open with Overview and Takeaway
+        self.assertIn('### Overview', g1a)
+        self.assertIn('### Takeaway', g1a)
+        self.assertIn('scope summary', g1a.split('### Takeaway')[1].split('###')[0] + g1a)
+        self.assertIn('`Prototype:` line', g1a)
+        g1b_item1 = plan.split('## G1b plan approval')[1].split('2. If `## Prototype`')[0]
+        self.assertIn('### Overview', g1b_item1)
+        self.assertIn('### Takeaway', g1b_item1)
+        self.assertIn('`Models` row', g1b_item1)
+        self.assertIn('`Prototype:` line', g1b_item1)
+
+    def test_plan_models_section_and_approval(self):
+        phases = REPO / 'l1-orchestration' / 'phases'
+        plan = (phases / 'plan.md').read_text(encoding='utf-8')
+        step3 = plan.split('## 3. Plan')[1].split('## 4. Plan Review')[0]
+        self.assertIn('agent-models.py', step3.split('2. Hand it')[1].split('3. Sections')[0])
+        self.assertIn('`## Models`', step3.split('3. Sections')[1])
+        step4 = plan.split('## 4. Plan Review')[1].split('## G1b plan approval')[0]
+        self.assertIn('agent-models.py', step4.split('3. Hand it')[1].split('4. Handle')[0])
+        approve = plan.split('4. **Approve:**')[1].split('5. **Request changes:**')[0]
+        self.assertIn('`## Models`', approve)
+        self.assertIn('Request changes', approve)
+        self.assertIn('refuses', approve)
+
+    def test_build_preset_rule(self):
+        build = (REPO / 'l1-orchestration' / 'phases' / 'build.md').read_text(encoding='utf-8')
+        self.assertNotIn('never pass `effort`', build)
+        self.assertNotIn('The model follows the definition file', build)
+        item3 = build.split('3. Hand out')[1].split('4. When a result')[0]
+        self.assertIn('show --plan', item3)
+        self.assertIn('pass=', item3)
+        self.assertIn('Models:', item3)
+        self.assertIn('model: "opus"', item3)
+        rules = build.split('## Workflow rules')[1].split('## 6. Merge')[0]
+        self.assertIn('definition values', rules)
+
+    def test_general_g1b_takeaway_carries_scope(self):
+        g = (REPO / 'l1-orchestration' / 'profiles' / 'general.md').read_text(encoding='utf-8')
+        row = [l for l in g.splitlines() if l.startswith('| G1b')][0]
+        self.assertIn('### Takeaway', row)
 
 
 if __name__ == '__main__':

@@ -99,5 +99,67 @@ class SchemaTest(unittest.TestCase):
         self.assertIsNone(ma_schema.unit_of_prompt('see Work unit: u3'))
 
 
+class ReportParsersTest(unittest.TestCase):
+    def test_criteria_and_purpose(self):
+        text = ('## Purpose and users\n\nClose it.\nSecond line.\n\n## Completion criteria\n'
+                '1. First thing works. More. [check: command]\n2. Second\n   continued. [check: file]\n3. No tag\n## Hard\n')
+        self.assertEqual(ma_schema.criteria(text), [(1, 'First thing works. More.', 'command'),
+                                                    (2, 'Second continued.', 'file'), (3, 'No tag', None)])
+        self.assertEqual(ma_schema.purpose(text), 'Close it. Second line.')
+        self.assertEqual(ma_schema.purpose('## Scope summary\nA.\n'), 'A.')
+        for empty in (None, '', 'no sections'):
+            self.assertEqual(ma_schema.criteria(empty), [])
+            self.assertIsNone(ma_schema.purpose(empty))
+
+    def test_verify(self):
+        text = 'Verdict: FAIL\nRun: 2\n- 1. PASS a.py:3 ok\n- 2. FAIL broken\n## Commands run\n- 3. PASS late\n'
+        self.assertEqual(ma_schema.verify_rows(text), [(1, 'PASS', 'a.py:3 ok'), (2, 'FAIL', 'broken')])
+        self.assertEqual(ma_schema.run_number(text), 2)
+        self.assertEqual((ma_schema.verify_rows(None), ma_schema.run_number('')), ([], None))
+
+    def test_review(self):
+        text = ('BLOCKER 0\n\n## Findings\n- SHOULD-FIX /p/SKILL.md:104 glued bullets → fix\n'
+                '- NITPICK /p/lib/a.py:36 copy (new)\n- NITPICK /p/lib/b.py:5 other (carried)\n\n'
+                '## Applied after review\n\n- SKILL.md:104 line break restored (plugins/x/SKILL.md)\n')
+        self.assertEqual(ma_schema.review_blockers(text), 0)
+        found = ma_schema.review_findings(text)
+        self.assertEqual([(f[0], f[1], f[3]) for f in found],
+                         [('SHOULD-FIX', '/p/SKILL.md:104', None), ('NITPICK', '/p/lib/a.py:36', 'new'),
+                          ('NITPICK', '/p/lib/b.py:5', 'carried')])
+        self.assertEqual(found[1][2], 'copy')
+        applied = ma_schema.review_applied(text)
+        self.assertEqual([ma_schema.finding_applied(f[1], applied) for f in found], [True, False, False])
+        self.assertTrue(ma_schema.finding_applied('/p/q/gate.py:9', ['docstring (q/gate.py)']))
+        self.assertEqual((ma_schema.review_blockers(None), ma_schema.review_findings(''), ma_schema.review_applied(None)),
+                         (None, [], []))
+
+    def test_plan_review(self):
+        text = ('REVISE\nRun: 1\n\n## Findings\n- BLOCKER plan.md:1 a\n- SHOULD-FIX plan.md:2 b\n- SHOULD-FIX x c\n'
+                '- NITPICK y d\n\n## Run 1 resolution\n- R1 BLOCKER done\n')
+        self.assertEqual(ma_schema.plan_review(text), {'verdict': 'REVISE', 'run': 1, 'blockers': 1, 'should_fix': 2, 'nitpicks': 1})
+        self.assertIsNone(ma_schema.plan_review(''))
+        self.assertIsNone(ma_schema.plan_review(None))
+
+    def test_gate_report(self):
+        text = ('# G\n\n## Summary\n1. one\n2. two\n\n## Tendencies\n- (weak) x\n\n## Suggested improvements\n'
+                '- [L1, weak] First.\n- [L3, clear] Second.\n')
+        self.assertEqual(ma_schema.gate_report_summary(text), ['one', 'two'])
+        self.assertEqual(ma_schema.gate_report_improvements(text), [('L1', 'weak', 'First.'), ('L3', 'clear', 'Second.')])
+        self.assertEqual((ma_schema.gate_report_summary(None), ma_schema.gate_report_improvements('')), ([], []))
+
+    def test_unit_details_and_criterion_numbers(self):
+        line = '1, 6, 7; the SKILL.md parts of 2 (…), 4 (… item 10 …) and 8 (…)'
+        self.assertEqual(ma_schema.criterion_numbers(line), [1, 2, 4, 6, 7, 8])
+        text = ('## Work units\n### u1 First\n- Agent: coder\n- Files to change: `P/a.md`, `P/b.py`\n'
+                '- Parallel group: group 1 (worktree)\n- Completion criteria: ' + line + '\n- Status: done\n'
+                '### u2 Second\n- Files to change:\n  - `P/c.py`: new\n  - `P/d.py`\n- Completion criteria: 3\n'
+                '- Status: pending\n## Approval\n')
+        units = ma_schema.unit_details(text)
+        self.assertEqual(units[0], {'id': 'u1', 'name': 'First', 'status': 'done', 'group': 'group 1 (worktree)',
+                                    'files': ['P/a.md', 'P/b.py'], 'criteria': [1, 2, 4, 6, 7, 8]})
+        self.assertEqual((units[1]['files'], units[1]['criteria'], units[1]['group']), (['P/c.py', 'P/d.py'], [3], None))
+        self.assertEqual((ma_schema.unit_details(None), ma_schema.criterion_numbers(None)), ([], []))
+
+
 if __name__ == '__main__':
     unittest.main()

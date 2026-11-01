@@ -1,0 +1,86 @@
+{
+  "general": {
+    "standard": {
+      "architect": {"model": "opus", "effort": "high"},
+      "plan-reviewer": {"model": "sonnet", "effort": "high"},
+      "verifier": {"model": "opus", "effort": "high"},
+      "reviewer": {"model": "sonnet", "effort": "high"},
+      "gate-analyst": {"model": "sonnet", "effort": "high"},
+      "explorer": {"model": "sonnet", "effort": "low"},
+      "researcher": {"model": "sonnet", "effort": "medium"},
+      "writer": {"model": "sonnet", "effort": "medium"},
+      "coder": {"model": "sonnet", "effort": "medium"}
+    },
+    "economy": {
+      "architect": {"model": "sonnet", "effort": "medium"},
+      "plan-reviewer": {"model": "sonnet", "effort": "medium"},
+      "verifier": {"model": "sonnet", "effort": "medium"},
+      "reviewer": {"model": "sonnet", "effort": "medium"},
+      "gate-analyst": {"model": "sonnet", "effort": "medium"},
+      "coder": {"model": "sonnet", "effort": "low"}
+    },
+    "max": {
+      "architect": {"model": "opus", "effort": "xhigh"},
+      "plan-reviewer": {"model": "opus", "effort": "xhigh"},
+      "verifier": {"model": "opus", "effort": "xhigh"},
+      "reviewer": {"model": "opus", "effort": "xhigh"},
+      "gate-analyst": {"model": "opus", "effort": "xhigh"}
+    }
+  },
+  "research": {
+    "standard": {
+      "architect": {"model": "opus", "effort": "high"},
+      "plan-reviewer": {"model": "sonnet", "effort": "high"},
+      "verifier": {"model": "opus", "effort": "high"},
+      "reviewer": {"model": "sonnet", "effort": "high"},
+      "gate-analyst": {"model": "sonnet", "effort": "high"},
+      "explorer": {"model": "sonnet", "effort": "low"},
+      "researcher": {"model": "sonnet", "effort": "medium"},
+      "writer": {"model": "sonnet", "effort": "medium"},
+      "coder": {"model": "sonnet", "effort": "medium"}
+    },
+    "economy": {
+      "architect": {"model": "sonnet", "effort": "medium"},
+      "plan-reviewer": {"model": "sonnet", "effort": "medium"},
+      "verifier": {"model": "sonnet", "effort": "medium"},
+      "reviewer": {"model": "sonnet", "effort": "medium"},
+      "gate-analyst": {"model": "sonnet", "effort": "medium"},
+      "coder": {"model": "sonnet", "effort": "low"}
+    },
+    "max": {
+      "architect": {"model": "opus", "effort": "xhigh"},
+      "plan-reviewer": {"model": "opus", "effort": "xhigh"},
+      "verifier": {"model": "opus", "effort": "xhigh"},
+      "reviewer": {"model": "opus", "effort": "xhigh"},
+      "gate-analyst": {"model": "opus", "effort": "xhigh"}
+    }
+  },
+  "dev": {
+    "standard": {
+      "architect": {"model": "opus", "effort": "high"},
+      "plan-reviewer": {"model": "sonnet", "effort": "high"},
+      "verifier": {"model": "opus", "effort": "high"},
+      "reviewer": {"model": "sonnet", "effort": "high"},
+      "gate-analyst": {"model": "sonnet", "effort": "high"},
+      "explorer": {"model": "sonnet", "effort": "low"},
+      "researcher": {"model": "sonnet", "effort": "medium"},
+      "writer": {"model": "sonnet", "effort": "medium"},
+      "coder": {"model": "sonnet", "effort": "medium"}
+    },
+    "economy": {
+      "architect": {"model": "sonnet", "effort": "medium"},
+      "plan-reviewer": {"model": "sonnet", "effort": "medium"},
+      "verifier": {"model": "sonnet", "effort": "medium"},
+      "reviewer": {"model": "sonnet", "effort": "medium"},
+      "gate-analyst": {"model": "sonnet", "effort": "medium"},
+      "coder": {"model": "sonnet", "effort": "low"}
+    },
+    "max": {
+      "architect": {"model": "opus", "effort": "xhigh"},
+      "plan-reviewer": {"model": "opus", "effort": "xhigh"},
+      "verifier": {"model": "opus", "effort": "xhigh"},
+      "reviewer": {"model": "opus", "effort": "xhigh"},
+      "gate-analyst": {"model": "opus", "effort": "xhigh"}
+    }
+  }
+}

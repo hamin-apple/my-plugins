@@ -83,7 +83,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
   - `${CLAUDE_SKILL_DIR}/l1-orchestration/phases/accept.md` (④ Accept: 7 Verify, 8 Review → G3)
   - Profile (`Profile:` in `intake.md`): `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/general.md`, `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/research.md`, `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/dev.md`
 - Read does not expand the plugin path variables in these files. When you run a command, replace the variable with this plugin's folder, `${CLAUDE_PLUGIN_ROOT}`.
-- Data folder: whenever you (re)read a phase file (also `continue`, compaction, a direct `define|plan|build|accept`) and at the start of Intake and status, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/data-dir.py" --data-dir '${user_config.data_dir}' --task-dir '${user_config.task_dir}'`. Its two output lines are `<data folder>` and `<task_dir>`. Use it for the popup, the folder of `projects.txt` and `<data folder>/active-index.json`, and as `--data-dir "<data folder>"` at the end of every run-log, usage-snapshot, gate-report, feedback and monitor-up call (all but feedback then take `--task-dir "<task_dir>"`).
+- Data folder: whenever you (re)read a phase file (also `continue`, compaction, a direct `define|plan|build|accept`) and at the start of Intake and status, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/data-dir.py" --data-dir '${user_config.data_dir}' --task-dir '${user_config.task_dir}'`. Its two output lines are `<data folder>` and `<task_dir>`. Use it for the popup, the folder of `projects.txt` and `<data folder>/active-index.json`, and as `--data-dir "<data folder>"` at the end of every run-log, usage-snapshot, gate-report, feedback and monitor-up call (all but feedback then take `--task-dir "<task_dir>"`); `agent-models.py` and `open-html.py` take `--data-dir` only.
 
 ## Arguments
 
@@ -121,6 +121,7 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
    - `dev`: requests that change code in a git repository (feature, bug fix, refactoring). The deliverable is a commit. If the task location is not a git repository, do not pick `dev`; pick `general` and write the reason in the Intake report.
    - `research`: requests to research a topic into a note or report with sources (mainly web research).
    - `general`: any other multi-step task.
+   - **Models preset:** asked after the profile is set; see "Models preset" below item 11.
 4. **Task ID:** `<YYMMDD>-<slug>`. Set the date once with `date +%y%m%d`. The slug is 2–4 English words for the request without the profile flag: lowercase letters, digits and hyphens, 30 characters or fewer. If the same folder exists, add `-b`, `-c`. Do not ask; show it in the first gate popup.
 5. **`.gitignore`:** Only when the task location is a git repository and `<task_dir>/.gitignore` does not exist, popup: `Don't commit (Recommended)` / `Commit`. Skip it also when `git check-ignore -q <task location>/<task_dir>/` exits 0. The question says what `Commit` means: task records go into the project's commits. For Don't commit, write the single line `*`; for Commit, the single line `# my-agent: commit`.
 6. **`.active` and index:** Create the task folder. Run `date '+%Y-%m-%d %H:%M'` first, then write the four lines of `.active` (`phase: 1`, `started:` with that value) with the Write tool, without command substitution (see "Tool choice"). If the task location differs from the folder you ran in (or its git root), add one line to `<data folder>/active-index.json` (`{"<run folder>": "<task location>"}`). Leave other lines as they are.
@@ -137,9 +138,11 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
    Request: <the request as written, one line; keep the leading valid flags as written, drop invalid flags the person let the Router replace>
    ```
 
-   For a follow-up task, add `Follows: <previous task ID>`.
-10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"`. Record the profile-flag popups (Arguments) and the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist). With a statusline file, the `step n=1` line also writes the baseline `cost` line (`baseline=1`). With `--auto`, then write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=flag --data-dir "<data folder>" --task-dir "<task_dir>"`. Delegation covers popups after that line; the item 1–5 popups and the flag popups go to the person.
+   For a follow-up task, add `Follows: <previous task ID>`. When the preset file is valid and has presets for the profile, add `Models: <preset>` (Intake item 3).
+10. **Record:** `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" step n=1 name=Intake --model <main session model ID> --data-dir "<data folder>" --task-dir "<task_dir>"`. Record the profile-flag popups (Arguments) and the popups shown in items 1–5 as `ask`/`answer` lines after this line (they could not be recorded then, because `.active` did not exist). With a statusline file, the `step n=1` line also writes the baseline `cost` line (`baseline=1`). With `--auto`, then write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=on how=flag --data-dir "<data folder>" --task-dir "<task_dir>"`. Delegation covers popups after that line; the item 1–5 popups and the flag popups go to the person. Last, only when `Models:` was written, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" models preset=<name> source=file --data-dir "<data folder>" --task-dir "<task_dir>"`.
 11. **Report:** Show the task ID, task location, profile (with `(set by you)` or `(Router)`) and monitor line, plus the line `Task folder: <task_dir>` only when it is not `.my-agent`, and the line `Delegated approval: on (--auto)` only when it is on, in 6 lines or fewer, then go to step 2 in `define.md`.
+
+**Models preset (item 3)** — after the profile is set, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/agent-models.py" presets --profile <profile> --data-dir "<data folder>"`. Only when it prints 2 or more presets, popup (a popup of items 1–5, so it goes to the person; record it in item 10): the question opens with one plain line saying what a preset is, one choice per output line, the first line `(Recommended)`, 2–4 choices. One preset or `none`: no popup; with one preset `standard` is used. Exit 1: show the one-line cause and popup `Use definition values (Recommended)` / `Abort`; after `Use definition values` there is no `Models:` line and no `models` line, the same as a missing file.
 
 ## status
 
@@ -156,6 +159,7 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
 2. If the `my-agent:` value in `intake.md` differs from the current value (same command as Intake item 9), show `git -C "${CLAUDE_PLUGIN_ROOT}" diff --stat <old value> -- .` and popup: `Proceed as is (Recommended)` / `Abort`. To proceed, update that line and run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" rules-changed from=<old value> to=<new value> --data-dir "<data folder>" --task-dir "<task_dir>"`.
 3. If `session:` in `.active` differs from `$CLAUDE_CODE_SESSION_ID`, popup: `Take over (Recommended)` / `Cancel`. To take over, update `session:`.
 4. Re-read that phase file and the profile file. Rerun the monitor command (Intake item 8).
+   - When `intake.md` has `Models:`, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/agent-models.py" show --profile <p> --preset <name> --data-dir "<data folder>"`. If it exits 1 because the preset is gone, report one line (`Preset "<name>" (intake.md Models:) is no longer in agent-models.json for <p> (presets: …); the definition values are used for the rest of the task.`) and use the definition values from then on.
 5. In `plan.md` `## Work units`, match each unit with `Status: running` (`### u<n>`) against `unit=` in the run-log `call:`/`stop:` lines. If that unit's `stop:` is `end=ok` and, for a writer or researcher unit, its result file exists, set it to `done` (a coder unit has no result file); otherwise set it back to `pending`. If `git worktree list` shows a leftover coder worktree not tied to a work unit, popup: `Merge` / `Redo` / `Discard`. A worktree on a `my-agent-task/` branch is a person's task worktree, not a leftover coder worktree; it gets no such popup.
 6. If the run-log has a `revision` line with `state=pending` and no `state=done` line with the same `rev=`, the revision was cut off. Archiving finished before that line, so do not redo it; only check that the line's `archive=` folder exists and is not empty (if missing or empty, stop and report). Then go through items 4 and 5 of "In-flight revision" → Revise this task in order, skip what is already done, and finish: the `rev<new rev>` line in `plan.md` `## Revisions`, deleting the judgment files, clearing `## Approval` (and `## Confirmation` for ①), `phase:` in `.active` (the `to=` value), and last the `state=done` line.
 7. Write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" resume session=<session ID> --data-dir "<data folder>" --task-dir "<task_dir>"` and continue from the remaining step.
@@ -201,6 +205,7 @@ The run-log is `run-log.md` in the task folder, and only `run-log.py` writes its
 | Delegated approval ends | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" delegate state=off how=<person or end> --data-dir "<data folder>" --task-dir "<task_dir>"` (`person`: take-back message; `end`: G3 acceptance or Abort) |
 | Popup answered by L1 (delegated approval) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" answer gate=<same value> choice="<recommended choice>" by=L1 --data-dir "<data folder>" --task-dir "<task_dir>"` (an `answer` line without `by=` is the person's) |
 | Profile change at the first gate | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" profile from=<old> to=<new> back=<1, 2 or -> archive=<archive folder or -> --data-dir "<data folder>" --task-dir "<task_dir>"` |
+| Model preset chosen (Intake, profile change at the first gate), only when `Models:` is written | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" models preset=<name> source=file --data-dir "<data folder>" --task-dir "<task_dir>"` |
 | Adjust within approved scope | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="Scope change: <content>" files=plan.md --data-dir "<data folder>" --task-dir "<task_dir>"` |
 | A background result becomes stale in a revision | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" stale id=<agent_id> rev=<new rev> --data-dir "<data folder>" --task-dir "<task_dir>"` |
 | Execute start (dev profile) | `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" base commit=<git rev-parse HEAD> dirty="<git status --porcelain summary>" --data-dir "<data folder>" --task-dir "<task_dir>"` |
@@ -225,11 +230,13 @@ Read the lines the command prints:
 | Situation | Handling |
 |---|---|
 | API error, rate limit | Retry once with the same model. If it happens again, E |
-| Worker stopped once (`PARTIAL`, `end=partial`) | Retry on opus as a new call (never a resume) with the same input and the stop report (call argument `model: "opus"`) |
+| Worker stopped once (`PARTIAL`, `end=partial`) | Retry on opus as a new call (never a resume) with the same input and the stop report (call argument `model: "opus"`, which beats the preset) |
 | Worker stopped twice | If it is a small fix L1 can make directly, make it; otherwise E. If the plan was wrong, go back to Plan |
 | Verify FAIL 1–2 times | Archive the judgment files, go back to Execute, and pass the list of failed criteria (`accept.md` "Back to Execute"); after the second FAIL on the same criterion, the fixer's new call must give a structural argument (why no other failing form remains) before the fix, or offer `Change scope` through E |
 | Verify FAIL 3 times in a row | E: `Keep fixing` / `Change scope·criteria` / `Abort` |
 | A workflow ends as completed | Do not treat it as success until you check its "could not handle" list |
+
+**Model and effort per call:** they come from the task's preset. Before G1b approval run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/agent-models.py" show --profile <p> --preset <name> --data-dir "<data folder>"`; after approval run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/agent-models.py" show --plan <task folder>/plan.md` (the `## Models` rows). Pass the Agent call arguments `model`/`effort` only for the fields listed under `pass=`. With no `Models:` line, pass none. When `continue` reported the preset gone (`continue` item 4), do not run `show --plan` and pass none for the rest of the task. The retry on opus passes `model: "opus"` for that call and beats the preset; an `effort` listed under `pass=` is still passed.
 
 ## Delegated approval details
 
@@ -239,7 +246,7 @@ Read the lines the command prints:
 
 ## Check before anything leaves
 
-Right before a deliverable leaves the task folder, scan it for secret patterns: publishing a prototype artifact, copying the deliverable after G3, copying `gate-report.md` in the retrospective, committing (dev profile, or a project that chose to commit `<task_dir>/`).
+Right before a deliverable leaves the task folder, scan it for secret patterns: copying the deliverable after G3, copying `gate-report.md` in the retrospective, committing (dev profile, or a project that chose to commit `<task_dir>/`).
 
 1. `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/secret-scan.py" <file or folder that leaves>`. If there is no output (exit 0), proceed. Exit 2 (`no such path`) means the path is wrong; fix the path and scan again.
 2. On a hit, show the location (`<file>:<line>: <kind>`) and popup: `Remove those parts and proceed (Recommended)` / `Proceed as is` / `Abort`. Before and after the popup, write `ask gate=Q … rec="Remove those parts and proceed"`/`answer gate=Q` lines.
@@ -249,9 +256,13 @@ Right before a deliverable leaves the task folder, scan it for secret patterns: 
 
 G1a, G1b, G3 (general and dev) and E open the chat report with an overview, then the details:
 
-- A table `| Item | Value |` of 5–8 rows at the top: task and profile; what is being approved; key decisions; counts (files, work units or estimate); open risks or unhandled items; what each choice leads to. In E, the "Approving" row says what is stuck.
+- G1a and G1b open with `### Overview` (background and goal, a few lines of prose in the person's language) and `### Takeaway` (G1a: the scope summary, i.e. purpose, criteria count and non-goals; G1b: the plan summary, i.e. work units, order and estimate), before the table.
+- A table `| Item | Value |` of 5–8 rows: task and profile; what is being approved; key decisions; counts (files, work units or estimate); open risks or unhandled items; what each choice leads to. In E, the "Approving" row says what is stuck. At G1b the table has a `Models` row: the preset and the recommended change, if any (`Approve` takes it, `Request changes` refuses it); without a change, `standard (definition values)` or the preset name.
 - Then a `### Details` heading with the full mock-up, diff or judgment summary.
 - The popup question text repeats the first two rows, e.g. "261101-fix-tally · dev (Router) — confirm the scope (6 criteria)?".
+- **Prototype** (G1a, and G1b when one exists): a prototype is the local file `<task_dir>/<task-id>/prototype/index.html`. After checking it, run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/open-html.py" "<absolute path of prototype/index.html>" --data-dir "<data folder>"` (no `--task-dir`). Its one output line is `window`, `tab` or `failed: <reason>`. Put the first line of `### Details` as `Prototype: <local path> (opened in the browser: <window|tab>)`, or on a `failed:` line `Prototype: <local path> (not opened: <reason>; open the file yourself)`, and carry on. The prototype is not published anywhere, and no harness tool is used for it.
+  - At G1a the line comes before the `scope.md` text. At G1b, when a prototype exists, `### Details` shows that line and the plan summary instead of the full mock-up; the prototype is remade only when the mock-up changed (otherwise the existing file is opened again). Without a prototype, `### Details` is as above.
+- G3 and E are unchanged.
 
 ## In-flight revision (before G3 acceptance)
 
@@ -265,6 +276,7 @@ The record of revisions is the run-log's `revision` lines. `## Revisions` at the
   3. Update `Profile:` in `intake.md`; `Request:` is left as written. The label is then `(set by you)` because of the `profile` run-log line.
   4. Convert. To general: archive and remove `scope.md`; its purpose, numbered criteria (same numbers), non-goals and deliverable location go to architect as the scope summary at the top of `plan.md`; back to ② Plan (`back=2`). From general: write `scope.md` from `## Scope summary` and `## Completion criteria`, ask only the dev or research Scope items still missing, archive and remove `plan.md`, run explorer again only if `explore.md` lacks check commands; back to ① Define (`back=1`), then G1a. Before `scope.md` exists nothing is rolled back (`back=-`, `archive=-`) and the interview goes on with the new profile's items.
   5. Write the `profile` line (Recorder rules), change `phase:` in `.active`, and tell the person in one line.
+     - Models preset: run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/agent-models.py" presets --profile <new profile> --data-dir "<data folder>"` again and ask with the same popup rule as Intake item 3 (a popup only with 2 or more presets; one preset gives `standard`; `none` gives no `Models:` line; exit 1 gives the broken-file popup). Then replace `Models:` in `intake.md` (remove it when Intake item 3 gives none) and, when `Models:` was written, write `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" models preset=<name> source=file --data-dir "<data folder>" --task-dir "<task_dir>"`. Record the popup like the other popups of that gate.
   - After G1b approval a profile change is a new task (`Follows:`); offer `Split into a new task (Recommended)` in the kind popup below.
 
 When a message that looks like a revision arrives after G1b approval, first ask its kind in a popup: `Revise this task` / `Adjust within approved scope` / `Split into a new task` / `Cancel` (put the one that fits first, with `(Recommended)`).

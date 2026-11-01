@@ -240,6 +240,136 @@ body.entering .tl-bar.live { animation: grow .8s backwards, stripes .7s linear i
 .mm-tag { font: 600 10.5px var(--mono); color: var(--surface); background: var(--gate); border-radius: 4px; padding: 0 5px; }
 .console .ln.mm { color: #ffb79b; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+/* report tab */
+#p-report.panel { background: none; border: 0; padding: 0; }
+#p-report .rp-part { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; min-width: 0; margin-bottom: 10px; }
+#p-report .rp-part > .ph { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+#p-report .rp-part > .ph h3 { font-size: 15px; }
+#p-report .rp-part > .ph small { color: var(--muted); font-size: 12px; }
+#p-report .seg.small button { padding: 1px 8px; font-size: 11.5px; }
+#p-report .nyw { font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 6px 10px; margin: 4px 0; background: var(--surface-2); }
+body.lay-b #p-report, body.lay-c #p-report { display: none; }
+/* overview part */
+#p-report .lead { margin: 0 0 6px; }
+#p-report .ovsum { margin: 0; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+#p-report .ovl { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 1px 10px; margin: 0; font-size: 13px; }
+#p-report .ovl dt { color: var(--muted); }
+#p-report .ovl dd { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 12.5px; }
+
+/* takeaway part */
+#p-report .rkpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 4px; }
+@media (max-width: 760px) { #p-report .rkpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }  }
+#p-report .rkpi { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#p-report .rkpi .kl { font-size: 11px; color: var(--muted); letter-spacing: .04em; }
+#p-report .rkpi .kv2 { font: 600 20px/1.2 var(--sans); font-variant-numeric: tabular-nums; }
+#p-report .rkpi .kv2 small { font-size: 13px; font-weight: 500; color: var(--muted); }
+#p-report .rkpi .kv2.ok { color: var(--ok); }
+#p-report .rkpi .ks { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#p-report .rbar { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 2px; }
+#p-report .rbar i { display: block; height: 100%; width: 100%; background: var(--ok); border-radius: 99px; transform-origin: left; }
+#p-report .sub { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; margin: 10px 0 5px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+
+/* compact expandable rows (criteria, work units) */
+#p-report .rows { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+#p-report .lrow { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; margin: 0; background: var(--surface); }
+#p-report .lrow:last-child { border-bottom: 0; }
+#p-report .lrow > .sh { grid-template-columns: 26px 10px minmax(0, 1fr) auto 16px; height: 28px; padding: 0 10px; border-radius: 0; gap: 8px; }
+#p-report .lrow .rnum { font: 12px var(--mono); color: var(--muted); }
+#p-report .lrow .tt { font-weight: 400; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#p-report .lrow .rt { font: 600 10.5px var(--mono); color: var(--muted); }
+#p-report .vdot { width: 8px; height: 8px; border-radius: 50%; background: var(--l4); }
+#p-report .vdot.pass { background: var(--ok); }
+#p-report .vdot.fail { background: var(--gate); }
+#p-report .vdot.run { background: var(--st-run); }
+#p-report .mk { font: 600 14px/1 var(--mono); color: var(--muted); text-align: center; }
+#p-report .mk::before { content: "+"; }
+#p-report .sec.open > .sh .mk::before { content: "\2212"; }
+#p-report .lrow.open > .sh { background: var(--surface-2); }
+
+/* timeline */
+#p-report .rtl { --lw: 150px; position: relative; font-size: 12px; }
+#p-report .rtl-gates { position: relative; height: 22px; margin-left: var(--lw); }
+#p-report .rtl-chip { position: absolute; top: 2px; transform: translateX(-50%); font: 600 10.5px var(--mono); color: var(--gate); border: 1px solid var(--gate); background: var(--gate-soft); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+#p-report .rtl-chip.end { transform: translateX(-100%); }
+#p-report .rtl-axis { position: relative; height: 16px; margin-left: var(--lw); border-bottom: 1px solid var(--line); font: 10.5px var(--mono); color: var(--muted); }
+#p-report .rtl-axis span { position: absolute; transform: translateX(-50%); }
+#p-report .rtl-axis span:first-child { transform: none; }
+#p-report .rtl-row { display: grid; grid-template-columns: var(--lw) minmax(0, 1fr); align-items: center; min-height: 30px; border-bottom: 1px dashed var(--line); }
+#p-report .rtl-row .lb { font: 12px var(--mono); padding-right: 8px; line-height: 1.25; }
+#p-report .rtl-row .lb small { display: block; color: var(--muted); font-family: var(--sans); font-size: 10.5px; }
+#p-report .rtl-track { position: relative; height: 30px; }
+#p-report .rtl-bar { position: absolute; top: 8px; height: 14px; border-radius: 4px; background: var(--c, var(--accent)); transform-origin: left; min-width: 4px; }
+#p-report .rtl-marks { position: absolute; top: 22px; bottom: 0; left: var(--lw); right: 0; pointer-events: none; }
+#p-report .rtl-mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--gate); opacity: .5; }
+#p-report .rtl-back { position: absolute; top: 3px; transform: translateX(-50%); font: 600 10px var(--mono); color: var(--surface); background: var(--gate); border-radius: 4px; padding: 0 4px; white-space: nowrap; z-index: 1; }
+#p-report.rp-enter .rtl-bar { animation: rp-grow .8s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+#p-report.rp-enter .rtl-back { animation: rp-rise .5s backwards; animation-delay: .9s; }
+#p-report.rp-enter .lrow, #p-report.rp-enter .rkpi { animation: rp-rise .4s backwards; animation-delay: calc(var(--i, 0) * 30ms); }
+#p-report.rp-enter .rkpi .rbar i { animation: rp-grow .9s cubic-bezier(.2,.8,.2,1) backwards; }
+@keyframes rp-grow { from { transform: scaleX(0); } }
+@keyframes rp-rise { from { opacity: 0; transform: translateY(8px); } }
+#p-report .rlegend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+#p-report .rlegend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+@media (max-width: 520px) { #p-report .rtl { --lw: 104px; }#p-report .rtl-row .lb { font-size: 11px; }#p-report .rp-part { padding: 10px; }#p-report .ovl { grid-template-columns: 78px minmax(0, 1fr); }  }
+
+/* cost */
+#p-report .ctab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+#p-report .ctab th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+#p-report .ctab td { border-bottom: 1px dashed var(--line); padding: 4px 6px; vertical-align: middle; }
+#p-report .ctab .n { text-align: right; font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+#p-report .ctab .nr { color: var(--muted); font-style: italic; }
+#p-report .ctab .cbar { display: block; height: 6px; background: var(--accent); border-radius: 3px; transform-origin: left; margin-top: 2px; }
+#p-report.rp-enter .ctab .cbar { animation: rp-grow .8s backwards; }
+#p-report .ctabwrap { overflow-x: auto; }
+
+/* follow-up */
+#p-report .fl { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+#p-report .fl li { font-size: 13px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: baseline; }
+#p-report .fl .one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#p-report .tag { font: 600 10.5px var(--mono); padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+#p-report .tag.clear { color: var(--ok); border-color: var(--ok); }
+#p-report .chain { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13px; }
+#p-report .chain code { background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; }
+#p-report .chain .self { border-color: var(--accent); color: var(--accent); }
+
+/* collapsed sections */
+#p-report .sec { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin-bottom: 6px; }
+#p-report .sh { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; text-align: left; border: 0; background: transparent; padding: 7px 10px; border-radius: 8px; }
+#p-report .sh:hover { background: var(--surface-2); }
+#p-report .sh .car { color: var(--muted); font-size: 11px; transition: transform .2s; display: inline-block; }
+#p-report .sec.open > .sh .car { transform: rotate(90deg); }
+#p-report .sh .tt { font-size: 13.5px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+#p-report .sh .tt small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 6px; }
+#p-report .sb { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+#p-report .sec.open > .sb { grid-template-rows: 1fr; }
+#p-report .sbi { overflow: hidden; min-height: 0; visibility: hidden; transition: visibility .25s; }
+#p-report .sec.open > .sb > .sbi { visibility: visible; }
+#p-report .sbp { padding: 4px 12px 10px 36px; font-size: 13px; }
+#p-report .sbp p { margin: 0 0 6px; }
+#p-report .vd { font: 600 11px var(--mono); padding: 0 6px; border-radius: 4px; border: 1px solid var(--ok); color: var(--ok); background: var(--ok-soft); white-space: nowrap; }
+#p-report .vd.neutral { border-color: var(--line); color: var(--muted); background: transparent; }
+#p-report .vd.sf { border-color: var(--l2); color: var(--l2); background: var(--l2-soft); }
+#p-report .files { margin: 4px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+#p-report .files code { font-size: 11.5px; background: var(--surface-2); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
+#p-report .stt { font-family: var(--mono); font-size: 11px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--ok); color: var(--ok); }
+#p-report .stt.other { border-color: var(--line); color: var(--muted); }
+#p-report .dtab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+#p-report .dtab th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+#p-report .dtab td { border-bottom: 1px dashed var(--line); padding: 4px 6px; vertical-align: top; }
+#p-report .dtab td.m { font-family: var(--mono); font-size: 11.5px; white-space: nowrap; }
+#p-report .pick { font: 11px var(--mono); padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+#p-report .pick.yes { border-color: var(--ok); color: var(--ok); }
+#p-report .pick.deleg { border-color: var(--l1); color: var(--l1); }
+#p-report .pick.typed { border-color: var(--l2); color: var(--l2); }
+#p-report .twrap { overflow-x: auto; }
+#p-report .summ { margin: 0; padding-left: 20px; font-size: 13px; }
+#p-report .summ li { margin-bottom: 4px; }
+#p-report .rpill { display: inline-block; font: 11.5px var(--mono); padding: 0 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin: 0 4px 4px 0; }
+#p-report .rpill.sf { border-color: var(--l2); color: var(--l2); }
+#p-report .gh { font-size: 11.5px; font-weight: 600; color: var(--muted); letter-spacing: .04em; margin: 8px 0 4px; }
+#p-report .gh:first-child { margin-top: 0; }
+
+@media (prefers-reduced-motion: reduce) { #p-report *, #p-report *::before, #p-report *::after { animation: none !important; transition-duration: .01ms !important; } }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
 
 /* architecture */
@@ -452,12 +582,14 @@ body.side-min .side-head { justify-content: center; padding: 0 0 10px; }
       <button data-tab="arch" aria-selected="false"><span class="k">2</span>Architecture</button>
       <button data-tab="files" aria-selected="false"><span class="k">3</span>Deliverables</button>
       <button data-tab="log" aria-selected="false"><span class="k">4</span>Log</button>
+      <button data-tab="report" aria-selected="false"><span class="k">5</span>Report</button>
     </nav>
     <div class="panels">
       <section class="panel on" data-view="status" id="p-status"></section>
       <section class="panel" data-view="arch" id="p-arch"></section>
       <section class="panel" data-view="files" id="p-files"></section>
       <section class="panel" data-view="log" id="p-log"></section>
+      <section class="panel" data-view="report" id="p-report"></section>
     </div>
   </main>
 </div>
@@ -900,8 +1032,8 @@ function renderAll() { renderChrome(); renderList();
     $('task-head').innerHTML = t ? `<h2>${esc(t.id)}</h2><span class="where"><code>${esc(t.folder)}/</code></span>` : '';
     $('p-status').innerHTML = t ? `<div class="now-box"><h4>${L('Could not read this task', '이 작업을 읽을 수 없음')}</h4><p class="note">${esc(t.error)}</p></div>`
       : `<p class="note">${st.offline ? L('Server not reachable', '서버에 연결할 수 없음') : L('No tasks yet.', '아직 작업이 없습니다.')}</p>`;
-    ['p-arch', 'p-files', 'p-log'].forEach(id => $(id).innerHTML = '');
-  } else { renderHead(); renderStatus(); renderArch(); renderFiles(); renderLog(); }
+    ['p-arch', 'p-files', 'p-log', 'p-report'].forEach(id => $(id).innerHTML = '');
+  } else { renderHead(); renderStatus(); renderArch(); renderFiles(); renderLog(); renderReport(); }
   document.querySelectorAll('.panel[data-view]').forEach(p => p.classList.toggle('on', p.dataset.view === st.tab));
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === st.tab));
   afterRender();
@@ -914,7 +1046,9 @@ const vt = fn => document.startViewTransition && !matchMedia('(prefers-reduced-m
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.task) { selectTask(b.dataset.task); }
-  else if (b.dataset.tab) { st.tab = b.dataset.tab; entering(); vt(() => renderAll()); }
+  else if (b.dataset.rx) rpToggle(b);
+  else if (b.dataset.rov) rpOverviewForm(b);
+  else if (b.dataset.tab) { st.tab = b.dataset.tab; entering(); if (st.tab === 'report') rpEnterTab(); vt(() => renderAll()); }
   else if (b.dataset.lang) { LANG = b.dataset.lang; try { localStorage.setItem('ma-lang', LANG); } catch (x) {} lastTyped = ''; vt(() => renderAll()); }
   else if (b.dataset.compwin) openCompWin();
   else if (b.dataset.side) { st.sideMin = !st.sideMin; try { localStorage.setItem('ma-side-min', st.sideMin ? '1' : '0'); } catch (x) {} vt(() => renderList()); }
@@ -950,6 +1084,176 @@ document.addEventListener('input', e => { if (e.target.id === 'rp-range') rpGo(+
 $('task-select').addEventListener('change', e => selectTask(e.target.value));
 
 
+/* ---------- report tab ---------- */
+const RP = {};   /* report JSON per task key; { error } when the fetch failed */
+const rp = { ov: 'para', open: new Set(), play: false };
+let rpT;
+const rpReduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rpEsc = s => (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const NYW = file => `<p class="nyw">Not written yet: <code>${rpEsc(file)}</code></p>`;
+const rpPad = n => (n < 10 ? '0' : '') + n;
+const rpHm = d => rpPad(d.getHours()) + ':' + rpPad(d.getMinutes());
+const rpHms = d => rpHm(d) + ':' + rpPad(d.getSeconds());
+const rpDur = s => { s = Math.round(s); return s >= 3600 ? Math.floor(s / 3600) + 'h ' + Math.round((s % 3600) / 60) + 'm' : s >= 60 ? Math.floor(s / 60) + 'm ' + rpPad(s % 60) + 's' : s + 's'; };
+const RP_COLORS = ['var(--l1)', 'var(--l1)', 'var(--l2)', 'var(--l2)', 'var(--l3)', 'var(--l3)', 'var(--l4)', 'var(--l4)'];
+
+async function loadReport(key) {
+  try { RP[key] = await getJSON('/api/tasks/' + encodeURIComponent(key).replace(/%2F/g, '/') + '/report'); }
+  catch (err) { RP[key] = { error: String(err.message || err) }; }
+}
+/* entering the tab: play the entry motion once, then refresh the data */
+async function rpEnterTab() {
+  const key = st.task; if (!key) return;
+  rp.play = true;
+  const before = JSON.stringify(RP[key]);
+  await loadReport(key);
+  if (key !== st.task || st.tab !== 'report' || JSON.stringify(RP[key]) === before) return;
+  lastSig = JSON.stringify([TASKS, FULL[key], st.offline, RP[key]]);
+  renderAll();
+}
+const rpIsOpen = id => rp.open.has(st.task + '|' + id);
+function rpSec(id, title, right, body) {
+  const o = rpIsOpen(id);
+  return `<div class="sec${o ? ' open' : ''}" id="${id}"><button class="sh" data-rx="${id}" aria-expanded="${o}" aria-controls="${id}-b"><span class="car">&#9656;</span><span class="tt">${title}</span><span>${right || ''}</span></button><div class="sb" id="${id}-b"><div class="sbi"><div class="sbp">${body}</div></div></div></div>`;
+}
+function rpRow(id, i, num, dot, text, tip, right, body) {
+  const o = rpIsOpen(id);
+  return `<div class="sec lrow${o ? ' open' : ''}" id="${id}" style="--i:${i}"><button class="sh" data-rx="${id}" aria-expanded="${o}" aria-controls="${id}-b"><span class="rnum">${num}</span><span class="vdot ${dot}"></span><span class="tt" title="${rpEsc(tip)}">${text}</span><span class="rt">${right}</span><span class="mk" aria-hidden="true"></span></button><div class="sb" id="${id}-b"><div class="sbi"><div class="sbp">${body}</div></div></div></div>`;
+}
+function rpOverview(d) {
+  const o = d.overview, delivered = o.delivered ? rpEsc(o.delivered) : 'not delivered yet';
+  if (rp.ov === 'para') return (o.purpose ? `<p class="lead">${rpEsc(o.purpose)}</p>` : `<p class="lead"></p>${NYW('scope.md')}`) +
+    `<p class="ovsum mono">${[rpEsc(o.task), rpEsc(o.profile), rpEsc(o.status), delivered].join(' &middot; ')}</p>`;
+  const rows = [['Task', rpEsc(o.task)], ['Profile', rpEsc(o.profile)], ['Status', rpEsc(o.status)], ['Delivered', delivered], ['Follows', o.follows ? rpEsc(o.follows) : 'none'], ['Request', o.request ? rpEsc(o.request) : 'not written yet']];
+  return '<dl class="ovl">' + rows.map(r => `<dt>${r[0]}</dt><dd title="${r[1]}">${r[1]}</dd>`).join('') + '</dl>';
+}
+function rpKpi(i, label, val, total, dec, cls, sub, frac, prefix, play) {
+  const shown = val == null ? '-' : `<span data-count="${val}" data-dec="${dec}">${play ? '0' : Number(val).toFixed(dec)}</span>`;
+  return `<div class="rkpi" style="--i:${i}"><span class="kl">${label}</span><span class="kv2 ${val == null ? '' : cls}">${val == null ? '' : (prefix || '')}${shown}${total != null ? `<small> / ${total}</small>` : ''}</span><span class="ks" title="${rpEsc(sub)}">${rpEsc(sub)}</span>${frac ? `<div class="rbar"><i style="transform:scaleX(${frac})"></i></div>` : ''}</div>`;
+}
+function rpTimeline(t) {
+  const steps = (t.steps || []).map(s => ({ n: s.n, name: s.name, a: new Date(s.start) }));
+  if (!steps.length) return NYW('run-log.md');
+  const end = t.end ? new Date(t.end) : new Date();
+  steps.forEach((s, i) => { s.b = i + 1 < steps.length ? steps[i + 1].a : end; });
+  const t0 = steps[0].a.getTime(), span = Math.max(1, end.getTime() - t0);
+  const pct = d => Math.max(0, Math.min(100, 100 * (new Date(d).getTime() - t0) / span));
+  const gates = t.gates || [], backs = t.backs || [];
+  let h = '<div class="rtl"><div class="rtl-gates">' + gates.map(g => { const p = pct(g.at);
+    return `<span class="rtl-chip${p > 94 ? ' end' : ''}" style="left:${p}%" title="${rpEsc(g.id)} at ${rpHms(new Date(g.at))}">${rpEsc(g.id)}</span>`; }).join('') + '</div>';
+  let ticks = `<span style="left:0">${rpHm(new Date(t0))}</span>`;
+  const tick = 15 * 60000;
+  if (span / tick <= 200) for (let x = Math.ceil(t0 / tick) * tick; x < t0 + span - 5 * 60000; x += tick) ticks += `<span style="left:${100 * (x - t0) / span}%">${rpHm(new Date(x))}</span>`;
+  h += `<div class="rtl-axis">${ticks}</div>`;
+  steps.forEach((s, i) => {
+    const left = 100 * (s.a.getTime() - t0) / span, w = Math.max(0, 100 * (s.b.getTime() - s.a.getTime()) / span), secs = (s.b - s.a) / 1000;
+    h += `<div class="rtl-row"><div class="lb">${rpEsc(s.n)} ${rpEsc(s.name)}<small>${rpHms(s.a)} &middot; ${rpDur(secs)}</small></div><div class="rtl-track">` +
+      `<span class="rtl-bar" style="--i:${i};--c:${RP_COLORS[i % RP_COLORS.length]};left:${left}%;width:${w}%" title="${rpEsc(s.n + ' ' + s.name + ': ' + rpHms(s.a) + ', ' + rpDur(secs))}"></span>` +
+      backs.filter(b => b.from === s.n).map(b => `<span class="rtl-back" style="left:${pct(b.at)}%" title="${rpEsc(b.why)}">&crarr; back to ${rpEsc(b.to)}</span>`).join('') + '</div></div>';
+  });
+  h += '<div class="rtl-marks">' + gates.map(g => `<span class="rtl-mark" style="left:calc(${pct(g.at)}% - 1px)"></span>`).join('') + '</div></div>';
+  const wt = t.wait;
+  h += '<div class="rlegend"><span><i style="background:var(--gate)"></i>' + L('gate mark (G1a, G1b, G3)', '게이트 표시 (G1a, G1b, G3)') + '</span>' +
+    (backs.length ? `<span>&crarr; ${L('back-to point', '되돌아간 지점')}: ${rpEsc(backs[0].why)}</span>` : '') +
+    (wt ? `<span>After the G3 popup opened at ${rpHm(new Date(wt.from))} the person answered at ${rpHm(new Date(wt.until))} (${rpDur((new Date(wt.until) - new Date(wt.from)) / 1000)}, not part of step ${rpEsc(wt.step)}).</span>` : '') + '</div>';
+  return h;
+}
+function rpMore(d) {
+  const o = d.overview, cost = d.timeline && d.timeline.cost;
+  let h = o.request ? rpSec('rq-req', 'Request <small>intake.md</small>', '', `<p>${rpEsc(o.request)}</p>`) : NYW('intake.md');
+  if (cost) {
+    const max = Math.max.apply(null, cost.map(c => c.usd || 0)) || 1, rec = cost.filter(c => c.usd != null).length;
+    h += rpSec('rq-cost', 'Cost per stretch <small>gate-tally.md</small>', `<span class="vd neutral">${rec} of ${cost.length} recorded</span>`,
+      '<div class="ctabwrap"><table class="ctab"><thead><tr><th>Stretch</th><th>Steps</th><th class="n">USD (approx.)</th></tr></thead><tbody>' + cost.map(c =>
+        `<tr><td class="mono">${rpEsc(c.span)}</td><td>${rpEsc(c.steps)}</td><td class="n">${c.usd == null ? '<span class="nr">not recorded</span>' : Number(c.usd).toFixed(2) + `<span class="cbar" style="width:${Math.max(3, 100 * c.usd / max)}%"></span>`}</td></tr>`).join('') + '</tbody></table></div>');
+  } else h += NYW('gate-tally.md');
+  if (d.review) {
+    const fs = d.review.findings || [], openN = fs.filter(f => !f.applied).length;
+    let body = `<p class="note" style="margin:0">BLOCKER: ${rpEsc(d.review.blockers)} findings.</p>`;
+    ['SHOULD-FIX', 'NITPICK'].forEach(sev => { const xs = fs.filter(f => f.sev === sev);
+      body += `<div class="gh">${sev} (${xs.length})</div>` + xs.map(f => `<p><code>${rpEsc(f.where)}</code><br>${rpEsc(f.text)}<br><span class="rpill${f.applied ? '' : ' sf'}">${f.applied ? 'applied' + (f.fix ? ': ' + rpEsc(f.fix) : '') : 'open' + (f.mark ? ' (' + rpEsc(f.mark) + ')' : '')}</span></p>`).join(''); });
+    h += rpSec('rq-rev', `Review findings <small>BLOCKER ${rpEsc(d.review.blockers)}</small>`, `<span class="vd sf">${openN} open</span>`, body);
+  } else h += NYW('review.md');
+  h += d.plan_review ? rpSec('rq-prv', 'Plan review <small>verdict per run</small>', `<span class="vd neutral">${d.plan_review.length} runs</span>`,
+    d.plan_review.map(r => `<div class="gh">RUN ${rpEsc(r.run)} <span class="vd${r.verdict === 'REVISE' ? ' sf' : ''}">${rpEsc(r.verdict)}</span></div><p>${rpEsc(r.blockers)} BLOCKER, ${rpEsc(r.should_fix)} SHOULD-FIX, ${rpEsc(r.nitpicks)} NITPICK. ${rpEsc(r.summary)}</p>`).join('')) : NYW('plan-review.md');
+  if (d.decisions) {
+    const lab = { yes: 'recommended', delegated: 'delegated (L1)', typed: 'typed (Other)' };
+    h += rpSec('rq-dec', 'Decisions <small>question, choice, who picked</small>', `<span class="vd neutral">${d.decisions.length} rows</span>`,
+      '<div class="twrap"><table class="dtab"><thead><tr><th>#</th><th>Time</th><th>Gate</th><th>Question</th><th>Choice</th><th>Picked</th></tr></thead><tbody>' + d.decisions.map(x =>
+        `<tr><td class="m">${rpEsc(x.n)}</td><td class="m">${rpEsc(x.at)}</td><td class="m">${rpEsc(x.gate)}</td><td>${rpEsc(x.q)}</td><td>${rpEsc(x.choice)}</td><td><span class="pick ${rpEsc(x.picked === 'delegated' ? 'deleg' : x.picked)}">${rpEsc(lab[x.picked] || x.picked)}</span></td></tr>`).join('') + '</tbody></table></div>');
+  } else h += NYW('run-log.md');
+  h += d.gate_report ? rpSec('rq-gr', 'Gate report <small>summary, gate-report.md</small>', '', '<ol class="summ">' + (d.gate_report.summary || []).map(s => `<li>${rpEsc(s)}</li>`).join('') + '</ol>') : NYW('gate-report.md');
+  h += rpSec('rq-chain', 'Task chain <small>follows / followed by</small>', '',
+    '<div class="chain">' + (o.follows ? `<span>follows</span><code>${rpEsc(o.follows)}</code><span>&rarr;</span>` : '') + `<code class="self">${rpEsc(o.task)}</code>` +
+    (o.followed_by && o.followed_by.length ? '<span>&rarr; followed by</span>' + o.followed_by.map(x => `<code>${rpEsc(x)}</code>`).join('') : '') + '</div>');
+  return h;
+}
+function rpParts(d, play) {
+  const crit = d.criteria, units = d.units, dec = d.decisions, gr = d.gate_report, tl = d.timeline, cost = tl && tl.cost;
+  const hasVerdict = !!crit && crit.some(c => c.verdict), pass = hasVerdict ? crit.filter(c => c.verdict === 'PASS').length : null;
+  const done = units ? units.filter(u => u.status === 'done').length : null;
+  const rec = gr && gr.recommended, paid = cost ? cost.filter(c => c.usd != null) : [];
+  const total = paid.reduce((a, c) => a + c.usd, 0);
+  let h = `<div class="rp-part" aria-labelledby="h-ov"><div class="ph"><h3 id="h-ov">Overview</h3><span class="seg small" role="group" aria-label="Overview form"><button data-rov="para" aria-pressed="${rp.ov === 'para'}">${L('Paragraph', '문단')}</button><button data-rov="list" aria-pressed="${rp.ov === 'list'}">${L('List', '목록')}</button></span></div><div id="ov-body">${rpOverview(d)}</div></div>`;
+  h += '<div class="rp-part" aria-labelledby="h-tk"><div class="ph"><h3 id="h-tk">Takeaway</h3><small>key conclusion and deliverables</small></div><div class="rkpis">';
+  h += rpKpi(0, 'CRITERIA PASS', pass, crit ? crit.length : null, 0, pass != null && pass === crit.length ? 'ok' : '', crit ? (hasVerdict ? 'verdicts from verify.md' : 'verify.md not written yet') : 'scope.md not written yet', hasVerdict ? pass / crit.length : 0, '', play);
+  h += rpKpi(1, 'WORK UNITS DONE', done, units ? units.length : null, 0, done != null && done === units.length ? 'ok' : '', units ? 'status lines of plan.md' : 'plan.md not written yet', units && units.length ? done / units.length : 0, '', play);
+  h += rpKpi(2, 'DECISIONS', dec ? dec.length : null, null, 0, '', !dec ? 'run-log.md not written yet' : rec && rec.counted ? `recommended choice picked ${rec.picked}/${rec.counted} (${Math.round(100 * rec.picked / rec.counted)}%)` : 'from run-log.md', 0, '', play);
+  h += rpKpi(3, 'RECORDED COST', paid.length ? total : null, null, 2, '', cost ? (paid.length ? `USD, approx., ${paid.length} of ${cost.length} stretches recorded` : 'not recorded') : 'run-log.md not written yet', 0, '$', play);
+  h += '</div>';
+  h += `<div class="sub">COMPLETION CRITERIA${hasVerdict ? ` <span class="vd">${pass}/${crit.length} PASS</span>` : ''}</div>`;
+  if (crit) {
+    h += '<div class="rows">' + crit.map((c, i) => rpRow('rc-' + c.n, i, rpEsc(c.n), c.verdict === 'PASS' ? 'pass' : c.verdict === 'FAIL' ? 'fail' : '', rpEsc(c.short || c.title), c.title, rpEsc(c.verdict || '-'),
+      `<p><b>${rpEsc(c.title)}.</b> ${rpEsc(c.evidence)}</p>`)).join('') + '</div>';
+    if (!hasVerdict) h += NYW('verify.md');
+  } else h += NYW('scope.md');
+  h += `<div class="sub">WORK UNITS${units ? ` <span class="vd">${done}/${units.length} done</span>` : ''}</div>`;
+  if (units) {
+    const fl = a => '<ul class="files">' + a.map(f => `<li><code>${rpEsc(f)}</code></li>`).join('') + '</ul>';
+    h += '<div class="rows">' + units.map((u, i) => {
+      const files = u.files || [], tests = files.filter(f => /(^|\/)tests\//.test(f)), other = files.filter(f => tests.indexOf(f) < 0);
+      return rpRow('ru-' + u.id, i, rpEsc(u.id), u.status === 'done' ? 'pass' : 'run', rpEsc(u.title), u.title, `<span class="stt${u.status === 'done' ? '' : ' other'}">${rpEsc(u.status)}</span>`,
+        `<p>${u.group ? 'Group ' + rpEsc(u.group) : ''}${u.secs ? ', ran ' + rpDur(u.secs) : ''}.</p><div class="gh">FILES (${other.length})</div>${fl(other)}<div class="gh">TESTS (${tests.length})</div>${fl(tests)}<div class="gh">CRITERIA</div><p>${(u.criteria || []).map(n => `<span class="rpill">${rpEsc(n)}</span>`).join('')}</p>`);
+    }).join('') + '</div>';
+  } else h += NYW('plan.md');
+  h += '<div class="sub">PHASE TIMELINE (steps 1 to 8)</div>' + (tl ? rpTimeline(tl) : NYW('run-log.md')) + '</div>';
+  h += '<div class="rp-part" aria-labelledby="h-fu"><div class="ph"><h3 id="h-fu">Follow-up</h3><small>suggested improvements (gate report)</small></div>';
+  h += gr ? '<ul class="fl">' + (gr.improvements || []).map(s => `<li><span class="tag ${s.strength === 'clear' ? 'clear' : ''}">${rpEsc(s.level)} ${rpEsc(s.strength)}</span><span class="one" title="${rpEsc(s.text)}">${rpEsc(s.text)}</span></li>`).join('') + '</ul>' : NYW('gate-report.md');
+  h += '</div><div class="sub">MORE (closed by default)</div>' + rpMore(d);
+  return h;
+}
+function renderReport() {
+  if (st.tab !== 'report') return;
+  const el = $('p-report'), d = RP[st.task];
+  if (!d) { el.innerHTML = `<p class="note">${L('Loading…', '불러오는 중…')}</p>`; return; }
+  if (d.error) { el.innerHTML = `<p class="nyw">${L('The report could not be read', '리포트를 읽을 수 없음')}: ${rpEsc(d.error)}</p>`; return; }
+  const play = rp.play && !rpReduce(); rp.play = false;   /* the entry motion runs on tab entry or task change, not on a poll */
+  el.classList.toggle('rp-enter', play);
+  el.innerHTML = rpParts(d, play);
+  clearTimeout(rpT);
+  if (play) { rpCount(); rpT = setTimeout(() => el.classList.remove('rp-enter'), 1800); }
+}
+function rpCount() {
+  document.querySelectorAll('#p-report [data-count]').forEach(el => {
+    const to = parseFloat(el.dataset.count), dec = parseInt(el.dataset.dec, 10) || 0; let t0 = null;
+    const tick = ts => { if (t0 == null) t0 = ts; const p = Math.min(1, (ts - t0) / 500);
+      el.textContent = (to * (1 - Math.pow(1 - p, 3))).toFixed(dec); if (p < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
+}
+function rpToggle(b) {
+  const s = b.closest('.sec'); if (!s) return;
+  const open = !s.classList.contains('open'), k = st.task + '|' + b.dataset.rx;
+  s.classList.toggle('open', open); b.setAttribute('aria-expanded', open);
+  if (open) rp.open.add(k); else rp.open.delete(k);
+}
+function rpOverviewForm(b) {
+  rp.ov = b.dataset.rov;
+  document.querySelectorAll('#p-report [data-rov]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  const d = RP[st.task]; if (d && d.overview) $('ov-body').innerHTML = rpOverview(d);
+}
+/* ---------- end report tab ---------- */
+
 /* ---------- live data: poll the local server every 2 s ---------- */
 const POLL_MS = 2000;
 let lastSig = '';
@@ -971,16 +1275,18 @@ async function poll() {
     TASKS = data.tasks;
     if (!TASKS.some(t => t.key === st.task)) st.task = (TASKS.find(t => t.status === 'running') || TASKS[0] || {}).key || null;
     if (st.task) await loadTask(st.task);
+    if (st.task && st.tab === 'report') await loadReport(st.task);
     st.offline = false;
   } catch (err) { st.offline = true; }
   st.liveWait = TASKS.some(t => t.status === 'running' && t.waiting);
-  const sig = JSON.stringify([TASKS, st.task && FULL[st.task], st.offline]);
+  const sig = JSON.stringify([TASKS, st.task && FULL[st.task], st.offline, st.task && RP[st.task]]);
   if (sig !== lastSig) { const first = !lastSig; lastSig = sig; if (first) entering(); renderAll(); if (first) setTimeout(() => scramble(document.querySelector('#task-head h2')), 30); }
 }
 async function selectTask(key) {
   st.task = key; st.ri = 0; st.rev = null;
   if (!FULL[key]) { try { await loadTask(key); } catch (err) { st.offline = true; } }
-  lastSig = JSON.stringify([TASKS, FULL[key], st.offline]);
+  if (st.tab === 'report') { rp.play = true; await loadReport(key); }
+  lastSig = JSON.stringify([TASKS, FULL[key], st.offline, RP[key]]);
   entering(); vt(() => renderAll()); setTimeout(() => scramble(document.querySelector('#task-head h2')), 30);
 }
 const hashTask = /^#task=(.+)$/.exec(location.hash);   // monitor-up.py --task: open on that task

@@ -118,7 +118,7 @@ def _int(value) -> int:
         return 0
 
 
-def _segments(lines) -> list:
+def segments(lines) -> list:
     """Stretches between `cost:` lines: [start, end, step names, usd or None, tokens].
 
     The cost of a stretch is the gain of the cost line that ends it over the previous cost line of the same
@@ -212,7 +212,7 @@ def tally_text(lines) -> str:
             *([f"| Delegated approval | {', '.join(switches)} |"] if switches else []),
             *([f"| Profile changes | {len(profiles)} ({', '.join(profiles)}) |"] if profiles else []),
             '', '## Cost and tokens per stretch']
-    segs = _segments(lines)
+    segs = segments(lines)
     if segs:
         out += ['| Stretch | Steps | Cost USD (approx.) | Subagent tokens |', '|---|---|---|---|']
         for start, end, names, usd, tokens in segs:

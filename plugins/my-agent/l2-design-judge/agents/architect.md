@@ -24,7 +24,7 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
 
 ## Input
 
-- `intake.md` (`Profile:` in its first lines), `explore.md`, `scope.md` (if any), and, in the general profile, the scope summary L1 wrote.
+- `intake.md` (`Profile:` in its first lines), the preset name and the `agent-models.py show` lines L1 passes (none without a `Models:` line), `explore.md`, `scope.md` (if any), and, in the general profile, the scope summary L1 wrote.
 - When rewriting: the `plan-review.md` path or the person's change request, and the list of deliverables already made.
 
 ## `plan.md` sections (in this order, all required)
@@ -40,8 +40,12 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
 5. `## Mock-up`: the first line is `Kind: <kind of example>` (e.g. `CLI input/output`, `note outline + sample paragraph`, `screen layout`), and below it is an example of the deliverable. Show both the normal case and the exception cases written in the scope document, and tag each case with its completion criterion number. It only shows the scope document as an example; it adds no new requirements.
 6. `## Prototype`: `needed` or `not needed` and a one-line reason. `needed` only when a judgment needs to be made by eye, such as a screen layout or a document layout. The `Prototype: requested` line in this section is written only by L1.
 7. `## Estimate`: the number of subagents; if you use a workflow, the number of steps and agents (9 or fewer per workflow). Write no expected tokens.
-8. `## Existing work` (when rewriting, if deliverables already exist): a table `| Target | Decision | Reason |`. The decision is keep / revise / discard for notes and drafts in `work/`, merge / redo / discard for an unmerged coder worktree, and keep / revise / revert for code already merged (dev). A revert and a worktree discard are each a work unit of their own.
-9. `## Approval`: leave empty. Only L1 writes this section.
+8. `## Models`: the models and efforts the task's agents run with.
+   - The line `Preset: <name>`, then the table `| Agent | Model | Effort | Note |` with one row per agent the task uses from step 3 on: architect, plan-reviewer, the workers in `## Work units`, writer when a prototype is made, verifier, reviewer, gate-analyst. Take the values from the preset lines L1 passes (`agent-models.py show` output). Agents the plan does not use get no row; a preset entry for them is ignored.
+   - Every difference from the passed preset lines (a recommended change of preset or of one agent) is shown in that row's Note and as one line `Recommendation: <change> — <reason>`. Every difference needs a one-line reason. Without a recommendation the Note cells are empty and there is no `Recommendation:` line.
+   - Without a preset (L1 passes no `Models:` line), the line is `Preset: standard (definition values)` and the rows carry the definition values.
+9. `## Existing work` (when rewriting, if deliverables already exist): a table `| Target | Decision | Reason |`. The decision is keep / revise / discard for notes and drafts in `work/`, merge / redo / discard for an unmerged coder worktree, and keep / revise / revert for code already merged (dev). A revert and a worktree discard are each a work unit of their own.
+10. `## Approval`: leave empty. Only L1 writes this section.
 
 If `## Revisions` exists, leave it at the very end as is (rule above).
 

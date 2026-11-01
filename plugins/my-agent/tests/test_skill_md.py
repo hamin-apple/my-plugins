@@ -367,7 +367,7 @@ class SkillMdTest(unittest.TestCase):
             self.assertIn(word, rules, word)
 
     # --- data folder (task 261028-data-dir-config, u3) ---
-    DATA_SCRIPTS = ('run-log', 'usage-snapshot', 'gate-report', 'feedback', 'monitor-up')
+    DATA_SCRIPTS = ('run-log', 'usage-snapshot', 'gate-report', 'feedback', 'monitor-up', 'open-html')
     MONITOR_SKILL = REPO / 'skills' / 'monitor' / 'SKILL.md'
 
     def command_spans(self, path):
@@ -534,6 +534,86 @@ class SkillMdTest(unittest.TestCase):
             text = path.read_text(encoding='utf-8')
             self.assertNotIn('~/dev/agent-tasks', text, path.name)
             self.assertNotIn('my-surrogate', text, path.name)
+
+
+    # --- agent model presets and report-style gate reports (task 261101-agent-model-config-report-b, u5) ---
+    def test_intake_models_preset(self):
+        """Criterion 3: Intake item 3 asks the preset only with 2 or more presets; item 9 and 10 carry it."""
+        self.assertIn('"Models preset" below item 11', self.intake_item(3))
+        item = self.section('**Models preset (item 3)**', '## status')
+        for word in ('Models preset', 'agent-models.py" presets --profile', '2 or more presets', '`standard` is used',
+                     'Use definition values (Recommended)', 'Abort', '(Recommended)', 'item 10'):
+            self.assertIn(word, item, word)
+        self.assertIn('Models: <preset>', self.intake_item(9))
+        ten = self.intake_item(10)
+        self.assertIn('run-log.py" models preset=<name> source=file', ten)
+        self.assertIn('only when `Models:` was written', ten)
+
+    def test_profile_change_models_preset(self):
+        """Criterion 3: a profile change at the first gate asks the preset again with the Intake popup rule."""
+        section = self.section('## In-flight revision', 'When a message that looks like a revision')
+        bullet = section[section.index('**Profile change at the first gate'):]
+        for word in ('presets --profile <new profile>', 'same popup rule as Intake item 3', '`Models:` in `intake.md`',
+                     'run-log.py" models preset=<name> source=file'):
+            self.assertIn(word, bullet, word)
+
+    def test_continue_checks_models_preset(self):
+        """Criterion 3: continue shows the preset again; a preset that is gone falls back to the definition values."""
+        sec = self.section('## continue', '## Task worktree')
+        for word in ('`Models:`', 'show --profile <p> --preset <name>', 'exits 1', 'definition values'):
+            self.assertIn(word, sec, word)
+
+    def test_delegation_passes_only_differing_fields(self):
+        """Criterion 4: model/effort come from the preset; only the pass= fields are passed; the opus retry beats it."""
+        sec = self.section('## Failure handling', '## Delegated approval details')
+        for word in ('show --profile', 'show --plan', '`## Models`', 'pass=', 'no `Models:` line', 'pass none',
+                     '`model: "opus"`', 'beats the preset'):
+            self.assertIn(word, sec, word)
+        row = next(l for l in self.text.splitlines() if l.startswith('| Worker stopped once'))
+        self.assertIn('beats the preset', row)
+        self.assertIn('model: "opus"', row)
+
+    def test_recorder_models_row(self):
+        row = next(l for l in self.text.splitlines() if l.startswith('| ') and 'run-log.py" models ' in l)
+        self.assertIn('--data-dir "<data folder>" --task-dir "<task_dir>"', row)
+        self.assertIn('models', run_log_kinds())
+
+    def test_gate_reports_overview_and_takeaway(self):
+        """Criterion 13: G1a and G1b open with Overview and Takeaway before the table; G1b has a Models row."""
+        sec = self.section('## Gate reports', '## In-flight revision')
+        for word in ('### Overview', '### Takeaway', 'G1a', 'G1b', 'scope summary', 'plan summary', '`Models` row',
+                     '`Request changes`', '`Approve`'):
+            self.assertIn(word, sec, word)
+        self.assertLess(sec.index('### Overview'), sec.index('### Takeaway'))
+        self.assertLess(sec.index('### Takeaway'), sec.index('`| Item | Value |`'))
+
+    def test_gate_reports_prototype_opened_locally(self):
+        """Criterion 13: the prototype is a local file opened by open-html.py; the line replaces the full mock-up at G1b."""
+        sec = self.section('## Gate reports', '## In-flight revision')
+        for word in ('open-html.py', 'prototype/index.html', '--data-dir', 'opened in the browser', 'not opened',
+                     '`failed:`', 'remade only when the mock-up changed', 'instead of the full mock-up',
+                     'not published anywhere', '`scope.md` text'):
+            self.assertIn(word, sec, word)
+        self.assertNotIn('--task-dir', ' '.join(c for s, c in self.command_spans(SKILL) if s == 'open-html'))
+
+    def test_open_html_spans_carry_data_dir_only(self):
+        spans = [c for s, c in self.command_spans(SKILL) if s == 'open-html']
+        self.assertTrue(spans)
+        for cmd in spans:
+            self.assertIn('--data-dir', cmd)
+            self.assertNotIn('--task-dir', cmd)
+
+    def test_no_artifact_publishing(self):
+        """Criterion 13: no stale publishing wording in the gate reports or the leave check."""
+        gate = self.section('## Gate reports', '## In-flight revision')
+        leave = self.section('## Check before anything leaves', '## Gate reports')
+        for part in (gate, leave):
+            for phrase in ('private artifact', 'artifact link', 'publishes it', 'publishing a prototype', 'claude.ai'):
+                self.assertNotIn(phrase, part, phrase)
+        self.assertNotIn('prototype', leave)
+        self.assertNotIn('artifact', leave)
+        self.assertIn('copying the deliverable after G3', leave)
+        self.assertIn('committing', leave)
 
 
 if __name__ == '__main__':

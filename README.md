@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by hamin-apple.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.6.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.7.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 | `my-agent-tray` | 0.1.2 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
@@ -33,6 +33,8 @@ A plugin cannot ship permission rules. For the risky-action prompts (G2: `git co
 
 When you enable the plugin, Claude Code asks for two settings. The first is the data folder (default `~/dev/log/my-agent`; change it later in `/config`). It holds everything my-agent keeps outside task folders: the project list (`projects.txt`), the run index (`active-index.json`), the monitor state, log and settings, the price override, the improvement list (`feedback.md`) and the retrospective report copies (`gate-report/`). A leading `~` is expanded. Nothing is written into the plugin's own folder. If the folder is changed, the old one is left as is and the new one is used from then on. If the setting is missing (for example with `--plugin-dir`), `~/dev/log/my-agent` is used. The environment variables `MA_TASKS_DIR` (data folder), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE` and `MA_GATE_REPORT_DIR` win over the setting. A folder from an earlier version (`~/my-agent`) is not moved: move it to the new place, or set the Data folder to the old path. The second setting, `task_dir`, is the task folder inside the task location (default `.my-agent`; change it later in `/config`). Task records were kept in `docs/agent` in earlier versions: they are not moved or read unless you set `task_dir` to `docs/agent` (or move the folder: `mv docs/agent .my-agent`). It must be a relative path without `..`; otherwise the default is used. The environment variable `MA_TASK_DIR` wins over the setting.
 
+Optionally, the data folder can hold `agent-models.json`, which defines named model presets per profile (a model and an effort per agent; copy `plugins/my-agent/docs/agent-models.example.json` to start). With two or more presets for the profile, my-agent asks which one to use at the start of a task. Without the file nothing changes: every agent runs on the model and effort of its definition file.
+
 ## my-agent
 
 The main session (L1) takes a request, runs plan → execute → verify → review in order, and asks the person in a popup at fixed points.
@@ -53,7 +55,7 @@ The whole architecture — each level's components, their roles and permissions,
 | `/my-agent --dev <request>` | Starts a new task with the profile you name: `--general`, `--research` or `--dev`. Without a flag, the profile is picked from the request. |
 | `/my-agent continue` | Continues the task in progress. |
 | `/my-agent status` | Shows the task in progress and recent tasks. |
-| `/my-agent:monitor` | Opens a local, read-only web page of task records. Also `status`, `stop`. |
+| `/my-agent:monitor` | Opens a local, read-only web page of task records, with a Report tab that sums up the scope, plan and results of the selected task on one page. Also `status`, `stop`. |
 
 Task records are kept in `<task location>/<task_dir>/<task ID>/` (by default `.my-agent/<task ID>/`; `docs/agent` is the former layout).
 Finished tasks pile up there and in the monitor's list. To move tasks finished 30 days ago or more to `<task_dir>/.archived/` (out of the list; move a folder back to bring it back):

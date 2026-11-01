@@ -18,6 +18,8 @@ my-agent starts it for you with `monitor-up.py` (Router at Intake, or `/my-agent
 
 `GET /api/tasks` returns `{"tasks": [...], "now": "HH:MM"}` with one summary per task in `tasks`; each summary has `elapsed` (minutes, read-only, recomputed on every request for a running task, `null` if the task could not be read). The menu bar app's List uses it.
 
+`GET /api/tasks/<key>/report` (the key is `<hash>/<task-id>`, so the path has three parts after `/api/tasks/`) returns the data of the Report tab as one JSON object with the keys `overview`, `timeline`, `criteria`, `units`, `review`, `plan_review`, `decisions` and `gate_report`. A key whose source file does not exist yet is `null` (a task with only `intake.md` has `overview` and `null` for every other key). An unknown key answers `404 {"error": "no such task"}`; only GET is accepted (other methods answer 405). It reads task files and writes nothing (`monitor/report.py`). `/api/tasks` and `/api/health` are unchanged.
+
 ### Opening the monitor
 
 `monitor-up.py` opens a new window by default (about 1200x800), or a tab.
@@ -71,6 +73,21 @@ S=$(mktemp -d) && cp -Rp tests/fixtures/projects/claude-sessions "$S"/ && echo "
 MA_PROJECTS_FILE="$S/projects.txt" MA_CLAUDE_PROJECTS=tests/fixtures/claude-projects python3 server.py --port 8780 &
 python3 tools/feed-fixture.py "$S/claude-sessions/docs/agent/261024-cli-json-output" --every 3
 ```
+
+## Report tab
+
+The fifth tab, `5 Report`, shows one task on one page (the `5` is a label, not a shortcut). It fetches `/api/tasks/<key>/report` when opened and again on every poll while it is open, so a running task updates. Parts, in order:
+
+- **Overview:** the purpose, with a segmented control for paragraph or list form (task, profile, status, delivered, follows, request).
+- **Takeaway:** four counters (criteria PASS/total, work units done/total, decisions with the recommended rate, recorded cost), the completion criteria and the work units as one-line rows (a click opens the evidence, or the files, tests and criterion numbers), and the phase timeline with the gate marks G1a/G1b/G3, back-to points and the G3 wait.
+- **Follow-up:** the suggested improvements of the gate report, one line each.
+- **Collapsed sections** (closed by default): request, cost per stretch (`not recorded` is shown as text), review findings, plan-review verdicts per run, decisions, gate report summary, task chain.
+
+A `null` key shows `Not written yet: <file>`. The counters and bars animate only when the tab is entered or the task changes, never on a poll; with `prefers-reduced-motion` the final values appear at once.
+
+## Opening a local HTML file
+
+`open-html.py <file> [--data-dir DIR]` sits next to `monitor-up.py`. It opens a local `.html`/`.htm` file with the same opener (`monitor/opener.py`), using the `open` (`window`/`tab`) and `browser` keys of `<data folder>/monitor-config.json`; on other platforms it opens one tab through `webbrowser`. It prints one line and always exits 0: `window`, `tab`, or `failed: <reason>` (`no such file <path>`, `not an HTML file <path>`, `no browser opened`, or an exception message). It writes nothing. my-agent uses it to show a prototype (`SKILL.md` "Gate reports").
 
 ## Page
 

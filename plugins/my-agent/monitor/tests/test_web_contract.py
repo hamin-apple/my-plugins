@@ -87,5 +87,56 @@ class WebStatusColorTest(unittest.TestCase):
         self.assertIn('var(--gate)', self.rule('.gate-lamp.wait'))
 
 
+class ReportTabTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.html = INDEX.read_text(encoding='utf-8')
+        a = cls.html.index('/* ---------- report tab ---------- */')
+        b = cls.html.index('/* ---------- end report tab ---------- */')
+        cls.code = cls.html[a:b]
+
+    def test_fifth_tab_and_panel(self):
+        self.assertIn('<button data-tab="report" aria-selected="false"><span class="k">5</span>Report</button>', self.html)
+        self.assertIn('<section class="panel" data-view="report" id="p-report"></section>', self.html)
+        self.assertLess(self.html.index('data-tab="log"'), self.html.index('data-tab="report"'))
+
+    def test_report_endpoint_fetch(self):
+        self.assertIn("'/report'", self.code)
+        self.assertIn("encodeURIComponent(key).replace(/%2F/g, '/')", self.code)
+        self.assertIn("st.tab === 'report'", self.html[self.html.index('async function poll()'):])
+
+    def test_report_in_change_check(self):
+        poll = self.html[self.html.index('async function poll()'):]
+        self.assertRegex(poll, r'JSON\.stringify\(\[.*RP\[')
+
+    def test_render_all_clears_report_panel(self):
+        self.assertRegex(self.html, r"\['p-arch', 'p-files', 'p-log', 'p-report'\]\.forEach")
+
+    def test_three_parts_in_order(self):
+        i = [self.code.index(">%s</h3>" % h) for h in ('Overview', 'Takeaway', 'Follow-up')]
+        self.assertEqual(i, sorted(i))
+
+    def test_report_code_reads_reduced_motion(self):
+        self.assertIn('prefers-reduced-motion', self.code)
+
+    def test_no_key_5_shortcut(self):
+        self.assertNotIn("'5'", self.html)
+        self.assertNotIn('"5"', self.html)
+
+    def test_no_write_requests(self):
+        self.assertNotRegex(self.html, r'method\s*:')
+        self.assertNotIn('XMLHttpRequest', self.html)
+
+    def test_missing_source_notes(self):
+        for f in ('scope.md', 'plan.md', 'run-log.md', 'verify.md', 'gate-report.md', 'review.md', 'plan-review.md'):
+            self.assertIn("NYW('%s')" % f, self.code)
+        self.assertIn('Not written yet: ', self.code)
+        self.assertIn('not recorded', self.code)
+
+    def test_tray_layouts_hide_tabs_and_report(self):
+        self.assertIn('body.lay-b nav.tabs, body.lay-c nav.tabs { display: none; }', self.html)
+        self.assertRegex(self.html, r'body\.lay-b #p-report')
+
+
 if __name__ == '__main__':
     unittest.main()

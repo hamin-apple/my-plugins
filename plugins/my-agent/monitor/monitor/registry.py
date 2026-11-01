@@ -4,6 +4,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
+from .report import build_report, follows_of
 from .runlog import read_lines
 from .taskview import build_task, task_key
 from .transcript import TranscriptCache
@@ -114,6 +115,24 @@ class Registry:
     def get_task(self, key: str):
         with self._lock:
             return self._find(key)
+
+    def get_report(self, key: str):
+        """The report JSON of the task with this key (read only), or None."""
+        with self._lock:
+            for project, task_dir in self._task_dirs():
+                if task_key(project, task_dir.name) != key:
+                    continue
+                task = self._get(project, task_dir)
+                followed_by = []
+                for _, other in self._task_dirs():
+                    try:
+                        text = (other / 'intake.md').read_text(encoding='utf-8', errors='replace')
+                    except OSError:
+                        continue
+                    if follows_of(text) == task_dir.name:
+                        followed_by.append(other.name)
+                return build_report(project, task_dir, task, followed_by)
+        return None
 
     def _list(self):
         tasks = [self._get(p, d) for p, d in self._task_dirs()]

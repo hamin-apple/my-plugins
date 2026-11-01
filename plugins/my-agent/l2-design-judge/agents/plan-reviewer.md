@@ -22,7 +22,7 @@ Judge whether `plan.md` covers the scope fully and feasibly, and write one `plan
 
 ## Input
 
-The paths of `plan.md`, `intake.md` (`Profile:`), `explore.md`, `scope.md` (if any), and the result path `plan-review.md`.
+The paths of `plan.md`, `intake.md` (`Profile:`), `explore.md`, `scope.md` (if any), the preset lines L1 passes (if any), and the result path `plan-review.md`.
 
 ## `plan-review.md` format
 
@@ -51,6 +51,7 @@ Run: <n>
 5. **Required sections:** `## Work units` (each unit with a unique `### u<n> <name>` heading and `- Status: pending`), `## Reference files`, `## Mock-up` (first line `Kind: <kind of example>`), `## Prototype`, `## Estimate` (number of subagents), an empty `## Approval`. If one is missing, BLOCKER. For a rewritten plan, also check that every BLOCKER in the previous `plan-review.md` is resolved.
 6. **Risk:** steps that are hard to undo if they fail, and actions that go outside, are marked. If not, SHOULD-FIX.
 7. **Check tags:** when any criterion line (in `scope.md`, or in `plan.md` `## Completion criteria`) ends with a check tag (`[check: command]`, `[check: file]`, `[check: URL]` or `[check: person]`), every criterion must carry one; a missing tag or a value other than the four is a BLOCKER. A task whose criterion lines carry no tag at all was written before check tags and is judged as before.
+8. **Models:** `## Models` exists and its rows match the passed preset lines (a preset is passed with the paths; none means the definition values), and every difference has a one-line reason (the Note and the `Recommendation:` line). A row that differs without a reason is otherwise SHOULD-FIX; a missing section is a BLOCKER.
 
 ## Checks per profile
 

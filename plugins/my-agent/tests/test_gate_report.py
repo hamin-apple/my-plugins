@@ -547,5 +547,20 @@ class GateReportTest(unittest.TestCase):
                     os.environ[k] = v
 
 
+class SegmentsTest(unittest.TestCase):
+    def test_segments_match_tally_stretches(self):
+        import ma_gate_report
+        lines = [('23:00', 'step', {'n': '1', 'name': 'Intake'}),
+                 ('23:05', 'cost', {'usd': '1.00', 'session': 's'}),
+                 ('23:06', 'step', {'n': '2', 'name': 'Plan'}),
+                 ('23:10', 'stop', {'tokens': '500'}),
+                 ('23:20', 'cost', {'usd': '3.50', 'session': 's'})]
+        segs = ma_gate_report.segments(lines)
+        self.assertEqual(segs, [['23:00', '23:05', ['1 Intake'], None, 0], ['23:05', '23:20', ['2 Plan'], 2.5, 500]])
+        text = ma_gate_report.tally_text(lines)
+        self.assertIn('| 23:00–23:05 | 1 Intake | not recorded | 0 |', text)
+        self.assertIn('| 23:05–23:20 | 2 Plan | 2.50 | 500 |', text)
+
+
 if __name__ == '__main__':
     unittest.main()

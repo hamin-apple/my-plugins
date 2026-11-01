@@ -17,6 +17,7 @@
   --accent-fg: #ffffff;
   --accent-soft: #d3e6e6;
   --focus: #b4560a;
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif KR", AppleMyungjo, Georgia, serif;
   --lv1-bg: #1b2224; --lv1-fg: #f1f3f1;
   --lv2-bg: #0e5a61; --lv2-fg: #ffffff;
   --lv3-bg: #d3e6e6; --lv3-fg: #0b3f44;
@@ -96,7 +97,7 @@ p { margin: 0; }
 
 header { padding-bottom: 14px; }
 .title-row { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
-h1 { font-size: 24px; line-height: 1.25; margin: 0; letter-spacing: -0.01em; }
+h1 { font-family: var(--display); font-size: 32px; line-height: 1.15; margin: 0; letter-spacing: -0.015em; font-weight: 700; }
 .ver { font-size: 12px; border: 1px solid var(--line); padding: 1px 8px; color: var(--muted); border-radius: 2px; }
 .lede { margin-top: 6px; color: var(--muted); overflow-wrap: anywhere; }
 
@@ -115,8 +116,8 @@ h1 { font-size: 24px; line-height: 1.25; margin: 0; letter-spacing: -0.01em; }
 .tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
 .tab:hover { color: var(--fg); }
 
-h2 { font-size: 15px; letter-spacing: 0.02em; color: var(--fg); margin: 0 0 10px; font-weight: 700; }
-h3.sub { font-size: 14px; color: var(--muted); margin: 16px 0 6px; font-weight: 700; }
+h2 { font-family: var(--display); font-size: 24px; line-height: 1.25; letter-spacing: -0.01em; color: var(--fg); margin: 4px 0 14px; font-weight: 700; }
+h3.sub { font-family: var(--display); font-size: 18px; color: var(--fg); margin: 22px 0 8px; font-weight: 700; }
 
 .chip {
   display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 0 7px;
@@ -174,7 +175,7 @@ table.mini th { background: var(--surface-2); font-weight: 700; }
 .link.done { background: var(--accent); }
 .step-card { background: var(--surface); border: 1px solid var(--line); padding: 14px; min-height: 150px; }
 .step-card .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.step-card h3 { margin: 2px 0 6px; font-size: 18px; }
+.step-card h3 { margin: 2px 0 6px; font-family: var(--display); font-size: 20px; }
 .nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
 .btn { background: var(--surface); border: 1px solid var(--fg); padding: 8px 16px; font-weight: 600; border-radius: 2px; min-height: 40px; }
 .btn.primary { background: var(--fg); color: var(--bg); }
@@ -223,7 +224,7 @@ table.full td:first-child, table.full th:first-child { position: sticky; left: 0
 /* diff cards */
 .diffs { display: grid; gap: 10px; margin-top: 10px; }
 .diff { background: var(--surface); border: 1px solid var(--line); padding: 12px 14px 4px; }
-.diff h3 { margin: 6px 0 0; font-size: 16px; }
+.diff h3 { margin: 6px 0 0; font-family: var(--display); font-size: 18px; }
 .diff .disc { margin-top: 4px; }
 
 footer { margin-top: 28px; border-top: 2px solid var(--fg); padding-top: 4px; }
@@ -231,9 +232,20 @@ footer ol { margin: 8px 0 0; padding-left: 1.8em; font-size: 13px; }
 footer li { margin-top: 4px; overflow-wrap: anywhere; }
 footer .disc { border-top: 0; }
 
+/* overview hero: the four levels, in the level colors used by the chips */
+.hero-h { font-size: 28px; line-height: 1.2; margin: 6px 0 18px; max-width: 24em; }
+.levels { list-style: none; margin: 0 0 22px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); }
+.levels li { padding: 12px 12px 14px; min-width: 0; }
+.levels .code { display: block; font-family: var(--display); font-size: 30px; line-height: 1; font-weight: 700; margin-bottom: 8px; }
+.levels b { display: block; font-size: 14px; }
+.levels .d { display: block; font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; }
+
 @media (max-width: 480px) {
   .cmp .sys { flex-basis: 34%; }
-  h1 { font-size: 21px; }
+  h1 { font-size: 27px; }
+  h2 { font-size: 21px; }
+  .hero-h { font-size: 23px; }
+  .levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
@@ -262,13 +274,19 @@ footer .disc { border-top: 0; }
 
   <main>
     <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
-      <h2>1. my-agent란?</h2>
+      <h2 class="hero-h">여러 단계 작업을 네 레벨로 나누고, 정해진 지점마다 사람이 승인합니다</h2>
+      <ul class="levels" aria-label="네 레벨">
+        <li class="lv1"><span class="code">L1</span><b>메인 세션</b><span class="d">단계를 진행하고, 사람에게 묻고, 기록</span></li>
+        <li class="lv2"><span class="code">L2</span><b>판정</b><span class="d">계획하고, 검토하고, 결정을 해석</span></li>
+        <li class="lv3"><span class="code">L3</span><b>작업자</b><span class="d">각자 작업 한 단위를 수행</span></li>
+        <li class="lv4"><span class="code">L4</span><b>도구와 훅</b><span class="d">실행하고, 기록하고, 차단</span></li>
+      </ul>
       <div id="ov-list"></div>
       <div id="ov-note"></div>
     </section>
 
     <section id="p-flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
-      <h2>2. 한 작업의 흐름 (general 프로필 예시)</h2>
+      <h2>한 작업의 흐름 (general 프로필 예시)</h2>
       <p class="arrow-line">① 정의 → ② 계획 → G1b 승인 → ③ 실행 → ④ 인수 → G3 승인</p>
       <div id="flow-note"></div>
       <div class="track" id="track" role="group" aria-label="단계 선택"></div>
@@ -280,22 +298,22 @@ footer .disc { border-top: 0; }
     </section>
 
     <section id="p-features" role="tabpanel" aria-labelledby="tab-features" hidden>
-      <h2>3. 주제별 특징</h2>
+      <h2>주제별 특징</h2>
       <p class="intro" style="margin-bottom:10px">각 특징은 한 줄 요약, 2~4줄의 자세한 내용, 출처 순서입니다.</p>
       <div id="acc-list"></div>
     </section>
 
     <section id="p-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
-      <h2>4. 다른 멀티 에이전트 시스템과 비교</h2>
+      <h2>다른 멀티 에이전트 시스템과 비교</h2>
       <div id="cmp-note"></div>
-      <h3 class="sub">4.1 비교 축 (A1–A7)</h3>
+      <h3 class="sub">비교 축 (A1–A7)</h3>
       <div class="row-ctl" id="axis-ctl" role="group" aria-label="비교 축">
         <span class="lbl">축</span>
       </div>
       <div class="axis-name" id="axis-name"></div>
       <p class="note">"종류" 열은 축이 아닙니다.</p>
-      <h3 class="sub">4.2 비교표</h3>
-      <p class="intro" style="margin-bottom:10px">각 칸의 윗첨자 번호는 6. 출처의 같은 번호로 이어집니다. <code>문서에 없음</code>은 확인한 문서에서 해당 내용을 찾지 못했다는 뜻이며, 그 번호는 확인한 URL을 가리킵니다.</p>
+      <h3 class="sub">비교표</h3>
+      <p class="intro" style="margin-bottom:10px">각 칸의 윗첨자 번호는 페이지 아래 출처 목록의 같은 번호로 이어집니다. <code>문서에 없음</code>은 확인한 문서에서 해당 내용을 찾지 못했다는 뜻이며, 그 번호는 확인한 URL을 가리킵니다.</p>
       <div class="row-ctl" id="kind-ctl" role="group" aria-label="종류 필터">
         <span class="lbl">종류</span>
         <button class="pill" type="button" data-kind="all" aria-pressed="true">전체</button>
@@ -313,17 +331,17 @@ footer .disc { border-top: 0; }
     </section>
 
     <section id="p-diff" role="tabpanel" aria-labelledby="tab-diff" hidden>
-      <h2>5. 차별점 요약</h2>
-      <p class="intro">아래는 4.2 표에 적힌 값만으로 말할 수 있는 것입니다. 각 항목 끝에 근거가 된 축과 표 칸을 적었습니다. 다른 시스템도 가진 점은 그대로 밝혔습니다.</p>
+      <h2>차별점 요약</h2>
+      <p class="intro">아래는 비교표에 적힌 값만으로 말할 수 있는 것입니다. 각 항목 끝에 근거가 된 축과 표 칸을 적었습니다. 다른 시스템도 가진 점은 그대로 밝혔습니다.</p>
       <div class="diffs" id="diffs"></div>
     </section>
   </main>
 
   <footer>
     <div class="disc">
-      <button class="disc-btn" type="button" id="src-btn" aria-expanded="false" aria-controls="src-body"><span class="mark" aria-hidden="true">▸</span><span class="lab">6. 출처</span></button>
+      <button class="disc-btn" type="button" id="src-btn" aria-expanded="false" aria-controls="src-body"><span class="mark" aria-hidden="true">▸</span><span class="lab">출처</span></button>
       <div class="disc-body" id="src-body" hidden>
-        <p class="intro">비교표 번호별 출처입니다. my-agent 칸(1~7)은 저장소 루트 기준 상대 경로입니다. 나머지는 URL이며, <code>문서에 없음</code> 칸은 확인한 URL을 적었습니다. 부차 출처는 (secondary)로 표시했습니다. 1~3장 특징별 출처는 각 항목의 <code>출처:</code> 줄에 있습니다.</p>
+        <p class="intro">비교표 번호별 출처입니다. my-agent 칸(1~7)은 저장소 루트 기준 상대 경로입니다. 나머지는 URL이며, <code>문서에 없음</code> 칸은 확인한 URL을 적었습니다. 부차 출처는 (secondary)로 표시했습니다. 개요·흐름·특징 탭의 출처는 각 항목의 <code>출처:</code> 줄에 있습니다.</p>
         <ol id="src-list"></ol>
       </div>
     </div>
@@ -402,16 +420,16 @@ footer .disc { border-top: 0; }
   /* ---------- 1. overview ---------- */
   var ovList = document.getElementById('ov-list');
   var ov = [
-    ['무엇을 하나.',
+    ['무엇을 하나',
      `<p>my-agent는 Claude Code에서 쓰는 멀티 에이전트 작업 플러그인입니다. 여러 단계가 필요한 요청, 곧 기능 구현·버그 수정·여러 파일에 걸친 리팩터링, 주제를 조사해 노트로 만드는 일, 여러 부분으로 된 문서 만들기에 쓰도록 만들어져 있습니다. 한 줄짜리 수정, 오타 고치기, 간단한 사실 질문, 코드가 어떻게 동작하는지 묻는 질문에는 쓰지 않도록 되어 있습니다.</p>` +
      src('plugins/my-agent/SKILL.md')],
-    ['누구를 위한 것인가.',
+    ['누구를 위한 것인가',
      `<p>작업 중 정해진 지점마다 사람이 직접 승인하거나 답하기를 원하는 사용자를 위한 것입니다. 사람에게 묻는 일은 모두 <code>AskUserQuestion</code> 팝업으로 하고, 글로 된 질문은 하지 않습니다. 플러그인 설명도 이를 사람이 개입하는(HITL) 멀티 에이전트 오케스트레이션 스킬이라고 밝힙니다.</p>` +
      src('plugins/my-agent/SKILL.md, plugins/my-agent/.claude-plugin/plugin.json')],
-    ['작업 종류에 맞는 3가지 프로필.',
+    ['작업 종류에 맞는 3가지 프로필',
      `<p>같은 단계 뼈대를 쓰되 일의 종류에 따라 규칙이 달라집니다. <code>dev</code>는 git 저장소의 코드를 바꾸는 일이고 결과물은 커밋입니다. <code>research</code>는 웹 조사를 출처가 달린 노트나 보고서로 만드는 일입니다. <code>general</code>은 그 밖의 여러 단계 작업입니다.</p>` +
      src('plugins/my-agent/SKILL.md')],
-    ['4개 레벨과 메인 세션의 역할.',
+    ['4개 레벨과 메인 세션의 역할',
      `<p>일을 4개 레벨로 나눕니다.</p>` +
      `<div class="mini-box"><table class="mini"><thead><tr><th>레벨</th><th>누가</th><th>하는 일</th><th>하지 않는 일</th></tr></thead><tbody>` +
      `<tr><td><span class="chip lv1">L1</span></td><td>메인 세션(my-agent 스킬 자신)</td><td>단계를 진행하고, 위임하고, 결과를 합치고, 사람에게 묻고, 기록합니다</td><td>결과물(코드·노트·초안·계획)을 직접 만들지 않습니다. 예외는 판정이 짚은 작은 수정(파일 2개 이하, 약 10줄)과 G1b 전의 작은 <code>plan.md</code> 수정뿐입니다</td></tr>` +
@@ -422,7 +440,7 @@ footer .disc { border-top: 0; }
      src('plugins/my-agent/SKILL.md') +
      `<p>메인 세션(L1)은 네 가지 일을 맡습니다. 요청을 분류하는 라우터(Router), 단계를 이끌고 위임하는 오케스트레이터(Orchestrator), 모든 질문과 게이트를 지키는 게이트키퍼(Gatekeeper), 기록하는 레코더(Recorder)입니다. 하위 에이전트(서브에이전트)는 사람에게 묻지 못하고 결과 파일과 보고만 돌려줍니다.</p>` +
      src('plugins/my-agent/SKILL.md')],
-    ['왜 4개씩 나눴나.',
+    ['왜 4개씩 나눴나',
      `<p>설계 문서에 따르면, 사람이 이 시스템의 유지보수에 직접 참여하므로 한 번에 기억하는 단위가 4개 안팎이라는 Cowan의 이론을 구조 전체에 적용했습니다. 레벨 4개, 레벨별 구성 요소 4개, 진행 단계(phase) 4개, 게이트 4종(G1a·G1b를 G1 하나로 세어 G1·G2·G3·E; 3.2에서는 다섯 종류로 나눠 적음), 팝업 선택지 최대 4개입니다. 문서는 이 이론이 사람의 기억에 관한 것이지 에이전트 성능의 근거는 아니라고 밝혀 둡니다.</p>` +
      src('plugins/my-agent/docs/build-guide/my-agent-architecture.md')]
   ];
@@ -432,7 +450,7 @@ footer .disc { border-top: 0; }
     ovList.appendChild(c);
   });
   document.getElementById('ov-note').appendChild(disc('자세히: 출처 표기 안내',
-    `<p>모든 출처 경로는 저장소 루트 기준 상대 경로입니다. 줄 번호는 그 줄(또는 범위) 하나가 문장을 뒷받침할 때만 붙였습니다. 1~3장의 출처는 항목마다 <code>출처:</code> 줄에 있고, 4장 비교표의 번호는 6장에서 풀립니다.</p>`));
+    `<p>모든 출처 경로는 저장소 루트 기준 상대 경로입니다. 줄 번호는 그 줄(또는 범위) 하나가 문장을 뒷받침할 때만 붙였습니다. 개요·흐름·특징 탭의 출처는 항목마다 <code>출처:</code> 줄에 있고, 비교 탭 표의 번호는 페이지 아래 출처 목록에서 풀립니다.</p>`));
 
   /* ---------- 2. flow ---------- */
   document.getElementById('flow-note').appendChild(disc('자세히: 예시 요청',
@@ -509,7 +527,7 @@ footer .disc { border-top: 0; }
   /* ---------- 3. features ---------- */
   /* feature = [title, summary, [bullets], source line, optional table html] */
   var themes = [
-    { name: '3.1 구조와 레벨', feats: [
+    { name: '구조와 레벨', feats: [
       ['4개 레벨로 나누고 역할을 갈랐습니다.',
        '조율(L1), 설계·판정(L2), 작업(L3), 도구·방어(L4)가 각각 다른 일을 맡습니다.',
        ['L1은 메인 세션이고 L2에는 5개, L3에는 4개 에이전트가 있습니다. 설계 문서는 구성 요소를 레벨당 4개로 맞추되, gate-analyst는 회고에서만 부르는 보조라 L2의 5번째로 따로 센다고 설명합니다.',
@@ -547,7 +565,7 @@ footer .disc { border-top: 0; }
         'L3는 맡은 범위 밖의 파일을 건드리지 않고, 막히면 우회하지 않고 보고합니다.'],
        'plugins/my-agent/SKILL.md, plugins/my-agent/l2-design-judge/agents/architect.md, plugins/my-agent/l3-workers/agents/coder.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md']
     ]},
-    { name: '3.2 단계와 게이트', feats: [
+    { name: '단계와 게이트', feats: [
       ['일은 4개 단계, 8개 스텝입니다.',
        '① 정의 → ② 계획 → ③ 실행 → ④ 인수 순서로 가고, 각 단계의 끝에 게이트가 있습니다.',
        ['① 정의 = 1 접수(Intake) · 2 탐색→범위, ② 계획 = 3 계획 · 4 계획 검토, ③ 실행 = 5 실행 · 6 병합, ④ 인수 = 7 검증 · 8 리뷰→인도입니다.',
@@ -599,7 +617,7 @@ footer .disc { border-top: 0; }
         '같은 반복 고리가 5번 돌면 6번째 전에 E로 넘어갑니다.'],
        'plugins/my-agent/SKILL.md']
     ]},
-    { name: '3.3 강제와 안전', feats: [
+    { name: '강제와 안전', feats: [
       ['계획 승인 전에는 hook이 위임을 거부하고 쓰기는 묻습니다 (G1b 하드 게이트).',
        '<code>plan.md</code>에 승인 줄이 없는 동안에는 hook이 작업 위임과 파일 쓰기를 거부합니다.',
        ['작업이 진행 중이고 <code>plan.md</code>의 <code>## Approval</code> 아래에 <code>Approved</code> 줄이 없으면, 어느 단계이든 위임과 쓰기를 거부합니다.',
@@ -638,7 +656,7 @@ footer .disc { border-top: 0; }
        'plugins/my-agent/SKILL.md'],
       ['밖으로 나가기 전에 비밀 패턴을 검사합니다 (secret scan).',
        '산출물이 작업 폴더를 떠나기 직전에 비밀처럼 생긴 문자열이 있는지 스캔합니다.',
-       ['검사 시점은 프로토타입 게시, G3 후 산출물 복사, 회고의 <code>gate-report.md</code> 복사, 커밋(dev 프로필 또는 작업 폴더를 커밋하기로 한 프로젝트. 기본값 <code>.my-agent/</code>, 이전 구조는 <code>docs/agent/</code>)입니다.',
+       ['검사 시점은 G3 후 산출물 복사, 회고의 <code>gate-report.md</code> 복사, 커밋(dev 프로필 또는 작업 폴더를 커밋하기로 한 프로젝트. 기본값 <code>.my-agent/</code>, 이전 구조는 <code>docs/agent/</code>)입니다.',
         '찾는 것은 AWS 키, 개인 키 헤더, <code>KEY/TOKEN/SECRET/PASSWORD=</code> 꼴의 줄, GitHub 토큰, Anthropic 키 형식입니다. 걸린 위치와 종류만 보여 주고 일치한 내용은 출력하지 않습니다.',
         '걸리면 사람에게 <code>해당 부분을 지우고 진행(권장)</code> / <code>그대로 진행</code> / <code>중단</code>을 묻습니다. 존재하지 않는 경로는 "깨끗함"으로 읽히지 않고 오류로 처리합니다.'],
        'plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py'],
@@ -648,7 +666,7 @@ footer .disc { border-top: 0; }
         '한도에 걸려 끝난 작업자는 정상 종료 이벤트가 없으므로, 기록 단계가 이를 <code>partial</code>로 따로 잡아냅니다(3.4의 ‘run-log’ 항목 참고). 같은 작업 단위가 두 번 멈추면 사람에게 올리는 에스컬레이션(E)이 열립니다.'],
        'plugins/my-agent/maintenance-notes.md · plugins/my-agent/l1-orchestration/phases/accept.md']
     ]},
-    { name: '3.4 기록·모니터·피드백', feats: [
+    { name: '기록·모니터·피드백', feats: [
       ['run-log: L1과 hook이 나눠서 자동 기록합니다.',
        '작업 폴더의 <code>run-log.md</code>에 단계·질문·하위 에이전트 호출이 시간순으로 쌓입니다.',
        ['줄은 <code>run-log.py</code> 스크립트만 쓰며 직접 고치지 않습니다. 시간은 스크립트가 시계에서 가져옵니다. L1은 단계 진입, 팝업 질문·답, 단계 전환 시 비용 등을 이 스크립트로 남깁니다.',
@@ -685,7 +703,7 @@ footer .disc { border-top: 0; }
         '<code>continue</code>는 이어받기 전에 세션 확인, 규칙 변경 확인, 위임 중이던 작업 단위의 상태 정리를 하고 <code>resume</code> 기록을 남깁니다.'],
        'plugins/my-agent/l4-tools-guards/hooks/session-notice.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/docs/build-guide/my-agent-architecture.md · plugins/my-agent/SKILL.md']
     ]},
-    { name: '3.5 프로필', feats: [
+    { name: '프로필', feats: [
       ['프로필 3가지가 같은 단계 뼈대를 일의 종류에 맞게 바꿉니다.',
        'general·research·dev는 단계는 같고, 범위를 묻는 항목, 계획 검토, 실행 방식, 결과물이 다릅니다.',
        ['프로필은 <code>intake.md</code>에 기록되고, 단계 시작 때마다 해당 프로필 파일을 다시 읽습니다.',

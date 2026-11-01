@@ -43,7 +43,7 @@ import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
 
 KINDS = ('step', 'ask', 'answer', 'revision', 'cost', 'stale', 'base', 'abort', 'deliver', 'resume',
-         'rules-changed', 'merge', 'fix', 'delegate', 'profile')
+         'rules-changed', 'merge', 'fix', 'delegate', 'profile', 'models')
 MAIN_MODEL = 'opus'
 
 
@@ -113,6 +113,9 @@ def main(argv=None) -> int:
         return 2
     if args.kind == 'profile' and not {'from', 'to'} <= keys:
         print('run-log: profile needs from= and to=', file=sys.stderr)
+        return 2
+    if args.kind == 'models' and not {'preset', 'source'} <= keys:
+        print('run-log: models needs preset= and source=', file=sys.stderr)
         return 2
     active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir), sub=args.task_dir)
     if active is None:

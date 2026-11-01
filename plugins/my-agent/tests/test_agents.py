@@ -279,6 +279,30 @@ class AgentsTest(unittest.TestCase):
         self.assertIn('not from memory', p)
         self.assertIn('colours, states and labels', p)
 
+    def test_architect_models_section(self):
+        """Criterion 5: architect writes `## Models` after `## Estimate`, from the preset lines L1 passes."""
+        a = self._agent('architect')
+        self.assertIn('`## Models`', a)
+        self.assertLess(a.index('7. `## Estimate`'), a.index('8. `## Models`'))
+        self.assertLess(a.index('8. `## Models`'), a.index('9. `## Existing work`'))
+        self.assertIn('| Agent | Model | Effort | Note |', a)
+        self.assertIn('`Preset: <name>`', a)
+        self.assertIn('`Preset: standard (definition values)`', a)
+        self.assertIn('`Recommendation: <change> — <reason>`', a)
+        self.assertIn('one-line reason', a)
+        self.assertIn('agent-models.py show', a)
+        self.assertIn('a preset entry for them is ignored', a)
+
+    def test_plan_reviewer_models_check(self):
+        """Criterion 5: plan-reviewer checks `## Models` against the passed preset lines."""
+        p = self._agent('plan-reviewer')
+        self.assertIn('**Models:**', p)
+        self.assertIn('`## Models`', p)
+        self.assertIn('match the passed preset lines', p)
+        self.assertIn('one-line reason', p)
+        self.assertIn('a missing section is a BLOCKER', p)
+        self.assertIn('otherwise SHOULD-FIX', p)
+
     def test_architect_keeps_coder_files_in_task_location(self):
         self.assertIn('inside the task location', self._agent('architect'))
 

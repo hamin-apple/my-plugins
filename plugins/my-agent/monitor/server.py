@@ -42,6 +42,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/api/tasks':
             return self._json(200, {'tasks': self.registry.list_tasks(), 'now': datetime.now().strftime('%H:%M')})
         if path.startswith('/api/tasks/'):
+            rest = path[len('/api/tasks/'):].split('/')
+            if len(rest) == 3 and rest[2] == 'report':   # the key itself is <hash>/<task-id>
+                report = self.registry.get_report('/'.join(rest[:2]))
+                return self._json(200, report) if report else self._json(404, {'error': 'no such task'})
             task = self.registry.get_task(path[len('/api/tasks/'):])
             return self._json(200, task) if task else self._json(404, {'error': 'no such task'})
         self._json(404, {'error': 'not found'})

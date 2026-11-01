@@ -114,8 +114,9 @@ final class WindowController: NSObject, NSWindowDelegate {
         hoveredInFront = Date()
     }
 
-    /// In front: pinned (always above), or no other window above it overlaps it (below the Dock level:
-    /// the Dock and the menu bar keep transparent full-screen windows).
+    /// In front: pinned (always above), or no other window of the same level above it overlaps it.
+    /// Windows of a higher level (another app's floating bar, the Dock, the menu bar) stay above whatever
+    /// show() does, so they do not count: counting them made the click never hide the window.
     /// Not NSApp.isActive: a status item click does not always make the app active.
     private func isInFront(_ win: NSWindow) -> Bool {
         if store.pinned { return true }
@@ -127,7 +128,7 @@ final class WindowController: NSObject, NSWindowDelegate {
         return !above.contains { info in
             let layer = info[kCGWindowLayer as String] as? Int ?? 0
             let alpha = info[kCGWindowAlpha as String] as? Double ?? 1
-            guard layer >= 0, layer < Int(CGWindowLevelForKey(.dockWindow)), alpha > 0,
+            guard layer == Int(win.level.rawValue), alpha > 0,
                   let b = info[kCGWindowBounds as String] as? NSDictionary,
                   let r = CGRect(dictionaryRepresentation: b) else { return false }
             return r.intersects(mine)

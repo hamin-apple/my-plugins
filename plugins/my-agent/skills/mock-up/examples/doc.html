@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- doc type: content only, no window frame. Width 1440, height = content (keep in sync with --h). -->
+<meta name="mockup-size" content="1440x1740">
+<title>Orbit</title>
+<script>
+  if (/[?&]capture\b/.test(location.search) || matchMedia('(prefers-reduced-motion: reduce)').matches)
+    document.documentElement.setAttribute('data-capture', '');
+</script>
+<style>
+  :root {
+    --w: 1440px; --h: 1740px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+    --accent: #007aff; --green: #34c759; --red: #ff3b30; --orange: #ff9500; --purple: #af52de; --teal: #30b0c7; --indigo: #5e5ce6;
+    --label: #000; --secondary-label: rgba(60,60,67,.6);
+    --bg: #f2f2f7; --grouped-bg: #fff; --card: #f5f5f7;
+    --separator: rgba(60,60,67,.18); --fill: rgba(120,120,128,.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { font-family: var(--font); color: var(--label); font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+  .canvas { width: var(--w); height: var(--h); overflow: hidden; position: relative; background: #fff; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 40px; }
+
+  /* nav: translucent bar, hairline separator */
+  .nav { height: 64px; border-bottom: .5px solid var(--separator); background: rgba(255,255,255,.85); }
+  .nav .wrap { height: 100%; display: flex; align-items: center; gap: 28px; }
+  .nav b { font-size: 21px; font-weight: 700; letter-spacing: -.02em; margin-right: auto; }
+  .nav a { font-size: 14px; color: var(--secondary-label); text-decoration: none; }
+
+  /* buttons: pill, filled = accent, secondary = tinted accent */
+  .pill { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 20px; border-radius: 20px;
+    font-size: 15px; font-weight: 500; background: var(--accent); color: #fff; white-space: nowrap; }
+  .pill.sm { height: 34px; padding: 0 16px; font-size: 14px; border-radius: 17px; }
+  .pill.tint { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+
+  /* hero: copy left, key figures (grouped list) right */
+  .hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: center; padding: 88px 0 64px; }
+  .eyebrow { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: .01em; margin-bottom: 14px; }
+  .hero h1 { font-size: 68px; line-height: 1.03; font-weight: 700; letter-spacing: -.04em; }
+  .hero p { margin-top: 20px; font-size: 20px; line-height: 1.45; color: var(--secondary-label); max-width: 34ch; }
+  .hero .row { display: flex; gap: 12px; margin-top: 28px; }
+
+  .group { background: var(--bg); border-radius: 16px; padding: 0 10px 10px; }
+  .group-h { padding: 14px 10px 10px; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--secondary-label); display: flex; justify-content: space-between; }
+  .cells { background: #fff; border-radius: 10px; overflow: hidden; }
+  .cell { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 0 18px; }
+  .cell + .cell { border-top: .5px solid var(--separator); }
+  .cell .no { font-size: 12px; font-weight: 600; color: var(--accent); width: 22px; }
+  .cell .lab { flex: 1; font-size: 16px; }
+  .cell .lab small { display: block; font-size: 12px; color: var(--secondary-label); }
+  .cell .val { font-size: 28px; font-weight: 600; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+
+  /* section header */
+  .sec-h { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+  .sec-h h2 { font-size: 36px; font-weight: 700; letter-spacing: -.03em; }
+  .sec-h span { font-size: 15px; color: var(--secondary-label); }
+
+  /* feature cards: filled, rounded, colored icon tile (display:block!) */
+  .features { padding: 24px 0 64px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card { border-radius: 18px; background: var(--card); padding: 26px 26px 30px; }
+  .tile { display: block; width: 44px; height: 44px; border-radius: 11px; margin-bottom: 20px; position: relative; }
+  .tile::after { content: ""; position: absolute; inset: 13px; border: 2.5px solid #fff; border-radius: 4px; }
+  .card h3 { font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
+  .card p { margin-top: 8px; font-size: 15px; line-height: 1.5; color: var(--secondary-label); }
+
+  /* split: CSS-drawn visual + copy */
+  .split { display: grid; grid-template-columns: 7fr 5fr; gap: 56px; align-items: center; padding: 16px 0 72px; }
+  .visual { aspect-ratio: 16 / 10; border-radius: 18px; background: linear-gradient(135deg, #e8f1ff, #f1e9ff); padding: 28px; display: flex; flex-direction: column; gap: 12px; }
+  .vrow { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .vrow i { display: block; width: 10px; height: 36px; border-radius: 5px; }
+  .vrow b { font-size: 15px; font-weight: 600; }
+  .vrow small { display: block; font-size: 12px; color: var(--secondary-label); font-weight: 400; }
+  .vrow span { margin-left: auto; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .split h2 { font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -.03em; }
+  .split p { margin-top: 14px; font-size: 17px; line-height: 1.5; color: var(--secondary-label); }
+
+  /* quote + close */
+  .bottom { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; padding-bottom: 56px; }
+  .quote { border-radius: 18px; padding: 32px 34px; background: #fff; box-shadow: 0 0 0 .5px var(--separator); }
+  .quote blockquote { font-size: 26px; line-height: 1.3; font-weight: 600; letter-spacing: -.02em; }
+  .quote cite { display: block; margin-top: 16px; font-size: 14px; font-style: normal; color: var(--secondary-label); }
+  .close { border-radius: 18px; padding: 32px 34px; background: linear-gradient(135deg, #0a84ff, var(--indigo)); color: #fff; }
+  .close h3 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .close p { margin-top: 6px; font-size: 15px; opacity: .85; }
+  .signup { display: flex; gap: 10px; margin-top: 22px; }
+  .signup .field { flex: 1; height: 40px; border-radius: 10px; background: rgba(255,255,255,.2); padding: 0 14px; font-size: 15px; line-height: 40px; color: rgba(255,255,255,.75); }
+  .signup .pill { background: #fff; color: var(--accent); }
+
+  footer { border-top: .5px solid var(--separator); padding: 22px 0; font-size: 13px; color: var(--secondary-label); }
+  footer .wrap { display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <nav class="nav"><div class="wrap"><b>Orbit</b><a>Features</a><a>Pricing</a><a>Customers</a><span class="pill sm">Start free trial</span></div></nav>
+
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Time tracking for small studios</div>
+        <h1>Track the work,<br>not the clock.</h1>
+        <p>Orbit logs billable hours from your calendar and turns them into invoices before Friday.</p>
+        <div class="row"><span class="pill">Start free trial</span><span class="pill tint">Watch demo</span></div>
+      </div>
+      <div class="group">
+        <div class="group-h"><span>THIS WEEK</span><span>Rev A</span></div>
+        <div class="cells">
+          <div class="cell"><span class="no">01</span><span class="lab">Hours auto-logged<small>from 14 calendars</small></span><span class="val">38.5 h</span></div>
+          <div class="cell"><span class="no">02</span><span class="lab">Invoices sent<small>3 paid same day</small></span><span class="val">12</span></div>
+          <div class="cell"><span class="no">03</span><span class="lab">Time to invoice<small>median, last 30 days</small></span><span class="val">2.4 d</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="sec-h"><h2>Everything between the meeting and the invoice.</h2><span>3 core features</span></div>
+      <div class="cards">
+        <div class="card"><i class="tile" style="background:var(--teal)"></i><h3>Calendar sync</h3><p>Meetings become time entries the moment they end. Edit or ignore them in one click.</p></div>
+        <div class="card"><i class="tile" style="background:var(--green)"></i><h3>One-click invoices</h3><p>Group by client, apply your rate card and send a PDF invoice straight from the week view.</p></div>
+        <div class="card"><i class="tile" style="background:var(--purple)"></i><h3>Team reports</h3><p>See utilization per person and per project without exporting a single spreadsheet.</p></div>
+      </div>
+    </section>
+
+    <section class="split">
+      <div class="visual">
+        <div class="vrow"><i style="background:var(--accent)"></i><b>Fieldwork — Brand refresh<small>Tue 10:00–11:30 · Design review</small></b><span>1.5 h</span></div>
+        <div class="vrow"><i style="background:var(--orange)"></i><b>Northline — Sprint planning<small>Tue 14:00–15:00 · Workshop</small></b><span>1.0 h</span></div>
+        <div class="vrow"><i style="background:var(--green)"></i><b>Fieldwork — Copy edits<small>Wed 09:30–12:00 · Focus block</small></b><span>2.5 h</span></div>
+        <div class="vrow"><i style="background:var(--purple)"></i><b>Atlas Co. — Kickoff<small>Thu 16:00–17:00 · Client call</small></b><span>1.0 h</span></div>
+      </div>
+      <div>
+        <div class="eyebrow">Week view</div>
+        <h2>Your calendar already knows what you billed.</h2>
+        <p>Orbit reads event titles and attendees, matches them to clients, and suggests the rate. You only confirm.</p>
+      </div>
+    </section>
+
+    <section class="bottom">
+      <figure class="quote"><blockquote>&ldquo;We stopped chasing timesheets on Thursday night. Invoices just go out.&rdquo;</blockquote><cite>Mina Park, Studio Lead at Fieldwork</cite></figure>
+      <div class="close"><h3>Ready for Friday?</h3><p>Connect a calendar and send your first invoice today.</p><div class="signup"><span class="field">you@studio.com</span><span class="pill">Subscribe</span></div></div>
+    </section>
+  </div>
+
+  <footer><div class="wrap"><span>&copy; 2026 Orbit Labs</span><span>Privacy · Terms · Status</span></div></footer>
+</div>
+</body>
+</html>

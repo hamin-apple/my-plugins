@@ -65,11 +65,22 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v043(self):
+    def test_status_line_starts_with_v044(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.43 ('), line[:60])
-        self.assertIn('v0.42 (', line)
-        self.assertIn('plugin 0.7.0', line)
+        self.assertTrue(line.startswith('- Status: design draft v0.44 ('), line[:60])
+        self.assertIn('v0.43 (', line)
+        self.assertIn('plugin 0.9.0', line)
+
+    def test_monitor_section_names_gate_view(self):
+        section = self.section('### 4.7.4 ', '### 4.8 ')
+        for word in ('gate', '/api/tasks/<key>/prototype', '--report'):
+            self.assertIn(word, section, word)
+
+    def test_prototype_uses_mock_up_skill(self):
+        a = self.text.index('**What G1b shows: mock-up and prototype**')
+        section = self.text[a:self.text.index('**What a prototype is**')]
+        self.assertIn('skills/mock-up', section)
+        self.assertIn('capture.sh', section)
 
     def test_preset_mechanism_is_described(self):
         section = self.section('### 4.5 ', '### 4.5.1 ')

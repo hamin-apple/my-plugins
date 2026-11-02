@@ -160,6 +160,105 @@ class ReportParsersTest(unittest.TestCase):
         self.assertEqual((units[1]['files'], units[1]['criteria'], units[1]['group']), (['P/c.py', 'P/d.py'], [3], None))
         self.assertEqual((ma_schema.unit_details(None), ma_schema.criterion_numbers(None)), ([], []))
 
+    def test_background_purpose_labeled(self):
+        text = ('# Scope\n\n## Purpose and users\n\nBackground: The export command writes one file per run\n'
+                'and overwrites the last one.\n\nPurpose: Keep every export by adding a dated name,\nand ship it as 1.4.0.\n\n'
+                'Users: the person running exports; the release script.\n\n## Other\nx\n')
+        self.assertEqual(ma_schema.background_purpose(text),
+                         ('The export command writes one file per run and overwrites the last one.',
+                          'Keep every export by adding a dated name, and ship it as 1.4.0.'))
+        only = '## Purpose and users\n\nPurpose: Only this.\n'
+        self.assertEqual(ma_schema.background_purpose(only), (None, 'Only this.'))
+        bullets = '## Purpose and users\n\n- Background: B text.\n- Purpose: P text.\n'
+        self.assertEqual(ma_schema.background_purpose(bullets), ('B text.', 'P text.'))
+
+    def test_background_purpose_unlabeled(self):
+        text = '## Purpose and users\n\nFirst para\nwraps.\n\nSecond para.\n\nUsers: someone.\n\n## Next\n'
+        self.assertEqual(ma_schema.background_purpose(text), ('First para wraps.', 'Second para.'))
+        one = '## Purpose and users\n\nOnly one.\n\nUsers: someone.\n'
+        self.assertEqual(ma_schema.background_purpose(one), ('Only one.', None))
+        lst = '## Purpose and users\n\nIntro.\n\n1. one\n2. two\n\nUsers: x.\n'
+        self.assertEqual(ma_schema.background_purpose(lst), ('Intro.', '1. one 2. two'))
+
+    def test_background_purpose_scope_summary(self):
+        text = ('# Plan: x\n\n## Scope summary\n- Purpose: Show the history.\n- Non-goals: No GUI.\n'
+                '- Deliverable location: the repo.\n\n## Work units\n')
+        self.assertEqual(ma_schema.background_purpose(text), (None, 'Show the history.'))
+
+    def test_background_purpose_missing(self):
+        self.assertEqual(ma_schema.background_purpose(None), (None, None))
+        self.assertEqual(ma_schema.background_purpose(''), (None, None))
+        self.assertEqual(ma_schema.background_purpose('## Other\nx\n'), (None, None))
+        self.assertEqual(ma_schema.background_purpose('## Purpose and users\n\nUsers: x.\n'), (None, None))
+
+    def test_section_bullets(self):
+        text = ('## Non-goals\n- No change to the file format.\n- A wrapped bullet\n  that goes on.\n  - nested\n\n'
+                '- Last.\n\n## Estimate\n- Subagents: 6.\n')
+        self.assertEqual(ma_schema.section_bullets(text, 'Non-goals'),
+                         ['No change to the file format.', 'A wrapped bullet that goes on. - nested', 'Last.'])
+        self.assertEqual(ma_schema.section_bullets(text, 'Estimate'), ['Subagents: 6.'])
+        self.assertEqual(ma_schema.section_bullets(text, 'Missing'), [])
+        self.assertEqual(ma_schema.section_bullets(None, 'Estimate'), [])
+
+    def test_plan_lead(self):
+        self.assertEqual(ma_schema.plan_lead('# Plan: x\n\nTwo coder units:\nthe name, then the docs.\n\nSecond para.\n\n## Work units\n'),
+                         'Two coder units: the name, then the docs.')
+        self.assertIsNone(ma_schema.plan_lead('# Plan: x\n\n## Work units\n\nText.\n'))
+        self.assertIsNone(ma_schema.plan_lead('# Plan: x\n## Work units\n'))
+        self.assertEqual(ma_schema.plan_lead('# Plan: x\n\nProfile: dev. Completion criteria 1-3 are in scope.md.\n\n## A\n'),
+                         'Profile: dev. Completion criteria 1-3 are in scope.md.')
+        self.assertIsNone(ma_schema.plan_lead(None))
+        self.assertIsNone(ma_schema.plan_lead(''))
+
+    def test_models_table(self):
+        text = ('## Models\nPreset: standard (definition values)\n\n| Agent | Model | Effort | Note |\n|---|---|---|---|\n'
+                '| architect | opus | high | |\n| coder | sonnet | medium | cheaper here |\n| newbie | haiku | low | |\n\n'
+                'Recommendation: economy fits this plan.\n\n## Approval\n')
+        self.assertEqual(ma_schema.models_table(text), {
+            'preset': 'standard (definition values)', 'recommendation': 'economy fits this plan.',
+            'rows': [{'agent': 'architect', 'model': 'opus', 'effort': 'high', 'note': ''},
+                     {'agent': 'coder', 'model': 'sonnet', 'effort': 'medium', 'note': 'cheaper here'},
+                     {'agent': 'newbie', 'model': 'haiku', 'effort': 'low', 'note': ''}]})
+        bare = ma_schema.models_table('## Models\nPreset: economy\n')
+        self.assertEqual(bare, {'preset': 'economy', 'rows': [], 'recommendation': None})
+        self.assertIsNone(ma_schema.models_table('## Approval\nx\n'))
+        self.assertIsNone(ma_schema.models_table(None))
+
+    def test_verify_verdict(self):
+        self.assertEqual(ma_schema.verify_verdict('\nVerdict: ALL PASS\nRun: 1\n'), 'ALL PASS')
+        self.assertEqual(ma_schema.verify_verdict('Verdict: FAIL\n- 1. FAIL x\n'), 'FAIL')
+        self.assertIsNone(ma_schema.verify_verdict('Something else\nVerdict: FAIL\n'))
+        self.assertIsNone(ma_schema.verify_verdict(''))
+        self.assertIsNone(ma_schema.verify_verdict(None))
+
+    def test_plan_review_decisions(self):
+        text = ('REVISE\nRun: 1\n\n## Findings\n- BLOCKER plan.md:1 a\n\n## Decisions\n'
+                '- BLOCKER plan.md:1 fix the thing → applied by L1\n'
+                '- SHOULD-FIX plan.md:259 pin updated → applied by architect\n'
+                '- NITPICK plan.md:60 skip it → declined\n'
+                '- NITPICK plan.md:61 no outcome\n\n## Other\n- BLOCKER x y → declined\n')
+        self.assertEqual(ma_schema.plan_review_decisions(text), [
+            ('BLOCKER', 'plan.md:1', 'applied'), ('SHOULD-FIX', 'plan.md:259', 'applied'),
+            ('NITPICK', 'plan.md:60', 'declined'), ('NITPICK', 'plan.md:61', None)])
+        self.assertEqual((ma_schema.plan_review_decisions(None), ma_schema.plan_review_decisions('x')), ([], []))
+
+    def test_aborted_reason(self):
+        self.assertEqual(ma_schema.aborted_reason('Status: aborted 2026-11-03 10:20 person stopped it\nTask: x\n'), 'person stopped it')
+        self.assertEqual(ma_schema.aborted_reason('Status: aborted 2026-11-03 10:20\n'), '')
+        self.assertEqual(ma_schema.aborted_reason('Status: aborted\n'), '')
+        self.assertIsNone(ma_schema.aborted_reason('Status: done\n'))
+        self.assertIsNone(ma_schema.aborted_reason('Status: active\n'))
+        self.assertIsNone(ma_schema.aborted_reason(None))
+        self.assertIsNone(ma_schema.aborted_reason(''))
+
+    def test_existing_parsers_unchanged(self):
+        text = '## Purpose and users\n\nFirst.\nSecond line.\n\nUsers: x\n'
+        self.assertEqual(ma_schema.purpose(text), 'First. Second line. Users: x')
+        rv = '## Findings\n- SHOULD-FIX a.py:3 text (new)\n- NITPICK b.py:4 other\n'
+        self.assertEqual(ma_schema.review_findings(rv), [('SHOULD-FIX', 'a.py:3', 'text', 'new'), ('NITPICK', 'b.py:4', 'other', None)])
+        pr = 'REVISE\nRun: 2\n\n## Findings\n- BLOCKER p:1 a\n- NITPICK q b\n'
+        self.assertEqual(ma_schema.plan_review(pr), {'verdict': 'REVISE', 'run': 2, 'blockers': 1, 'should_fix': 0, 'nitpicks': 1})
+
 
 if __name__ == '__main__':
     unittest.main()

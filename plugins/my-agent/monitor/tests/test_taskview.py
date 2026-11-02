@@ -183,6 +183,28 @@ def write_transcript(claude, task_dir, ma_usage):
     path.write_text('\n'.join(rows) + '\n', encoding='utf-8')
 
 
+class MultiDayTest(unittest.TestCase):
+    """A task whose run-log crosses midnight keeps the date on every record, so the timeline can place them in order."""
+
+    def test_three_day_task_has_absolute_stamps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shutil.copytree(PROJECTS / 'claude-sessions', root / 'p')
+            td = root / 'p/docs/agent/261024-cli-json-output'
+            lines = (td / 'run-log.md').read_text().splitlines()
+            out = [lines[0]]
+            for i, ln in enumerate(lines[1:]):
+                day = 24 + i * 3 // (len(lines) - 1)           # spreads the lines over 24..26 Oct
+                out.append(ln.replace('2026-10-24', '2026-10-%02d' % day, 1))
+            (td / 'run-log.md').write_text('\n'.join(out) + '\n')
+            now = datetime(2026, 10, 27, 9, 5)
+            t = build_task(root / 'p', td, PRICES, TranscriptCache(CLAUDE), now)
+        self.assertEqual(t['nowTs'], '2026-10-27 09:05:00')
+        stamps = [x['ts'] for x in t['log']]
+        self.assertEqual(stamps, sorted(stamps))
+        self.assertEqual({s[:10] for s in stamps}, {'2026-10-24', '2026-10-25', '2026-10-26'})
+
+
 class SnapshotTest(unittest.TestCase):
     """A finished task reads main-usage.json (ma_usage) instead of a transcript that may be deleted."""
 

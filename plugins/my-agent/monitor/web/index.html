@@ -19,13 +19,21 @@
   --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
-@media (prefers-color-scheme: dark) { :root {
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0e1319; --surface: #151c24; --surface-2: #1a232d; --ink: #e4eaf0; --muted: #93a1b0; --line: #2a3542;
   --accent: #7ea3ff; --l1: #7ea3ff; --l1-soft: #1c2a47; --l2: #e2aa4f; --l2-soft: #3a2c14;
   --l3: #4cc5a3; --l3-soft: #133a31; --l4: #a3adba; --l4-soft: #262f3a;
   --gate: #ff8a5c; --gate-soft: #3e2016; --ok: #5fd08a; --ok-soft: #143222; --run: #7ea3ff;
   --st-run: #ffa94d; --st-wait: #ff6b6b; --st-done: #7ea3ff; --st-stop: #c9d1d9; --st-past: #5fd08a;
   --term-bg: #0a0f14; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1319; --surface: #151c24; --surface-2: #1a232d; --ink: #e4eaf0; --muted: #93a1b0; --line: #2a3542;
+  --accent: #7ea3ff; --l1: #7ea3ff; --l1-soft: #1c2a47; --l2: #e2aa4f; --l2-soft: #3a2c14;
+  --l3: #4cc5a3; --l3-soft: #133a31; --l4: #a3adba; --l4-soft: #262f3a;
+  --gate: #ff8a5c; --gate-soft: #3e2016; --ok: #5fd08a; --ok-soft: #143222; --run: #7ea3ff;
+  --st-run: #ffa94d; --st-wait: #ff6b6b; --st-done: #7ea3ff; --st-stop: #c9d1d9; --st-past: #5fd08a;
+  --term-bg: #0a0f14; color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 14px/1.55 var(--sans); }
@@ -46,6 +54,7 @@ h2, h3 { margin: 0; line-height: 1.3; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .seg button { border: 0; background: transparent; padding: 4px 10px; font-size: 12px; color: var(--muted); }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.theme-btn { border: 1px solid var(--line); border-radius: 6px; background: transparent; padding: 4px 10px; font-size: 12px; color: var(--muted); }
 .task-select { display: none; font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); }
 
 /* shell */
@@ -219,7 +228,7 @@ button { position: relative; overflow: hidden; }
 /* timeline */
 .tl { position: relative; font-size: 12px; }
 .tl-axis { position: relative; height: 18px; margin-left: 170px; border-bottom: 1px solid var(--line); font: 10.5px var(--mono); color: var(--muted); }
-.tl-axis span { position: absolute; transform: translateX(-50%); }
+.tl-axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 .tl-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); align-items: center; min-height: 26px; border-bottom: 1px dashed var(--line); }
 .tl-band { opacity: .7; } .tl-row .tl-mark { opacity: .35; }
 .tl-row .lb { font: 11.5px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
@@ -242,32 +251,51 @@ body.entering .tl-bar.live { animation: grow .8s backwards, stripes .7s linear i
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
 /* report tab */
 #p-report.panel { background: none; border: 0; padding: 0; }
-#p-report .rp-part { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 12px; min-width: 0; margin-bottom: 10px; }
-#p-report .rp-part > .ph { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-#p-report .rp-part > .ph h3 { font-size: 15px; }
-#p-report .rp-part > .ph small { color: var(--muted); font-size: 12px; }
+#p-report { --rp-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Apple SD Gothic Neo", sans-serif; --rp-mono: ui-monospace, "SF Mono", Menlo, monospace; --sans: var(--rp-sans); --mono: var(--rp-mono); font-family: var(--rp-sans); }
+#p-report code, #p-report .mono { font-family: var(--rp-mono); }
+#p-report .rsec { margin-top: 18px; min-width: 0; }
+#p-report .rsec-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 22px; }
+#p-report .rlabel { font: 600 11px var(--rp-sans); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin: 0; }
+#p-report .rcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; min-width: 0; }
+#p-report .reyebrow { margin: 14px 0 0; font: 500 12px var(--rp-mono); color: var(--muted); overflow-wrap: anywhere; }
+#p-report .rbanner { --tone: var(--muted); border-radius: 12px; padding: 12px 18px; background: color-mix(in srgb, var(--tone) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent); }
+#p-report .rbanner.done { --tone: var(--ok); }
+#p-report .rbanner.run { --tone: var(--st-run); }
+#p-report .rbanner.wait { --tone: var(--st-wait); }
+#p-report .rbanner.stop { --tone: var(--st-stop); }
+#p-report .rb-top { display: flex; align-items: center; gap: 16px; }
+#p-report .rb-ic { width: 40px; height: 40px; border-radius: 50%; background: var(--tone); color: var(--surface); flex: none; display: grid; place-items: center; font: 700 20px/1 var(--rp-sans); }
+#p-report .rb-big { font: 600 17px/1.3 var(--rp-sans); overflow-wrap: anywhere; }
+#p-report .rb-big code { font-size: 14px; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; }
+#p-report .rb-small { font-size: 13px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#p-report .rb-body { margin-top: 12px; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--tone) 25%, transparent); }
+#p-report .rlink { color: var(--accent); font-weight: 600; text-decoration: none; }
+#p-report .rlink:hover { text-decoration: underline; }
+#p-report .ov, #p-report .gb { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 14px; line-height: 1.45; }
+#p-report .ov dt, #p-report .gb dt { color: var(--muted); font-weight: 500; }
+#p-report .ov dd, #p-report .gb dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+#p-report .tk { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+#p-report .tk li { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.4; }
+#p-report .tk .tg { width: 92px; flex: none; color: var(--muted); font-weight: 500; display: inline-flex; align-items: center; gap: 8px; }
+#p-report .tk .ic { width: 20px; height: 20px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 11px/1 var(--rp-sans); }
+#p-report .tk .ic.ok { background: var(--ok-soft); color: var(--ok); }
+#p-report .tk .ic.note { background: var(--gate-soft); color: var(--gate); }
+#p-report .tk .tx { min-width: 0; overflow-wrap: anywhere; }
+#p-report .tk .d { display: block; color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+#p-report .tk code { font-size: 12.5px; background: var(--surface-2); padding: 0 5px; border-radius: 4px; }
+#p-report .group { margin-top: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+#p-report .group > .sec { border: 0; border-radius: 0; margin: 0; background: transparent; }
+#p-report .group > .sec + .sec { border-top: 1px solid var(--line); }
+#p-report .group > .sec > .sh { grid-template-columns: 12px auto minmax(0, 1fr); gap: 12px; min-height: 40px; padding: 0 16px; border-radius: 0; }
+#p-report .group > .sec > .sh .nm { font-size: 14px; font-weight: 500; white-space: nowrap; }
+#p-report .group > .sec > .sh .sum { text-align: right; color: var(--muted); font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#p-report .group > .sec > .sb > .sbi > .sbp { padding: 4px 16px 16px 40px; }
 #p-report .seg.small button { padding: 1px 8px; font-size: 11.5px; }
 #p-report .nyw { font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 6px 10px; margin: 4px 0; background: var(--surface-2); }
 body.lay-b #p-report, body.lay-c #p-report { display: none; }
 /* overview part */
 #p-report .lead { margin: 0 0 6px; }
 #p-report .ovsum { margin: 0; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
-#p-report .ovl { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 1px 10px; margin: 0; font-size: 13px; }
-#p-report .ovl dt { color: var(--muted); }
-#p-report .ovl dd { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 12.5px; }
-
-/* takeaway part */
-#p-report .rkpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 4px; }
-@media (max-width: 760px) { #p-report .rkpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }  }
-#p-report .rkpi { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-#p-report .rkpi .kl { font-size: 11px; color: var(--muted); letter-spacing: .04em; }
-#p-report .rkpi .kv2 { font: 600 20px/1.2 var(--sans); font-variant-numeric: tabular-nums; }
-#p-report .rkpi .kv2 small { font-size: 13px; font-weight: 500; color: var(--muted); }
-#p-report .rkpi .kv2.ok { color: var(--ok); }
-#p-report .rkpi .ks { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#p-report .rbar { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 2px; }
-#p-report .rbar i { display: block; height: 100%; width: 100%; background: var(--ok); border-radius: 99px; transform-origin: left; }
-#p-report .sub { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; margin: 10px 0 5px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 
 /* compact expandable rows (criteria, work units) */
 #p-report .rows { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
@@ -292,7 +320,7 @@ body.lay-b #p-report, body.lay-c #p-report { display: none; }
 #p-report .rtl-chip { position: absolute; top: 2px; transform: translateX(-50%); font: 600 10.5px var(--mono); color: var(--gate); border: 1px solid var(--gate); background: var(--gate-soft); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
 #p-report .rtl-chip.end { transform: translateX(-100%); }
 #p-report .rtl-axis { position: relative; height: 16px; margin-left: var(--lw); border-bottom: 1px solid var(--line); font: 10.5px var(--mono); color: var(--muted); }
-#p-report .rtl-axis span { position: absolute; transform: translateX(-50%); }
+#p-report .rtl-axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
 #p-report .rtl-axis span:first-child { transform: none; }
 #p-report .rtl-row { display: grid; grid-template-columns: var(--lw) minmax(0, 1fr); align-items: center; min-height: 30px; border-bottom: 1px dashed var(--line); }
 #p-report .rtl-row .lb { font: 12px var(--mono); padding-right: 8px; line-height: 1.25; }
@@ -304,14 +332,12 @@ body.lay-b #p-report, body.lay-c #p-report { display: none; }
 #p-report .rtl-back { position: absolute; top: 3px; transform: translateX(-50%); font: 600 10px var(--mono); color: var(--surface); background: var(--gate); border-radius: 4px; padding: 0 4px; white-space: nowrap; z-index: 1; }
 #p-report.rp-enter .rtl-bar { animation: rp-grow .8s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
 #p-report.rp-enter .rtl-back { animation: rp-rise .5s backwards; animation-delay: .9s; }
-#p-report.rp-enter .lrow, #p-report.rp-enter .rkpi { animation: rp-rise .4s backwards; animation-delay: calc(var(--i, 0) * 30ms); }
-#p-report.rp-enter .rkpi .rbar i { animation: rp-grow .9s cubic-bezier(.2,.8,.2,1) backwards; }
+#p-report.rp-enter .lrow, #p-report.rp-enter .rbanner, #p-report.rp-enter .rcard { animation: rp-rise .4s backwards; animation-delay: calc(var(--i, 0) * 30ms); }
 @keyframes rp-grow { from { transform: scaleX(0); } }
 @keyframes rp-rise { from { opacity: 0; transform: translateY(8px); } }
 #p-report .rlegend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
 #p-report .rlegend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
-@media (max-width: 520px) { #p-report .rtl { --lw: 104px; }#p-report .rtl-row .lb { font-size: 11px; }#p-report .rp-part { padding: 10px; }#p-report .ovl { grid-template-columns: 78px minmax(0, 1fr); }  }
-
+@media (max-width: 520px) { #p-report .rtl { --lw: 104px; }#p-report .rtl-row .lb { font-size: 11px; }#p-report .rcard { padding: 10px 12px; } }
 /* cost */
 #p-report .ctab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 #p-report .ctab th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11.5px; border-bottom: 1px solid var(--line); padding: 4px 6px; }
@@ -558,6 +584,7 @@ body.side-min .side-head { justify-content: center; padding: 0 0 10px; }
   <span class="live"><i class="dot run" id="live-dot"></i><span id="live-txt"></span></span>
   <select class="task-select" id="task-select"></select>
   <span class="spacer"></span>
+  <button class="theme-btn" id="theme-btn" type="button" data-theme-cycle="1"></button>
   <span class="seg lang-seg" id="lang-seg" role="group" aria-label="Language"><button data-lang="en" aria-pressed="true">EN</button><button data-lang="ko" aria-pressed="false">한국어</button></span>
 </div>
 
@@ -604,6 +631,13 @@ const fmt = s =>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 let LANG = 'en';
 try { if (localStorage.getItem('ma-lang') === 'ko') LANG = 'ko'; } catch (e) {}
 const L = (en, ko) => LANG === 'ko' ? ko : en;
+
+/* ---------- theme: auto follows the system; light / dark force it; the choice is kept per browser ---------- */
+const THEMES = ['auto', 'light', 'dark'];
+let THEME = 'auto';
+try { const t = localStorage.getItem('ma-theme'); if (THEMES.includes(t)) THEME = t; } catch (e) {}
+const applyTheme = () => { if (THEME === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', THEME); };
+applyTheme();
 const fmtMin = m => { m = Math.round(m); return m >= 60 ? L(`${Math.floor(m / 60)}h ${m % 60}m`, `${Math.floor(m / 60)}시간 ${m % 60}분`) : L(m + 'm', m + '분'); };
 
 const PHASES = [
@@ -697,6 +731,9 @@ function renderChrome() {
   $('side-note').innerHTML = TASKS.length ? L(`Tasks found in ${np} project${np === 1 ? '' : 's'}.`, `프로젝트 ${np}곳에서 찾은 작업입니다.`)
     : L('No tasks yet. my-agent lists projects in <code>projects.txt</code> in its data folder.', '아직 작업이 없습니다. my-agent가 데이터 폴더의 <code>projects.txt</code>에 프로젝트를 적습니다.');
   document.querySelectorAll('#lang-seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === LANG));
+  const tb = $('theme-btn');
+  tb.textContent = THEME === 'light' ? L('Light','라이트') : THEME === 'dark' ? L('Dark','다크') : L('Auto','자동');
+  tb.title = L('Theme: click to change','테마: 눌러서 바꿉니다');
 }
 
 function renderList() {
@@ -727,6 +764,30 @@ function renderHead() {
 
 const num = s => parseFloat(String(s || '0')) || 0;
 const mins = hm => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+/* absolute minutes of a 'YYYY-MM-DD HH:MM[:SS]' stamp (naive local time); falls back to the time of day */
+const tsm = (ts, hm) => { const m = /^(\d+)-(\d+)-(\d+) (\d+):(\d+)/.exec(ts || ''); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]) / 60000 : mins(hm); };
+/* axis labels over [n0, n1] (naive ms): at most 5 nice-step ticks, none within 16% of an edge, the start left-aligned and the end right-aligned; the date joins the time when the span crosses midnight */
+const AX_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080, 43200];
+function axisTicks(n0, n1) {
+  const span = Math.max(1, n1 - n0), p2 = v => String(v).padStart(2, '0'), a = new Date(n0), b = new Date(n1);
+  const multi = a.getUTCFullYear() !== b.getUTCFullYear() || a.getUTCMonth() !== b.getUTCMonth() || a.getUTCDate() !== b.getUTCDate();
+  const lab = ms => { const d = new Date(ms); return (multi ? p2(d.getUTCMonth() + 1) + '-' + p2(d.getUTCDate()) + ' ' : '') + p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes()); };
+  const stepMs = (AX_STEPS.find(m => span / (m * 60000) <= 4) || 43200) * 60000;
+  const out = [{ p: 0, l: lab(n0), al: 'l' }];
+  for (let x = Math.ceil(n0 / stepMs) * stepMs; x <= n1; x += stepMs) { const p = 100 * (x - n0) / span; if (p >= 16 && p <= 84) out.push({ p, l: lab(x), al: 'c' }); }
+  if (n1 > n0) out.push({ p: 100, l: lab(n1), al: 'r' });
+  return out;
+}
+const axisHtml = ticks => ticks.map(k => `<span style="left:${k.p.toFixed(2)}%${k.al === 'l' ? ';transform:none' : k.al === 'r' ? ';transform:translateX(-100%)' : ''}">${k.l}</span>`).join('');
+/* after render: hide a middle label that would touch its left neighbour or the end label (narrow windows) */
+function thinAxis(root) {
+  if (!root) return;
+  root.querySelectorAll('.tl-axis, .rtl-axis').forEach(ax => {
+    const s = [...ax.children]; if (s.length < 3 || !ax.getBoundingClientRect().width) return;   /* a hidden pane has no sizes; measured again once it is shown */
+    const last = s[s.length - 1].getBoundingClientRect(); let edge = s[0].getBoundingClientRect().right + 6;
+    s.slice(1, -1).forEach(k => { const r = k.getBoundingClientRect(); const hide = r.left < edge || r.right + 6 > last.left; k.style.visibility = hide ? 'hidden' : ''; if (!hide) edge = r.right + 6; });
+  });
+}
 const dm = (a, b) => (((mins(b) - mins(a)) % 1440) + 1440) % 1440;   /* minutes from a to b, across midnight */
 const modelOf = e => (e.actual || e.model || '').split(' ')[0];
 const latestRev = t => t.revs ? t.revs.length - 1 : 0;
@@ -924,35 +985,35 @@ function renderLog() {
       <button class="comp-btn" data-compwin="1" title="${L('Components at this moment · opens in a new window', '이 순간의 구성 요소 · 새 창으로 보기')}">↗ Components</button></span></div>`;
   $('p-log').innerHTML = head + (mode === 'timeline' ? timeline(t) : replay(t));
   syncCompWin();
+  thinAxis($('p-log'));
   const tk = t.id + ':' + st.ri; if (mode === 'replay' && tk !== lastTyped) { lastTyped = tk; typeLast(); typeFiles(); }
 }
 const MCOL = { opus: 'var(--l2)', sonnet: 'var(--l3)', haiku: 'var(--l1)' };
 function timeline(t) {
   if (!t.log.length) return `<p class="note">${L('No run-log records yet.', '아직 run-log 기록이 없습니다.')}</p>`;
-  const t0 = mins(t.log[0].t), t1 = t0 + Math.max(1, dm(t.log[0].t, t.now)), W = t1 - t0, X = m => ((m - t0) / W * 100).toFixed(2) + '%';
-  const ticks = []; const stepM = W > 90 ? 30 : W > 40 ? 10 : 5;
-  for (let m = Math.ceil(t0 / stepM) * stepM; m <= t1; m += stepM) ticks.push(m);
-  const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  /* every position is an absolute minute (date included), so a task that runs over midnight stays in order */
+  const am = e => tsm(e.ts, e.t), t0 = am(t.log[0]), nowM = t.nowTs ? tsm(t.nowTs) : t0 + dm(t.log[0].t, t.now), t1 = Math.max(t0 + 1, nowM, ...t.log.map(am)), W = t1 - t0, X = m => ((m - t0) / W * 100).toFixed(2) + '%';
+  const ticks = axisTicks(t0 * 60000, t1 * 60000);
   const bands = []; let last = 0;
-  t.log.forEach(e => { const key = rOf(e) + '-' + e.s; if (key !== last) { bands.push({ m: mins(e.t), lb: (t.revs && rOf(e) ? 'r' + rOf(e) + '·' : '') + e.s }); last = key; } });
+  t.log.forEach(e => { const key = rOf(e) + '-' + e.s; if (key !== last) { bands.push({ m: am(e), lb: (t.revs && rOf(e) ? 'r' + rOf(e) + '·' : '') + e.s }); last = key; } });
   const pops = t.log.filter(e => e.k === 'popup' || e.k === 'rev');
-  const bg = bands.map(b => `<div class="tl-band" style="left:${X(b.m)}"></div>`).join('') + pops.map(e => `<div class="tl-mark" style="left:${X(mins(e.t))}"></div>`).join('');
+  const bg = bands.map(b => `<div class="tl-band" style="left:${X(b.m)}"></div>`).join('') + pops.map(e => `<div class="tl-mark" style="left:${X(am(e))}"></div>`).join('');
   const head = `<div class="tl-row" style="border-bottom:1px solid var(--line)"><span class="lb"><small>Steps · gates</small></span><div class="tl-track">
     ${bands.map(b => `<div class="tl-band" style="left:${X(b.m)}"><span>${b.lb}</span></div>`).join('')}
-    ${pops.map(e => `<div class="tl-mark" style="left:${X(mins(e.t))}" title="${esc(e.tx)}"><b style="top:12px">${e.k === 'rev' ? '↺' : esc(e.tx.split(' ')[0])}</b></div>`).join('')}</div></div>`;
+    ${pops.map(e => `<div class="tl-mark" style="left:${X(am(e))}" title="${esc(e.tx)}"><b style="top:12px">${e.k === 'rev' ? '↺' : esc(e.tx.split(' ')[0])}</b></div>`).join('')}</div></div>`;
   /* an "×N" call is N parallel agents: one row each */
   const items = [];
   t.log.filter(e => e.k === 'agent').forEach(e => { const m = e.tx.match(/×(\d+)/); const n = m ? +m[1] : 1;
     for (let j = 0; j < n; j++) items.push({ e, label: n > 1 ? e.tx.replace(/\s*×\d+/, '') + '-' + (j + 1) : e.tx, d: e.live ? null : Math.max(1, Math.round(num(e.dur) * (n > 1 ? [1, .8, .9, .7][j % 4] : 1))) }); });
   const rows = items.map(({ e, label, d: dd }, i) => {
-    const s = mins(e.t), d = dd == null ? Math.max(1, mins(t.now) - s) : dd, m = modelOf(e);
+    const s = am(e), d = dd == null ? Math.max(1, t1 - s) : dd, m = modelOf(e);
     return `<div class="tl-row"><span class="lb" title="${esc(e.tx)}"><span class="lvbadge ${LV_OF(e.a).cls}">${LV_OF(e.a).id}</span> ${esc(label.replace('my-agent:', ''))} <small>${L(`step ${e.s}`, `${e.s}단계`)}</small></span>
       <div class="tl-track">${bg}<div class="tl-bar ${e.live ? 'live' : ''} ${isMM(e) ? 'mm' : ''}" style="left:${X(s)};width:calc(${(d / W * 100).toFixed(2)}%);--c:${MCOL[m] || 'var(--accent)'};--i:${i}" title="${esc(e.tx)} · ${esc(m)}${(e.effort || EFFORT[e.a]) ? ' · effort ' + (e.effort || EFFORT[e.a]) : ''} · ${e.live ? L('running', '실행 중') : fmtMin(num(e.dur)) + ' · ' + money(e.c)}" data-jump="${t.log.indexOf(e)}"></div></div></div>`;
   }).join('');
-  const peak = (() => { let mx = 0; for (let m = t0; m <= t1; m++) { const n = items.filter(({ e, d }) => mins(e.t) <= m && m < mins(e.t) + (d == null ? mins(t.now) - mins(e.t) : d)).length; mx = Math.max(mx, n); } return mx; })();
+  const peak = (() => { let mx = 0; for (let m = t0; m <= t1; m++) { const n = items.filter(({ e, d }) => am(e) <= m && m < am(e) + (d == null ? t1 - am(e) : d)).length; mx = Math.max(mx, n); } return mx; })();
   return `<div class="tl-legend"><span><i style="background:var(--l2)"></i>opus</span><span><i style="background:var(--l3)"></i>sonnet</span><span><i style="background:var(--l1)"></i>haiku</span>
       <span><i style="background:var(--gate);width:2px"></i>${L('popup · gate · revision', '팝업·게이트·수정')}</span><span>${L('stripes = running', '줄무늬 = 실행 중')}</span><span>${L('red border = MISMATCH', '빨간 테두리 = MISMATCH')}</span><span style="margin-left:auto">${L(`peak concurrency ${peak}`, `최대 동시 실행 ${peak}개`)}</span></div>
-    <div class="tl"><div class="tl-axis">${ticks.map(m => `<span style="left:${X(m)}">${hm(m)}</span>`).join('')}</div>${head}${rows}</div>
+    <div class="tl"><div class="tl-axis">${axisHtml(ticks)}</div>${head}${rows}</div>
     <p class="note">${L('Click a bar to jump to that moment in Replay. Numbers in the top row are step numbers.', '막대를 누르면 재생에서 그 시점으로 갑니다. 위 칸의 숫자는 단계 번호입니다.')}</p>`;
 }
 function replay(t) {
@@ -1036,6 +1097,7 @@ function renderAll() { renderChrome(); renderList();
   } else { renderHead(); renderStatus(); renderArch(); renderFiles(); renderLog(); renderReport(); }
   document.querySelectorAll('.panel[data-view]').forEach(p => p.classList.toggle('on', p.dataset.view === st.tab));
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === st.tab));
+  thinAxis(document.querySelector('.panel.on'));   /* the pane was hidden while it rendered */
   afterRender();
 }
 function afterRender() { stagger(); setBars(); runCountUps(); }
@@ -1049,6 +1111,7 @@ document.addEventListener('click', e => {
   else if (b.dataset.rx) rpToggle(b);
   else if (b.dataset.rov) rpOverviewForm(b);
   else if (b.dataset.tab) { st.tab = b.dataset.tab; entering(); if (st.tab === 'report') rpEnterTab(); vt(() => renderAll()); }
+  else if (b.dataset.themeCycle) { THEME = THEMES[(THEMES.indexOf(THEME) + 1) % THEMES.length]; try { localStorage.setItem('ma-theme', THEME); } catch (x) {} applyTheme(); renderAll(); }
   else if (b.dataset.lang) { LANG = b.dataset.lang; try { localStorage.setItem('ma-lang', LANG); } catch (x) {} lastTyped = ''; vt(() => renderAll()); }
   else if (b.dataset.compwin) openCompWin();
   else if (b.dataset.side) { st.sideMin = !st.sideMin; try { localStorage.setItem('ma-side-min', st.sideMin ? '1' : '0'); } catch (x) {} vt(() => renderList()); }
@@ -1086,7 +1149,7 @@ $('task-select').addEventListener('change', e => selectTask(e.target.value));
 
 /* ---------- report tab ---------- */
 const RP = {};   /* report JSON per task key; { error } when the fetch failed */
-const rp = { ov: 'para', open: new Set(), play: false };
+const rp = { ov: 'para', open: new Set(), seeded: new Set(), counted: new Set(), play: false };   /* open: task|row ids; seeded: tasks whose timeline row was opened once; counted: tasks whose banner numbers counted up */
 let rpT;
 const rpReduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rpEsc = s => (s == null ? '' : String(s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1121,15 +1184,20 @@ function rpRow(id, i, num, dot, text, tip, right, body) {
   return `<div class="sec lrow${o ? ' open' : ''}" id="${id}" style="--i:${i}"><button class="sh" data-rx="${id}" aria-expanded="${o}" aria-controls="${id}-b"><span class="rnum">${num}</span><span class="vdot ${dot}"></span><span class="tt" title="${rpEsc(tip)}">${text}</span><span class="rt">${right}</span><span class="mk" aria-hidden="true"></span></button><div class="sb" id="${id}-b"><div class="sbi"><div class="sbp">${body}</div></div></div></div>`;
 }
 function rpOverview(d) {
-  const o = d.overview, delivered = o.delivered ? rpEsc(o.delivered) : 'not delivered yet';
-  if (rp.ov === 'para') return (o.purpose ? `<p class="lead">${rpEsc(o.purpose)}</p>` : `<p class="lead"></p>${NYW('scope.md')}`) +
-    `<p class="ovsum mono">${[rpEsc(o.task), rpEsc(o.profile), rpEsc(o.status), delivered].join(' &middot; ')}</p>`;
-  const rows = [['Task', rpEsc(o.task)], ['Profile', rpEsc(o.profile)], ['Status', rpEsc(o.status)], ['Delivered', delivered], ['Follows', o.follows ? rpEsc(o.follows) : 'none'], ['Request', o.request ? rpEsc(o.request) : 'not written yet']];
-  return '<dl class="ovl">' + rows.map(r => `<dt>${r[0]}</dt><dd title="${r[1]}">${r[1]}</dd>`).join('') + '</dl>';
+  const o = d.overview;
+  if (rp.ov === 'para') {
+    if (!o.background && !o.purpose) return NYW('scope.md');
+    const row = (lab, v) => `<dt>${lab}</dt><dd>${v ? rpEsc(v) : '-'}</dd>`;
+    return '<dl class="ov">' + (o.background === o.purpose ? '' : row(L('Background', '배경'), o.background)) + row(L('Purpose', '목적'), o.purpose) + '</dl>';
+  }
+  const rows = [[L('Task', '작업'), rpEsc(o.task)], [L('Profile', '프로파일'), rpEsc(o.profile)], [L('Status', '상태'), rpEsc(o.status)], [L('Delivered', '전달'), o.delivered ? rpEsc(o.delivered) : L('not delivered yet', '아직 전달 전')], [L('Follows', '이어받는 작업'), o.follows ? rpEsc(o.follows) : L('none', '없음')], [L('Request', '요청'), o.request ? rpEsc(o.request) : L('not written yet', '아직 작성 전')]];
+  return '<dl class="ov">' + rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('') + '</dl>';
 }
-function rpKpi(i, label, val, total, dec, cls, sub, frac, prefix, play) {
-  const shown = val == null ? '-' : `<span data-count="${val}" data-dec="${dec}">${play ? '0' : Number(val).toFixed(dec)}</span>`;
-  return `<div class="rkpi" style="--i:${i}"><span class="kl">${label}</span><span class="kv2 ${val == null ? '' : cls}">${val == null ? '' : (prefix || '')}${shown}${total != null ? `<small> / ${total}</small>` : ''}</span><span class="ks" title="${rpEsc(sub)}">${rpEsc(sub)}</span>${frac ? `<div class="rbar"><i style="transform:scaleX(${frac})"></i></div>` : ''}</div>`;
+/* BLOCKER n/m · SHOULD-FIX n/m · NITPICK n/m (found/fixed) from review_totals; with count the numbers count up */
+function rpReviewSum(t, count) {
+  if (!t) return '-';
+  const n = v => count ? `<span data-count="${v}" data-dec="0">0</span>` : v;
+  return ['BLOCKER', 'SHOULD-FIX', 'NITPICK'].map(sev => { const x = t[sev] || {}; return `${sev} ${n(x.found || 0)}/${n(x.fixed || 0)}`; }).join(' &middot; ');
 }
 function rpTimeline(t) {
   const steps = (t.steps || []).map(s => ({ n: s.n, name: s.name, a: new Date(s.start) }));
@@ -1141,9 +1209,7 @@ function rpTimeline(t) {
   const gates = t.gates || [], backs = t.backs || [];
   let h = '<div class="rtl"><div class="rtl-gates">' + gates.map(g => { const p = pct(g.at);
     return `<span class="rtl-chip${p > 94 ? ' end' : ''}" style="left:${p}%" title="${rpEsc(g.id)} at ${rpHms(new Date(g.at))}">${rpEsc(g.id)}</span>`; }).join('') + '</div>';
-  let ticks = `<span style="left:0">${rpHm(new Date(t0))}</span>`;
-  const tick = 15 * 60000;
-  if (span / tick <= 200) for (let x = Math.ceil(t0 / tick) * tick; x < t0 + span - 5 * 60000; x += tick) ticks += `<span style="left:${100 * (x - t0) / span}%">${rpHm(new Date(x))}</span>`;
+  const tz = new Date(t0).getTimezoneOffset() * 60000, ticks = axisHtml(axisTicks(t0 - tz, t0 + span - tz));
   h += `<div class="rtl-axis">${ticks}</div>`;
   steps.forEach((s, i) => {
     const left = 100 * (s.a.getTime() - t0) / span, w = Math.max(0, 100 * (s.b.getTime() - s.a.getTime()) / span), secs = (s.b - s.a) / 1000;
@@ -1172,10 +1238,12 @@ function rpMore(d) {
     let body = `<p class="note" style="margin:0">BLOCKER: ${rpEsc(d.review.blockers)} findings.</p>`;
     ['SHOULD-FIX', 'NITPICK'].forEach(sev => { const xs = fs.filter(f => f.sev === sev);
       body += `<div class="gh">${sev} (${xs.length})</div>` + xs.map(f => `<p><code>${rpEsc(f.where)}</code><br>${rpEsc(f.text)}<br><span class="rpill${f.applied ? '' : ' sf'}">${f.applied ? 'applied' + (f.fix ? ': ' + rpEsc(f.fix) : '') : 'open' + (f.mark ? ' (' + rpEsc(f.mark) + ')' : '')}</span></p>`).join(''); });
-    h += rpSec('rq-rev', `Review findings <small>BLOCKER ${rpEsc(d.review.blockers)}</small>`, `<span class="vd sf">${openN} open</span>`, body);
+    h += rpSec('rq-rev', `Review findings <small>${rpReviewSum(d.review_totals)}</small>`, `<span class="vd sf">${openN} open</span>`, body);
   } else h += NYW('review.md');
   h += d.plan_review ? rpSec('rq-prv', 'Plan review <small>verdict per run</small>', `<span class="vd neutral">${d.plan_review.length} runs</span>`,
-    d.plan_review.map(r => `<div class="gh">RUN ${rpEsc(r.run)} <span class="vd${r.verdict === 'REVISE' ? ' sf' : ''}">${rpEsc(r.verdict)}</span></div><p>${rpEsc(r.blockers)} BLOCKER, ${rpEsc(r.should_fix)} SHOULD-FIX, ${rpEsc(r.nitpicks)} NITPICK. ${rpEsc(r.summary)}</p>`).join('')) : NYW('plan-review.md');
+    d.plan_review.map(r => { const f = r.found || {}, x = r.fixed || {};
+      const t = { BLOCKER: { found: f.BLOCKER != null ? f.BLOCKER : r.blockers, fixed: x.BLOCKER }, 'SHOULD-FIX': { found: f['SHOULD-FIX'] != null ? f['SHOULD-FIX'] : r.should_fix, fixed: x['SHOULD-FIX'] }, NITPICK: { found: f.NITPICK != null ? f.NITPICK : r.nitpicks, fixed: x.NITPICK } };
+      return `<div class="gh">RUN ${rpEsc(r.run)} <span class="vd${r.verdict === 'REVISE' ? ' sf' : ''}">${rpEsc(r.verdict)}</span></div><p>${rpReviewSum(t)}</p>`; }).join('')) : NYW('plan-review.md');
   if (d.decisions) {
     const lab = { yes: 'recommended', delegated: 'delegated (L1)', typed: 'typed (Other)' };
     h += rpSec('rq-dec', 'Decisions <small>question, choice, who picked</small>', `<span class="vd neutral">${d.decisions.length} rows</span>`,
@@ -1188,38 +1256,116 @@ function rpMore(d) {
     (o.followed_by && o.followed_by.length ? '<span>&rarr; followed by</span>' + o.followed_by.map(x => `<code>${rpEsc(x)}</code>`).join('') : '') + '</div>');
   return h;
 }
-function rpParts(d, play) {
+const rpDeltaIcon = ok => `<span class="ic ${ok ? 'ok' : 'note'}" aria-hidden="true">${ok ? '&#10003;' : '!'}</span>`;
+function rpDisc(id, name, sum, body) {
+  const o = rpIsOpen(id);
+  return `<div class="sec${o ? ' open' : ''}" id="${id}"><button class="sh" data-rx="${id}" aria-expanded="${o}" aria-controls="${id}-b"><span class="car">&#9654;</span><span class="nm">${name}</span><span class="sum">${sum}</span></button><div class="sb" id="${id}-b"><div class="sbi"><div class="sbp">${body}</div></div></div></div>`;
+}
+/* the waiting gate's own body (M2, M4); `gate` is d.gate */
+function rpGateBody(gate, d) {
+  const dl = rows => '<dl class="gb">' + rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('') + '</dl>';
+  if (gate.id === 'G1a') {
+    const ng = gate.non_goals || [];
+    return dl([[L('Purpose', '목적'), gate.purpose ? rpEsc(gate.purpose) : '-'], [L('Non-goals', '제외 범위'), ng.length ? ng.map(rpEsc).join(' &middot; ') : L('none', '없음')]]);
+  }
+  if (gate.id === 'G1b') {
+    const units = gate.units || [], m = gate.models;
+    const list = units.map(u => rpEsc(u.id) + ' ' + rpEsc(u.title) + (u.group ? ` (${rpEsc(u.group)})` : '')).join(' &middot; ');
+    const sum = gate.summary ? rpEsc(gate.summary) : L(`${units.length} work units in ${gate.groups || 0} groups`, `작업 단위 ${units.length}개, 그룹 ${gate.groups || 0}개`) + ': ' + list;
+    const rows = [[L('Plan', '계획'), sum]];
+    if (gate.summary) rows.push([L('Work units', '작업 단위'), list || '-']);
+    rows.push([L('Estimate', '추정'), (gate.estimate || []).length ? gate.estimate.map(rpEsc).join(' &middot; ') : '-']);
+    const mr = m && m.rows ? m.rows.map(r => `${rpEsc(r.agent)} ${rpEsc(r.model)}${r.effort ? '/' + rpEsc(r.effort) : ''}`).join(' &middot; ') : '';
+    rows.push([L('Models', '모델'), (mr || '-') + (m && m.recommendation ? `<br>${L('Recommended', '권장')}: ${rpEsc(m.recommendation)}` : '')]);
+    rows.push([L('Prototype', '프로토타입'), gate.prototype ? `<a class="rlink" href="${rpEsc(gate.prototype)}" target="_blank" rel="noopener">${L('Open prototype', '프로토타입 열기')} &#8599;</a>` : L('No prototype', '프로토타입 없음')]);
+    return dl(rows);
+  }
+  if (gate.id !== 'G3') return '';
+  const v = gate.verify, rv = gate.review, open = rv ? rv.open || [] : [];
+  return dl([[L('Verify', '검증'), v ? `${rpEsc(v.verdict)} ${rpEsc(v.pass)}/${rpEsc(v.total)} (${L('run', '회차')} ${rpEsc(v.run)})${v.failed && v.failed.length ? ' &middot; FAIL ' + v.failed.map(rpEsc).join(', ') : ''}` : NYW('verify.md')],
+    [L('Review', '리뷰'), rv ? rpReviewSum(rv.totals) : NYW('review.md')],
+    [L('Open', '미해결'), open.length ? open.map(x => `${rpEsc(x.sev)} <code>${rpEsc(x.where)}</code> ${rpEsc(x.text)}${x.mark ? ' (' + rpEsc(x.mark) + ')' : ''}`).join('<br>') : L('No open SHOULD-FIX or NITPICK items', '미해결 SHOULD-FIX, NITPICK 없음')]]);
+}
+function rpGateNumbers(gate) {
+  if (gate.id === 'G1a') return L(`${gate.criteria} completion criteria`, `완료 기준 ${gate.criteria}개`) + ' &middot; ' + L(`${(gate.non_goals || []).length} non-goals`, `제외 범위 ${(gate.non_goals || []).length}개`);
+  if (gate.id === 'G1b') {
+    const n = (gate.units || []).length, m = gate.models;
+    return L(`${n} work units in ${gate.groups || 0} groups`, `작업 단위 ${n}개, 그룹 ${gate.groups || 0}개`) + (m && m.preset ? ' &middot; ' + L('Models', '모델') + ': ' + rpEsc(m.preset) : '');
+  }
+  const v = gate.verify;
+  return 'Verify ' + (v ? `${rpEsc(v.verdict)} ${rpEsc(v.pass)}/${rpEsc(v.total)} (run ${rpEsc(v.run)})` : '-') + ' &middot; ' + (gate.review ? rpReviewSum(gate.review.totals) : '-');
+}
+function rpBanner(d, count) {
+  const v = d.verdict, gate = d.gate;
+  if (!v) return NYW('run-log.md');
+  const box = (tone, ic, big, small, body) => `<div class="rbanner ${tone}" role="status"><div class="rb-top"><span class="rb-ic" aria-hidden="true">${ic}</span><div><div class="rb-big">${big}</div><div class="rb-small">${small}</div></div></div>${body ? `<div class="rb-body">${body}</div>` : ''}</div>`;
+  const step = v.step ? `${L('step', '단계')} ${rpEsc(v.step.n)} ${rpEsc(v.step.name)}` : '';
+  if (v.status === 'aborted') return box('stop', '&#10005;', L('Aborted', '중단됨') + (v.reason ? ': ' + rpEsc(v.reason) : ''), step ? L('at', '위치') + ' ' + step : '');
+  if (gate) {
+    const label = String(gate.q || '').split(':')[0];
+    return box('wait', '!', `${L('Waiting for you at', '게이트 대기 중:')} ${rpEsc(gate.id)}${label ? ' &middot; ' + rpEsc(label) : ''}`, rpGateNumbers(gate), rpGateBody(gate, d));
+  }
+  if (v.status === 'done') {
+    const c = v.criteria, n = x => count ? `<span data-count="${x}" data-dec="0">0</span>` : x;
+    const big = v.commit ? `${L('Done and committed as', '완료, 커밋')} <code>${rpEsc(v.commit)}</code>` : v.delivered ? `${L('Done', '완료')} &middot; <code>${rpEsc(v.delivered)}</code>` : L('Done', '완료');
+    const parts = [];
+    if (c) parts.push(L(`${n(c.pass)} of ${c.total} criteria pass`, `완료 기준 ${c.total}개 중 ${n(c.pass)}개 통과`));
+    parts.push(rpReviewSum(d.review_totals, count));
+    if (v.secs != null) parts.push(rpDur(v.secs));
+    if (v.usd != null) parts.push(`$${count ? `<span data-count="${v.usd}" data-dec="2">0.00</span>` : Number(v.usd).toFixed(2)}`);
+    return box('done', '&#10003;', big, parts.join(' &middot; '));
+  }
+  return box('run', '&bull;', `${L('Running', '진행 중')}${step ? ' &middot; ' + step : ''}`, v.secs != null ? `${rpDur(v.secs)} ${L('so far', '경과')}` : '');
+}
+function rpTakeaway(d) {
+  const tk = d.takeaway, row = (ok, tag, main, sub) => `<li><span class="tg">${rpDeltaIcon(ok)}${tag}</span><span class="tx">${main}<span class="d">${sub}</span></span></li>`;
+  if (!tk) return `<section class="rsec"><div class="rsec-h"><h3 class="rlabel">${L('Key takeaway', '핵심 요약')}</h3></div>${NYW('run-log.md')}</section>`;
+  let h = '';
+  const sc = tk.scope, dv = tk.delivered, nx = tk.next;
+  h += sc ? row(sc.pass === sc.criteria, L('Scope', '범위'), L(`${sc.pass} of ${sc.criteria} completion criteria pass.`, `완료 기준 ${sc.criteria}개 중 ${sc.pass}개 통과.`),
+    [L(`${sc.units} work units`, `작업 단위 ${sc.units}개`), sc.verify_run != null ? `Verify ${L('run', '회차')} ${sc.verify_run}` : '', sc.plan_rewrites ? L(`${sc.plan_rewrites} plan rewrite`, `계획 재작성 ${sc.plan_rewrites}회`) : ''].filter(Boolean).join(' &middot; '))
+    : row(false, L('Scope', '범위'), '-', NYW('scope.md'));
+  const dmain = !dv ? '-' : dv.status === 'done' ? (dv.commit ? `${L('Committed as', '커밋')} <code>${rpEsc(dv.commit)}</code>.` : dv.delivered ? rpEsc(dv.delivered) : L('Done.', '완료.'))
+    : dv.status === 'aborted' ? L('Aborted.', '중단됨.') : L('Nothing delivered yet.', '아직 전달 없음.') + (dv.step ? ` ${L('step', '단계')} ${rpEsc(dv.step.n)} ${rpEsc(dv.step.name)}` : '');
+  h += row(!!dv && dv.status === 'done', L('Delivered', '결과'), dmain, rpReviewSum(d.review_totals));
+  h += nx ? row(!(nx.clear || nx.weak), L('Next', '다음'), rpEsc(nx.text), L(`${nx.clear} clear follow-up, ${nx.weak} weak`, `분명한 후속 ${nx.clear}개, 약한 후속 ${nx.weak}개`))
+    : row(true, L('Next', '다음'), '-', '');
+  return `<section class="rsec"><div class="rsec-h"><h3 class="rlabel">${L('Key takeaway', '핵심 요약')}</h3></div><div class="rcard"><ul class="tk">${h}</ul></div></section>`;
+}
+function rpParts(d, count) {
   const crit = d.criteria, units = d.units, dec = d.decisions, gr = d.gate_report, tl = d.timeline, cost = tl && tl.cost;
   const hasVerdict = !!crit && crit.some(c => c.verdict), pass = hasVerdict ? crit.filter(c => c.verdict === 'PASS').length : null;
   const done = units ? units.filter(u => u.status === 'done').length : null;
-  const rec = gr && gr.recommended, paid = cost ? cost.filter(c => c.usd != null) : [];
-  const total = paid.reduce((a, c) => a + c.usd, 0);
-  let h = `<div class="rp-part" aria-labelledby="h-ov"><div class="ph"><h3 id="h-ov">Overview</h3><span class="seg small" role="group" aria-label="Overview form"><button data-rov="para" aria-pressed="${rp.ov === 'para'}">${L('Paragraph', '문단')}</button><button data-rov="list" aria-pressed="${rp.ov === 'list'}">${L('List', '목록')}</button></span></div><div id="ov-body">${rpOverview(d)}</div></div>`;
-  h += '<div class="rp-part" aria-labelledby="h-tk"><div class="ph"><h3 id="h-tk">Takeaway</h3><small>key conclusion and deliverables</small></div><div class="rkpis">';
-  h += rpKpi(0, 'CRITERIA PASS', pass, crit ? crit.length : null, 0, pass != null && pass === crit.length ? 'ok' : '', crit ? (hasVerdict ? 'verdicts from verify.md' : 'verify.md not written yet') : 'scope.md not written yet', hasVerdict ? pass / crit.length : 0, '', play);
-  h += rpKpi(1, 'WORK UNITS DONE', done, units ? units.length : null, 0, done != null && done === units.length ? 'ok' : '', units ? 'status lines of plan.md' : 'plan.md not written yet', units && units.length ? done / units.length : 0, '', play);
-  h += rpKpi(2, 'DECISIONS', dec ? dec.length : null, null, 0, '', !dec ? 'run-log.md not written yet' : rec && rec.counted ? `recommended choice picked ${rec.picked}/${rec.counted} (${Math.round(100 * rec.picked / rec.counted)}%)` : 'from run-log.md', 0, '', play);
-  h += rpKpi(3, 'RECORDED COST', paid.length ? total : null, null, 2, '', cost ? (paid.length ? `USD, approx., ${paid.length} of ${cost.length} stretches recorded` : 'not recorded') : 'run-log.md not written yet', 0, '$', play);
-  h += '</div>';
-  h += `<div class="sub">COMPLETION CRITERIA${hasVerdict ? ` <span class="vd">${pass}/${crit.length} PASS</span>` : ''}</div>`;
+  const paid = cost ? cost.filter(c => c.usd != null) : [], total = paid.reduce((a, c) => a + c.usd, 0), o = d.overview;
+  const eyebrow = [o.task, o.profile, o.follows ? L('follows', '이전 작업') + ' ' + o.follows : null, o.status].filter(Boolean).map(rpEsc).join(' &middot; ');
+  let h = rpBanner(d, count) + `<p class="reyebrow">${eyebrow}</p>`;
+  h += `<section class="rsec" aria-labelledby="h-ov"><div class="rsec-h"><h3 class="rlabel" id="h-ov">${L('Overview', '개요')}</h3><span class="seg small" role="group" aria-label="Overview form"><button data-rov="para" aria-pressed="${rp.ov === 'para'}">${L('Paragraph', '문단')}</button><button data-rov="list" aria-pressed="${rp.ov === 'list'}">${L('List', '목록')}</button></span></div><div class="rcard" id="ov-body">${rpOverview(d)}</div></section>`;
+  h += rpTakeaway(d);
+  let cb;
   if (crit) {
-    h += '<div class="rows">' + crit.map((c, i) => rpRow('rc-' + c.n, i, rpEsc(c.n), c.verdict === 'PASS' ? 'pass' : c.verdict === 'FAIL' ? 'fail' : '', rpEsc(c.short || c.title), c.title, rpEsc(c.verdict || '-'),
-      `<p><b>${rpEsc(c.title)}.</b> ${rpEsc(c.evidence)}</p>`)).join('') + '</div>';
-    if (!hasVerdict) h += NYW('verify.md');
-  } else h += NYW('scope.md');
-  h += `<div class="sub">WORK UNITS${units ? ` <span class="vd">${done}/${units.length} done</span>` : ''}</div>`;
+    cb = '<div class="rows">' + crit.map((c, i) => rpRow('rc-' + c.n, i, rpEsc(c.n), c.verdict === 'PASS' ? 'pass' : c.verdict === 'FAIL' ? 'fail' : '', rpEsc(c.short || c.title), c.title, rpEsc(c.verdict || '-'),
+      `<p><b>${rpEsc(c.title)}.</b> ${rpEsc(c.evidence)}</p>`)).join('') + '</div>' + (hasVerdict ? '' : NYW('verify.md'));
+  } else cb = NYW('scope.md');
+  let ub;
   if (units) {
     const fl = a => '<ul class="files">' + a.map(f => `<li><code>${rpEsc(f)}</code></li>`).join('') + '</ul>';
-    h += '<div class="rows">' + units.map((u, i) => {
+    ub = '<div class="rows">' + units.map((u, i) => {
       const files = u.files || [], tests = files.filter(f => /(^|\/)tests\//.test(f)), other = files.filter(f => tests.indexOf(f) < 0);
       return rpRow('ru-' + u.id, i, rpEsc(u.id), u.status === 'done' ? 'pass' : 'run', rpEsc(u.title), u.title, `<span class="stt${u.status === 'done' ? '' : ' other'}">${rpEsc(u.status)}</span>`,
         `<p>${u.group ? 'Group ' + rpEsc(u.group) : ''}${u.secs ? ', ran ' + rpDur(u.secs) : ''}.</p><div class="gh">FILES (${other.length})</div>${fl(other)}<div class="gh">TESTS (${tests.length})</div>${fl(tests)}<div class="gh">CRITERIA</div><p>${(u.criteria || []).map(n => `<span class="rpill">${rpEsc(n)}</span>`).join('')}</p>`);
     }).join('') + '</div>';
-  } else h += NYW('plan.md');
-  h += '<div class="sub">PHASE TIMELINE (steps 1 to 8)</div>' + (tl ? rpTimeline(tl) : NYW('run-log.md')) + '</div>';
-  h += '<div class="rp-part" aria-labelledby="h-fu"><div class="ph"><h3 id="h-fu">Follow-up</h3><small>suggested improvements (gate report)</small></div>';
-  h += gr ? '<ul class="fl">' + (gr.improvements || []).map(s => `<li><span class="tag ${s.strength === 'clear' ? 'clear' : ''}">${rpEsc(s.level)} ${rpEsc(s.strength)}</span><span class="one" title="${rpEsc(s.text)}">${rpEsc(s.text)}</span></li>`).join('') + '</ul>' : NYW('gate-report.md');
-  h += '</div><div class="sub">MORE (closed by default)</div>' + rpMore(d);
+  } else ub = NYW('plan.md');
+  const groups = units ? new Set(units.map(u => u.group).filter(Boolean)).size : 0;
+  const steps = tl && tl.steps && tl.steps.length ? tl.steps : null, rewrites = tl ? (tl.backs || []).filter(b => b.to === 3).length : 0;
+  const tsum = steps ? [rpHm(new Date(steps[0].start)) + ' &rarr; ' + rpHm(new Date(tl.end || Date.now())), rpDur((new Date(tl.end || Date.now()) - new Date(steps[0].start)) / 1000), rewrites ? L(`${rewrites} plan rewrite`, `계획 재작성 ${rewrites}회`) : ''].filter(Boolean).join(' &middot; ') : '-';
+  const fu = gr ? '<ul class="fl">' + (gr.improvements || []).map(s => `<li><span class="tag ${s.strength === 'clear' ? 'clear' : ''}">${rpEsc(s.level)} ${rpEsc(s.strength)}</span><span class="one" title="${rpEsc(s.text)}">${rpEsc(s.text)}</span></li>`).join('') + '</ul>' : NYW('gate-report.md');
+  const msum = [dec ? L(`${dec.length} decisions`, `결정 ${dec.length}건`) : '', rpReviewSum(d.review_totals), paid.length ? '$' + total.toFixed(2) : ''].filter(Boolean).join(' &middot; ');
+  h += '<div class="group">' +
+    rpDisc('rd-crit', L('Completion criteria', '완료 기준'), crit ? (hasVerdict ? `${pass} / ${crit.length} PASS` : `${crit.length}`) : '-', cb) +
+    rpDisc('rd-units', L('Work units', '작업 단위'), units ? `${done} / ${units.length} ${L('done', '완료')} &middot; ${L(`${groups} groups`, `그룹 ${groups}개`)}` : '-', ub) +
+    rpDisc('rd-tl', L('Phase timeline', '단계 타임라인'), tsum, tl ? rpTimeline(tl) : NYW('run-log.md')) +
+    rpDisc('rd-fu', L('Follow-up', '후속 작업'), gr ? L(`${(gr.improvements || []).length} suggestions from the gate report`, `게이트 보고서의 제안 ${(gr.improvements || []).length}건`) : '-', fu) +
+    rpDisc('rd-more', L('Decisions · review · cost', '결정 · 리뷰 · 비용'), msum || '-', rpMore(d)) + '</div>';
   return h;
 }
 function renderReport() {
@@ -1228,10 +1374,15 @@ function renderReport() {
   if (!d) { el.innerHTML = `<p class="note">${L('Loading…', '불러오는 중…')}</p>`; return; }
   if (d.error) { el.innerHTML = `<p class="nyw">${L('The report could not be read', '리포트를 읽을 수 없음')}: ${rpEsc(d.error)}</p>`; return; }
   const play = rp.play && !rpReduce(); rp.play = false;   /* the entry motion runs on tab entry or task change, not on a poll */
+  const first = !rp.counted.has(st.task), count = first && !rpReduce();   /* the banner numbers count up once per task */
+  if (!rp.seeded.has(st.task)) { rp.seeded.add(st.task); rp.open.add(st.task + '|rd-tl'); }   /* only the timeline row starts open, once; later polls keep the person's choice */
   el.classList.toggle('rp-enter', play);
-  el.innerHTML = rpParts(d, play);
+  el.innerHTML = rpParts(d, count);
+  thinAxis(el);
+  if (first && (!count || el.querySelector('[data-count]'))) rp.counted.add(st.task);
   clearTimeout(rpT);
-  if (play) { rpCount(); rpT = setTimeout(() => el.classList.remove('rp-enter'), 1800); }
+  if (count) rpCount();
+  if (play) rpT = setTimeout(() => el.classList.remove('rp-enter'), 1800);
 }
 function rpCount() {
   document.querySelectorAll('#p-report [data-count]').forEach(el => {
@@ -1289,8 +1440,16 @@ async function selectTask(key) {
   lastSig = JSON.stringify([TASKS, FULL[key], st.offline, RP[key]]);
   entering(); vt(() => renderAll()); setTimeout(() => scramble(document.querySelector('#task-head h2')), 30);
 }
-const hashTask = /^#task=(.+)$/.exec(location.hash);   // monitor-up.py --task: open on that task
-if (hashTask) try { st.task = decodeURIComponent(hashTask[1]); } catch (err) {}
+/* #task=<key>&tab=report: monitor-up.py --task, the tray and open-html.py --report open the page on that task and tab */
+function applyHash(initial) {
+  const q = new URLSearchParams(location.hash.replace(/^#/, '')), task = q.get('task'), tab = q.get('tab');
+  if (tab === 'report') { st.tab = 'report'; rp.play = true; }
+  if (initial) { if (task) st.task = task; return; }
+  if (task && task !== st.task) selectTask(task);
+  else if (tab === 'report') { entering(); rpEnterTab(); vt(() => renderAll()); }
+}
+applyHash(true);
+window.addEventListener('hashchange', () => applyHash(false));
 poll(); setInterval(poll, POLL_MS);
 </script>
 </body>

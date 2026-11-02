@@ -201,7 +201,7 @@ class ProfilesTest(unittest.TestCase):
         plan = (phases / 'plan.md').read_text(encoding='utf-8')
         g1a = define.split('4. **Confirm the scope:**')[1]
         self.assertIn('Gate reports', g1a)
-        self.assertIn('### Details', g1a)
+        self.assertNotIn('### Details', g1a)
         interview = define.split('3. **Scope interview:**')[1].split('4. **Confirm the scope:**')[0]
         self.assertIn('Question rules', interview)
         self.assertIn('screen behavior', interview)
@@ -210,7 +210,7 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn('`## Prototype`', define)
         g1b = plan.split('## G1b plan approval')[1].split('2. If `## Prototype`')[0]
         self.assertIn('Gate reports', g1b)
-        self.assertIn('### Details', g1b)
+        self.assertNotIn('### Details', g1b)
         self.assertIn('remake it only if the mock-up changed', plan)
         step4 = plan.split('## 4. Plan Review')[1].split('## G1b plan approval')[0]
         self.assertIn('L1 writes the `## Decisions` lines in `plan-review.md`; architect does not write that file', step4)
@@ -222,22 +222,51 @@ class ProfilesTest(unittest.TestCase):
         for sec in (proto3, item2):
             self.assertIn('open-html.py', sec)
             self.assertIn('local path', sec)
+            self.assertIn('skills/mock-up', sec)
+            self.assertIn('capture.sh', sec)
             for phrase in stale:
                 self.assertNotIn(phrase, sec)
+        for word in ('templates/canvas.html', 'references', 'index.png'):
+            self.assertIn(word, item2)
+        self.assertNotIn('artifact-design', item2)
         self.assertIn('failed:', item2)
         self.assertIn('--data-dir', item2)
         self.assertNotIn('Check before anything leaves', item2)
         self.assertIn('Nothing is published', item2)
-        # G1a / G1b chat reports open with Overview and Takeaway
+        # G1a / G1b chat reports open with Overview and Takeaway; the Report tab opens before the popup
         self.assertIn('### Overview', g1a)
         self.assertIn('### Takeaway', g1a)
         self.assertIn('scope summary', g1a.split('### Takeaway')[1].split('###')[0] + g1a)
-        self.assertIn('`Prototype:` line', g1a)
-        g1b_item1 = plan.split('## G1b plan approval')[1].split('2. If `## Prototype`')[0]
+        self.assertIn('`Prototype` row', g1a)
+        g1b_item1 = g1b
         self.assertIn('### Overview', g1b_item1)
         self.assertIn('### Takeaway', g1b_item1)
         self.assertIn('`Models` row', g1b_item1)
-        self.assertIn('`Prototype:` line', g1b_item1)
+        self.assertIn('`Prototype` row', g1b_item1)
+        item3 = plan.split('3. Record before and after')[1].split('4. **Approve:**')[0]
+        for gate, sec in (('G1a', g1a), ('G1b', item3)):
+            for word in ('--report', 'pointer line', '--url', 'failed: no browser opened'):
+                self.assertIn(word, sec)
+            self.assertLess(sec.index('ask gate=%s' % gate), sec.index('--report'))
+            self.assertLess(sec.index('--report'), sec.index('answer gate=%s' % gate))
+
+    def test_plan_lead_paragraph_required(self):
+        plan = (REPO / 'l1-orchestration' / 'phases' / 'plan.md').read_text(encoding='utf-8')
+        sec = plan.split('3. Sections `plan.md` must have')[1].split('4. If work units in the same parallel group')[0]
+        for word in ('lead paragraph', '# Plan:', 'Profile:'):
+            self.assertIn(word, sec)
+        self.assertLess(sec.index('lead paragraph'), sec.index('## Scope summary'))
+        arch = (REPO / 'l2-design-judge' / 'agents' / 'architect.md').read_text(encoding='utf-8')
+        head = arch.split('## `plan.md` sections')[1].split('\n1. ')[0]
+        for word in ('lead paragraph', 'plan summary'):
+            self.assertIn(word, head)
+
+    def test_scope_purpose_labels(self):
+        for name in ('dev', 'research'):
+            text = (REPO / 'l1-orchestration' / 'profiles' / ('%s.md' % name)).read_text(encoding='utf-8')
+            self.assertIn('## Purpose and users', text)
+            self.assertIn('Background:', text)
+            self.assertIn('Purpose:', text)
 
     def test_plan_models_section_and_approval(self):
         phases = REPO / 'l1-orchestration' / 'phases'

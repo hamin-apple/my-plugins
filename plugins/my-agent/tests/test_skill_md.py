@@ -462,7 +462,8 @@ class SkillMdTest(unittest.TestCase):
 
     def test_gate_reports_section(self):
         section = self.section('## Gate reports', '## In-flight revision')
-        for word in ('### Details', 'first two rows', 'G1a', 'G1b', 'G3', 'E'):
+        for word in ('### Details', 'first two rows', 'G1a', 'G1b', 'G3', 'E', '--report', '--url', 'Report:',
+                     'task folder', 'no harness tool'):
             self.assertIn(word, section, word)
         self.assertLess(self.text.index('## Check before anything leaves'), self.text.index('## Gate reports'))
 
@@ -474,9 +475,16 @@ class SkillMdTest(unittest.TestCase):
         general = accept[accept.index('4. **G3 report (chat):**'):accept.index('5. **G3 popup:**')]
         dev = accept[accept.index('## G3 in the dev profile'):accept.index('## E escalation')]
         esc = accept[accept.index('## E escalation'):accept.index('## Retrospective')]
-        for part in (general, dev, esc):
-            self.assertIn('Gate reports', part)
-            self.assertIn('### Details', part)
+        for part in (general, dev):
+            for word in ('Gate reports', '### Overview', '### Takeaway', '--report', '--url',
+                         'failed: no browser opened', 'pointer line'):
+                self.assertIn(word, part)
+            self.assertNotIn('### Details', part)
+        for word in ('Commit message', 'Diff', '+<a>/-<b>'):
+            self.assertIn(word, dev)
+        self.assertNotIn('the main diffs', dev)
+        self.assertIn('Gate reports', esc)
+        self.assertIn('### Details', esc)
         self.assertIn('Tool choice', accept)
 
     def test_accept_popup_bodies(self):
@@ -591,10 +599,28 @@ class SkillMdTest(unittest.TestCase):
         """Criterion 13: the prototype is a local file opened by open-html.py; the line replaces the full mock-up at G1b."""
         sec = self.section('## Gate reports', '## In-flight revision')
         for word in ('open-html.py', 'prototype/index.html', '--data-dir', 'opened in the browser', 'not opened',
-                     '`failed:`', 'remade only when the mock-up changed', 'instead of the full mock-up',
-                     'not published anywhere', '`scope.md` text'):
+                     '`failed:`', 'remade only when the mock-up changed', 'not published anywhere',
+                     'skills/mock-up', 'capture.sh'):
             self.assertIn(word, sec, word)
         self.assertNotIn('--task-dir', ' '.join(c for s, c in self.command_spans(SKILL) if s == 'open-html'))
+
+    def test_gate_reports_open_report_tab(self):
+        """Criterion 7: the gate report is read on the Report tab; the chat keeps a pointer line."""
+        sec = self.section('## Gate reports', '## In-flight revision')
+        for word in ('`ask` line', 'three pointer forms', 'failed:', 'Commit message', 'Diff', '+<a>/-<b>', 'Save path',
+                     'the full diff is not printed', 'Report: not opened (',
+                     '(not opened: no browser opened; open it yourself)'):
+            self.assertIn(word, sec, word)
+        self.assertLess(sec.index('`ask` line'), sec.index('--report'))
+        url_sentence = next(x for x in re.split(r'(?<=\.)\s', sec) if '--url' in x and 'only when' in x)
+        for word in ('window', 'tab', 'failed: no browser opened'):
+            self.assertIn(word, url_sentence, word)
+        self.assertRegex(sec, r'any other `failed:` line[^.]*does not run `--url`[^.]*third pointer form')
+
+    def test_g1b_row_opens_report_tab(self):
+        row = next(l for l in self.text.splitlines() if l.startswith('| G1b Plan approval'))
+        self.assertNotIn('full mock-up', row)
+        self.assertIn("after opening the task's Report tab", row)
 
     def test_open_html_spans_carry_data_dir_only(self):
         spans = [c for s, c in self.command_spans(SKILL) if s == 'open-html']

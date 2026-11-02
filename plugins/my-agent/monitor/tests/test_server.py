@@ -11,7 +11,9 @@ import server
 from monitor.registry import Registry
 from monitor.registry import SUMMARY
 from tests.fixtures.build_fixtures import CLAUDE, PROJECTS_TXT
-from tests.test_report import FULL, ReportEnv
+from tests.test_report import FULL, PROJECT, ReportEnv
+
+G1B = '261106-gate-g1b'
 
 
 class ServerTest(unittest.TestCase):
@@ -60,7 +62,8 @@ class ServerTest(unittest.TestCase):
     def test_index_reads_task_from_hash(self):
         body = self.get('/')[2].decode('utf-8')
         self.assertIn('location.hash', body)
-        self.assertIn('/^#task=(.+)$/', body)
+        self.assertIn('URLSearchParams', body)
+        self.assertIn("get('tab')", body)
 
     def test_unknown_key_404(self):
         with self.assertRaises(urllib.error.HTTPError) as cm:
@@ -131,10 +134,57 @@ class ReportRouteTest(unittest.TestCase):
 
     def test_list_and_health_keep_their_shape(self):
         status, data = self.get('/api/tasks')
-        self.assertEqual((status, sorted(data), len(data['tasks'])), (200, ['now', 'tasks'], 3))
+        self.assertEqual((status, sorted(data), len(data['tasks'])), (200, ['now', 'tasks'], 9))
         self.assertEqual(set(data['tasks'][0]), set(SUMMARY))
         status, health = self.get('/api/health')
         self.assertEqual(sorted(health), ['app', 'root', 'task_dir'])
+
+    def raw(self, path, method='GET'):
+        return urllib.request.urlopen(urllib.request.Request(self.base + path, method=method))
+
+    def proto_path(self):
+        return f'/api/tasks/{self.e.keys[G1B]}/prototype'
+
+    def test_prototype_served(self):
+        expected = (PROJECT / 'docs/agent' / G1B / 'prototype/index.html').read_bytes()
+        with self.raw(self.proto_path()) as r:
+            self.assertEqual(r.status, 200)
+            self.assertEqual(r.read(), expected)
+            self.assertEqual(r.headers['Content-Type'], 'text/html; charset=utf-8')
+            self.assertEqual(r.headers['Content-Security-Policy'], 'sandbox allow-scripts')
+            self.assertEqual(r.headers['X-Content-Type-Options'], 'nosniff')
+            self.assertEqual(r.headers['Cache-Control'], 'no-store')
+
+    def test_prototype_missing(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            self.get(f'/api/tasks/{self.e.keys[FULL]}/prototype')
+        self.assertEqual(cm.exception.code, 404)
+        self.assertEqual(json.loads(cm.exception.read()), {'error': 'no prototype'})
+
+    def test_prototype_unknown_key(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            self.get('/api/tasks/00000000/nope/prototype')
+        self.assertEqual(cm.exception.code, 404)
+        self.assertEqual(json.loads(cm.exception.read()), {'error': 'no such task'})
+
+    def test_prototype_extra_parts(self):
+        for path in (self.proto_path() + '/x', f'/api/tasks/{self.e.keys[G1B]}/../prototype',
+                     f'/api/tasks/{self.e.keys[G1B]}/prototype/..'):
+            with self.assertRaises(urllib.error.HTTPError, msg=path) as cm:
+                self.get(path)
+            self.assertEqual(cm.exception.code, 404, path)
+            self.assertNotIn(b'<html', cm.exception.read().lower())
+
+    def test_prototype_post_405(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            self.get(self.proto_path(), method='POST')
+        self.assertEqual(cm.exception.code, 405)
+
+    def test_report_gate_points_to_served_prototype(self):
+        status, data = self.get(f'/api/tasks/{self.e.keys[G1B]}/report')
+        self.assertEqual(data['gate']['prototype'], self.proto_path())
+        with self.raw(data['gate']['prototype']) as r:
+            self.assertEqual(r.status, 200)
 
 
 if __name__ == '__main__':

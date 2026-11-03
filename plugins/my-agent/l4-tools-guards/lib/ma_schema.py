@@ -348,3 +348,135 @@ def unit_details(text: str) -> list:
             if m:
                 unit['files'].append(m.group(1))
     return units
+
+
+# --- gate view parsers (monitor Report tab; same rule: None or [] for a missing text, never raise) ---
+
+LABEL_LINE = re.compile(r'^(?:-\s*)?(Background|Purpose):\s*(.*)$')
+UNLABELED_SKIP = re.compile(r'^(?:Users:|-\s*Non-goals:|-\s*Deliverable location:)')
+VERDICT_LINE = re.compile(r'^Verdict:\s*(ALL PASS|FAIL)\b')
+DECISION_LINE = re.compile(r'^-\s*(BLOCKER|SHOULD-FIX|NITPICK)\s+(\S+)\s*(.*)$')
+ABORTED_LINE = re.compile(r'(?m)^Status:\s*aborted\b(?:[ \t]+\d{4}-\d{2}-\d{2} \d{2}:\d{2})?[ \t]*(.*?)[ \t]*$')
+MODELS_KEYS = ('agent', 'model', 'effort', 'note')
+
+
+def _blocks(lines) -> list:
+    """Blank-line separated groups of non-empty stripped lines."""
+    out, cur = [], []
+    for line in lines:
+        if line.strip():
+            cur.append(line.strip())
+        elif cur:
+            out.append(cur)
+            cur = []
+    if cur:
+        out.append(cur)
+    return out
+
+
+def background_purpose(text):
+    """(background, purpose) from `## Purpose and users` (scope.md) or `## Scope summary` (plan.md); a missing one is None.
+    `Background:` / `Purpose:` labels pick the values; without labels the first paragraph is the background and the
+    rest (without `Users:`, `- Non-goals:`, `- Deliverable location:` paragraphs) is the purpose."""
+    blocks = _blocks(section_lines(text, 'Purpose and users', 'Scope summary') or [])
+    items = []                                   # a bullet list is split into its bullets, a paragraph stays one item
+    for block in blocks:
+        if any(l.startswith('- ') for l in block):
+            for l in block:
+                if l.startswith('- ') or not items:
+                    items.append([l])
+                else:
+                    items[-1].append(l)
+        else:
+            items.append(block)
+    found = {}
+    current = None
+    for item in items:
+        m = LABEL_LINE.match(item[0])
+        if m:
+            current = m.group(1)
+            found.setdefault(current, []).append(' '.join([m.group(2)] + item[1:]).strip())
+        else:
+            current = None
+    if found:
+        return tuple(' '.join(found[k]).strip() or None if k in found else None for k in ('Background', 'Purpose'))
+    kept = [' '.join(b) for b in blocks if not UNLABELED_SKIP.match(b[0])]
+    if not kept:
+        return None, None
+    return kept[0], ' '.join(kept[1:]) or None
+
+
+def section_bullets(text, name) -> list:
+    """The top-level `- ` bullet texts under `## <name>` (indented lines of a bullet are joined to it)."""
+    out = []
+    for line in section_lines(text, name) or []:
+        if line.startswith('- '):
+            out.append(line[2:].strip())
+        elif out and line.strip() and line[:1].isspace():
+            out[-1] += ' ' + line.strip()
+    return out
+
+
+def plan_lead(text):
+    """The paragraph between the `# ` title line of a plan.md and its first `## ` heading, or None."""
+    lead, titled = [], False
+    for line in (text or '').splitlines():
+        if not titled:
+            titled = line.startswith('# ')
+            continue
+        if line.startswith('#'):
+            break
+        if line.strip():
+            lead.append(line.strip())
+        elif lead:
+            break
+    return ' '.join(lead) or None
+
+
+def models_table(text):
+    """{preset, rows: [{agent, model, effort, note}], recommendation} from `## Models` of a plan.md, or None without it."""
+    lines = section_lines(text, 'Models')
+    if lines is None:
+        return None
+    preset = recommendation = None
+    rows = []
+    for line in lines:
+        s = line.strip()
+        if s.startswith('|'):
+            cells = [c.strip() for c in s.strip('|').split('|')]
+            if not cells[0] or cells[0].lower() == 'agent' or re.fullmatch(r':?-+:?', cells[0]):
+                continue
+            cells += [''] * (len(MODELS_KEYS) - len(cells))
+            rows.append(dict(zip(MODELS_KEYS, cells)))
+        elif s.startswith('Preset:') and preset is None:
+            preset = s[len('Preset:'):].strip() or None
+        elif s.startswith('Recommendation:') and recommendation is None:
+            recommendation = s[len('Recommendation:'):].strip() or None
+    return {'preset': preset, 'rows': rows, 'recommendation': recommendation}
+
+
+def verify_verdict(text):
+    """`ALL PASS`, `FAIL` or None from the first non-empty line `Verdict: …` of verify.md."""
+    for line in (text or '').splitlines():
+        if line.strip():
+            m = VERDICT_LINE.match(line.strip())
+            return m.group(1) if m else None
+    return None
+
+
+def plan_review_decisions(text) -> list:
+    """[(severity, where, outcome)] of the `## Decisions` bullets of plan-review.md; outcome is `applied`, `declined` or None."""
+    out = []
+    for line in section_lines(text, 'Decisions') or []:
+        m = DECISION_LINE.match(line.strip())
+        if m:
+            tail = m.group(3).rpartition('→')[2].strip() if '→' in m.group(3) else ''
+            outcome = 'applied' if tail.startswith('applied') else 'declined' if tail.startswith('declined') else None
+            out.append((m.group(1), m.group(2), outcome))
+    return out
+
+
+def aborted_reason(intake_text):
+    """The reason of `Status: aborted <YYYY-MM-DD HH:MM> <reason>` in intake.md, '' without a reason, None when not aborted."""
+    m = ABORTED_LINE.search(intake_text or '')
+    return m.group(1) if m else None

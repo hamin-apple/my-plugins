@@ -18,7 +18,9 @@ my-agent starts it for you with `monitor-up.py` (Router at Intake, or `/my-agent
 
 `GET /api/tasks` returns `{"tasks": [...], "now": "HH:MM"}` with one summary per task in `tasks`; each summary has `elapsed` (minutes, read-only, recomputed on every request for a running task, `null` if the task could not be read). The menu bar app's List uses it.
 
-`GET /api/tasks/<key>/report` (the key is `<hash>/<task-id>`, so the path has three parts after `/api/tasks/`) returns the data of the Report tab as one JSON object with the keys `overview`, `timeline`, `criteria`, `units`, `review`, `plan_review`, `decisions` and `gate_report`. A key whose source file does not exist yet is `null` (a task with only `intake.md` has `overview` and `null` for every other key). An unknown key answers `404 {"error": "no such task"}`; only GET is accepted (other methods answer 405). It reads task files and writes nothing (`monitor/report.py`). `/api/tasks` and `/api/health` are unchanged.
+`GET /api/tasks/<key>/report` (the key is `<hash>/<task-id>`, so the path has three parts after `/api/tasks/`) returns the data of the Report tab as one JSON object with the keys `overview` (`background`, `purpose`), `timeline`, `criteria`, `units`, `review`, `plan_review` (per run with `found`/`fixed`), `decisions`, `gate_report`, `verdict`, `gate` (the waiting gate's payload), `takeaway` and `review_totals`. A key whose source file does not exist yet is `null` (a task with only `intake.md` has `overview` and `null` for every other key). An unknown key answers `404 {"error": "no such task"}`; only GET is accepted (other methods answer 405). It reads task files and writes nothing (`monitor/report.py`). `/api/tasks` and `/api/health` are unchanged.
+
+`GET /api/tasks/<key>/prototype` returns the task's `prototype/index.html` as `text/html` (read-only; `nosniff` and a `sandbox allow-scripts` Content-Security-Policy). An unknown task answers `404 {"error": "no such task"}`, a task without the file `404 {"error": "no prototype"}`. The G1b gate view links to it.
 
 ### Opening the monitor
 
@@ -77,18 +79,23 @@ python3 tools/feed-fixture.py "$S/claude-sessions/docs/agent/261024-cli-json-out
 
 ## Report tab
 
-The fifth tab, `5 Report`, shows one task on one page (the `5` is a label, not a shortcut). It fetches `/api/tasks/<key>/report` when opened and again on every poll while it is open, so a running task updates. Parts, in order:
+The fifth tab, `5 Report`, shows one task on one page and is the gate view (the `5` is a label, not a shortcut). It fetches `/api/tasks/<key>/report` when opened and again on every poll while it is open, so a running task updates. Parts, in order:
 
-- **Overview:** the purpose, with a segmented control for paragraph or list form (task, profile, status, delivered, follows, request).
-- **Takeaway:** four counters (criteria PASS/total, work units done/total, decisions with the recommended rate, recorded cost), the completion criteria and the work units as one-line rows (a click opens the evidence, or the files, tests and criterion numbers), and the phase timeline with the gate marks G1a/G1b/G3, back-to points and the G3 wait.
-- **Follow-up:** the suggested improvements of the gate report, one line each.
-- **Collapsed sections** (closed by default): request, cost per stretch (`not recorded` is shown as text), review findings, plan-review verdicts per run, decisions, gate report summary, task chain.
+- **Banner:** the verdict of a finished task (done in green with the commit and `N of M criteria pass · BLOCKER n/m · SHOULD-FIX n/m · NITPICK n/m · duration · $cost`; aborted in grey with the reason), or the waiting gate of a running task in red (an `ask: gate=G1a|G1b|G3` run-log line without a later `answer:`), or the current phase and step in orange. These are the dashboard's status colors (running, waiting, stopped). The numbers count up once per task, never on a poll.
+- **Overview:** two labeled rows, Background and Purpose.
+- **Key Takeaway:** three labeled lines, Scope / Delivered / Next, each with a sub-line of numbers.
+- **Disclosure rows** with a one-line summary on the right: Completion criteria, Work units, Phase timeline (open), Follow-up, Decisions · review · cost. A click expands a row into the detail rows (evidence, files and tests, the gate marks and back-to points, the suggested improvements, request, cost per stretch, review findings, plan-review verdicts, decisions, gate report, task chain); open rows stay open across polls.
+- **Gate view:** G1a shows the scope summary, criteria count and non-goals; G1b the plan summary, work units, estimate, Models rows and a link to the prototype (or "no prototype"); G3 the Verify and Review results with found/fixed counts and the open SHOULD-FIX and NITPICK items.
+
+The hash `#task=<key>&tab=report` selects the task and the tab; `#task=<key>` alone still works. The tab uses the macOS system font stack; the other tabs are unchanged. The top bar has a theme switch (`Auto` / `Light` / `Dark`), remembered per browser, so the page can be checked in both modes.
 
 A `null` key shows `Not written yet: <file>`. The counters and bars animate only when the tab is entered or the task changes, never on a poll; with `prefers-reduced-motion` the final values appear at once.
 
 ## Opening a local HTML file
 
 `open-html.py <file> [--data-dir DIR]` sits next to `monitor-up.py`. It opens a local `.html`/`.htm` file with the same opener (`monitor/opener.py`), using the `open` (`window`/`tab`) and `browser` keys of `<data folder>/monitor-config.json`; on other platforms it opens one tab through `webbrowser`. It prints one line and always exits 0: `window`, `tab`, or `failed: <reason>` (`no such file <path>`, `not an HTML file <path>`, `no browser opened`, or an exception message). It writes nothing. my-agent uses it to show a prototype (`SKILL.md` "Gate reports").
+
+`open-html.py --report <task folder> [--url] [--ports A-B] [--data-dir DIR]` opens the running monitor (it never starts one) on that task's Report tab, `http://127.0.0.1:<port>/#task=<key>&tab=report`, in a window or tab per `monitor-config.json`, and prints the same one line (`window`, `tab` or `failed: <reason>`, for example when the monitor is not running or does not list the task); exit 0. With `--url` it prints the URL and opens nothing. The health comparison is `monitor/locate.py`, shared with `monitor-up.py`. my-agent runs it at G1a, G1b and G3.
 
 ## Page
 

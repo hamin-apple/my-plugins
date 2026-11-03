@@ -403,7 +403,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
 <noscript><p>이 페이지의 자세히 탭은 스크립트를 켜야 보입니다. 저장소 안내는 <a href="https://github.com/hamin-apple/my-plugins#readme">GitHub의 README</a>에 있습니다.</p></noscript>
 <header class="top">
   <div class="wrap">
-    <span class="brand">my-agent <span class="ver mono">v0.8.1</span></span>
+    <span class="brand">my-agent <span class="ver mono">v0.9.0</span></span>
     <nav aria-label="페이지 링크"><a class="hide-md" href="#highlights">특징</a><a class="hide-md" href="#detail">자세히</a><a href="index.html" hreflang="en" lang="en">English</a><a href="architecture.html">아키텍처</a><a class="cta sm hide-sm" href="https://github.com/hamin-apple/my-plugins">GitHub</a></nav>
   </div>
 </header>
@@ -415,10 +415,10 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
       <h1 id="hero-title">일은 에이전트가,<br>승인은 사람이.</h1>
       <p class="lead">my-agent는 요청을 네 단계로 진행하면서 각 작업을 맡은 에이전트에게 나눠 주고, 정해진 관문에서 멈춰 사람의 결정을 받습니다. 질문은 모두 팝업으로 묻고, 모든 단계는 기록으로 남습니다.</p>
       <div class="row"><a class="cta" href="#detail">작동 방식 보기</a><a class="cta tint" href="architecture.html">아키텍처</a></div>
-      <p class="meta">버전 0.8.1 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Codex에서도 일부 제한과 함께 동작 (개요 › Codex 지원)</p>
+      <p class="meta">버전 0.9.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Codex에서도 일부 제한과 함께 동작 (개요 › Codex 지원)</p>
     </div>
     <div class="group" role="group" aria-labelledby="glance-h">
-      <div class="group-h"><span id="glance-h">한눈에 보기</span><span>my-agent 0.8.1</span></div>
+      <div class="group-h"><span id="glance-h">한눈에 보기</span><span>my-agent 0.9.0</span></div>
       <div class="cells">
         <div class="cell"><span class="no">01</span><span class="lab">레벨<small>오케스트레이션 · 판정 · 작업 · 도구</small></span><span class="val">4</span></div>
         <div class="cell"><span class="no">02</span><span class="lab">단계<small>정의 · 계획 · 실행 · 인수, 8개 스텝</small></span><span class="val">4</span></div>
@@ -754,7 +754,7 @@ claude plugin install my-agent@my-plugins</pre>
       text: `plan-reviewer가 계획을 따로 검토합니다. L1은 작성자인 architect의 설명을 넘기지 않습니다. 작업 단위가 바꾸는 파일이 모두 합쳐 3개 미만이면 이 검토를 건너뛸 수 있습니다. 지적 사항은 작으면 L1이 고치고, 크면 architect가 다시 씁니다.`,
       src: 'plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/profiles/general.md' },
     { n: 'G1b', title: 'G1b 계획 승인', gate: true,
-      text: `L1이 목업 전체를 채팅에 붙여 보여 준 뒤, 사람이 팝업(승인 / 변경 요청 / 중단)에서 답합니다. 화면처럼 눈으로 봐야 판단되는 결과물이면 writer가 만든 프로토타입을 먼저 볼 수도 있습니다.`,
+      text: `L1이 모니터에서 해당 작업의 Report 탭을 열어 계획 요약, 작업 단위, 추정치, 프로토타입이 있으면 그 링크를 보여 주고, 채팅 보고는 짧게 유지합니다. 그런 다음 사람이 팝업(승인 / 변경 요청 / 중단)에서 답합니다. 화면처럼 눈으로 봐야 판단되는 결과물이면 writer가 만든 프로토타입을 먼저 볼 수도 있습니다.`,
       src: 'plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l2-design-judge/agents/architect.md' },
     { n: '③', title: '③ 실행', gate: false,
       text: `승인 뒤 L1이 승인된 작업 단위를 병렬 그룹 순서대로 하위 에이전트(researcher·writer 등)에 맡깁니다. 일하는 에이전트에게는 계획 경로·작업 단위·읽을 파일·결과 경로만 줍니다. 위험한 행동이 나오면 Claude Code의 권한 대화상자(G2)가 뜹니다. general에서는 하위 에이전트만 쓰고 워크플로는 쓰지 않습니다.`,
@@ -1011,7 +1011,7 @@ claude plugin install my-agent@my-plugins</pre>
        ['항상 explorer가 먼저 관련 파일·호출하는 곳·검사 명령·커밋 안 된 변경을 살피고, 범위 인터뷰로 목적·완료 기준·제약·예외·데이터·하지 않을 일·UX 선호 일곱 가지를 정합니다.',
         '바꿀 파일이 3개 미만이고 요청이 목적·완료 기준·하지 않을 일을 이미 답했으면 범위 인터뷰와 G1a, 계획 검토를 건너뛰는 작은 작업 예외가 있습니다.',
         '작업 단위 하나가 코드 한 조각(coder)입니다. 병렬 coder는 첫 병렬 그룹에서만 worktree에서 일하고, 이후 그룹은 메인 트리에서 차례로 합니다. 병합 뒤 검사 명령을 돌립니다.',
-        'G3에서는 차이(diff)와 제안 커밋 메시지를 보여 주고 커밋 / 재작업 / 중단을 묻습니다. 커밋 메시지에는 완료 기준 번호가 들어갑니다.'],
+        'G3에서는 작업의 Report 탭을 열고, 한 줄 diff 통계와 제안 커밋 메시지를 표 행으로 보여 준 뒤 커밋 / 재작업 / 중단을 묻습니다. 커밋 메시지에는 완료 기준 번호가 들어갑니다.'],
        'plugins/my-agent/l1-orchestration/profiles/dev.md'],
       ['프로필마다 부르는 에이전트가 다릅니다.',
        '프로필 파일의 "Agents used" 표가 단계별 담당을 정합니다.',

@@ -403,7 +403,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
 <noscript><p>The detail tabs on this page need scripts turned on. The repository is described in its <a href="https://github.com/hamin-apple/my-plugins#readme">README on GitHub</a>.</p></noscript>
 <header class="top">
   <div class="wrap">
-    <span class="brand">my-agent <span class="ver mono">v0.8.1</span></span>
+    <span class="brand">my-agent <span class="ver mono">v0.9.0</span></span>
     <nav aria-label="Page links"><a class="hide-md" href="#highlights">Highlights</a><a class="hide-md" href="#detail">Details</a><a href="index-ko.html" hreflang="ko" lang="ko">한국어</a><a href="architecture.html">Architecture</a><a class="cta sm hide-sm" href="https://github.com/hamin-apple/my-plugins">GitHub</a></nav>
   </div>
 </header>
@@ -415,10 +415,10 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
       <h1 id="hero-title">Agents do the work.<br>You approve it.</h1>
       <p class="lead">my-agent runs a request through four phases, hands each piece to its own agent, and stops at set gates for you to decide. Every question is a popup, and every step leaves a record.</p>
       <div class="row"><a class="cta" href="#detail">See how it works</a><a class="cta tint" href="architecture.html">Architecture</a></div>
-      <p class="meta">Version 0.8.1 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Also runs in Codex, with limits (Overview › Codex support)</p>
+      <p class="meta">Version 0.9.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Also runs in Codex, with limits (Overview › Codex support)</p>
     </div>
     <div class="group" role="group" aria-labelledby="glance-h">
-      <div class="group-h"><span id="glance-h">AT A GLANCE</span><span>my-agent 0.8.1</span></div>
+      <div class="group-h"><span id="glance-h">AT A GLANCE</span><span>my-agent 0.9.0</span></div>
       <div class="cells">
         <div class="cell"><span class="no">01</span><span class="lab">Levels<small>orchestration · judges · workers · tools</small></span><span class="val">4</span></div>
         <div class="cell"><span class="no">02</span><span class="lab">Phases<small>Define · Plan · Build · Accept, in 8 steps</small></span><span class="val">4</span></div>
@@ -754,7 +754,7 @@ claude plugin install my-agent@my-plugins</pre>
       text: `The plan-reviewer reviews the plan separately. L1 does not pass along the explanation of the architect, who wrote it. If the files changed by all work units add up to fewer than 3, this review can be skipped. Small findings are fixed by L1; large ones make the architect rewrite.`,
       src: 'plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/profiles/general.md' },
     { n: 'G1b', title: 'G1b Plan approval', gate: true,
-      text: `L1 pastes the whole mock-up into the chat, then the person answers in a popup (approve / request changes / stop). If the deliverable has to be seen to be judged, like a screen, a prototype made by the writer can be viewed first.`,
+      text: `L1 opens the task's Report tab in the monitor, which shows the plan summary, work units, estimate and, if one exists, a link to the prototype, and keeps the chat report short. Then the person answers in a popup (approve / request changes / stop). If the deliverable has to be seen to be judged, like a screen, a prototype made by the writer can be viewed first.`,
       src: 'plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l2-design-judge/agents/architect.md' },
     { n: '③', title: '③ Build', gate: false,
       text: `After approval, L1 hands the approved work units to subagents (researcher, writer, and so on) in parallel-group order. The working agent gets only the plan path, the work unit, the files to read, and the result path. If a risky action comes up, Claude Code's permission dialog (G2) appears. General uses only subagents, not workflows.`,
@@ -1011,7 +1011,7 @@ claude plugin install my-agent@my-plugins</pre>
        ['The explorer always goes first and looks at the relevant files, the places that call them, the check commands, and uncommitted changes, and the scope interview settles seven things: purpose, completion criteria, constraints, exceptions, data, what will not be done, and UX preferences.',
         'There is a small-task exception: if fewer than 3 files will change and the request already answered the purpose, completion criteria, and what will not be done, the scope interview, G1a, and plan review are skipped.',
         'One work unit is one piece of code (coder). Parallel coders work in a worktree only in the first parallel group, and later groups merge one after another in the main tree. After merging, the check commands are run.',
-        'At G3 it shows the diff and a proposed commit message and asks commit / rework / stop. The commit message carries the completion criterion numbers.'],
+        'At G3 it opens the task\'s Report tab, shows the one-line diff stat and the proposed commit message as table rows, and asks commit / rework / stop. The commit message carries the completion criterion numbers.'],
        'plugins/my-agent/l1-orchestration/profiles/dev.md'],
       ['Each profile calls different agents.',
        'The "Agents used" table in each profile file sets who is in charge of each phase.',

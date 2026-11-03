@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><!-- set lang per request (ko for Korean content) -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Keep this meta and --w/--h below in sync: they are the mockup size. -->
+<meta name="mockup-size" content="1440x900">
+<title>Mockup</title>
+<script>/* capture boot: settled final state for the PNG (?capture=1) and for reduced motion.
+   Keep this before any effect markup. Snippets in references/effects.md read html[data-capture]. */
+  if (/[?&]capture\b/.test(location.search) || matchMedia('(prefers-reduced-motion: reduce)').matches)
+    document.documentElement.setAttribute('data-capture', '');
+</script>
+<style>
+  :root {
+    --w: 1440px;
+    --h: 900px;
+    /* Swift default: SF font + Apple system colors (light mode).
+       Replace the values when the request states another style. */
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+    --accent: #007aff;
+    --green: #34c759;
+    --red: #ff3b30;
+    --orange: #ff9500;
+    --yellow: #ffcc00;
+    --purple: #af52de;
+    --label: #000000;
+    --secondary-label: rgba(60, 60, 67, .6);
+    --bg: #f2f2f7;                       /* system grouped background */
+    --grouped-bg: #ffffff;               /* grouped list / card surface */
+    --separator: rgba(60, 60, 67, .29);
+    --fill: rgba(120, 120, 128, .12);    /* tertiary fill: hover, search field, skeleton */
+    --material: rgba(246, 246, 246, .88);   /* toolbar / tab bar */
+    --sidebar-bg: rgba(238, 238, 243, .92); /* macOS sidebar */
+    --radius: 10px;
+    /* Old names kept as aliases: the phone/laptop/browser frames and references/flow.md use them. */
+    --surface: var(--grouped-bg);
+    --text: var(--label);
+    --muted: var(--secondary-label);
+    --line: var(--separator);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); }
+  body { font-family: var(--font); color: var(--label); font-size: 14px; line-height: 1.5; }
+
+  .canvas {
+    width: var(--w);
+    height: var(--h);
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <!-- mockup content -->
+</div>
+</body>
+</html>

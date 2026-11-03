@@ -24,6 +24,8 @@ Write one task plan, `plan.md`, from the scope document and the explore results.
 
 ## `plan.md` sections (in this order, all required)
 
+The file starts with the `# Plan: <task-id>` title and a lead paragraph: one or two sentences on what the plan builds (not a `Profile:` line or a pointer to the criteria). The G1b Report view shows it as the plan summary.
+
 1. `## Scope summary` (general profile only): purpose, non-goals, deliverable location (an absolute path (no `~`, no relative path)).
 2. `## Completion criteria` (general profile only): a numbered list `1.`, `2.`; it carries each criterion's check tag (`[check: command]`, `[check: file]`, `[check: URL]` or `[check: person]`) unchanged. Other profiles use the numbers and tags in `scope.md` as is.
 3. `## Work units`: for each unit, a `### u<n> <name>` heading (`u1`, `u2` …, unique within the plan), and under it `- ` lines with the agent that takes it (`my-agent:researcher`·`writer`·`coder`), files to read, and for a coder the files to change, or for a writer or researcher the result path (`<task_dir>/<task-id>/work/…`), the parallel group (`group 1`, `group 2` …), the matching completion criterion number, and `- Status: pending` (when rewriting, a unit whose result `## Existing work` keeps as is gets `- Status: done`). L1 calls workers by this ID and the run-log records it as `unit=`.

@@ -27,7 +27,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 | Gate | When | Choices |
 |---|---|---|
 | G1a Scope confirmation | End of Scope (none in the general profile; merged into G1b) | Confirm / Revise / Abort |
-| G1b Plan approval | End of Plan Review, after pasting the full mock-up into the chat | Approve / Request changes / Abort |
+| G1b Plan approval | End of Plan Review, after opening the task's Report tab | Approve / Request changes / Abort |
 | G2 Risky action | Right before a risky tool call; the Claude Code permission dialog shows it | Allow once / Deny |
 | G3 Final acceptance | Verify ALL PASS, Review BLOCKER 0 | Accept / Rework / Abort (dev profile: Commit / Rework / Abort) |
 | E Escalation | Verify FAIL 3 times in a row, the same work unit stopped twice, a workflow error, a merge conflict exposes a plan error | Give direction / Change scope / Abort |
@@ -255,15 +255,20 @@ Right before a deliverable leaves the task folder, scan it for secret patterns: 
 
 ## Gate reports
 
-G1a, G1b, G3 (general and dev) and E open the chat report with an overview, then the details:
+G1a, G1b and G3 (general and dev) are read on the task's Report tab; the chat report is short. E keeps the overview table followed by `### Details`.
 
-- G1a and G1b open with `### Overview` (background and goal, a few lines of prose in the person's language) and `### Takeaway` (G1a: the scope summary, i.e. purpose, criteria count and non-goals; G1b: the plan summary, i.e. work units, order and estimate), before the table.
-- A table `| Item | Value |` of 5–8 rows: task and profile; what is being approved; key decisions; counts (files, work units or estimate); open risks or unhandled items; what each choice leads to. In E, the "Approving" row says what is stuck. At G1b the table has a `Models` row: the preset and the recommended change, if any (`Approve` takes it, `Request changes` refuses it); without a change, `standard (definition values)` or the preset name.
-- Then a `### Details` heading with the full mock-up, diff or judgment summary.
-- The popup question text repeats the first two rows, e.g. "261101-fix-tally · dev (Router) — confirm the scope (6 criteria)?".
-- **Prototype** (G1a, and G1b when one exists): a prototype is the local file `<task_dir>/<task-id>/prototype/index.html`. After checking it, run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/open-html.py" "<absolute path of prototype/index.html>" --data-dir "<data folder>"` (no `--task-dir`). Its one output line is `window`, `tab` or `failed: <reason>`. Put the first line of `### Details` as `Prototype: <local path> (opened in the browser: <window|tab>)`, or on a `failed:` line `Prototype: <local path> (not opened: <reason>; open the file yourself)`, and carry on. The prototype is not published anywhere, and no harness tool is used for it.
-  - At G1a the line comes before the `scope.md` text. At G1b, when a prototype exists, `### Details` shows that line and the plan summary instead of the full mock-up; the prototype is remade only when the mock-up changed (otherwise the existing file is opened again). Without a prototype, `### Details` is as above.
-- G3 and E are unchanged.
+- **Opening the Report tab.** Right before each of these popups, after its `ask` line (and at G3 after the `cost` line), run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/open-html.py" --report "<absolute task folder>" --data-dir "<data folder>"`. Its one line is `window`, `tab` or `failed: <reason>`.
+  - Run `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/open-html.py" --report "<absolute task folder>" --url --data-dir "<data folder>"` only when the first line is `window`, `tab` or `failed: no browser opened`. For any other `failed:` line it does not run `--url` and uses the third pointer form with that reason. When the `--url` call itself prints a `failed:` line, use the third pointer form with that reason.
+  - Both are plugin scripts run with Bash; no harness tool is used, so the rule runs the same in Claude Code and Codex. The gate goes on in every case.
+- **Chat report** at these gates: `### Overview` (background and purpose, a few lines of prose in the person's language), `### Takeaway` (Scope, Delivered, Next: one line each; G1a: the scope summary, i.e. purpose, criteria count and non-goals; G1b: the plan summary, i.e. work units, order and estimate), the table `| Item | Value |` of 5–8 rows, and one pointer line in one of the three pointer forms below. No `### Details`.
+  - After `window` or `tab`: `Report: <URL> (opened in the browser: <window|tab>)`.
+  - After `failed: no browser opened`: `Report: <URL> (not opened: no browser opened; open it yourself)`.
+  - After any other `failed:` line (from either call): `Report: not opened (<reason>); task folder: <absolute task folder>`.
+- **Table rows:** task and profile; what is being approved; key decisions; counts (files, work units or estimate); open risks or unhandled items (unexpected paths, `Plugin reload` notes, criteria checked by the person later); what each choice leads to. At G1b the table has a `Models` row: the preset and the recommended change, if any (`Approve` takes it, `Request changes` refuses it); without a change, `standard (definition values)` or the preset name. G1a and G1b add a `Prototype` row when a prototype exists.
+  - G3 in the dev profile adds `Commit message` (first line, then `criteria: <numbers>`) and `Diff` (`<N> files, +<a>/-<b>` from the last line of `git diff --stat`); the full diff is not printed. G3 in the general and research profiles adds `Save path` (the exact path).
+  - In E, the "Approving" row says what is stuck.
+- The popup question text repeats the first two rows, e.g. "261101-fix-tally · dev (Router) — confirm the scope (6 criteria)?". The G3 popup body still lists the open SHOULD-FIX and NITPICK items (phase files).
+- **Prototype** (G1a, and G1b when one exists): built by `my-agent:writer` with the `mock-up` skill files (`${CLAUDE_PLUGIN_ROOT}/skills/mock-up/`), captured with `sh "${CLAUDE_PLUGIN_ROOT}/skills/mock-up/scripts/capture.sh" "<absolute path of prototype/index.html>"`, then opened with `python3 "${CLAUDE_PLUGIN_ROOT}/monitor/open-html.py" "<absolute path of prototype/index.html>" --data-dir "<data folder>"` (no `--task-dir`). A prototype is the local file `<task_dir>/<task-id>/prototype/index.html`. The result goes in the `Prototype` row: `<local path> (opened in the browser: <window|tab>)`, or on a `failed:` line `<local path> (not opened: <reason>; open the file yourself)`. The prototype is not published anywhere. It is remade only when the mock-up changed (otherwise the existing file is opened again). The G1b Report view links it through the monitor.
 
 ## In-flight revision (before G3 acceptance)
 

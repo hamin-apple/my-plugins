@@ -101,6 +101,7 @@ class Registry:
         if task.get('status') == 'running':   # the clock moves without any file changing
             now = self.clock()
             task['now'] = now.strftime('%H:%M')
+            task['nowTs'] = now.strftime('%Y-%m-%d %H:%M:%S')   # the timelines' right edge
             task['elapsed'] = round((now - cached['started']).total_seconds() / 60)
         return task
 
@@ -116,23 +117,43 @@ class Registry:
         with self._lock:
             return self._find(key)
 
+    def _locate(self, key):
+        """(project, task_dir) of the task with this key, or None. Caller holds the lock."""
+        for project, task_dir in self._task_dirs():
+            if task_key(project, task_dir.name) == key:
+                return project, task_dir
+        return None
+
     def get_report(self, key: str):
         """The report JSON of the task with this key (read only), or None."""
         with self._lock:
-            for project, task_dir in self._task_dirs():
-                if task_key(project, task_dir.name) != key:
+            found = self._locate(key)
+            if not found:
+                return None
+            project, task_dir = found
+            task = self._get(project, task_dir)
+            followed_by = []
+            for _, other in self._task_dirs():
+                try:
+                    text = (other / 'intake.md').read_text(encoding='utf-8', errors='replace')
+                except OSError:
                     continue
-                task = self._get(project, task_dir)
-                followed_by = []
-                for _, other in self._task_dirs():
-                    try:
-                        text = (other / 'intake.md').read_text(encoding='utf-8', errors='replace')
-                    except OSError:
-                        continue
-                    if follows_of(text) == task_dir.name:
-                        followed_by.append(other.name)
-                return build_report(project, task_dir, task, followed_by)
-        return None
+                if follows_of(text) == task_dir.name:
+                    followed_by.append(other.name)
+            return build_report(project, task_dir, task, followed_by)
+
+    def get_prototype(self, key: str):
+        """(found, bytes) for `<task folder>/prototype/index.html`: (False, None) for an unknown key, (True, None) without the file."""
+        with self._lock:
+            found = self._locate(key)
+            if not found:
+                return False, None
+            page = found[1] / 'prototype' / 'index.html'
+            try:
+                inside = page.resolve().is_relative_to(found[1].resolve())   # a symlink must not lead outside the task folder
+                return True, page.read_bytes() if inside and page.is_file() else None
+            except OSError:
+                return True, None
 
     def _list(self):
         tasks = [self._get(p, d) for p, d in self._task_dirs()]

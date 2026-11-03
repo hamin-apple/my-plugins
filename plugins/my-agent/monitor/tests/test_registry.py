@@ -35,6 +35,16 @@ class RegistryTest(unittest.TestCase):
             self.assertIsNotNone(t['elapsed'])
             self.assertEqual(t['elapsed'], r.get_task(t['key'])['elapsed'])
 
+    def test_now_ts_follows_the_clock_for_running(self):
+        """The timelines' right edge is nowTs; it moves on every poll like now and elapsed, not only on a rebuild."""
+        from datetime import datetime
+        clock = {'now': datetime(2026, 11, 3, 7, 54, 38)}
+        r = Registry(PROJECTS_TXT, claude_root=CLAUDE, clock=lambda: clock['now'])
+        key = next(t['key'] for t in r.list_tasks() if t['status'] == 'running')
+        self.assertEqual(r.get_task(key)['nowTs'], '2026-11-03 07:54:38')
+        clock['now'] = datetime(2026, 11, 3, 7, 57, 0)
+        self.assertEqual(r.get_task(key)['nowTs'], '2026-11-03 07:57:00')   # no file changed, the clock did
+
     def test_registry_skips_missing_and_expands_home(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / 'projects.txt'
@@ -63,6 +73,26 @@ class RegistryTest(unittest.TestCase):
                 os.utime(log, (st.st_atime, st.st_mtime))
             self.assertEqual(spy.call_count, 1)
         self.assertIsNone(r.get_task('deadbeef/nope'))
+
+    def test_prototype_symlink_outside_the_task_folder_is_not_served(self):
+        """`prototype/index.html` is read only when it resolves inside the task folder."""
+        import shutil
+        with tempfile.TemporaryDirectory() as d:
+            proj = Path(d) / 'obsidian-notes'
+            shutil.copytree(PROJECTS / 'obsidian-notes', proj)
+            p = Path(d) / 'projects.txt'
+            p.write_text(f'{proj}\n', encoding='utf-8')
+            task_dir = proj / 'docs/agent/261023-hooks-notify-note'
+            secret = Path(d) / 'secret.html'
+            secret.write_text('<p>outside</p>', encoding='utf-8')
+            (task_dir / 'prototype').mkdir()
+            (task_dir / 'prototype' / 'index.html').symlink_to(secret)
+            r = Registry(p, claude_root=Path(d) / 'claude')
+            [t] = r.list_tasks()
+            self.assertEqual(r.get_prototype(t['key']), (True, None))
+            (task_dir / 'prototype' / 'index.html').unlink()
+            (task_dir / 'prototype' / 'index.html').write_text('<p>inside</p>', encoding='utf-8')
+            self.assertEqual(r.get_prototype(t['key']), (True, b'<p>inside</p>'))
 
     def test_moved_task_leaves_caches(self):
         import shutil

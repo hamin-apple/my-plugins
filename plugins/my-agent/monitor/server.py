@@ -19,11 +19,13 @@ INDEX = ROOT / 'web' / 'index.html'
 class Handler(BaseHTTPRequestHandler):
     registry = None
 
-    def _send(self, code, body: bytes, ctype):
+    def _send(self, code, body: bytes, ctype, headers=()):
         self.send_response(code)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-store')
+        for name, value in headers:
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -46,6 +48,15 @@ class Handler(BaseHTTPRequestHandler):
             if len(rest) == 3 and rest[2] == 'report':   # the key itself is <hash>/<task-id>
                 report = self.registry.get_report('/'.join(rest[:2]))
                 return self._json(200, report) if report else self._json(404, {'error': 'no such task'})
+            if len(rest) == 3 and rest[2] == 'prototype':
+                found, data = self.registry.get_prototype('/'.join(rest[:2]))
+                if not found:
+                    return self._json(404, {'error': 'no such task'})
+                if data is None:
+                    return self._json(404, {'error': 'no prototype'})
+                # the prototype runs its own scripts in an opaque origin, apart from the monitor page
+                return self._send(200, data, 'text/html; charset=utf-8',
+                                  (('X-Content-Type-Options', 'nosniff'), ('Content-Security-Policy', 'sandbox allow-scripts')))
             task = self.registry.get_task(path[len('/api/tasks/'):])
             return self._json(200, task) if task else self._json(404, {'error': 'no such task'})
         self._json(404, {'error': 'not found'})

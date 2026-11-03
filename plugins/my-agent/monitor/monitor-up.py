@@ -34,6 +34,7 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
+from monitor.locate import is_ours
 from monitor.opener import BROWSERS, open_monitor, read_browser, read_mode, write_browser
 
 import ma_data   # on sys.path through monitor/__init__.py
@@ -65,8 +66,7 @@ def health(port: int):
 
 
 def ours(port: int) -> bool:
-    h = health(port)
-    return isinstance(h, dict) and h.get('app') == 'my-agent-monitor' and h.get('root') == str(ROOT)
+    return is_ours(health(port), ROOT)
 
 
 def port_free(port: int) -> bool:

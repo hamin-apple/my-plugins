@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- slide type: one 16:9 slide, content only, no app window. Several slides: see references/doc-slide.md (stacked board). -->
+<meta name="mockup-size" content="1280x720">
+<title>Q3 Review</title>
+<script>
+  if (/[?&]capture\b/.test(location.search) || matchMedia('(prefers-reduced-motion: reduce)').matches)
+    document.documentElement.setAttribute('data-capture', '');
+</script>
+<style>
+  :root {
+    --w: 1280px; --h: 720px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+    --accent: #007aff; --green: #34c759;
+    --label: #000; --secondary-label: rgba(60,60,67,.6);
+    --card: #f5f5f7; --separator: rgba(60,60,67,.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { font-family: var(--font); color: var(--label); -webkit-font-smoothing: antialiased; }
+  .canvas { width: var(--w); height: var(--h); overflow: hidden; position: relative; background: #fff; }
+
+  .slide { width: 1280px; height: 720px; padding: 64px 72px 56px; position: relative; display: flex; flex-direction: column; background: #fff; }
+  .eyebrow { font-size: 16px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+  .slide h1 { margin-top: 12px; font-size: 54px; line-height: 1.06; font-weight: 700; letter-spacing: -.035em; }
+  .grid { flex: 1; display: grid; grid-template-columns: 340px 1fr; gap: 32px; margin-top: 40px; min-height: 0; }
+  .stats { display: flex; flex-direction: column; gap: 16px; }
+  .stat { flex: 1; background: var(--card); border-radius: 20px; padding: 22px 26px; display: flex; flex-direction: column; justify-content: center; }
+  .stat small { font-size: 16px; color: var(--secondary-label); }
+  .stat b { display: block; margin-top: 2px; font-size: 44px; font-weight: 700; letter-spacing: -.035em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .up { display: inline-block; margin-left: 10px; padding: 3px 11px; border-radius: 14px; background: rgba(52,199,89,.15); color: #1f9d41;
+    font-size: 17px; font-weight: 600; letter-spacing: 0; vertical-align: 8px; }
+  .chart { background: var(--card); border-radius: 20px; padding: 24px 30px 20px; display: flex; flex-direction: column; }
+  .chart h4 { font-size: 18px; font-weight: 600; display: flex; justify-content: space-between; }
+  .chart h4 span { font-weight: 400; color: var(--secondary-label); }
+  .legend { display: flex; gap: 18px; margin-top: 6px; font-size: 14px; color: var(--secondary-label); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: 0; }
+  .bars { flex: 1; display: flex; align-items: flex-end; gap: 22px; }
+  .bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; }
+  .bar u { display: block; width: 100%; border-radius: 10px 10px 3px 3px; background: #b9d7ff; }
+  .bar.q3 u { background: linear-gradient(#3395ff, #007aff); }
+  .bar em { font-style: normal; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bar span { font-size: 14px; color: var(--secondary-label); }
+  .foot { position: absolute; left: 72px; right: 72px; bottom: 22px; display: flex; justify-content: space-between; font-size: 13px; color: var(--secondary-label); }
+</style>
+</head>
+<body>
+<div class="canvas">
+  <section class="slide">
+    <div class="eyebrow">Q3 Review &middot; Revenue</div>
+    <h1>Revenue grew 24.8% quarter over quarter</h1>
+    <div class="grid">
+      <div class="stats">
+        <div class="stat"><small>Q3 revenue</small><b>$4.43M<span class="up">+24.8%</span></b></div>
+        <div class="stat"><small>Q2 revenue</small><b>$3.55M</b></div>
+        <div class="stat"><small>New customers</small><b>1,284</b></div>
+      </div>
+      <div class="chart">
+        <h4>Monthly revenue<span>$M</span></h4>
+        <div class="legend"><span><i style="background:#b9d7ff"></i>Q2</span><span><i style="background:#007aff"></i>Q3</span></div>
+        <div class="bars"><div class="bar"><em>$1.12M</em><u style="height:175px"></u><span>Apr</span></div><div class="bar"><em>$1.18M</em><u style="height:184px"></u><span>May</span></div><div class="bar"><em>$1.25M</em><u style="height:195px"></u><span>Jun</span></div><div class="bar q3"><em>$1.36M</em><u style="height:212px"></u><span>Jul</span></div><div class="bar q3"><em>$1.49M</em><u style="height:233px"></u><span>Aug</span></div><div class="bar q3"><em>$1.58M</em><u style="height:247px"></u><span>Sep</span></div></div>
+      </div>
+    </div>
+    <div class="foot"><span>Orbit Labs &middot; Q3 2026 Business Review</span><span>3 / 6</span></div>
+  </section>
+</div>
+</body>
+</html>

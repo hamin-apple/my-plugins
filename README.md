@@ -7,7 +7,7 @@ A Claude Code plugin marketplace by hamin-apple.
 | Plugin | Version | Description |
 |---|---|---|
 | `my-agent` | 0.9.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
-| `my-agent-tray` | 0.1.2 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
+| `my-agent-tray` | 0.1.3 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
 

@@ -1,0 +1,2 @@
+prompt-input:1  - pdf: A made-up other skill. (file: /abs/pdf/SKILL.md)
+prompt-input:2  - my-agent:monitor: Start, check, or stop the my-agent monitor web page (local, read-only). Run only when called as /my-agent:monitor. (file: <codex-home>/plugins/cache/my-plugins/my-agent/0.7.0/skills/monitor/SKILL.md)

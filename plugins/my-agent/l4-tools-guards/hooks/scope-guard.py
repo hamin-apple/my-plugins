@@ -21,7 +21,6 @@ Paths compare without case (ma_path). Any error → exit 2, so the call is block
 (`onFailure: block` covers a crash or timeout).
 """
 import fnmatch
-import json
 import os
 import re
 import sys
@@ -32,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
 import ma_data  # noqa: E402
+import ma_host  # noqa: E402
 import ma_logline  # noqa: E402
 import ma_plan  # noqa: E402
 import ma_schema  # noqa: E402
@@ -88,17 +88,17 @@ def data_root() -> Path:
     return ma_data.data_dir().expanduser().resolve()
 
 
-def scratch_base() -> Path:
-    return Path('/tmp').resolve() / f'claude-{os.getuid()}'
+def scratch_base(inp=None) -> Path:
+    return ma_host.scratch_base(inp)
 
 
-def in_scratchpad(p: Path, session_id) -> bool:
+def in_scratchpad(p: Path, session_id, inp=None) -> bool:
     """True when `p` is under this session's scratchpad `<base>/<project slug>/<session_id>/scratchpad`. Any slug
     matches (it comes from the launch folder, which the hook input does not carry); the session id is unique."""
     if not isinstance(session_id, str) or session_id in ('', '.', '..') or '/' in session_id or not hasattr(os, 'getuid'):
         return False
     try:
-        rel = p.resolve().relative_to(scratch_base())
+        rel = p.resolve().relative_to(scratch_base(inp))
     except ValueError:
         return False
     return len(rel.parts) >= 3 and rel.parts[1] == session_id and rel.parts[2] == 'scratchpad'
@@ -197,7 +197,7 @@ def check(inp: dict, role: str, active) -> Optional[str]:
             return f'Secret paths are not read or written: {p}'
     for p in reads:
         if not (any(under(p, root) for root in r.read)
-                or (role != 'gate-analyst' and in_scratchpad(p, inp.get('session_id')))):
+                or (role != 'gate-analyst' and in_scratchpad(p, inp.get('session_id'), inp))):
             return f'Outside the read scope of {role}: {p}'
     if tool == 'Bash' and role == 'verifier' and ma_bash.http_sends(ti['command']) is not False:
         return 'The verifier\'s curl and wget only fetch (GET) (this option sends data).'
@@ -231,30 +231,39 @@ def plan_write_problem(ti: dict, path: Path) -> Optional[str]:
     return None
 
 
+def judge(inp) -> Optional[dict]:
+    """Hook output (a deny) for one Claude-shaped input, or None to let the call through."""
+    agent = inp.get('agent_type') if isinstance(inp, dict) else None
+    if not isinstance(agent, str) or not agent.startswith('my-agent:'):
+        return None
+    role = agent.split(':', 1)[1]
+    broken = []
+    active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
+    missing = (f'{broken[0]} has no `task:` line.' if broken else
+               'No active my-agent task (no .active).')
+    why = missing if active is None else check(inp, role, active)
+    if not why:
+        return None
+    reason = why if why.startswith('my-agent scope-guard:') else f'scope-guard: {why}'
+    if active is not None:
+        ma_logline.log_guard(active, 'scope-guard', agent, inp.get('agent_id') or '-',
+                             inp.get('tool_name') or '-', 'deny', reason, inp.get('cwd') or '-')
+    return {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
+                                   'permissionDecisionReason': reason}}
+
+
 def main() -> int:
     raw = sys.stdin.read()
-    if 'my-agent:' not in raw:
+    if 'my-agent:' not in raw and ma_host.CODEX_PREFIX not in raw:
         return 0
     try:
-        inp = json.loads(raw)
-        agent = inp.get('agent_type') if isinstance(inp, dict) else None
-        if not isinstance(agent, str) or not agent.startswith('my-agent:'):
-            return 0
-        role = agent.split(':', 1)[1]
-        broken = []
-        active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
-        missing = (f'{broken[0]} has no `task:` line.' if broken else
-                   'No active my-agent task (no .active).')
-        why = missing if active is None else check(inp, role, active)
-        if why:
-            reason = why if why.startswith('my-agent scope-guard:') else f'scope-guard: {why}'
-            if active is not None:
-                ma_logline.log_guard(active, 'scope-guard', agent, inp.get('agent_id') or '-',
-                                     inp.get('tool_name') or '-', 'deny', reason, inp.get('cwd') or '-')
-            print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
-                                                     'permissionDecisionReason': reason}},
-                             ensure_ascii=False))
-        return 0
+        call = ma_host.parse(raw)
+        out = None
+        for inp in call.inps:   # one per target path of a Codex patch; the first deny wins
+            out = ma_host.stronger(out, judge(inp))
+            if ma_host.decision(out) == 'deny':
+                break
+        return ma_host.emit(call, out)
     except Exception as e:   # block the call: exit 2 is a blocking error for PreToolUse
         print(f'scope-guard: {type(e).__name__}: {e}', file=sys.stderr)
         return 2

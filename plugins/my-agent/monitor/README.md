@@ -40,11 +40,12 @@ The server binds `127.0.0.1` only. The page polls every 2 s.
 |---|---|---|
 | Project list (one path per line; my-agent writes absolute paths, a hand-added `~/…` line also works) | `<data folder>/projects.txt` | `MA_PROJECTS_FILE` |
 | Main-session transcripts | `~/.claude/projects/*/<session>.jsonl` | `MA_CLAUDE_PROJECTS` |
+| Codex session records (read when no Claude transcript has the session id; tasks from both tools are listed together) | `~/.codex/sessions/*/*/*/rollout-*.jsonl` | `MA_CODEX_SESSIONS` |
 | Prices | `<data folder>/prices.json` if it exists, else `l4-tools-guards/lib/prices.json` | `MA_TASKS_DIR` (the data folder) |
 
 The data folder is the my-agent plugin setting `data_dir` (default `~/dev/log/my-agent`). Order: `MA_TASKS_DIR`, then the setting, then `~/dev/log/my-agent`; a leading `~` is expanded. `monitor-up.py --data-dir <folder>` takes the setting for the commands the my-agent skill runs, and passes the resolved folder to the server it starts. `monitor.json`, `monitor.log` and `monitor-config.json` sit directly in the data folder. A running server keeps the folder it started with: after changing the folder, run `/my-agent:monitor stop` and start the monitor again.
 
-The main session's usage of a finished task is read from `main-usage.json` in its task folder when it exists (my-agent writes it at the end of a task with `usage-snapshot.py`) and costed with the current `prices.json`, because Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days). Without it, they come from the transcript, and turn into `–` once the transcript is gone.
+The main session's usage of a finished task is read from `main-usage.json` in its task folder when it exists (my-agent writes it at the end of a task with `usage-snapshot.py`) and costed with the current `prices.json`, because Claude Code deletes transcripts after `cleanupPeriodDays` (default 30 days). The Models table's main row reads `<family> · main`: `opus` for a Claude task, the Codex model family (for example `gpt-6-luna`) for a Codex task. Without it, they come from the transcript, and turn into `–` once the transcript is gone.
 The dashboard, Models table, step cards and replay show USD only (no token counts); the raw counts stay in the run-log `stop:` lines and `main-usage.json`.
 Only `<task_dir>/*/` is listed. The server keeps the `task_dir` value `monitor-up.py` started it with; after you change the setting, run `/my-agent:monitor stop` once (`monitor-up.py` names a mismatch instead of reusing the server silently). A server started by the menu bar app uses the default. Finished tasks moved to `<task_dir>/.archived/` by `l4-tools-guards/scripts/archive-tasks.py` leave the list (architecture 4.8.2 "Task records over time").
 

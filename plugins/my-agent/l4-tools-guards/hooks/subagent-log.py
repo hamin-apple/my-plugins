@@ -22,16 +22,42 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
+import ma_host  # noqa: E402
 import ma_logline  # noqa: E402
 import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
+import ma_usage  # noqa: E402
 
 HANDBACK_WAIT = 3   # seconds to wait for a late SubagentHandback line (live run 2026-10-25)
 PREFIX = 'my-agent:'
 
 
 def plugin_root() -> Path:
-    return Path(os.environ.get('CLAUDE_PLUGIN_ROOT') or Path(__file__).resolve().parents[2])
+    return ma_host.plugin_root(Path(__file__).resolve().parents[2])
+
+
+def codex_run(inp):
+    """(usage sums, Counter of models, seconds) of a Codex subagent from its `token_usage_record` lines: the
+    subagent's own record, else the main record. (None, empty, None) when neither has any."""
+    from collections import Counter
+    for key in ('agent_transcript_path', 'transcript_path'):
+        path = inp.get(key)
+        if not isinstance(path, str) or not path:
+            continue
+        try:
+            rows = ma_usage.read_codex(Path(path), inp.get('agent_id'))
+        except OSError:
+            continue
+        if rows:
+            sums = {'in': 0, 'out': 0, 'cw': 0, 'cr': 0}
+            for _, _, u in rows:
+                sums['in'] += u['input_tokens']
+                sums['out'] += u['output_tokens']
+                sums['cw'] += u['cache_creation_input_tokens']
+                sums['cr'] += u['cache_read_input_tokens']
+            stamps = [ts for ts, _, _ in rows]
+            return sums, Counter(m for _, m, _ in rows if m), int((max(stamps) - min(stamps)).total_seconds())
+    return None, Counter(), None
 
 
 def definition(name: str) -> dict:
@@ -100,12 +126,16 @@ def do_stop(inp, active):
     message = (inp.get('last_assistant_message') or '').strip()
     sums, actual, secs, error = None, None, None, False
     try:
-        sums, models, secs, last = ma_subagent.read_transcript(inp.get('agent_transcript_path') or '', since)
+        if inp.get('_host') == 'codex':   # a Codex record has no Claude transcript entries
+            sums, models, secs = codex_run(inp)
+            last = None
+        else:
+            sums, models, secs, last = ma_subagent.read_transcript(inp.get('agent_transcript_path') or '', since)
         actual = models.most_common(1)[0][0] if models else None
         if last and last.get('isApiErrorMessage'):
             error = True
         deadline = time.time() + HANDBACK_WAIT
-        while not message:   # the SubagentHandback line can reach the transcript just after SubagentStop fires
+        while not message and inp.get('_host') != 'codex':   # the SubagentHandback line can reach the transcript just after SubagentStop fires
             message = ma_subagent.handback_message(inp.get('agent_transcript_path') or '', since).strip()
             if message or time.time() >= deadline:
                 break
@@ -116,7 +146,7 @@ def do_stop(inp, active):
     error = error or not message
     effort = inp.get('effort')
     try:
-        unit = ma_subagent.unit_of(inp.get('agent_transcript_path') or '')
+        unit = None if inp.get('_host') == 'codex' else ma_subagent.unit_of(inp.get('agent_transcript_path') or '')
     except OSError:
         unit = None
     ma_logline.append(active.log, ma_subagent.stop_line(
@@ -132,6 +162,7 @@ def main(argv) -> int:
         inp = json.loads(sys.stdin.read() or '{}')
         if not isinstance(inp, dict):
             return 0
+        inp = ma_host.record_input(inp)
         active = ma_active.find_active(inp.get('cwd') or os.getcwd())
         if active is None:
             return 0

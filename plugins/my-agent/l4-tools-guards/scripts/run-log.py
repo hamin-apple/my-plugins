@@ -4,10 +4,10 @@
 usage: run-log.py <kind> [key=value ...] [--model MODEL_ID] [--cwd DIR] [--data-dir DIR] [--task-dir DIR]
 
 The time comes from the clock. `step` needs n= and name=; rev= (latest revision:
-line, else 0) and session= ($CLAUDE_CODE_SESSION_ID, else .active) are filled in.
+line, else 0) and session= ($CLAUDE_CODE_SESSION_ID or Codex's $CODEX_THREAD_ID, else .active) are filled in.
 On step lines (and any line given --model), model= is the model of the session
 transcript's last main-chain reply (F13: the skill's `model:` holds for one
-turn), else --model; it is checked against the configured main model (opus, P9)
+turn), else --model; it is checked against the configured main model (opus, P9; the Codex default for a Codex model id)
 and a main-session MISMATCH is printed once per task and model.
 `ask` and `answer` lines get session= the same way. `cost` takes no value from the command line (usd= or
 session= is refused): it reads `cost_usd` from the statusline file `<session>.json` in $MA_STATUSLINE_DIR (default
@@ -38,13 +38,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_data  # noqa: E402
 import ma_gate_report  # noqa: E402
+import ma_host  # noqa: E402
 import ma_logline  # noqa: E402
+import ma_prices  # noqa: E402
 import ma_schema  # noqa: E402
 import ma_subagent  # noqa: E402
+import ma_usage  # noqa: E402
 
 KINDS = ('step', 'ask', 'answer', 'revision', 'cost', 'stale', 'base', 'abort', 'deliver', 'resume',
          'rules-changed', 'merge', 'fix', 'delegate', 'profile', 'models')
-MAIN_MODEL = 'opus'
 
 
 def statusline_cost(session):
@@ -63,6 +65,15 @@ def statusline_cost(session):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         return None, f'{path} has no cost_usd number'
     return value, None
+
+
+def session_cost(session, data_dir):
+    """(cost_usd, None) or (None, reason): a Claude session's statusline value; for a session with a Codex
+    record (and no statusline file) tokens times list prices."""
+    usd, why = statusline_cost(session)
+    if why and ma_host.codex_record(session):
+        return ma_usage.codex_cost(session, ma_prices.load_prices(ma_prices.prices_file(data_dir)))
+    return usd, why
 
 
 def subagent_mismatches(lines) -> list:
@@ -132,14 +143,14 @@ def main(argv=None) -> int:
             revs = [f.get('rev') for k, f in lines if k == 'revision' and f.get('rev')]
             fields.append(('rev', revs[-1] if revs else '0'))
         if 'session' not in keys:
-            fields.append(('session', os.environ.get('CLAUDE_CODE_SESSION_ID') or active.session or None))
+            fields.append(('session', ma_host.session_id() or active.session or None))
     if args.kind in ('ask', 'answer') and 'session' not in keys:
-        sid = os.environ.get('CLAUDE_CODE_SESSION_ID') or active.session
+        sid = ma_host.session_id() or active.session
         if sid:
             fields.append(('session', sid))
     if args.kind == 'cost':
-        sid = active.session or os.environ.get('CLAUDE_CODE_SESSION_ID')
-        usd, why = statusline_cost(sid)
+        sid = active.session or ma_host.session_id()
+        usd, why = session_cost(sid, args.data_dir)
         if why:
             print(f'run-log: no cost line ({why})')
             return 0
@@ -149,7 +160,7 @@ def main(argv=None) -> int:
         except (TypeError, ValueError):
             lower = False
         fields += [('session', sid), ('usd', usd)] + ([('reset', '1')] if lower else [])
-    session = dict(fields).get('session') or os.environ.get('CLAUDE_CODE_SESSION_ID') or active.session
+    session = dict(fields).get('session') or ma_host.session_id() or active.session
     try:
         model = (ma_subagent.main_model(session) if args.kind == 'step' or args.model else None) or args.model
     except OSError as exc:   # an unreadable transcript never blocks an L1 record
@@ -166,8 +177,8 @@ def main(argv=None) -> int:
         return 1
     print(line)
     if args.kind == 'step' and dict(fields).get('n') == '1' and not any(k == 'cost' for k, _ in lines):
-        sid = active.session or os.environ.get('CLAUDE_CODE_SESSION_ID')
-        usd, why = statusline_cost(sid)
+        sid = active.session or ma_host.session_id()
+        usd, why = session_cost(sid, args.data_dir)
         if not why:   # no statusline value: no baseline, nothing printed
             base = ma_logline.format_line('cost', [('session', sid), ('usd', usd), (ma_gate_report.BASELINE, '1')])
             try:
@@ -176,10 +187,9 @@ def main(argv=None) -> int:
             except OSError as exc:
                 print(f'run-log: cannot write {active.log}: {exc}', file=sys.stderr)
     if model:
-        fam = ma_schema.family(model)
         seen = any(f.get('model') == model for k, f in lines if not ma_logline.is_hook_line(k, f))
-        if fam != MAIN_MODEL and not seen:   # once per task and model
-            print(f'MISMATCH: main session configured {MAIN_MODEL}, actual {model}')
+        if ma_host.main_mismatch(model) and not seen:   # once per task and model
+            print(f'MISMATCH: main session configured {ma_host.main_family(model)}, actual {model}')
     for m in report:
         print(m)
     for agent, agent_id, unit in partial:

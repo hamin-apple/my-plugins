@@ -759,7 +759,7 @@ function stats(t, R) {
   evs.filter(e => e.k === 'agent').forEach(e => { if (e.live) { (models[e.model] = models[e.model] || { calls: 0, min: 0, cost: 0, live: 0, done: 0, priced: 0 }).live++; models[e.model].calls++; }
     else addM(modelOf(e), num(e.dur), num(e.c), 1, e.c != null); });
   const mv = Object.values(mainOf(t, R)); const mt = mv.reduce((a, c) => a + num(c), 0);
-  models[L('opus · main', 'opus · main')] = { calls: 0, min: evs.length ? dm(evs[0].t, revEnd(t, R)) : 0, cost: mt, live: t.status === 'running' ? 1 : 0, done: mv.length, priced: mv.filter(c => c != null).length, main: true, nil: !hasMain(t) };
+  models[(t.mainFamily || 'opus') + ' · main'] = { calls: 0, min: evs.length ? dm(evs[0].t, revEnd(t, R)) : 0, cost: mt, live: t.status === 'running' ? 1 : 0, done: mv.length, priced: mv.filter(c => c != null).length, main: true, nil: !hasMain(t) };
   return { steps, models };
 }
 const money = c => c == null ? '–' : '$' + (+c).toFixed(2);

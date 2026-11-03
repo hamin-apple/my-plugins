@@ -1,0 +1,2 @@
+{"type": "thread.started", "thread_id": "bbbbbbbb-2"}
+{"type": "item.completed", "item": {"id": "item_1", "type": "command_execution", "command": "echo ma-probe-deny", "aggregated_output": "ma-probe-deny\n", "exit_code": 0}}

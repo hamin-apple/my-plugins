@@ -63,15 +63,15 @@ Stepping in too often and stepping in too late are both problems. [Gemini]
 
 ### 1.3 Features the platform provides [official]
 
-| Feature | What it does | Relation to the person stepping in |
-|---|---|---|
-| **Subagents** | The main agent hands off work directly and reads the reports. The subagent's thread persists, so follow-up instructions can be sent. | Between the main agent's judgments, it can report to the person and take instructions. |
-| **Dynamic workflows** | The main agent writes a program (workflow) and the server runs it in the background (run). Several agents run at the same time per phase. | **There is no approval step before start.** No user input is taken while it runs. |
-| **Advisor** | The main thread asks a stronger model for advice during work. | Assists judgment in place of the person. When Opus 5.5 is the advisor, the client sees the advice only as `redacted`, so **the person cannot check its content.** |
-| **Session threads** | Each agent has its own event record. Summaries and approval requests gather in the main stream. | One screen, the main stream, is enough for the person. |
-| **Permission policy** | Each tool call is approved or not by an `always_ask` or `auto` policy. | The only approval mechanism the platform **enforces**. |
-| **Session budget** | Puts a dollar cap on the whole session's spend. On reaching the cap, it stops and goes idle. | A forced stop on the cost side. |
-| **Scheduled deployments** | Starts sessions automatically on a cron schedule. | Runs nobody watches, so a way to step in asynchronously is needed. |
+| Feature                   | What it does                                                                                                                              | Relation to the person stepping in                                                                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Subagents**             | The main agent hands off work directly and reads the reports. The subagent's thread persists, so follow-up instructions can be sent.      | Between the main agent's judgments, it can report to the person and take instructions.                                                                            |
+| **Dynamic workflows**     | The main agent writes a program (workflow) and the server runs it in the background (run). Several agents run at the same time per phase. | **There is no approval step before start.** No user input is taken while it runs.                                                                                 |
+| **Advisor**               | The main thread asks a stronger model for advice during work.                                                                             | Assists judgment in place of the person. When Opus 5.5 is the advisor, the client sees the advice only as `redacted`, so **the person cannot check its content.** |
+| **Session threads**       | Each agent has its own event record. Summaries and approval requests gather in the main stream.                                           | One screen, the main stream, is enough for the person.                                                                                                            |
+| **Permission policy**     | Each tool call is approved or not by an `always_ask` or `auto` policy.                                                                    | The only approval mechanism the platform **enforces**.                                                                                                            |
+| **Session budget**        | Puts a dollar cap on the whole session's spend. On reaching the cap, it stops and goes idle.                                              | A forced stop on the cost side.                                                                                                                                   |
+| **Scheduled deployments** | Starts sessions automatically on a cron schedule.                                                                                         | Runs nobody watches, so a way to step in asynchronously is needed.                                                                                                |
 
 ### 1.4 Where the Gemini design and the official platform differ
 
@@ -165,12 +165,12 @@ flowchart TD
 
 ### 3.3 HITL gates at a glance
 
-| Gate | When | Enforced? | How it is built | What the person sees | The person's choices |
-|---|---|---|---|---|---|
-| **G1 Plan approval** | before the build starts | **enforced** | session split: the execution session is created only after approval (section 3.4) | the plan | Approve / Request changes / Abort |
-| **G2 Execution safety** | right before a risky tool call | **enforced** | permission policy `always_ask` (section 3.5) | tool name, arguments, which thread asked | Allow / Deny |
-| **G3 Final acceptance** | when all runs have ended and the turn is wrapped up | the judging rule is enforced; the report content depends on the prompt | completion rule + report format (section 3.6) | change summary, test results, list of failures and unhandled items | Accept / Order rework |
-| **E Escalation** | when the same rejection repeats N times, the budget is hit, or a run ends with an error | the budget is enforced; the repeat limit depends on the prompt | sections 3.7, 3.8 | where it got stuck and what was tried | Give direction / Adjust budget / Abort |
+| Gate                    | When                                                                                    | Enforced?                                                              | How it is built                                                                   | What the person sees                                               | The person's choices                   |
+| ----------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------- |
+| **G1 Plan approval**    | before the build starts                                                                 | **enforced**                                                           | session split: the execution session is created only after approval (section 3.4) | the plan                                                           | Approve / Request changes / Abort      |
+| **G2 Execution safety** | right before a risky tool call                                                          | **enforced**                                                           | permission policy `always_ask` (section 3.5)                                      | tool name, arguments, which thread asked                           | Allow / Deny                           |
+| **G3 Final acceptance** | when all runs have ended and the turn is wrapped up                                     | the judging rule is enforced; the report content depends on the prompt | completion rule + report format (section 3.6)                                     | change summary, test results, list of failures and unhandled items | Accept / Order rework                  |
+| **E Escalation**        | when the same rejection repeats N times, the budget is hit, or a run ends with an error | the budget is enforced; the repeat limit depends on the prompt         | sections 3.7, 3.8                                                                 | where it got stuck and what was tried                              | Give direction / Adjust budget / Abort |
 
 **No gates inside the build loop.** Approving every single file change causes approval fatigue. [Gemini]
 

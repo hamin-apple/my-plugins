@@ -1,0 +1,3 @@
+2026-01-01T00:00:00Z ERROR codex_core::tools::router: error=unknown agent_type 'ma_probe_agent_claude'
+2026-01-01T00:00:01Z ERROR codex_core::tools::router: error=unknown agent_type 'ma_probe_agent_project'
+2026-01-01T00:00:02Z ERROR codex_core::tools::router: error=unknown agent_type 'ma_probe_agent_project_tools'

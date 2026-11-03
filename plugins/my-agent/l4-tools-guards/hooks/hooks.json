@@ -12,7 +12,7 @@
         ]
       },
       {
-        "matcher": "Agent",
+        "matcher": "Agent|collaborationspawn_agent",
         "hooks": [
           {
             "type": "command",
@@ -22,7 +22,7 @@
         ]
       },
       {
-        "matcher": "Agent|Workflow|Edit|Write|NotebookEdit|Bash",
+        "matcher": "Agent|collaborationspawn_agent|Workflow|Edit|Write|NotebookEdit|apply_patch|Bash",
         "hooks": [
           {
             "type": "command",
@@ -33,7 +33,7 @@
         ]
       },
       {
-        "matcher": "Bash|Edit|Write|NotebookEdit",
+        "matcher": "Bash|Edit|Write|NotebookEdit|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -46,7 +46,7 @@
     ],
     "SubagentStart": [
       {
-        "matcher": "^my-agent:",
+        "matcher": "^my-agent:|^my_agent_",
         "hooks": [
           {
             "type": "command",
@@ -58,7 +58,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "^my-agent:",
+        "matcher": "^my-agent:|^my_agent_",
         "hooks": [
           {
             "type": "command",

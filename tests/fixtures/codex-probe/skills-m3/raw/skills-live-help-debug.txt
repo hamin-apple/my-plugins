@@ -1,0 +1,5 @@
+Usage: codex debug <COMMAND>
+
+Commands:
+  prompt-input
+  models

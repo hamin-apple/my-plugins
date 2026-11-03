@@ -133,9 +133,24 @@ def _deliver(project: Path, intake: dict, status: str):
     return None
 
 
+def _main_family(got, sessions, tcache):
+    """The family label of the main model (D9): the Codex family when a Codex model is in the usage or a session is a
+    Codex record, else `opus` (Claude's main session)."""
+    for models in (got or {}).values():
+        for model in models:
+            fam = ma_schema.codex_family(model)
+            if fam:
+                return fam
+    for sess in sessions:
+        fam = tcache.codex_model_family(sess)
+        if fam:
+            return fam
+    return 'opus'
+
+
 def _main(ev, tcache, prices, unpriced, running, task_dir):
-    """{(rev, step): usd} of the main session (None for a window whose models have no price row), or None if
-    neither a snapshot nor a transcript was found.
+    """({(rev, step): usd}, family): the usd of the main session (None for a window whose models have no price row; the
+    whole value None if neither a snapshot nor a transcript was found), and the main-model family label (D9).
 
     A finished task reads `main-usage.json` (written by L1 at the end of the task, ma_usage) when it exists, since
     Claude Code deletes transcripts after `cleanupPeriodDays`; otherwise the transcript. A finished task's last window
@@ -145,6 +160,7 @@ def _main(ev, tcache, prices, unpriced, running, task_dir):
     if got is None:
         wins = ma_usage.windows(ev.step_enter, ev.last, running)
         found, got = False, {}
+        sessions = {w[0] for w in wins if w[0]}
         for sess in {w[0] for w in wins if w[0]}:
             for key, models in tcache.usage_by_window(sess, [(s, e, k) for ss, s, e, k in wins if ss == sess]).items():
                 for model, usage in models.items():
@@ -154,7 +170,10 @@ def _main(ev, tcache, prices, unpriced, running, task_dir):
             if tcache.size(sess) is not None:
                 found = True
         if not found:
-            return None
+            return None, 'opus'
+    else:
+        sessions = ()
+    family = _main_family(got, sessions, tcache)
     out = {}
     for key, models in got.items():
         usd = None
@@ -165,7 +184,7 @@ def _main(ev, tcache, prices, unpriced, running, task_dir):
             else:
                 usd = (usd or 0.0) + c
         out[key] = None if usd is None else round(usd, 2)
-    return out
+    return out, family
 
 
 def build_task(project: Path, task_dir: Path, prices, tcache, now: datetime) -> dict:
@@ -215,7 +234,7 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
             it.pop(k, None)
         log.append(it)
 
-    main = _main(ev, tcache, prices, unpriced, status == 'running', task_dir)
+    main, family = _main(ev, tcache, prices, unpriced, status == 'running', task_dir)
 
     started = ev.started or datetime.fromtimestamp((task_dir / 'intake.md').stat().st_mtime)
     end = now if status == 'running' else (ev.last or started)
@@ -234,7 +253,7 @@ def _build(project, task_dir, tid, key, prices, tcache, now):
         'crit': {'total': crit_total, 'res': read_verify(task_dir / 'verify.md')},
         'vfail': ev.vfail, 'vfailMax': ev.vfail_max, 'sstop': ev.sstop,
         'mocks': _mocks(task_dir, plan, cur_rev),
-        'mainApprox': True,
+        'mainApprox': True, 'mainFamily': family,
     }
     if ev.revs:
         task['main'] = None

@@ -23,7 +23,6 @@ copies made just before it). A `verify.md` older than a change is accepted when 
 and has `## Applied after review`. No `.active`, or another command → exit 0 at once (a `.active` without `task:`
 prints a warning, C9). Any error → exit 2 (blocked).
 """
-import json
 import os
 import re
 import shlex
@@ -34,6 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
+import ma_host  # noqa: E402
 import ma_schema  # noqa: E402
 from ma_path import under  # noqa: E402
 
@@ -182,45 +182,52 @@ def applies(tool: str, ti: dict, cwd: Path, active, commit: bool = True):
     return False if any(under(t, deliverable) for t in targets) else None
 
 
+def judge(inp):
+    """Hook output (deny, ask or a system message) for one Claude-shaped input, or None to let the call through."""
+    if not isinstance(inp, dict):
+        raise ValueError('hook input is not an object')
+    if ma_active.in_subagent(inp):
+        return None
+    broken = []
+    active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
+    if active is None:
+        return {'systemMessage': ma_active.BROKEN.format(path=broken[0])} if broken else None
+    if not ma_active.owns(active, inp):
+        return None
+    cwd = Path(inp.get('cwd') or os.getcwd()).resolve()
+    mode = applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active)
+    if mode is None:
+        return None
+    stale = stale_result(active, changed_files(active, mode))
+    if not stale:
+        return None
+    ti_cmd = (inp.get('tool_input') or {}).get('command') or ''
+    subs = ma_bash.git_subcommands(ti_cmd) \
+        if inp.get('tool_name') == 'Bash' else []
+    if any(x in ('commit', '?') for x in subs) and applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active, commit=False) is None:
+        decision, reason = 'ask', ask_reason(active, stale, '?' in subs)
+    else:
+        why = deliver_why(stale)
+        seen = raw_task_copy(ti_cmd, cwd, active.task_dir) if '?' in subs else None
+        if seen:
+            kind, name, _ = stale
+            what = 'is not a pass' if kind == 'not-pass' else 'a file changed after it'
+            why = (f'The unparsed command copies {os.path.relpath(seen, cwd) if under(seen, cwd) else seen} '
+                   f'from the task folder while {name} {what}.')
+        decision, reason = 'deny', REASON.format(task=active.task, why=why)
+    return {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
+                                   'permissionDecisionReason': reason}}
+
+
 def main() -> int:
     try:
-        inp = json.loads(sys.stdin.read())
-        if not isinstance(inp, dict):
-            raise ValueError('hook input is not an object')
-        if ma_active.in_subagent(inp):
-            return 0
-        broken = []
-        active = ma_active.find_active(inp.get('cwd') or os.getcwd(), broken=broken)
-        if active is None:
-            if broken:
-                print(json.dumps({'systemMessage': ma_active.BROKEN.format(path=broken[0])}, ensure_ascii=False))
-            return 0
-        if not ma_active.owns(active, inp):
-            return 0
-        cwd = Path(inp.get('cwd') or os.getcwd()).resolve()
-        mode = applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active)
-        if mode is None:
-            return 0
-        stale = stale_result(active, changed_files(active, mode))
-        if stale:
-            ti_cmd = (inp.get('tool_input') or {}).get('command') or ''
-            subs = ma_bash.git_subcommands(ti_cmd) \
-                if inp.get('tool_name') == 'Bash' else []
-            if any(x in ('commit', '?') for x in subs) and applies(inp.get('tool_name'), inp.get('tool_input') or {}, cwd, active, commit=False) is None:
-                decision, reason = 'ask', ask_reason(active, stale, '?' in subs)
-            else:
-                why = deliver_why(stale)
-                seen = raw_task_copy(ti_cmd, cwd, active.task_dir) if '?' in subs else None
-                if seen:
-                    kind, name, _ = stale
-                    what = 'is not a pass' if kind == 'not-pass' else 'a file changed after it'
-                    why = (f'The unparsed command copies {os.path.relpath(seen, cwd) if under(seen, cwd) else seen} '
-                           f'from the task folder while {name} {what}.')
-                decision, reason = 'deny', REASON.format(task=active.task, why=why)
-            print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
-                                                     'permissionDecisionReason': reason}},
-                             ensure_ascii=False))
-        return 0
+        call = ma_host.parse(sys.stdin.read())
+        out = None
+        for inp in call.inps:   # one per target path of a Codex patch; the first deny wins
+            out = ma_host.stronger(out, judge(inp))
+            if ma_host.decision(out) == 'deny':
+                break
+        return ma_host.emit(call, out)
     except Exception as e:   # block the call: exit 2 is a blocking error for PreToolUse
         print(f'verdict-fresh-check: {type(e).__name__}: {e}', file=sys.stderr)
         return 2

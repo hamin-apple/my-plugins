@@ -1,0 +1,2 @@
+{"type": "item.completed", "item": {"type": "agent_message", "text": "Skills: ma-probe-root, ma-probe-dir"}}
+{"type": "item.completed", "item": {"type": "agent_message", "text": "MA-PROBE-EXPAND skill_dir=</skills/ma-probe-dir> plugin_root=<${CLAUDE_PLUGIN_ROOT}> arguments=<arg-one> opt=<${user_config.probe_opt}>"}}

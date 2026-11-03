@@ -32,6 +32,10 @@ Sources the my-agent design draws on. Local copies live in `docs/ref/`, which is
 | `budgets.md` | [Session budgets](https://platform.claude.com/docs/en/managed-agents/budgets) |
 | `scheduled-deployments.md` | [Scheduled deployments](https://platform.claude.com/docs/en/managed-agents/scheduled-deployments) |
 
+## Codex
+
+Observed on the installed Codex CLI (codex-cli 0.166.0), not copied: the hook inputs and outputs, the main-session tool list, the skill listing (`codex debug prompt-input`), the `codex plugin` commands and Codex's own session records. The probe and the end-to-end run read these where Codex keeps them and keep no copy of a session record in git. The findings behind `l1-orchestration/hosts.md` and section 4.14 of the architecture document come from that probing; no Codex document is stored under `docs/ref/`.
+
 ## Articles
 
 | Local copy (`docs/ref/`) | Source |

@@ -1,6 +1,8 @@
 """List prices (USD per 1M tokens, keyed by model-ID prefix; monitor design 5.4) shared by the monitor and
 `usage-snapshot.py`, so both show the same cost.
 
+There is no Codex row: the person gave no Codex list prices (Step S2 of the Codex port), so a Codex model id has no
+cost until a row for it is added here or in `<data folder>/prices.json`.
 The bundled table is `l4-tools-guards/lib/prices.json`; `<data folder>/prices.json` overrides it when that file exists.
 """
 import json

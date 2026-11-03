@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by hamin-apple.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.7.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.8.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 | `my-agent-tray` | 0.1.2 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
@@ -16,6 +16,7 @@ A Claude Code plugin marketplace by hamin-apple.
 - git, for the `dev` profile (base commit, worktrees, commit). Tested with git 2.50.1.
 - macOS, for the monitor's window opening. Tested on macOS 27.0.1. On other platforms the monitor opens a tab through the standard browser opener; this was not tried. Linux and Windows were not tried: the hooks call `python3`.
 - Optional, for the menu bar app (the `my-agent-tray` plugin) only: Command Line Tools (`swiftc`) on macOS 12 or later; Xcode is not required. Tested with Swift 6.3.3; older Swift versions were not tried.
+- Optional, to use my-agent in Codex: Codex CLI with plugin support. Tested with codex-cli 0.166.0; other versions were not tried.
 
 Nothing else is installed.
 
@@ -34,6 +35,22 @@ A plugin cannot ship permission rules. For the risky-action prompts (G2: `git co
 When you enable the plugin, Claude Code asks for two settings. The first is the data folder (default `~/dev/log/my-agent`; change it later in `/config`). It holds everything my-agent keeps outside task folders: the project list (`projects.txt`), the run index (`active-index.json`), the monitor state, log and settings, the price override, the improvement list (`feedback.md`) and the retrospective report copies (`gate-report/`). A leading `~` is expanded. Nothing is written into the plugin's own folder. If the folder is changed, the old one is left as is and the new one is used from then on. If the setting is missing (for example with `--plugin-dir`), `~/dev/log/my-agent` is used. The environment variables `MA_TASKS_DIR` (data folder), `MA_PROJECTS_FILE`, `MA_FEEDBACK_FILE` and `MA_GATE_REPORT_DIR` win over the setting. A folder from an earlier version (`~/my-agent`) is not moved: move it to the new place, or set the Data folder to the old path. The second setting, `task_dir`, is the task folder inside the task location (default `.my-agent`; change it later in `/config`). Task records were kept in `docs/agent` in earlier versions: they are not moved or read unless you set `task_dir` to `docs/agent` (or move the folder: `mv docs/agent .my-agent`). It must be a relative path without `..`; otherwise the default is used. The environment variable `MA_TASK_DIR` wins over the setting.
 
 Optionally, the data folder can hold `agent-models.json`, which defines named model presets per profile (a model and an effort per agent; copy `plugins/my-agent/docs/agent-models.example.json` to start). With two or more presets for the profile, my-agent asks which one to use at the start of a task. Without the file nothing changes: every agent runs on the model and effort of its definition file.
+
+## Use in Codex
+
+my-agent also runs in Codex. Only a local clone of this repository was tried as the marketplace source:
+
+```bash
+git clone https://github.com/hamin-apple/my-plugins ~/dev/my-plugins
+codex plugin marketplace add ~/dev/my-plugins
+codex plugin add my-agent@my-plugins
+```
+
+- Codex does not run a plugin's hooks until you trust them. Start Codex once; on the `Hooks need review` screen, trust the my-agent hooks (`t` trusts all). Before that, Intake names the hooks that did not run.
+- Codex does not list the main skill yet, because it lists no plugin-root `SKILL.md`. Start my-agent by asking Codex to read and follow the installed `SKILL.md` by its path: `~/.codex/plugins/cache/my-plugins/my-agent/<version>/SKILL.md`, followed by your request. A generated Codex entry skill that Codex lists is planned for a later task.
+- Codex loads no agent definition from the plugin, so it does not run subagents as my-agent roles: it refuses `my_agent_<role>`, and subagents started otherwise run without roles, so the subagent start and stop records and the role-based checks do not apply. Making Codex load them is planned for a later task.
+- `/my-agent:monitor` is the skill `my-agent:monitor` in Codex, and Codex lists it.
+- Codex differs in some places: no per-agent model or effort, no coder worktree, no background start, no G2 permission dialog, and the plugin settings are not passed. `plugins/my-agent/l1-orchestration/hosts.md` maps each name, and section 4.14 of `plugins/my-agent/docs/build-guide/my-agent-architecture.md` lists the limits.
 
 ## my-agent
 
@@ -81,6 +98,7 @@ claude plugin uninstall my-agent-tray@my-plugins   # if installed
 
 - `CLAUDE.md`: notes for development (folder roles, test commands, version rule)
 - `.claude-plugin/marketplace.json`: plugin list
+- `.agents/plugins/marketplace.json`: plugin list for Codex
 - `plugins/<name>/`: a plugin. Only this folder is copied on install.
 - `tools/build-docs.py`, `tools/docs-template.html`: build the my-agent architecture page
 - `docs/architecture.html`: the architecture page (generated; GitHub Pages source `main` · `/docs`)

@@ -1,0 +1,4 @@
+{"codex_version": "codex-cli 9.9.9", "outcome": "Outcome: A sample", "facts": [
+  {"capture": "probe-skills/captures/skills-live-prompt-input.txt", "fact": "Skill listing source", "line": 1, "section": "Sources", "used_by": "u27, u28, u14", "value": {"skills-live": {"prompt-input": true}}},
+  {"capture": "probe-skills/captures/skills-live-prompt-input.txt", "fact": "Plugin skill discovery outcome", "line": 2, "section": "Outcome", "used_by": "u27, u28, u14", "value": "Outcome: A sample"}
+], "open": []}

@@ -1,0 +1,31 @@
+{
+ "label": "marker-deny",
+ "argv": [
+  "marker-deny",
+  "/kit/plugins/ma-probe",
+  "deny"
+ ],
+ "time": "2026-01-01T00:00:00+00:00",
+ "cwd": "/work",
+ "scenario": "hooks",
+ "stdin_json": {
+  "session_id": "s1",
+  "cwd": "/work",
+  "hook_event_name": "PreToolUse",
+  "turn_id": "t1",
+  "tool_name": "Bash",
+  "tool_input": {
+   "command": "echo ma-probe-deny"
+  }
+ },
+ "env_names": [
+  "CODEX_HOME",
+  "HOME",
+  "PATH",
+  "MA_PROBE_SCENARIO"
+ ],
+ "env_values": {
+  "MA_PROBE_SCENARIO": "hooks",
+  "CODEX_HOME": "/home/x/.codex"
+ }
+}

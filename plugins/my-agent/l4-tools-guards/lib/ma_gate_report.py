@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 import ma_data
+import ma_host
 import ma_logline
 import ma_schema
 
@@ -185,7 +186,7 @@ def tally_text(lines) -> str:
     kinds = [(k, f) for _, k, f in lines]
     count = lambda kind, **want: sum(1 for k, f in kinds if k == kind and all(f.get(a) == b for a, b in want.items()))  # noqa: E731
     main = len({(f.get('session'), f.get('model')) for k, f in kinds if k == 'step' and f.get('model') not in (None, '-')
-                and ma_schema.family(f.get('model')) != 'opus'})
+                and ma_host.main_mismatch(f.get('model'))})
     sub = count('stop', mismatch='1')
     opus = sum(1 for k, f in kinds if k == 'call' and 'opus' in (f.get('model') or ''))
     scope = sum(1 for k, f in kinds if k == 'fix' and (f.get('what') or '').startswith(SCOPE_CHANGE))

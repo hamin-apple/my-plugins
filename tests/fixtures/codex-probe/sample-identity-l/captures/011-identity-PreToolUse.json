@@ -1,0 +1,28 @@
+{
+ "label": "PreToolUse",
+ "argv": [
+  "PreToolUse",
+  "/kit/plugins/ma-probe"
+ ],
+ "time": "2026-01-01T00:00:11+00:00",
+ "cwd": "/work",
+ "scenario": "identity",
+ "stdin_json": {
+  "session_id": "sess-main-0001",
+  "transcript_path": "/t/main.jsonl",
+  "cwd": "/work",
+  "hook_event_name": "PreToolUse",
+  "turn_id": "t-a",
+  "tool_name": "Bash",
+  "tool_input": {
+   "command": "echo ma-probe-exit1"
+  }
+ },
+ "stdin_head": null,
+ "env_names": [
+  "PATH"
+ ],
+ "env_values": {
+  "MA_PROBE_SCENARIO": "identity"
+ }
+}

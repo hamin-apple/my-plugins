@@ -1,0 +1,20 @@
+{
+  "name": "my-plugins",
+  "interface": {
+    "displayName": "My Plugins"
+  },
+  "plugins": [
+    {
+      "name": "my-agent",
+      "source": {
+        "source": "local",
+        "path": "./plugins/my-agent"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

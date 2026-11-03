@@ -66,6 +66,18 @@ def family(model):
     return m.group(1) if m else None
 
 
+# Codex model ids seen by the probe (T/work/codex-findings.md, `debug-models.txt`); not part of FAMILY (Claude only).
+# The Codex default is the id the probe session used; every role uses it (no per-role mapping).
+CODEX_DEFAULT = 'gpt-6-luna'
+CODEX_FAMILY = re.compile(r'(gpt-6-luna|gpt-5\.6-luna|gpt-5\.6-terra|codex-auto-review|gpt-reserve)')
+
+
+def codex_family(model):
+    """`gpt-6-luna` → itself, any other Codex id the probe saw likewise; anything else None."""
+    m = CODEX_FAMILY.search(model or '')
+    return m.group(1) if m else None
+
+
 # --- run-log lines (4.7.2): `<YYYY-MM-DD HH:MM:SS> <kind>: <key=value ...>` ---
 
 LINE_RE = re.compile(r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) ([a-z][a-z0-9-]*):(?:\s+(.*))?$')

@@ -1,0 +1,10 @@
+Marketplace `ma-probe`
+/tmp/x/kit/.agents/plugins/marketplace.json
+
+PLUGIN                 STATUS              VERSION  SOURCE
+ma-probe-s0@ma-probe  installed, enabled  0.0.1  ./plugins/ma-probe-s0
+ma-probe-s1@ma-probe  installed, enabled  0.0.1  ./plugins/ma-probe-s1
+ma-probe-s2@ma-probe  installed, enabled  0.0.1  ./plugins/ma-probe-s2
+ma-probe-s3@ma-probe  not installed  0.0.1  ./plugins/ma-probe-s3
+ma-probe-s4@ma-probe  installed, enabled  0.0.1  ./plugins/ma-probe-s4
+ma-probe-s5@ma-probe  installed, enabled  0.0.1  ./plugins/ma-probe-s5

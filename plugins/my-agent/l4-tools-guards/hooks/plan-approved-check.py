@@ -24,7 +24,6 @@ id=-, ma_schema.GUARD_FIELDS, `cwd` the input's) to the task's run-log; an ask w
 decision.
 The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
 """
-import json
 import os
 import re
 import sys
@@ -34,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_bash  # noqa: E402
 import ma_gate_report  # noqa: E402
+import ma_host  # noqa: E402
 import ma_logline  # noqa: E402
 import ma_plan  # noqa: E402
 import ma_schema  # noqa: E402
@@ -119,36 +119,42 @@ def decide(inp: dict, active, tasks_dir: Path):
     return None, None
 
 
+def judge(inp):
+    """Hook output (deny, ask or a system message) for one Claude-shaped input, or None to let the call through."""
+    if not isinstance(inp, dict):
+        raise ValueError('hook input is not an object')
+    if ma_active.in_subagent(inp):
+        return None
+    tasks_dir = ma_active.default_tasks_dir().expanduser().resolve()
+    broken = []
+    active = ma_active.find_active(inp.get('cwd') or os.getcwd(), tasks_dir, broken)
+    if active is None:
+        return {'systemMessage': ma_active.BROKEN.format(path=broken[0])} if broken else None
+    if not ma_active.owns(active, inp):
+        return None
+    if not active.task_dir.is_dir():
+        return {'systemMessage': f'my-agent: the task folder {active.task_dir} that .active points to does not exist'}
+    why, decision = decide(inp, active, tasks_dir)
+    if not why and ma_plan.approved(active.task_dir / 'plan.md'):
+        why, decision = outside_ask(inp, active, tasks_dir), 'ask'
+    if why and decision == 'deny':   # an ask writes no line; this hook only sees the main session
+        ma_logline.log_guard(active, 'plan-approved-check', 'main', '-', inp.get('tool_name') or '-', 'deny', why,
+                             inp.get('cwd') or '-')
+    if not why:
+        return None
+    return {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
+                                   'permissionDecisionReason': why}}
+
+
 def main() -> int:
     try:
-        inp = json.loads(sys.stdin.read())
-        if not isinstance(inp, dict):
-            raise ValueError('hook input is not an object')
-        if ma_active.in_subagent(inp):
-            return 0
-        tasks_dir = ma_active.default_tasks_dir().expanduser().resolve()
-        broken = []
-        active = ma_active.find_active(inp.get('cwd') or os.getcwd(), tasks_dir, broken)
-        if active is None:
-            if broken:
-                print(json.dumps({'systemMessage': ma_active.BROKEN.format(path=broken[0])}, ensure_ascii=False))
-            return 0
-        if not ma_active.owns(active, inp):
-            return 0
-        if not active.task_dir.is_dir():
-            print(json.dumps({'systemMessage': f'my-agent: the task folder {active.task_dir} that .active points to does not exist'},
-                             ensure_ascii=False))
-            return 0
-        why, decision = decide(inp, active, tasks_dir)
-        if not why and ma_plan.approved(active.task_dir / 'plan.md'):
-            why, decision = outside_ask(inp, active, tasks_dir), 'ask'
-        if why and decision == 'deny':   # an ask writes no line; this hook only sees the main session
-            ma_logline.log_guard(active, 'plan-approved-check', 'main', '-', inp.get('tool_name') or '-', 'deny', why,
-                                 inp.get('cwd') or '-')
-        if why:
-            print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': decision,
-                                                     'permissionDecisionReason': why}}, ensure_ascii=False))
-        return 0
+        call = ma_host.parse(sys.stdin.read())
+        out = None
+        for inp in call.inps:   # one per target path of a Codex patch; the first deny wins
+            out = ma_host.stronger(out, judge(inp))
+            if ma_host.decision(out) == 'deny':
+                break
+        return ma_host.emit(call, out)
     except Exception as e:   # block the call: exit 2 is a blocking error for PreToolUse
         print(f'plan-approved-check: {type(e).__name__}: {e}', file=sys.stderr)
         return 2

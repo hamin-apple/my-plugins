@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
 import ma_data  # noqa: E402
 import ma_gate_report  # noqa: E402
+import ma_host  # noqa: E402
 import ma_subagent  # noqa: E402
 
 
@@ -82,6 +83,8 @@ def transcripts(sessions) -> list:
     for sid in sessions:
         if re.search(r'[/\\\0*?\[]', sid) or sid in ('.', '..'):
             continue
+        for tid, path, role in ma_host.codex_subagents(sid):   # Codex: one record per subagent thread
+            out.append((tid, path, ma_host.claude_agent(role) if role else None))
         for path in sorted(root.glob(f'*/{sid}/subagents/agent-*.jsonl')):
             out.append((path.name[len('agent-'):-len('.jsonl')], path, agent_type(path)))
     return out

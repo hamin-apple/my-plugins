@@ -1,0 +1,4 @@
+{"codex_version": "codex-cli 9.9.9", "facts": [
+  {"capture": "probe/captures/a.json", "fact": "Question/popup tool", "section": "Main-session tools", "used_by": "u7", "value": ["request_user_input"]},
+  {"capture": "probe/captures/a.json", "fact": "Per-call model or effort argument on start", "section": "Agents", "used_by": "u6", "value": {"fields": []}}
+], "open": []}

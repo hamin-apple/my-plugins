@@ -1,0 +1,21 @@
+{
+ "label": "SubagentStop",
+ "argv": [
+  "SubagentStop",
+  "/kit/plugins/ma-probe"
+ ],
+ "time": "2026-01-01T00:00:03+00:00",
+ "cwd": "/work",
+ "scenario": "agents",
+ "stdin_json": {
+  "session_id": "bbbbbbbb-2",
+  "agent_id": "agent-1",
+  "last_assistant_message": "done",
+  "hook_event_name": "SubagentStop"
+ },
+ "stdin_head": null,
+ "env_names": [
+  "PATH"
+ ],
+ "env_values": {}
+}

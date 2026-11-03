@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
+import ma_host  # noqa: E402
 
 NOTICE = ('Unfinished my-agent task `{task}`, phase `{phase}`. Run `/my-agent continue` before doing anything else. '
           'If `plan.md` has no approval line, do not delegate or write.')
@@ -25,6 +26,7 @@ def main() -> int:
         inp = json.loads(sys.stdin.read() or '{}')
         if not isinstance(inp, dict):
             return 0
+        inp = ma_host.record_input(inp)
         active = ma_active.find_active(inp.get('cwd') or os.getcwd())
         if active is None:
             return 0

@@ -65,11 +65,11 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v043(self):
+    def test_status_line_starts_with_v044(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.43 ('), line[:60])
-        self.assertIn('v0.42 (', line)
-        self.assertIn('plugin 0.7.0', line)
+        self.assertTrue(line.startswith('- Status: design draft v0.44 ('), line[:60])
+        self.assertIn('v0.43 (', line)
+        self.assertIn('plugin 0.8.0', line)
 
     def test_preset_mechanism_is_described(self):
         section = self.section('### 4.5 ', '### 4.5.1 ')
@@ -210,6 +210,22 @@ class ArchDocTest(unittest.TestCase):
         rows = [l for l in self.text.splitlines() if l.startswith('| Q25 |')]
         self.assertEqual(len(rows), 1, rows)
         self.assertIn('2026-10-31', rows[0])
+
+    def test_host_layer_section(self):
+        section = self.section('### 4.14 ', '## 5. ')
+        self.assertIn('Host layer', section.splitlines()[0])
+        for text in ('l1-orchestration/hosts.md', 'ma_host.py'):
+            self.assertIn(text, section)
+        a = section.index('**Host differences**')
+        differences = section[a:].lower()
+        for word in ('fallback', 'workaround'):
+            self.assertNotIn(word, differences)
+        self.assertIn('refuses `my_agent_<role>`', differences)
+        self.assertIn('loads no agent definition', differences)
+
+    def test_host_differences_name_the_question_tool(self):
+        section = self.section('### 4.14 ', '## 5. ')
+        self.assertIn('`request_user_input`', section[section.index('**Host differences**'):])
 
     def test_reference_articles_list_both_local_copies(self):
         ref = (REPO / 'docs' / 'reference.md').read_text(encoding='utf-8')

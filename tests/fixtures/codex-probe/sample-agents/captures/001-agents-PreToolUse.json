@@ -1,0 +1,26 @@
+{
+ "label": "PreToolUse",
+ "argv": [
+  "PreToolUse",
+  "/kit/plugins/ma-probe"
+ ],
+ "time": "2026-01-01T00:00:00+00:00",
+ "cwd": "/work",
+ "scenario": "agents",
+ "stdin_json": {
+  "session_id": "aaaaaaaa-1",
+  "cwd": "/work",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "spawn_agent",
+  "tool_input": {
+   "agent_type": "ma_probe_agent_project",
+   "message": "go",
+   "model": "m1"
+  }
+ },
+ "stdin_head": null,
+ "env_names": [
+  "PATH"
+ ],
+ "env_values": {}
+}

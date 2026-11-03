@@ -12,6 +12,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import ma_host
 import ma_logline
 import ma_schema
 from ma_schema import family
@@ -158,7 +159,8 @@ def main_model(session, tail=4 << 20):
         return None
     path = next(iter(sorted(claude_projects().glob(f'*/{session}.jsonl'))), None)
     if path is None:
-        return None
+        path = ma_host.codex_record(session)
+        return codex_main_model(path, tail) if path else None
     with open(path, 'rb') as fh:
         fh.seek(max(0, path.stat().st_size - tail))
         rows = fh.read().decode('utf-8', 'replace').splitlines()
@@ -169,6 +171,25 @@ def main_model(session, tail=4 << 20):
             continue
         model = (d.get('message') or {}).get('model') if isinstance(d, dict) else None
         if d.get('type') == 'assistant' and not d.get('isSidechain') and family(model):
+            return model
+    return None
+
+
+def codex_main_model(path, tail=4 << 20):
+    """The `model` of the last `turn_context` line in a Codex session record, or None (the record has no
+    sidechain flag: a subagent has a record of its own)."""
+    with open(path, 'rb') as fh:
+        fh.seek(max(0, path.stat().st_size - tail))
+        rows = fh.read().decode('utf-8', 'replace').splitlines()
+    for row in reversed(rows):
+        if '"turn_context"' not in row:
+            continue
+        try:
+            d = json.loads(row)
+        except ValueError:
+            continue
+        model = (d.get('payload') or {}).get('model') if isinstance(d, dict) and d.get('type') == 'turn_context' else None
+        if isinstance(model, str) and model:
             return model
     return None
 

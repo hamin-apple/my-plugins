@@ -3,17 +3,22 @@
 Each file is read once from the start and afterwards only from the stored byte
 offset, so a transcript of hundreds of MB costs one full read. Lines are read and
 summed with the plugin's `ma_usage`, the same code `usage-snapshot.py` uses.
+A session id with no Claude transcript is looked up as a Codex session record (`ma_host.codex_record`, root
+$MA_CODEX_SESSIONS or `~/.codex/sessions`); its usage lines are re-read whenever the file grew.
 """
 from pathlib import Path
 
+import ma_host
+import ma_schema
 import ma_usage
 
 KEYS = ma_usage.KEYS
 
 
 class _File:
-    def __init__(self, path):
+    def __init__(self, path, codex=False):
         self.path, self.offset, self.msgs = path, 0, {}   # message id -> (local ts, model, usage)
+        self.codex = codex       # a Codex record: msgs is rebuilt on growth
 
 
 class TranscriptCache:
@@ -24,9 +29,14 @@ class TranscriptCache:
     def _find(self, session):
         if session not in self.files:
             hit = ma_usage.find_transcript(self.root, session)
-            if hit is None:
-                return None
-            self.files[session] = _File(hit)
+            if hit is not None:
+                self.files[session] = _File(hit)
+            else:
+                hit = ma_host.codex_record(session)
+                if hit is None:
+                    return None
+                self.files[session] = _File(hit, codex=True)
+                self.files[session].session = session
         return self.files[session]
 
     def keep(self, sessions):
@@ -45,6 +55,10 @@ class TranscriptCache:
         try:
             size = tf.path.stat().st_size
         except OSError:
+            return
+        if tf.codex:
+            if size != tf.offset:
+                tf.offset, tf.msgs = size, dict(enumerate(ma_usage.read_codex(tf.path, tf.session)))
             return
         if size < tf.offset:          # rewritten: start over
             tf.offset, tf.msgs = 0, {}
@@ -68,3 +82,15 @@ class TranscriptCache:
             return {}
         self._refresh(tf)
         return ma_usage.sum_windows(tf.msgs.values(), windows)
+
+    def codex_model_family(self, session):
+        """The Codex family of the model a Codex session's main thread used (its first response), else None."""
+        tf = self._find(session)
+        if not tf or not tf.codex:
+            return None
+        self._refresh(tf)
+        for _, model, _ in tf.msgs.values():
+            fam = ma_schema.codex_family(model)
+            if fam:
+                return fam
+        return None

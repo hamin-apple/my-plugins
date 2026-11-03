@@ -8,11 +8,19 @@ model inside each step window: from a `step:` line to the next `step:` line; the
 The monitor also uses `parse_entry` and `windows` here, so both count the same way.
 `write_snapshot` returns a message with the cost from `ma_prices` (the same table and override as the monitor); the
 scripts print it.
+
+A Codex session's record (`ma_host.codex_record`) is read when no Claude transcript exists for the session id. Its
+`token_usage_record` lines of the session's own thread (`payload.thread_id` = session) are one response each and are
+all summed, in the same four keys: Codex counts cached and cache-written tokens inside `input_tokens`
+(`total_tokens` = input + output), so `input_tokens` here is the input less those two, as Claude counts it. The model
+of a record is the `turn_context` model of its turn. Codex has no per-response cost, so cost is tokens times
+`prices.json`; a model without a row has no cost.
 """
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import ma_host
 import ma_prices
 import ma_schema
 
@@ -32,6 +40,50 @@ def parse_entry(raw):
     except (ValueError, KeyError, TypeError, AttributeError):
         return None
     return msg.get('id'), ts, msg.get('model'), usage
+
+
+def codex_usage(u) -> dict:
+    """The four KEYS from a Codex `usage` object."""
+    n = {k: int(u.get(k) or 0) for k in ('input_tokens', 'output_tokens', 'cached_input_tokens', 'cache_write_input_tokens')}
+    return {'input_tokens': max(n['input_tokens'] - n['cached_input_tokens'] - n['cache_write_input_tokens'], 0),
+            'output_tokens': n['output_tokens'],
+            'cache_creation_input_tokens': n['cache_write_input_tokens'],
+            'cache_read_input_tokens': n['cached_input_tokens']}
+
+
+def read_codex(path: Path, thread) -> list:
+    """(ts, model, usage) per `token_usage_record` of `thread` in a Codex record; the model is that of the turn."""
+    out, models, last = [], {}, None
+    with open(path, 'rb') as fh:
+        for raw in fh:
+            if b'"turn_context"' not in raw and b'"token_usage_record"' not in raw:
+                continue
+            try:
+                e = json.loads(raw)
+                kind, p = e.get('type'), e['payload']
+                if kind == 'turn_context':
+                    last = models[p.get('turn_id')] = p.get('model')
+                elif kind == 'token_usage_record' and p.get('thread_id') == thread:
+                    ts = datetime.fromisoformat(e['timestamp'].replace('Z', '+00:00')).astimezone().replace(tzinfo=None)
+                    out.append((ts, models.get(p.get('turn_id')) or last, codex_usage(p['usage'])))
+            except (ValueError, KeyError, TypeError, AttributeError):
+                continue
+    return out
+
+
+def codex_cost(session, prices):
+    """(usd, None) of a Codex session's main thread at list prices, else (None, reason)."""
+    path = ma_host.codex_record(session)
+    if path is None:
+        return None, f'no Codex record for session {session}'
+    total, seen = 0.0, False
+    for _, model, usage in read_codex(path, session):
+        seen = True
+        usd = ma_prices.cost(prices, model, usage)
+        if usd is None:
+            return None, f'{model or "unknown model"} not in prices.json'
+        total += usd
+    return (total, None) if seen else (None, 'no token usage in the Codex record')
 
 
 def step_enter(lines) -> list:
@@ -119,10 +171,12 @@ def measure(task_dir: Path, root: Path):
     missing, out = [], {}
     for sess in sessions:
         path = find_transcript(root, sess)
-        if path is None:
+        codex = None if path else ma_host.codex_record(sess)
+        if path is None and codex is None:
             missing.append(sess)
             continue
-        got = sum_windows(read_transcript(path), [(s, e, k) for ss, s, e, k in wins if ss == sess])
+        msgs = read_transcript(path) if path else read_codex(codex, sess)
+        got = sum_windows(msgs, [(s, e, k) for ss, s, e, k in wins if ss == sess])
         for key, models in got.items():
             for model, usage in models.items():
                 acc = out.setdefault(key, {}).setdefault(model, dict.fromkeys(KEYS, 0))

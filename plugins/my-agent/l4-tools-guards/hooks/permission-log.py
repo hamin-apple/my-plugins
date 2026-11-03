@@ -21,6 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_active  # noqa: E402
+import ma_host  # noqa: E402
 import ma_logline  # noqa: E402
 
 Q_MAX = 200
@@ -90,6 +91,7 @@ def main(argv) -> int:
         inp = json.loads(sys.stdin.read() or '{}')
         if not isinstance(inp, dict):
             return 0
+        inp = ma_host.record_input(inp)
         active = ma_active.find_active(inp.get('cwd') or os.getcwd())
         if active is None or not ma_active.owns(active, inp):
             return 0

@@ -1,0 +1,28 @@
+{
+ "label": "PreToolUse",
+ "argv": [
+  "PreToolUse",
+  "/kit/plugins/ma-probe"
+ ],
+ "time": "2026-01-01T00:00:18+00:00",
+ "cwd": "/work",
+ "scenario": "identity",
+ "stdin_json": {
+  "session_id": "sess-main-0001",
+  "transcript_path": "/t/main.jsonl",
+  "cwd": "/work",
+  "hook_event_name": "PreToolUse",
+  "turn_id": "t-b",
+  "tool_name": "apply_patch",
+  "tool_input": {
+   "input": "*** Begin Patch\n*** Add File: ma-probe-deny-file-b.txt\n+x\n*** End Patch"
+  }
+ },
+ "stdin_head": null,
+ "env_names": [
+  "PATH"
+ ],
+ "env_values": {
+  "MA_PROBE_SCENARIO": "identity"
+ }
+}

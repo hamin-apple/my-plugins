@@ -1,0 +1,2 @@
+{"type": "thread.started", "thread_id": "aaaaaaaa-1"}
+{"type": "item.completed", "item": {"type": "agent_message", "text": "Started ma_probe_agent_project and ma_probe_agent_claude with spawn_agent"}}

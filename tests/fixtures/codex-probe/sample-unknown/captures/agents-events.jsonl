@@ -1,0 +1,4 @@
+{"type": "thread.started", "thread_id": "bbbbbbbb-1"}
+{"type": "turn.started"}
+{"type": "item.completed", "item": {"id": "item_2", "type": "agent_message", "text": "The listed startable agent types are `default`, `explorer` and `worker`.\n\nEvery requested name returned the same error: `unknown agent_type`:\n\n- `ma_probe_agent_claude`\n- `ma_probe_agent_project`\n- `ma_probe_agent_project_tools`"}}
+{"type": "turn.completed", "usage": {}}

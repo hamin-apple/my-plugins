@@ -1,0 +1,4 @@
+{"codex_version": "codex-cli 9.9.9", "facts": [
+  {"capture": "probe-identity/captures/b.json", "fact": "Deny honored per case (true = blocked)", "section": "Deny", "used_by": "u5", "value": {"worker_shell_exit1": false}},
+  {"capture": "probe-identity/captures/b.json", "fact": "Attributed calls by who, kind and tool (fields; agent_id/agent_type presence)", "section": "Subagent tool calls", "used_by": "u5", "value": {}}
+]}

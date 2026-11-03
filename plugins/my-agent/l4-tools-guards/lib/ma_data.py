@@ -13,6 +13,8 @@ folder, an older name); the names differ by one letter.
 import os
 from pathlib import Path
 
+import ma_host
+
 SETTING_ENV = 'CLAUDE_PLUGIN_OPTION_DATA_DIR'
 TASK_SETTING_ENV = 'CLAUDE_PLUGIN_OPTION_TASK_DIR'
 TASK_DIR_DEFAULT = '.my-agent'
@@ -32,7 +34,7 @@ def _path(raw: str) -> Path:
 
 
 def data_dir(arg=None) -> Path:
-    raw = _value(os.environ.get('MA_TASKS_DIR')) or _value(arg) or _value(os.environ.get(SETTING_ENV))
+    raw = _value(os.environ.get('MA_TASKS_DIR')) or _value(arg) or _value(ma_host.plugin_option(SETTING_ENV))
     return _path(raw) if raw else Path.home() / 'dev' / 'log' / 'my-agent'
 
 
@@ -55,7 +57,7 @@ def task_dir(arg=None) -> str:
     """The task subfolder (a normalized relative path, case kept). The first set value of $MA_TASK_DIR, `arg`,
     $CLAUDE_PLUGIN_OPTION_TASK_DIR is used; an invalid one (absolute, `~`, a `..` segment, no segment left, first
     segment `.git` or `.claude`) gives the default, never the next source. $MA_TASK_DIR is not $MA_TASKS_DIR."""
-    raw = _value(os.environ.get('MA_TASK_DIR')) or _value(arg) or _value(os.environ.get(TASK_SETTING_ENV))
+    raw = _value(os.environ.get('MA_TASK_DIR')) or _value(arg) or _value(ma_host.plugin_option(TASK_SETTING_ENV))
     if not raw or raw.startswith(('/', '~')):
         return TASK_DIR_DEFAULT
     parts = [p for p in raw.split('/') if p not in ('', '.')]

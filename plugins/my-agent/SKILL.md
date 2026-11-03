@@ -82,6 +82,7 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
   - `${CLAUDE_SKILL_DIR}/l1-orchestration/phases/build.md` (③ Build: 5 Execute, 6 Merge)
   - `${CLAUDE_SKILL_DIR}/l1-orchestration/phases/accept.md` (④ Accept: 7 Verify, 8 Review → G3)
   - Profile (`Profile:` in `intake.md`): `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/general.md`, `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/research.md`, `${CLAUDE_SKILL_DIR}/l1-orchestration/profiles/dev.md`
+- Codex: read `l1-orchestration/hosts.md`.
 - Read does not expand the plugin path variables in these files. When you run a command, replace the variable with this plugin's folder, `${CLAUDE_PLUGIN_ROOT}`.
 - Data folder: whenever you (re)read a phase file (also `continue`, compaction, a direct `define|plan|build|accept`) and at the start of Intake and status, run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/data-dir.py" --data-dir '${user_config.data_dir}' --task-dir '${user_config.task_dir}'`. Its two output lines are `<data folder>` and `<task_dir>`. Use it for the popup, the folder of `projects.txt` and `<data folder>/active-index.json`, and as `--data-dir "<data folder>"` at the end of every run-log, usage-snapshot, gate-report, feedback and monitor-up call (all but feedback then take `--task-dir "<task_dir>"`); `agent-models.py` and `open-html.py` take `--data-dir` only.
 

@@ -1,0 +1,5 @@
+apply_patch
+exec_command
+request_user_input
+update_plan
+web_search

@@ -1,0 +1,382 @@
+{
+  "rows": [
+    {
+      "id": "question-popup",
+      "capability": "Question popup (choices)",
+      "status": "available",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md"
+      ],
+      "how_tried": "S1 agents scenario, main-session tool list (debug prompt-input); u22 e2e run (Step S3), where the gates were asked",
+      "result": "both request_user_input (questions with header, id, question and options of label and description) and request_user_input_async (questions with title and options) take choices; the e2e run called request_user_input_async 4 times and the Codex TUI showed the gate choices (G1b Approve, G3 Commit (Recommended) / Rework / Abort)",
+      "effect": "gates are asked through Codex's question tool with the same choices (hosts.md, D5)",
+      "facts": [
+        "Question/popup tool"
+      ],
+      "failure_patterns": [
+        "request_user_input",
+        "AskUserQuestion",
+        "popup"
+      ]
+    },
+    {
+      "id": "subagent-start",
+      "capability": "Subagent start with per-agent model, tools and turn limit",
+      "status": "partial",
+      "needed_by": [
+        "plugins/my-agent/l3-workers/agents/coder.md",
+        "plugins/my-agent/codex/agents/my_agent_coder.toml"
+      ],
+      "how_tried": "S1 agents scenario (agent forms and locations; project agent TOML); S7 identity scenario (renamed agents); e2e run (Step S3)",
+      "result": "Codex loads no plugin agent definition in any tried place; in the e2e run the main session made 6 spawn_agent calls; the first, named `my_agent_explorer`, was refused by Codex as an unknown agent_type, and the other 5 started as Codex's built-in `explorer` (1) and `worker` (4) agents without my-agent roles; the run-log has no start or stop line for them",
+      "effect": "in Codex, subagents run without my-agent role definitions: no subagent start/stop records, no per-role tools, model or turn limit, and the role-based checks of scope-guard do not apply to them; the main session follows the role text of the phase files",
+      "facts": [
+        "Tool name and input fields used to start an agent",
+        "Which renamed agents Codex loaded, and where each was placed"
+      ],
+      "failure_patterns": [
+        "subagent started without a my-agent role",
+        "unknown agent_type",
+        "agent_type",
+        "unknown agent",
+        "agent_name",
+        "my_agent_"
+      ]
+    },
+    {
+      "id": "model-preset",
+      "capability": "Per-task model preset (model and effort per call)",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md"
+      ],
+      "how_tried": "S1 agents scenario: fields of the start tool call",
+      "result": "no model or effort argument on the start tool",
+      "effect": "presets apply in Claude Code only (D4)",
+      "facts": [
+        "Per-call model or effort argument on start"
+      ],
+      "failure_patterns": [
+        "effort",
+        "model preset"
+      ]
+    },
+    {
+      "id": "agent-identity",
+      "capability": "Agent identity on tool calls",
+      "status": "available",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/hooks/scope-guard.py",
+        "plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py",
+        "plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py"
+      ],
+      "how_tried": "S7 identity scenario (two parallel workers, shell and file-change calls); e2e step 5 guard lines",
+      "result": "Outcome I: agent_id and agent_type are on every subagent tool call and on none of the main session calls; file-change deny is honored by exit 2, decision block or a matcher-scoped deny",
+      "effect": "guards read the identity from the call; a deny on a file-change call is printed as exit 2 (hosts.md)",
+      "facts": [
+        "Attributed calls by who, kind and tool (fields; agent_id/agent_type presence)"
+      ],
+      "failure_patterns": [
+        "agent_id",
+        "identity"
+      ]
+    },
+    {
+      "id": "file-change-deny",
+      "capability": "Deny of a file-change (apply_patch) call",
+      "status": "partial",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/hooks/scope-guard.py",
+        "plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py"
+      ],
+      "how_tried": "S7 identity scenario: deny forms on main and worker apply_patch calls",
+      "result": "permissionDecision deny and the stop form were not honored; exit 2, decision block, both, or a matcher-scoped deny were",
+      "effect": "guards deny an apply_patch call by exit 2; the plain permissionDecision deny is not relied on for it",
+      "facts": [
+        "Deny honored per case (true = blocked)",
+        "File-change deny per form (honored = marked file absent for main and workers)"
+      ],
+      "failure_patterns": [
+        "apply_patch"
+      ]
+    },
+    {
+      "id": "subagent-hooks",
+      "capability": "Subagent hooks (SubagentStart, SubagentStop)",
+      "status": "partial",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/hooks/subagent-log.py"
+      ],
+      "how_tried": "S1 agents scenario (two parallel subagents); e2e run (Step S3): run-log start and stop lines",
+      "result": "SubagentStart and SubagentStop fire with agent_id, agent_type and (stop) agent_transcript_path for the S1 agents; in the e2e run there were 6 spawn_agent calls; the first, named `my_agent_explorer`, was refused by Codex as an unknown agent_type, and the other 5 started as Codex's built-in `explorer` (1) and `worker` (4) agents without my-agent roles, the matcher for my-agent agents did not match them, and the run-log has no start or stop line",
+      "effect": "in Codex, subagents run without my-agent role definitions: subagent-log.py records no start or stop line for them",
+      "facts": [
+        "Subagent start/stop events and their fields"
+      ],
+      "failure_patterns": [
+        "SubagentStart",
+        "SubagentStop"
+      ]
+    },
+    {
+      "id": "worktree-isolation",
+      "capability": "Worktree isolation for a coder",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/l3-workers/agents/coder.md"
+      ],
+      "how_tried": "S1 agents scenario: fields of the start tool call",
+      "result": "the start tool has no isolation field",
+      "effect": "no coder worktree; coders work in the repository (hosts.md)",
+      "facts": [
+        "Tool name and input fields used to start an agent"
+      ],
+      "failure_patterns": [
+        "isolation",
+        "worktree"
+      ]
+    },
+    {
+      "id": "background-start",
+      "capability": "Background start of a subagent",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md"
+      ],
+      "how_tried": "S1 agents scenario: fields of the start tool call; two subagents started together",
+      "result": "no run_in_background field; subagents started together overlap",
+      "effect": "no background start; parallel work is several starts in one turn (hosts.md)",
+      "facts": [
+        "Parallel start (overlapping subagents)"
+      ],
+      "failure_patterns": [
+        "background"
+      ]
+    },
+    {
+      "id": "workflow",
+      "capability": "Workflow tool",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md"
+      ],
+      "how_tried": "S1 agents scenario: main-session tool list",
+      "result": "no Workflow tool in the list",
+      "effect": "steps run by L1 delegating one start at a time (hosts.md)",
+      "facts": [
+        "Tool names of the main session"
+      ],
+      "failure_patterns": [
+        "Workflow"
+      ]
+    },
+    {
+      "id": "send-message",
+      "capability": "SendMessage to a running subagent",
+      "status": "available",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md"
+      ],
+      "how_tried": "S1 agents scenario: main-session tool list",
+      "result": "send_message, followup_task and wait_agent are listed",
+      "effect": "read SendMessage as send_message (hosts.md)",
+      "facts": [
+        "Tool names of the main session"
+      ],
+      "failure_patterns": [
+        "send_message",
+        "followup_task"
+      ]
+    },
+    {
+      "id": "permission-dialog",
+      "capability": "Permission dialog (G2)",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/hooks/permission-log.py"
+      ],
+      "how_tried": "S1 hooks scenario (PermissionRequest event); u23 in the e2e run",
+      "result": "the findings show no Codex permission dialog for G2",
+      "effect": "the G2 dialog step is skipped and said so in one chat line (hosts.md)",
+      "facts": [
+        "Events seen and their input fields"
+      ],
+      "failure_patterns": [
+        "PermissionRequest",
+        "permission dialog",
+        "G2"
+      ]
+    },
+    {
+      "id": "plugin-options",
+      "capability": "Plugin options (userConfig)",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/scripts/data-dir.py"
+      ],
+      "how_tried": "S1 hooks scenario: hook environment values; skills scenario: ${user_config.*} in skill text",
+      "result": "no option env names seen in the hook environment; the placeholder stays literal in skill text",
+      "effect": "the data folder is $MA_TASKS_DIR or the default, the task folder $MA_TASK_DIR or .my-agent (hosts.md)",
+      "facts": [
+        "Hook environment values (CODEX_*, CLAUDE_*)"
+      ],
+      "failure_patterns": [
+        "user_config",
+        "data_dir"
+      ]
+    },
+    {
+      "id": "skill-path-variables",
+      "capability": "Skill path variables in skill text",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md",
+        "plugins/my-agent/l1-orchestration/hosts.md"
+      ],
+      "how_tried": "S7 identity scenario (skill text expansion): CLAUDE_SKILL_DIR, CLAUDE_PLUGIN_ROOT, ARGUMENTS, user_config",
+      "result": "Codex passes the variables literally, not expanded",
+      "effect": "the plugin and skill folders are the folder of the SKILL.md file Codex read (hosts.md)",
+      "facts": [
+        "Skill text variables as Codex gave them to the model"
+      ],
+      "failure_patterns": [
+        "CLAUDE_SKILL_DIR",
+        "CLAUDE_PLUGIN_ROOT",
+        "\\$ARGUMENTS"
+      ]
+    },
+    {
+      "id": "session-id",
+      "capability": "Session id",
+      "status": "available",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/lib/ma_host.py"
+      ],
+      "how_tried": "S1 hooks scenario (hook input fields) and session record; e2e run-log session= values",
+      "result": "session_id is in every hook input; the thread id is the session id of the record",
+      "effect": "$CODEX_THREAD_ID stands for $CLAUDE_CODE_SESSION_ID (hosts.md)",
+      "facts": [
+        "Id fields in hook input",
+        "Where the session id is"
+      ],
+      "failure_patterns": [
+        "session_id",
+        "CODEX_THREAD_ID"
+      ]
+    },
+    {
+      "id": "hook-trust",
+      "capability": "Hook trust (stale trust stops hooks)",
+      "status": "partial",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/lib/ma_host.py",
+        "plugins/my-agent/l4-tools-guards/hooks/session-notice.py"
+      ],
+      "how_tried": "S1 stale scenario: kit --bump and reinstall without trusting again; e2e Step S3 trust step",
+      "result": "after a bump and reinstall without trust, no hook of the plugin fired",
+      "effect": "the hook-health check at Intake names the hooks that did not run (u7, hosts.md); the person trusts them in the Codex TUI",
+      "facts": [
+        "Hooks ran after trust, and the bumped hook in the stale run"
+      ],
+      "failure_patterns": [
+        "trust",
+        "hook-health",
+        "hooks did not run"
+      ]
+    },
+    {
+      "id": "fail-closed-malformed",
+      "capability": "Fail-closed on malformed hook output",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/hooks/hooks.json"
+      ],
+      "how_tried": "S1 hooks scenario: marker-bad hook printing malformed output",
+      "result": "the tool ran and PostToolUse was seen (fail open)",
+      "effect": "the scripts never print malformed output; a crash ends in exit 2 (their except path)",
+      "facts": [
+        "Unparseable hook output behavior (fail-closed or open)"
+      ],
+      "failure_patterns": [
+        "malformed",
+        "unparseable"
+      ]
+    },
+    {
+      "id": "on-failure-block",
+      "capability": "onFailure: block on a failing hook",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/hooks/hooks.json"
+      ],
+      "how_tried": "S7 identity scenario: worker shell call with an exit-1 hook marked onFailure: block",
+      "result": "the call was not blocked on exit 1 with onFailure: block",
+      "effect": "a gate hook that must stop a call ends in exit 2, never in exit 1 (their except path); onFailure: block is not relied on",
+      "facts": [
+        "Deny honored per case (true = blocked)"
+      ],
+      "failure_patterns": [
+        "onFailure",
+        "exit 1",
+        "exit1"
+      ]
+    },
+    {
+      "id": "plugin-skill-discovery",
+      "capability": "Plugin skill discovery (root SKILL.md and skills folder)",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/.codex-plugin/plugin.json",
+        "plugins/my-agent/SKILL.md"
+      ],
+      "how_tried": "u26 skills diagnosis: live install and variants s0-s5 (manifest `skills` forms, root content, symlink folder); e2e Step S3 start by path",
+      "result": "Codex lists no plugin-root SKILL.md under any manifest form tried and drops symlinks from its install copy; my-agent:monitor is listed",
+      "effect": "the main skill is started by asking Codex to read and follow the installed SKILL.md by its path; a generated Codex entry skill is left for a later task",
+      "facts": [
+        "Plugin skill discovery outcome",
+        "Skill listing source"
+      ],
+      "failure_patterns": [
+        "unknown skill",
+        "skill .?my-agent.? (is )?(not (found|listed|available)|unavailable)",
+        "SKILL\\.md.{0,80}(no such file|not found|does not exist|cannot read)",
+        "(no such file|not found|cannot read).{0,120}SKILL\\.md"
+      ]
+    },
+    {
+      "id": "plugin-rules-version",
+      "capability": "Plugin rules version from git (Intake my-agent: value)",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md"
+      ],
+      "how_tried": "u22 e2e run: Intake item 9 ran git log and git status on the plugin folder; the session record shows both exit 128 and task/intake.md has `my-agent: none`",
+      "result": "the plugin folder is Codex's install copy (plugins/cache/<marketplace>/<plugin>/<version>/), which is not a git repository, so both git calls fail",
+      "effect": "in Codex the rules version is always `none`, so the rules-changed check of continue item 2 cannot detect a rules change; the installed version folder name is the only version marker",
+      "facts": [
+        "Plugin folder is a git repository"
+      ],
+      "failure_patterns": [
+        "fatal: not a git repository \\(or any of the parent directories\\)"
+      ]
+    },
+    {
+      "id": "intake-order",
+      "capability": "Order of Intake steps (.active before the first run-log line)",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/SKILL.md",
+        "plugins/my-agent/l4-tools-guards/scripts/run-log.py"
+      ],
+      "how_tried": "u22 e2e run: the model ran the Intake item 10 run-log call before writing .active (item 6); run-log refused twice, then the call succeeded after .active was written",
+      "result": "Codex did not keep the order of Intake items 6 and 10; run-log refused as designed and the model recovered by writing .active and retrying",
+      "effect": "no record was lost; the order of Intake items 6 and 10 is not reliably kept in Codex, so the run-log refusal is the guard",
+      "facts": [
+        "Intake step order kept"
+      ],
+      "failure_patterns": [
+        "run-log: no active my-agent task"
+      ]
+    }
+  ]
+}

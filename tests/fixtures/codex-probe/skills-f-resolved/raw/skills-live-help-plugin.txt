@@ -1,0 +1,7 @@
+Usage: codex plugin <COMMAND>
+
+Commands:
+  add
+  list
+  remove
+  marketplace

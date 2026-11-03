@@ -1,0 +1,6 @@
+Usage: codex [OPTIONS] [COMMAND]
+
+Commands:
+  exec
+  plugin
+  debug

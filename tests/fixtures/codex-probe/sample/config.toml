@@ -1,0 +1,5 @@
+[hooks.state."ma-probe@ma-probe:hooks/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:abc"
+
+[hooks.state."other@x:hooks/hooks.json:stop:0:0"]
+trusted_hash = "sha256:zzz"

@@ -1,0 +1,26 @@
+{
+ "label": "SubagentStop",
+ "argv": [
+  "SubagentStop",
+  "/kit/plugins/ma-probe"
+ ],
+ "time": "2026-01-01T00:00:22+00:00",
+ "cwd": "/work",
+ "scenario": "identity",
+ "stdin_json": {
+  "session_id": "sess-main-0001",
+  "transcript_path": "/t/main.jsonl",
+  "cwd": "/work",
+  "hook_event_name": "SubagentStop",
+  "turn_id": "t-b",
+  "agent_id": "agent-b-0001",
+  "agent_transcript_path": "/t/agent-b.jsonl"
+ },
+ "stdin_head": null,
+ "env_names": [
+  "PATH"
+ ],
+ "env_values": {
+  "MA_PROBE_SCENARIO": "identity"
+ }
+}

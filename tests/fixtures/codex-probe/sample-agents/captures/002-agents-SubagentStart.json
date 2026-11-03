@@ -1,0 +1,22 @@
+{
+ "label": "SubagentStart",
+ "argv": [
+  "SubagentStart",
+  "/kit/plugins/ma-probe"
+ ],
+ "time": "2026-01-01T00:00:01+00:00",
+ "cwd": "/work",
+ "scenario": "agents",
+ "stdin_json": {
+  "session_id": "bbbbbbbb-2",
+  "parent_session_id": "aaaaaaaa-1",
+  "agent_id": "agent-1",
+  "agent_type": "ma_probe_agent_project",
+  "hook_event_name": "SubagentStart"
+ },
+ "stdin_head": null,
+ "env_names": [
+  "PATH"
+ ],
+ "env_values": {}
+}

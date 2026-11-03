@@ -1,0 +1,2 @@
+{"type": "item.completed", "item": {"type": "command_execution", "command": "echo ma-probe-deny", "aggregated_output": "", "exit_code": 1}}
+{"type": "item.completed", "item": {"type": "command_execution", "command": "echo ma-probe-exit2", "aggregated_output": "ma-probe-exit2\n", "exit_code": 0, "api_key": "zzz"}}

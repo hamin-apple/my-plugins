@@ -1,0 +1,26 @@
+{
+ "label": "Stop",
+ "argv": [
+  "Stop",
+  "/kit/plugins/ma-probe",
+  "bumped"
+ ],
+ "time": "2026-01-01T00:00:00+00:00",
+ "cwd": "/work",
+ "scenario": "stale",
+ "stdin_json": {
+  "session_id": "s2",
+  "cwd": "/work",
+  "hook_event_name": "Stop"
+ },
+ "env_names": [
+  "CODEX_HOME",
+  "HOME",
+  "PATH",
+  "MA_PROBE_SCENARIO"
+ ],
+ "env_values": {
+  "MA_PROBE_SCENARIO": "stale",
+  "CODEX_HOME": "/home/x/.codex"
+ }
+}

@@ -232,7 +232,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         self.menu = menu
     }
 
-    @objc func mouseEntered(with event: NSEvent) { windows.noteHover() }
+    /// The tracking area sends `mouseEntered:`; without the explicit name Swift exports `mouseEnteredWith:` and it never runs.
+    @objc(mouseEntered:) func mouseEntered(with event: NSEvent) { windows.noteHover() }
 
     @objc func clicked(_ sender: Any?) {
         let e = NSApp.currentEvent

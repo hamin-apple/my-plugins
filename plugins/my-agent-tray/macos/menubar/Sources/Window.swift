@@ -124,9 +124,12 @@ final class WindowController: NSObject, NSWindowDelegate {
         hoveredInFront = Date()
     }
 
-    /// In front: pinned (always above), or no other window of the same level above it overlaps it.
+    /// In front: pinned (always above), or no other app's window of the same level above it overlaps it.
     /// Windows of a higher level (another app's floating bar, the Dock, the menu bar) stay above whatever
     /// show() does, so they do not count: counting them made the click never hide the window.
+    /// This app's own windows do not count either: in Detail, macOS hangs the Writing Tools button
+    /// (WTAffordanceWindow) on the window as a child window, which always sits above it, so the click only
+    /// ever brought the window to the front. The Components window is ours too.
     /// Not NSApp.isActive: a status item click does not always make the app active.
     private func isInFront(_ win: NSWindow) -> Bool {
         if store.pinned { return true }
@@ -135,10 +138,12 @@ final class WindowController: NSObject, NSWindowDelegate {
         // CG bounds have the origin at the top left of the main screen
         let top = NSScreen.screens.first?.frame.maxY ?? 0
         let mine = CGRect(x: win.frame.minX, y: top - win.frame.maxY, width: win.frame.width, height: win.frame.height)
+        let me = Int(ProcessInfo.processInfo.processIdentifier)
         return !above.contains { info in
             let layer = info[kCGWindowLayer as String] as? Int ?? 0
             let alpha = info[kCGWindowAlpha as String] as? Double ?? 1
-            guard layer == Int(win.level.rawValue), alpha > 0,
+            let owner = info[kCGWindowOwnerPID as String] as? Int ?? 0
+            guard owner != me, layer == Int(win.level.rawValue), alpha > 0,
                   let b = info[kCGWindowBounds as String] as? NSDictionary,
                   let r = CGRect(dictionaryRepresentation: b) else { return false }
             return r.intersects(mine)
@@ -153,6 +158,15 @@ final class WindowController: NSObject, NSWindowDelegate {
         NSApp.activate()   // activate(ignoringOtherApps:) was often refused for a status item click
         win.makeKeyAndOrderFront(nil)
         win.orderFrontRegardless()   // above the active app's windows also when macOS does not let this app activate
+        // macOS refuses this app's activation. When another accessory app's window was key (another menu bar
+        // app's window), the click on the icon makes macOS activate the app before it (Terminal) and raise its
+        // windows, which can land after orderFrontRegardless. Raise this window again if one now covers it.
+        for delay in [0.1, 0.4] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak win] in
+                guard let self = self, let win = win, win.isVisible, !win.isMiniaturized, !self.isInFront(win) else { return }
+                win.orderFrontRegardless()
+            }
+        }
     }
 
     private func makeWindow() -> FirstClickWindow {

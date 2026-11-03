@@ -11,8 +11,8 @@ EXPECTED = {
     ('PreToolUse', 'Agent|collaborationspawn_agent', 'subagent-log.py call'),
     ('PreToolUse', 'Agent|collaborationspawn_agent|Workflow|Edit|Write|NotebookEdit|apply_patch|Bash', 'plan-approved-check.py'),
     ('PreToolUse', 'Bash|Edit|Write|NotebookEdit|apply_patch', 'verdict-fresh-check.py'),
-    ('SubagentStart', '^my-agent:|^my_agent_', 'subagent-log.py start'),
-    ('SubagentStop', '^my-agent:|^my_agent_', 'subagent-log.py stop'),
+    ('SubagentStart', '^my-agent:|^my-agent-', 'subagent-log.py start'),
+    ('SubagentStop', '^my-agent:|^my-agent-', 'subagent-log.py stop'),
     ('PermissionRequest', None, 'permission-log.py ask'),
     ('PostToolUse', None, 'permission-log.py answer'),
     ('SessionStart', 'startup|resume|clear|compact|fork', 'session-notice.py'),
@@ -68,7 +68,7 @@ class HooksJsonTest(unittest.TestCase):
         self.assertEqual(self._selected('PreToolUse', 'collaborationspawn_agent'), self._selected('PreToolUse', 'Agent'))
         self.assertEqual(self._selected('PreToolUse', 'apply_patch'), self._selected('PreToolUse', 'Edit'))
         for event, tail in (('SubagentStart', 'subagent-log.py start'), ('SubagentStop', 'subagent-log.py stop')):
-            self.assertEqual(self._selected(event, 'my_agent_coder', True), {tail})
+            self.assertEqual(self._selected(event, 'my-agent-coder', True), {tail})
             self.assertEqual(self._selected(event, 'ma_probe_worker_a', True), set())
 
 

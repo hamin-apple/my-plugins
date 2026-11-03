@@ -268,7 +268,7 @@ class GateReportTest(Base):
         self.assertEqual(self.mismatches('claude-sonnet-5-5'), '1')
 
     def test_check_finds_subagent_records(self):
-        self.records(role='my_agent_coder')
+        self.records(role='my-agent-coder')
         self.log(f'2026-01-01 05:00:00 start: agent=my-agent:coder id={SUB} session={SESSION}',
                  f'2026-01-01 05:01:00 stop: id={SUB} mode=auto')
         r = self.gate('check')
@@ -276,7 +276,7 @@ class GateReportTest(Base):
         self.assertIn('summary: transcripts 1 (other 0, untyped 0), start lines 1, missing 0, non-auto stops 0', r.stdout)
 
     def test_check_missing_start(self):
-        self.records(role='my_agent_coder')
+        self.records(role='my-agent-coder')
         r = self.gate('check')
         self.assertRegex(r.stdout, rf'missing start: id={SUB} agent=my-agent:coder transcript=.*rollout-2-sub\.jsonl')
         self.assertIn('summary: transcripts 1 (other 0, untyped 0), start lines 0, missing 1, non-auto stops 0', r.stdout)

@@ -67,7 +67,7 @@ def family(model):
 
 
 # Codex model ids seen by the probe (T/work/codex-findings.md, `debug-models.txt`); not part of FAMILY (Claude only).
-# The Codex default is the id the probe session used; every role uses it (no per-role mapping).
+# The Codex default is the id the probe session used; the model a role runs on when no preset sets one.
 CODEX_DEFAULT = 'gpt-6-luna'
 CODEX_FAMILY = re.compile(r'(gpt-6-luna|gpt-5\.6-luna|gpt-5\.6-terra|codex-auto-review|gpt-reserve)')
 

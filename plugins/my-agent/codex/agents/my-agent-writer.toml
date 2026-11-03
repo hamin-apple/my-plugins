@@ -1,4 +1,4 @@
-name = "my_agent_writer"
+name = "my-agent-writer"
 description = "my-agent L3 writer. L1 calls it in step 5 Execute for a document draft, in step 6 Merge to assemble research notes, and at G1b for a prototype page."
 developer_instructions = """
 

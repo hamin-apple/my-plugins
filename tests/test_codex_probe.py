@@ -612,6 +612,11 @@ class IdentityRunTest(unittest.TestCase):
         with redirect_stdout(out), unittest.mock.patch('builtins.input', side_effect=EOFError):
             for scenario in ('hooks', 'stale', 'agents', 'skills', 'identity', 'install'):
                 probe.main(h + ['run', str(self.work), scenario])
+            e2e = self.tmp / 'e2e-rc'
+            shutil.copytree(E2E / 'repo', e2e / 'repo')
+            (e2e / 'repo' / '.my-agent' / '.active').write_text('task: 260101-demo\n', encoding='utf-8')
+            (e2e / 'repo' / '.my-agent' / '260101-demo' / 'plan.md').write_text(APPROVED_PLAN, encoding='utf-8')
+            probe.main(h + ['role-check', str(e2e)])
         probe.main(h + ['snapshot', '--out', str(self.tmp / 'snap')])
         probe.main(['summary-identity', str(self.work), '--out', str(self.tmp / 'o')])
         probe.main(['findings-identity', str(self.tmp / 'o')])
@@ -842,6 +847,296 @@ a@other      not installed  1.0.0    /x
 """
 
 
+APPROVED_PLAN = '# Plan\n\n## Approval\n- Approved 2026-11-04 00:55 G1b\n'
+GUARD_FAKE = '''#!{py}
+import glob, json, os, sys
+with open({log!r}, 'a') as f:
+    f.write(json.dumps({{'argv': sys.argv[1:], 'cwd': os.getcwd(), 'tasks': os.environ.get('MA_TASKS_DIR')}}) + '\\n')
+if sys.argv[1:2] == ['exec']:
+    repo = sys.argv[sys.argv.index('-C') + 1]
+    for path in glob.glob(repo + '/.my-agent/*/run-log.md'):
+        with open(path, 'a') as f:
+            f.write('2026-01-01 11:00:00 guard: hook=scope-guard agent=my-agent:coder id=x1 tool=apply_patch '
+                    'decision=deny why="read-only role" cwd=-\\n')
+    print(json.dumps({{'type': 'thread.started'}}))
+'''
+
+
+class RoleCheckTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.fake = self.tmp / 'fake-codex'
+        self.log = self.tmp / 'fake-calls.jsonl'
+        self.fake.write_text(GUARD_FAKE.format(py=sys.executable, log=str(self.log)), encoding='utf-8')
+        self.fake.chmod(self.fake.stat().st_mode | stat.S_IEXEC)
+        self.h = ['--codex', str(self.fake), '--codex-home', str(self.tmp / 'home')]
+        self.dir = self.tmp / 'e2e'
+        shutil.copytree(E2E / 'repo', self.dir / 'repo')
+        (self.dir / 'data').mkdir()
+        self.agent = self.dir / 'repo' / '.my-agent'
+        (self.agent / '.active').write_text('task: 260101-demo\n', encoding='utf-8')
+        (self.agent / '260101-demo' / 'plan.md').write_text(APPROVED_PLAN, encoding='utf-8')
+
+    def run_check(self):
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = probe.main(self.h + ['role-check', str(self.dir)])
+        return code, out.getvalue(), err.getvalue()
+
+    def refused(self, why):
+        code, _, err = self.run_check()
+        self.assertEqual(code, 1)
+        self.assertIn(why, err)
+        self.assertFalse(self.log.exists())
+
+    def test_refuses_without_active(self):
+        (self.agent / '.active').unlink()
+        self.refused('.active')
+
+    def test_refuses_without_approval(self):
+        (self.agent / '260101-demo' / 'plan.md').write_text('# Plan\n', encoding='utf-8')
+        self.refused('Approved')
+
+    def test_refuses_with_empty_approval_section(self):
+        (self.agent / '260101-demo' / 'plan.md').write_text('# Plan\n\n## Approval\n\n## Other\n', encoding='utf-8')
+        self.refused('Approved')
+
+    def test_accepts_bare_approved_line(self):
+        (self.agent / '260101-demo' / 'plan.md').write_text(
+            '# Plan\n\n## Approval\n\nApproved 2026-01-01 10:00\n', encoding='utf-8')
+        code, _, _ = self.run_check()
+        self.assertEqual(code, 0)
+
+    def test_refuses_with_two_tasks(self):
+        (self.agent / '260102-other').mkdir()
+        self.refused('exactly one task')
+
+    def test_refuses_without_repo(self):
+        shutil.rmtree(self.dir / 'repo')
+        self.refused('repo')
+
+    def test_passes_tasks_dir_and_prompt(self):
+        code, out, _ = self.run_check()
+        self.assertEqual(code, 0)
+        execs = [c for c in calls(self.log) if c['argv'][:1] == ['exec']]
+        self.assertEqual(len(execs), 1)
+        argv = execs[0]['argv']
+        self.assertEqual(execs[0]['tasks'], str((self.dir / 'data').resolve()))
+        self.assertEqual(argv[:2], ['exec', '--json'])
+        self.assertEqual(argv[argv.index('--sandbox') + 1], 'workspace-write')
+        self.assertIn('--skip-git-repo-check', argv)
+        self.assertEqual(argv[argv.index('-C') + 1], str((self.dir / 'repo').resolve()))
+        target = (self.dir / 'role-check.txt').resolve()
+        self.assertEqual(argv[-1], probe.role_check_prompt(self.dir.resolve()))
+        self.assertIn('agent_type `my-agent-coder`', argv[-1])
+        self.assertNotIn('explorer', argv[-1])
+        self.assertIn('task_name `role_check`', argv[-1])
+        self.assertIn(f'*** Add File: {target}', argv[-1])
+        self.assertIn('apply_patch', argv[-1])
+        self.assertFalse(target.is_relative_to((self.dir / 'repo').resolve()))
+        self.assertIn('exact result or error', argv[-1])
+
+    def test_prompt_follows_ma_host(self):
+        lib = REPO / 'plugins' / 'my-agent' / 'l4-tools-guards' / 'lib'
+        sys.path.insert(0, str(lib))
+        try:
+            import ma_host
+            want = ma_host.codex_agent('my-agent:coder')
+        finally:
+            sys.path.remove(str(lib))
+        self.assertIn(f'agent_type `{want}`', probe.role_check_prompt(self.dir.resolve()))
+
+    def test_saves_captures_and_prints_new_guard_lines_only(self):
+        log = self.agent / '260101-demo' / 'run-log.md'
+        old = log.read_text(encoding='utf-8')
+        code, out, _ = self.run_check()
+        self.assertEqual(code, 0)
+        self.assertTrue((self.dir / 'role-check' / 'events.jsonl').is_file())
+        self.assertTrue((self.dir / 'role-check' / 'stderr.txt').is_file())
+        printed = [x for x in out.splitlines() if ' guard: ' in x]
+        self.assertEqual(len(printed), 1)
+        self.assertIn('agent=my-agent:coder', printed[0])
+        self.assertTrue(log.read_text(encoding='utf-8').startswith(old))
+
+    def test_changes_nothing_in_repo_but_the_hooks_lines(self):
+        def tree():
+            return {str(p.relative_to(self.dir / 'repo')): p.read_bytes() for p in (self.dir / 'repo').rglob('*')
+                    if p.is_file() and '.git/' not in str(p) and p.name != 'run-log.md'}
+        before = tree()
+        self.run_check()
+        self.assertEqual(tree(), before)
+        self.assertEqual((self.agent / '.active').read_text(encoding='utf-8'), 'task: 260101-demo\n')
+
+    def test_refuses_inside_repository(self):
+        with self.assertRaises(SystemExit):
+            probe.main(self.h + ['role-check', str(REPO / 'tests' / 'zz-rc')])
+        self.assertFalse(self.log.exists())
+
+
+class E2eSetupModelsTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.fake, self.log = make_fake(self.tmp)
+        self.h = ['--codex', str(self.fake), '--codex-home', str(self.tmp / 'home')]
+
+    def setup(self, models):
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            return probe.main(self.h + ['e2e-setup', str(self.tmp / 'e2e'), '--models', str(models)])
+
+    def test_models_file_copied(self):
+        src = self.tmp / 'models.json'
+        src.write_text('{"codex": {"model": "gpt-6-luna"}}', encoding='utf-8')
+        self.assertEqual(self.setup(src), 0)
+        self.assertEqual((self.tmp / 'e2e' / 'data' / 'agent-models.json').read_text(encoding='utf-8'),
+                         src.read_text(encoding='utf-8'))
+
+    def test_invalid_json_refused(self):
+        src = self.tmp / 'models.json'
+        src.write_text('{not json', encoding='utf-8')
+        self.assertEqual(self.setup(src), 1)
+        self.assertFalse((self.tmp / 'e2e' / 'data' / 'agent-models.json').exists())
+
+    def test_missing_file_refused(self):
+        self.assertEqual(self.setup(self.tmp / 'nope.json'), 1)
+
+    def test_without_models_no_file(self):
+        import io
+        from contextlib import redirect_stdout
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(probe.main(self.h + ['e2e-setup', str(self.tmp / 'e2e')]), 0)
+        self.assertFalse((self.tmp / 'e2e' / 'data' / 'agent-models.json').exists())
+
+
+class E2eGuardsTest(unittest.TestCase):
+    def test_collect_fills_guards(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        base = tmp / 'e2e'
+        shutil.copytree(E2E, base)
+        log = base / 'repo' / '.my-agent' / '260101-demo' / 'run-log.md'
+        with open(log, 'a', encoding='utf-8') as f:
+            f.write('2026-01-01 11:00:00 guard: hook=scope-guard agent=my-agent:explorer id=x1 tool=apply_patch '
+                    'decision=deny why="read-only role" cwd=-\n')
+        (base / 'role-check').mkdir()
+        (base / 'role-check' / 'events.jsonl').write_text('{}\n', encoding='utf-8')
+        (base / 'role-check' / 'stderr.txt').write_text('', encoding='utf-8')
+        out = tmp / 'out'
+        code = probe.main(['--codex-home', str(base / 'codex-home'), 'e2e-collect', str(base), '--out', str(out)])
+        self.assertEqual(code, 0)
+        summary = json.loads((out / 'summary-e2e.json').read_text(encoding='utf-8'))
+        self.assertEqual([(g['hook'], g['agent'], g['decision']) for g in summary['guards']],
+                         [('scope-guard', 'my-agent:coder', 'deny'), ('scope-guard', 'my-agent:explorer', 'deny')])
+        self.assertEqual(set(summary['guards'][1]), {'hook', 'agent', 'decision', 'line'})
+        self.assertIn('guard: hook=scope-guard agent=my-agent:explorer', summary['guards'][1]['line'])
+        self.assertTrue((out / 'role-check' / 'events.jsonl').is_file())
+        self.assertTrue((out / 'role-check' / 'stderr.txt').is_file())
+
+    def test_collect_without_role_check_folder(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        out = tmp / 'out'
+        probe.main(['--codex-home', str(E2E / 'codex-home'), 'e2e-collect', str(E2E), '--out', str(out)])
+        self.assertFalse((out / 'role-check').exists())
+        self.assertEqual(len(json.loads((out / 'summary-e2e.json').read_text(encoding='utf-8'))['guards']), 1)
+
+
+HOOKS = REPO / 'plugins' / 'my-agent' / 'l4-tools-guards' / 'hooks'
+CODEX_FIX = REPO / 'plugins' / 'my-agent' / 'tests' / 'fixtures' / 'codex'
+MAIN_SESSION = '019a0000-0000-7000-8000-000000000001'
+FOREIGN_SESSION = '019a0000-0000-7000-8000-0000000000ee'
+
+
+class RealHookAssumptionsTest(unittest.TestCase):
+    """The Assumes lines of the role check, against the real hook scripts on a temp approved task."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.root = self.tmp.resolve()
+        self.repo = self.root / 'repo'
+        self.agent = self.repo / '.my-agent'
+        (self.agent / '260101-demo').mkdir(parents=True)
+        subprocess.run(['git', 'init', '-q', str(self.repo)], check=True)
+        (self.agent / '.active').write_text(
+            f'task: 260101-demo\nphase: 5\nsession: {MAIN_SESSION}\nstarted: 2026-01-01 09:00\n', encoding='utf-8')
+        self.plan = self.agent / '260101-demo' / 'plan.md'
+        self.plan.write_text(APPROVED_PLAN, encoding='utf-8')
+        self.env = dict(os.environ, MA_TASKS_DIR=str(self.root / 'data'))
+
+    def fixture(self, name, **over):
+        d = json.loads((CODEX_FIX / name).read_text(encoding='utf-8'))
+        d.update(over, cwd=str(self.repo))
+        return d
+
+    def hook(self, script, payload):
+        return subprocess.run([sys.executable, str(HOOKS / script)], input=json.dumps(payload), capture_output=True,
+                              text=True, cwd=self.repo, env=self.env, timeout=30)
+
+    def spawn(self, agent, session):
+        d = self.fixture('hook-pre-tool-use-spawn-agent.json', session_id=session)
+        d['tool_input'] = dict(d['tool_input'], agent_type=agent)
+        return d
+
+    def test_foreign_session_spawn_passes_plan_approved_check(self):
+        self.plan.write_text('# Plan\n', encoding='utf-8')   # not approved: the control must be denied
+        control = self.hook('plan-approved-check.py', self.spawn('my-agent-coder', MAIN_SESSION))
+        self.assertIn('deny', control.stdout)
+        r = self.hook('plan-approved-check.py', self.spawn('my-agent-coder', FOREIGN_SESSION))
+        self.assertEqual((r.returncode, r.stdout), (0, ''), r.stderr)
+        self.plan.write_text(APPROVED_PLAN, encoding='utf-8')
+        r = self.hook('plan-approved-check.py', self.spawn('my-agent-explorer', FOREIGN_SESSION))
+        self.assertEqual((r.returncode, r.stdout), (0, ''), r.stderr)
+
+    def test_explorer_apply_patch_denied_with_guard_line(self):
+        d = self.fixture('hook-pre-tool-use-worker-file-change.json', session_id=FOREIGN_SESSION,
+                         agent_type='my-agent-explorer')
+        d['tool_input'] = {'command': '*** Begin Patch\n*** Add File: role-check.txt\n+x\n*** End Patch'}
+        r = self.hook('scope-guard.py', d)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        lines = [x for x in (self.agent / '260101-demo' / 'run-log.md').read_text(encoding='utf-8').splitlines()
+                 if ' guard: ' in x]
+        self.assertEqual(len(lines), 1)
+        self.assertIn('hook=scope-guard', lines[0])
+        self.assertIn('agent=my-agent:explorer', lines[0])
+        self.assertIn('decision=deny', lines[0])
+
+    def coder_patch(self, path):
+        d = self.fixture('hook-pre-tool-use-worker-file-change.json', session_id=FOREIGN_SESSION,
+                         agent_type='my-agent-coder')
+        d['tool_input'] = {'command': f'*** Begin Patch\n*** Add File: {path}\n+x\n*** End Patch'}
+        return d
+
+    def guard_lines(self):
+        log = self.agent / '260101-demo' / 'run-log.md'
+        return [x for x in log.read_text(encoding='utf-8').splitlines() if ' guard: ' in x] if log.is_file() else []
+
+    def test_coder_apply_patch_outside_location_denied_with_guard_line(self):
+        r = self.hook('scope-guard.py', self.coder_patch(self.root / 'role-check.txt'))
+        self.assertEqual(r.returncode, 2, r.stderr)
+        lines = self.guard_lines()
+        self.assertEqual(len(lines), 1)
+        for part in ('hook=scope-guard', 'agent=my-agent:coder', 'decision=deny'):
+            self.assertIn(part, lines[0])
+
+    def test_coder_apply_patch_inside_location_let_through(self):
+        r = self.hook('scope-guard.py', self.coder_patch(self.repo / 'src-new.txt'))
+        self.assertEqual((r.returncode, r.stdout), (0, ''), r.stderr)
+        self.assertEqual(self.guard_lines(), [])
+
+    def test_session_notice_leaves_active_unchanged(self):
+        active = self.agent / '.active'
+        before = active.read_bytes()
+        r = self.hook('session-notice.py', self.fixture('hook-session-start.json', session_id=FOREIGN_SESSION))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(active.read_bytes(), before)
+
+
 class E2eToolingTest(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -893,7 +1188,7 @@ class E2eToolingTest(unittest.TestCase):
         self.assertEqual([s['n'] for s in summary['steps_reached']], [1, 3, 5])
         self.assertEqual(summary['steps_reached'][2]['line'], 5)
         self.assertEqual(summary['hooks_fired'], {'scope-guard': 1})
-        self.assertEqual(summary['subagents'][0]['agent'], 'my_agent_coder')
+        self.assertEqual(summary['subagents'][0]['agent'], 'my-agent:coder')
         self.assertEqual(summary['failures'][0]['source'], 'e2e/session-sess1111-aaaa.jsonl line 2')
         self.assertIn('unknown agent_type', summary['failures'][0]['text'])
         self.assertFalse(self.log.exists())
@@ -986,6 +1281,35 @@ class E2eToolingTest(unittest.TestCase):
         unlisted = self.report(e2e, 'report2.md')
         self.assertEqual(self.check_report(unlisted, e2e, '--probe-root', str(probe_root)), 1)
 
+    def test_ignored_failures(self):
+        caps = json.loads(probe.CAPABILITIES.read_text(encoding='utf-8'))
+        self.assertIsInstance(caps['ignored_failures'], list)
+        self.assertTrue(caps['ignored_failures'])
+        for entry in caps['ignored_failures']:
+            self.assertTrue(entry['pattern'].strip())
+            self.assertTrue(entry['why'].strip())
+        e2e = self.collect()
+        probe_root = self.tmp / 'proot'
+        shutil.copytree(E2E_PROBE, probe_root)
+        summary = json.loads((e2e / 'summary-e2e.json').read_text(encoding='utf-8'))
+        slip = "run-log: unknown kind 'codex-agents'; one of: ask, answer"
+        summary['failures'].append({'step': '2 Intake', 'source': 'e2e/run-log.txt line 3', 'text': slip})
+        summary['failures'].append({'step': '2 Intake', 'source': 'e2e/run-log.txt line 4',
+                                    'text': "fatal: /h/.codex/plugins/cache/m/p/1: '/h/x' is outside repository at '/tmp/r'"})
+        (e2e / 'summary-e2e.json').write_text(json.dumps(summary), encoding='utf-8')
+        report = self.report(e2e, 'report-ign.md')
+        text = report.read_text(encoding='utf-8')
+        ignored = text.split('## Ignored failures')[1].split('## Unlisted failures')[0]
+        self.assertIn(f'Ignored failure: step 2 Intake, "{slip}" (e2e/run-log.txt line 3): ', ignored)
+        self.assertNotIn('outside repository', ignored)
+        self.assertNotIn('codex-agents', text.split('## Unlisted failures')[1])
+        self.assertEqual(self.check_report(report, e2e, '--probe-root', str(probe_root)), 0)
+        summary['failures'].append({'step': '5 Execute', 'source': 'e2e/run-log.txt line 3', 'text': 'disk exploded'})
+        (e2e / 'summary-e2e.json').write_text(json.dumps(summary), encoding='utf-8')
+        bad = self.report(e2e, 'report-bad.md')
+        self.assertIn('Unlisted failure:', bad.read_text(encoding='utf-8').split('## Unlisted failures')[1])
+        self.assertEqual(self.check_report(bad, e2e, '--probe-root', str(probe_root)), 1)
+
     def spawn_collect(self, name='spawn-out'):
         spawn = E2E.parent / 'sample-e2e-spawn'
         out = self.tmp / name
@@ -997,12 +1321,12 @@ class E2eToolingTest(unittest.TestCase):
         out = self.spawn_collect()
         summary = json.loads((out / 'summary-e2e.json').read_text(encoding='utf-8'))
         self.assertEqual([(s['agent_type'], s['ok']) for s in summary['spawns']],
-                         [('worker', True), ('my_agent_coder', False), ('my_agent_coder', True)])
+                         [('worker', True), ('my-agent-coder', False), ('my-agent-coder', True)])
         self.assertEqual(summary['spawns'][0]['line'], 'e2e/session-sess4444-dddd.jsonl line 2')
-        self.assertEqual(summary['spawns'][1]['error'], 'unknown agent_type my_agent_coder second line')
+        self.assertEqual(summary['spawns'][1]['error'], 'unknown agent_type my-agent-coder second line')
         texts = [f['text'] for f in summary['failures']]
         self.assertEqual(texts, ['subagent started without a my-agent role: agent_type=worker',
-                                 'unknown agent_type my_agent_coder second line'])
+                                 'unknown agent_type my-agent-coder second line'])
         reduced = (out / 'session-sess4444-dddd.jsonl').read_text(encoding='utf-8')
         self.assertNotIn('secret task prose', reduced)
         self.assertEqual(len(reduced.splitlines()), 9)
@@ -1018,23 +1342,31 @@ class E2eToolingTest(unittest.TestCase):
         summary['failures'] = []
         (out / 'summary-e2e.json').write_text(json.dumps(summary), encoding='utf-8')
         self.assertEqual(self.check_report(report, out, '--probe-root', str(probe_root)), 1)
-        summary['subagents'] = [{'agent': 'my_agent_coder', 'id': 'x', 'line': 2}]
+        summary['subagents'] = [{'agent': 'my-agent:coder', 'id': 'x', 'line': 2}]
         (out / 'summary-e2e.json').write_text(json.dumps(summary), encoding='utf-8')
         self.assertEqual(self.check_report(report, out, '--probe-root', str(probe_root)), 0)
 
     def test_subagent_row_states_the_evidence(self):
         rows = {r['id']: r for r in json.loads(CAPS.read_text(encoding='utf-8'))['rows']}
         row = rows['subagent-start']
+        self.assertEqual(row['status'], 'available')
         self.assertIn('e2e', row['how_tried'])
-        self.assertIn('no plugin agent definition', row['result'])
-        self.assertIn('6 spawn_agent calls', row['result'])
-        self.assertIn('my_agent_explorer', row['result'])
-        self.assertIn('unknown agent_type', row['result'])
-        self.assertIn('other 5', row['result'])
-        self.assertIn('explorer` (1) and `worker` (4)', row['result'])
-        hooks = rows['subagent-hooks']['result']
-        for text in ('6 spawn_agent calls', 'my_agent_explorer', 'other 5', 'explorer` (1) and `worker` (4)'):
-            self.assertIn(text, hooks)
+        for text in ('8 start lines', '8 stop lines', 'lines 6, 10, 19, 24 and 28', 'lines 7, 11, 20, 25 and 29',
+                     'lines 32, 35 and 38', 'my-agent-<role>'):
+            self.assertIn(text, row['result'])
+        self.assertIn('scope-guard role checks apply instead', row['effect'])
+        for old in ('6 spawn_agent calls', 'other 5'):
+            self.assertNotIn(old, row['result'])
+        hooks = rows['subagent-hooks']
+        self.assertEqual(hooks['status'], 'available')
+        for text in ('8 start lines', '8 stop lines', 'guard line 39', 'decision=deny'):
+            self.assertIn(text, hooks['result'])
+        for old in ('6 spawn_agent calls', 'other 5'):
+            self.assertNotIn(old, hooks['result'])
+        preset = rows['model-preset']
+        self.assertEqual(preset['status'], 'gap')
+        self.assertIn('model=-', preset['result'])
+        self.assertIn('no codex section', preset['result'])
         self.assertIn('subagent started without a my-agent role', row['failure_patterns'])
         self.assertIn('unknown agent_type', row['failure_patterns'])
         for text in ('subagent started without a my-agent role: agent_type=worker', 'unknown agent_type foo'):

@@ -14,7 +14,12 @@ the definition values (for the preset `standard`) and `presets` prints `none`.
 where `pass=` lists the fields that differ from the definition file (`-` for none): the Agent call arguments L1
 passes. `show --plan` reads the `## Models` table of a plan.md instead of the file. `presets` prints one line per
 preset of the profile (`standard` first when present): the name, and after `: ` what differs from the definition.
-Takes no --task-dir. Exit 0 on success, 1 for a rejected file, preset or table (one stderr line
+Takes no --task-dir.
+
+On the Codex host (ma_host.env_host()) the values come from the `codex` section of the file: the installed agent
+files carry no model or effort, so the no-argument value is `-` and `pass=` lists the fields an entry sets. Without a
+`codex` section `standard` prints every role as `model=- effort=- pass=-` (header `no codex section: no override`).
+`show --plan` then takes Codex models (or `-`) in the model cells. Exit 0 on success, 1 for a rejected file, preset or table (one stderr line
 `agent-models: <cause>`, nothing on stdout), 2 for bad arguments.
 """
 import argparse
@@ -23,29 +28,41 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 import ma_data  # noqa: E402
+import ma_host  # noqa: E402
 import ma_models  # noqa: E402
 
 
-def render(header, defs, values) -> str:
+def render(header, defs, values, width=6) -> str:
     fields = ma_models.diff(defs, values)
     lines = [header]
     for agent in defs:
         model, effort = values[agent]
-        lines.append(f"{agent:<13}  model={model:<6} effort={effort:<6}  pass={','.join(fields[agent]) or '-'}")
+        lines.append(f"{agent:<13}  model={model:<{width}} effort={effort:<6}  pass={','.join(fields[agent]) or '-'}")
     return '\n'.join(lines)
+
+
+def _codex() -> bool:
+    return ma_host.env_host() == 'codex'
 
 
 def show(args) -> str:
     defs = ma_models.definitions()
+    if _codex():
+        defs = ma_models.codex_definitions(defs)
     if args.plan:
         try:
             text = Path(args.plan).read_text(encoding='utf-8')
         except (OSError, UnicodeDecodeError) as exc:
             raise ma_models.ModelsError(f'cannot read {args.plan}: {exc}')
-        name, values = ma_models.parse_plan(text, defs)
-        return render(f'preset: {name} (plan.md ## Models)', defs, values)
+        name, values = ma_models.parse_plan(text, defs, codex=_codex())
+        return render(f'preset: {name} (plan.md ## Models)', defs, values, 10 if _codex() else 6)
     path, data = ma_models.load(ma_data.data_dir(args.data_dir), defs)
     profile = _profile(args.profile, data)
+    if _codex():
+        data = ma_models.codex_section(data)
+        values = ma_models.resolve(data, profile, args.preset, defs)
+        where = f'file {path}, codex section' if data.get(profile) else 'no codex section: no override'
+        return render(f'preset: {profile}/{args.preset} ({where})', defs, values, 10)
     values = ma_models.resolve(data, profile, args.preset, defs)
     where = f'file {path}' if (data or {}).get(profile) else 'no file: definition values'
     return render(f'preset: {profile}/{args.preset} ({where})', defs, values)
@@ -59,8 +76,12 @@ def _profile(name, data):
 
 def presets(args) -> str:
     defs = ma_models.definitions()
+    if _codex():
+        defs = ma_models.codex_definitions(defs)
     _, data = ma_models.load(ma_data.data_dir(args.data_dir), defs)
     profile = _profile(args.profile, data)
+    if _codex():
+        data = ma_models.codex_section(data)
     names = ma_models.preset_names(data, profile)
     if not names:
         return 'none'

@@ -403,7 +403,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
 <noscript><p>The detail tabs on this page need scripts turned on. The repository is described in its <a href="https://github.com/hamin-apple/my-plugins#readme">README on GitHub</a>.</p></noscript>
 <header class="top">
   <div class="wrap">
-    <span class="brand">my-agent <span class="ver mono">v0.9.0</span></span>
+    <span class="brand">my-agent <span class="ver mono">v0.10.0</span></span>
     <nav aria-label="Page links"><a class="hide-md" href="#highlights">Highlights</a><a class="hide-md" href="#detail">Details</a><a href="index-ko.html" hreflang="ko" lang="ko">한국어</a><a href="architecture.html">Architecture</a><a class="cta sm hide-sm" href="https://github.com/hamin-apple/my-plugins">GitHub</a></nav>
   </div>
 </header>
@@ -415,10 +415,10 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
       <h1 id="hero-title">Agents do the work.<br>You approve it.</h1>
       <p class="lead">my-agent runs a request through four phases, hands each piece to its own agent, and stops at set gates for you to decide. Every question is a popup, and every step leaves a record.</p>
       <div class="row"><a class="cta" href="#detail">See how it works</a><a class="cta tint" href="architecture.html">Architecture</a></div>
-      <p class="meta">Version 0.9.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Also runs in Codex, with limits (Overview › Codex support)</p>
+      <p class="meta">Version 0.10.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Also runs in Codex, with limits (Overview › Codex support)</p>
     </div>
     <div class="group" role="group" aria-labelledby="glance-h">
-      <div class="group-h"><span id="glance-h">AT A GLANCE</span><span>my-agent 0.9.0</span></div>
+      <div class="group-h"><span id="glance-h">AT A GLANCE</span><span>my-agent 0.10.0</span></div>
       <div class="cells">
         <div class="cell"><span class="no">01</span><span class="lab">Levels<small>orchestration · judges · workers · tools</small></span><span class="val">4</span></div>
         <div class="cell"><span class="no">02</span><span class="lab">Phases<small>Define · Plan · Build · Accept, in 8 steps</small></span><span class="val">4</span></div>
@@ -721,7 +721,7 @@ claude plugin install my-agent@my-plugins</pre>
      `<p>The main session (L1) has four jobs: Router, which classifies the request; Orchestrator, which leads the phases and delegates; Gatekeeper, which guards every question and gate; and Recorder, which keeps the record. Subagents cannot ask the person; they return only result files and reports.</p>` +
      src('plugins/my-agent/SKILL.md')],
     ['Codex support',
-     `<p>my-agent also runs in Codex. The rules stay the same Claude Code text; a name table (<code>l1-orchestration/hosts.md</code>), one code adapter for the gate hooks (<code>l4-tools-guards/lib/ma_host.py</code>) and generated Codex files carry the difference. The gate questions go through Codex's question tool, and <code>my-agent:monitor</code> is listed as a Codex skill. Codex lists no plugin-root <code>SKILL.md</code>, so the main skill is not listed yet: start it by asking Codex to read and follow the installed <code>SKILL.md</code> by its path. A generated Codex entry skill is planned for a later task. Codex loads no agent definition from the plugin, so it does not run subagents as my-agent roles (it refuses <code>my_agent_&lt;role&gt;</code>), and the subagent start and stop records and the role-based checks do not apply; making Codex load them is planned for a later task. There is no per-agent model or effort, no coder worktree, no background start and no G2 dialog in Codex.</p>` +
+     `<p>my-agent also runs in Codex. The rules stay the same Claude Code text; a name table (<code>l1-orchestration/hosts.md</code>), one code adapter for the gate hooks (<code>l4-tools-guards/lib/ma_host.py</code>) and generated Codex files carry the difference. The gate questions go through Codex's question tool, and <code>my-agent:monitor</code> is listed as a Codex skill. Codex lists no plugin-root <code>SKILL.md</code>, so the main skill is not listed yet: start it by asking Codex to read and follow the installed <code>SKILL.md</code> by its path. A generated Codex entry skill is planned for a later task. Codex loads agent definitions from <code>~/.codex/agents/</code>, not from the plugin. At the start of a task Intake checks the nine my-agent roles there and, when they are missing or stale, asks before installing them as <code>my-agent-&lt;role&gt;</code> (<code>build-codex.py --install-agents</code>); a file without the my-agent version comment is never overwritten, and new agents show in a new Codex session. Until they are installed, Codex refuses the names, and the subagent start and stop records and the role-based checks do not apply. Model presets apply on Codex through the <code>codex</code> section of <code>agent-models.json</code>. There is no coder worktree, no background start and no G2 dialog in Codex, and agent <code>tools</code> and <code>maxTurns</code> are not available.</p>` +
      src('plugins/my-agent/docs/build-guide/my-agent-architecture.md, plugins/my-agent/l1-orchestration/hosts.md, README.md')],
     ['Why groups of four',
      `<p>According to the design document, a person takes part directly in maintaining this system, so it applies Cowan's theory that people hold about four things in memory at a time across the whole structure: 4 levels, 4 components per level, 4 phases, 4 kinds of gates (G1·G2·G3·E, counting G1a and G1b as one G1; section 3.2 lists them as five), and at most 4 popup choices. The document states that this theory is about human memory, not a basis for agent performance.</p>` +

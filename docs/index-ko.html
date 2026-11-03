@@ -403,7 +403,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
 <noscript><p>이 페이지의 자세히 탭은 스크립트를 켜야 보입니다. 저장소 안내는 <a href="https://github.com/hamin-apple/my-plugins#readme">GitHub의 README</a>에 있습니다.</p></noscript>
 <header class="top">
   <div class="wrap">
-    <span class="brand">my-agent <span class="ver mono">v0.9.0</span></span>
+    <span class="brand">my-agent <span class="ver mono">v0.10.0</span></span>
     <nav aria-label="페이지 링크"><a class="hide-md" href="#highlights">특징</a><a class="hide-md" href="#detail">자세히</a><a href="index.html" hreflang="en" lang="en">English</a><a href="architecture.html">아키텍처</a><a class="cta sm hide-sm" href="https://github.com/hamin-apple/my-plugins">GitHub</a></nav>
   </div>
 </header>
@@ -415,10 +415,10 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
       <h1 id="hero-title">일은 에이전트가,<br>승인은 사람이.</h1>
       <p class="lead">my-agent는 요청을 네 단계로 진행하면서 각 작업을 맡은 에이전트에게 나눠 주고, 정해진 관문에서 멈춰 사람의 결정을 받습니다. 질문은 모두 팝업으로 묻고, 모든 단계는 기록으로 남습니다.</p>
       <div class="row"><a class="cta" href="#detail">작동 방식 보기</a><a class="cta tint" href="architecture.html">아키텍처</a></div>
-      <p class="meta">버전 0.9.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Codex에서도 일부 제한과 함께 동작 (개요 › Codex 지원)</p>
+      <p class="meta">버전 0.10.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Codex에서도 일부 제한과 함께 동작 (개요 › Codex 지원)</p>
     </div>
     <div class="group" role="group" aria-labelledby="glance-h">
-      <div class="group-h"><span id="glance-h">한눈에 보기</span><span>my-agent 0.9.0</span></div>
+      <div class="group-h"><span id="glance-h">한눈에 보기</span><span>my-agent 0.10.0</span></div>
       <div class="cells">
         <div class="cell"><span class="no">01</span><span class="lab">레벨<small>오케스트레이션 · 판정 · 작업 · 도구</small></span><span class="val">4</span></div>
         <div class="cell"><span class="no">02</span><span class="lab">단계<small>정의 · 계획 · 실행 · 인수, 8개 스텝</small></span><span class="val">4</span></div>
@@ -721,7 +721,7 @@ claude plugin install my-agent@my-plugins</pre>
      `<p>메인 세션(L1)은 네 가지 일을 맡습니다. 요청을 분류하는 라우터(Router), 단계를 이끌고 위임하는 오케스트레이터(Orchestrator), 모든 질문과 게이트를 지키는 게이트키퍼(Gatekeeper), 기록하는 레코더(Recorder)입니다. 하위 에이전트(서브에이전트)는 사람에게 묻지 못하고 결과 파일과 보고만 돌려줍니다.</p>` +
      src('plugins/my-agent/SKILL.md')],
     ['Codex 지원',
-     `<p>my-agent는 Codex에서도 돕니다. 규칙은 같은 Claude Code 문서 그대로이고, 이름 대응표(<code>l1-orchestration/hosts.md</code>), 게이트 hook용 코드 어댑터 하나(<code>l4-tools-guards/lib/ma_host.py</code>), 생성되는 Codex 파일이 차이를 맡습니다. 게이트 질문은 Codex의 질문 도구로 하고, <code>my-agent:monitor</code>는 Codex 스킬로 목록에 올라옵니다. Codex는 플러그인 루트의 <code>SKILL.md</code>를 목록에 올리지 않으므로 메인 스킬은 아직 목록에 없습니다. Codex에게 설치된 <code>SKILL.md</code>를 경로로 읽고 따르라고 요청해서 시작하세요. Codex용 진입 스킬을 생성하는 일은 이후 작업으로 계획되어 있습니다. Codex는 플러그인에서 에이전트 정의를 불러오지 않으므로 서브에이전트를 my-agent 역할로 실행하지 않습니다(<code>my_agent_&lt;role&gt;</code>은 거부됩니다). 서브에이전트 시작·종료 기록과 역할 기반 점검도 적용되지 않으며, Codex가 이를 불러오게 만드는 일은 이후 작업으로 계획되어 있습니다. Codex에는 에이전트별 모델·effort, coder worktree, 백그라운드 시작, G2 대화상자가 없습니다.</p>` +
+     `<p>my-agent는 Codex에서도 돕니다. 규칙은 같은 Claude Code 문서 그대로이고, 이름 대응표(<code>l1-orchestration/hosts.md</code>), 게이트 hook용 코드 어댑터 하나(<code>l4-tools-guards/lib/ma_host.py</code>), 생성되는 Codex 파일이 차이를 맡습니다. 게이트 질문은 Codex의 질문 도구로 하고, <code>my-agent:monitor</code>는 Codex 스킬로 목록에 올라옵니다. Codex는 플러그인 루트의 <code>SKILL.md</code>를 목록에 올리지 않으므로 메인 스킬은 아직 목록에 없습니다. Codex에게 설치된 <code>SKILL.md</code>를 경로로 읽고 따르라고 요청해서 시작하세요. Codex용 진입 스킬을 생성하는 일은 이후 작업으로 계획되어 있습니다. Codex는 에이전트 정의를 플러그인이 아니라 <code>~/.codex/agents/</code>에서 불러옵니다. 작업을 시작할 때 Intake가 그곳의 my-agent 역할 아홉 개를 점검하고, 없거나 오래되었으면 <code>my-agent-&lt;role&gt;</code>로 설치하기 전에 물어봅니다(<code>build-codex.py --install-agents</code>). my-agent 버전 주석이 없는 파일은 덮어쓰지 않고, 새 에이전트는 새 Codex 세션에서 보입니다. 설치되기 전에는 Codex가 그 이름을 거부하고 서브에이전트 시작·종료 기록과 역할 기반 점검이 적용되지 않습니다. 모델 프리셋은 <code>agent-models.json</code>의 <code>codex</code> 섹션으로 Codex에서도 적용됩니다. Codex에는 coder worktree, 백그라운드 시작, G2 대화상자가 없고, 에이전트의 <code>tools</code>와 <code>maxTurns</code>는 쓸 수 없습니다.</p>` +
      src('plugins/my-agent/docs/build-guide/my-agent-architecture.md, plugins/my-agent/l1-orchestration/hosts.md, README-ko.md')],
     ['왜 4개씩 나눴나',
      `<p>설계 문서에 따르면, 사람이 이 시스템의 유지보수에 직접 참여하므로 한 번에 기억하는 단위가 4개 안팎이라는 Cowan의 이론을 구조 전체에 적용했습니다. 레벨 4개, 레벨별 구성 요소 4개, 진행 단계(phase) 4개, 게이트 4종(G1a·G1b를 G1 하나로 세어 G1·G2·G3·E; 3.2에서는 다섯 종류로 나눠 적음), 팝업 선택지 최대 4개입니다. 문서는 이 이론이 사람의 기억에 관한 것이지 에이전트 성능의 근거는 아니라고 밝혀 둡니다.</p>` +

@@ -1,4 +1,4 @@
-name = "my_agent_plan_reviewer"
+name = "my-agent-plan-reviewer"
 description = "my-agent L2 plan judge. L1 calls it in step 4 Plan Review to judge plan.md against the scope and write plan-review.md."
 developer_instructions = """
 

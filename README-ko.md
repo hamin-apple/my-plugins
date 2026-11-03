@@ -6,7 +6,7 @@ hamin-apple의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| `my-agent` | 0.9.0 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent` | 0.10.0 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
 | `my-agent-tray` | 0.1.3 | my-agent 모니터용 macOS 메뉴바 앱 (선택; my-agent 0.5.0 이상 필요) |
 
 ## 요구 사항
@@ -48,9 +48,10 @@ codex plugin add my-agent@my-plugins
 
 - Codex는 플러그인의 hook을 신뢰하기 전에는 실행하지 않습니다. Codex를 한 번 열고 `Hooks need review` 화면에서 my-agent hook을 신뢰하세요(`t`는 모두 신뢰). 그 전에는 Intake가 실행되지 않은 hook의 이름을 알려 줍니다.
 - Codex는 아직 메인 스킬을 목록에 올리지 않습니다. 플러그인 루트의 `SKILL.md`를 Codex가 목록에 올리지 않기 때문입니다. Codex에게 설치된 `SKILL.md`를 경로로 읽고 따르라고 요청한 뒤 요청 내용을 이어서 쓰면 my-agent가 시작됩니다: `~/.codex/plugins/cache/my-plugins/my-agent/<버전>/SKILL.md`. Codex가 목록에 올리는 Codex용 진입 스킬을 생성하는 일은 이후 작업으로 계획되어 있습니다.
-- Codex는 플러그인에서 에이전트 정의를 불러오지 않으므로 서브에이전트를 my-agent 역할로 실행하지 않습니다. `my_agent_<role>`은 알 수 없는 agent_type으로 거부되고, 다른 방식으로 시작한 서브에이전트는 역할 없이 돌기 때문에 서브에이전트 시작·종료 기록과 역할 기반 점검이 적용되지 않습니다. Codex가 이를 불러오게 만드는 일은 이후 작업으로 계획되어 있습니다.
+- Codex는 에이전트 정의를 플러그인이 아니라 `~/.codex/agents/`에서 불러옵니다. Intake가 my-agent 역할 아홉 개를 `my-agent-<role>`로 그곳에 설치하므로 Codex가 서브에이전트를 my-agent 역할로 실행합니다. 설치되기 전에는 Codex가 그 이름을 거부하고, 서브에이전트 시작·종료 기록과 역할 기반 점검이 적용되지 않습니다.
+- 작업을 시작할 때 Intake가 `~/.codex/agents/`의 my-agent 에이전트 아홉 개를 점검하고, 없거나 오래되었으면 설치하기 전에 물어봅니다(`build-codex.py --install-agents`). my-agent 버전 주석이 없는 파일은 덮어쓰지 않습니다. 새 에이전트는 새 Codex 세션에서 보입니다.
 - `/my-agent:monitor`는 Codex에서 스킬 `my-agent:monitor`이며, Codex가 목록에 올립니다.
-- Codex에서 다른 점: 에이전트별 모델·effort 없음, coder worktree 없음, 백그라운드 시작 없음, G2 권한 대화상자 없음, 플러그인 설정이 전달되지 않음. `plugins/my-agent/l1-orchestration/hosts.md`가 이름을 하나씩 대응시키고, `plugins/my-agent/docs/build-guide/my-agent-architecture.md`의 4.14절에 제한이 정리되어 있습니다.
+- Codex에서 다른 점: coder worktree 없음, 백그라운드 시작 없음, G2 권한 대화상자 없음, 플러그인 설정이 전달되지 않음. 모델 프리셋은 `agent-models.json`의 `codex` 섹션으로 Codex에서도 적용되고, 에이전트의 `tools`와 `maxTurns`는 쓸 수 없습니다. `plugins/my-agent/l1-orchestration/hosts.md`가 이름을 하나씩 대응시키고, `plugins/my-agent/docs/build-guide/my-agent-architecture.md`의 4.14절에 제한이 정리되어 있습니다.
 
 ## my-agent
 

@@ -40,9 +40,21 @@ class HostTest(unittest.TestCase):
             ma_host.parse('not json')
 
     def test_names_map_both_ways(self):
-        self.assertEqual(ma_host.claude_agent('my_agent_plan_reviewer'), 'my-agent:plan-reviewer')
-        self.assertEqual(ma_host.codex_agent('my-agent:gate-analyst'), 'my_agent_gate_analyst')
+        self.assertEqual(ma_host.claude_agent('my-agent-plan-reviewer'), 'my-agent:plan-reviewer')
+        self.assertEqual(ma_host.codex_agent('my-agent:gate-analyst'), 'my-agent-gate-analyst')
         self.assertEqual(ma_host.claude_agent('default'), 'default')
+        for name in ('my-agent-plan-reviewer', 'my-agent-gate-analyst'):
+            self.assertEqual(ma_host.codex_agent(ma_host.claude_agent(name)), name)
+        for name in ('my-explorer', 'worker'):
+            self.assertEqual(ma_host.claude_agent(name), name)
+            self.assertEqual(ma_host.codex_agent(name), name)
+
+    def test_codex_prefix_agent_types(self):
+        self.assertTrue(ma_host.is_codex({'agent_type': 'my-agent-coder'}))
+        self.assertFalse(ma_host.is_codex({'agent_type': 'my-explorer'}))
+        # pins the prefix match: a Claude-style type that starts with `my-agent-` counts as Codex
+        self.assertTrue(ma_host.is_codex({'agent_type': 'my-agent-tray:helper'}))
+        self.assertEqual(ma_host.claude_agent('my-agent-tray:helper'), 'my-agent:tray:helper')
 
     def test_worker_bash(self):
         c = ma_host.parse(fixture('hook-pre-tool-use-worker-bash.json'))
@@ -61,12 +73,25 @@ class HostTest(unittest.TestCase):
 
     def test_spawn_becomes_agent(self):
         d = json.loads(fixture('hook-pre-tool-use-spawn-agent.json'))
-        d['tool_input']['agent_type'] = 'my_agent_plan_reviewer'
+        d['tool_input']['agent_type'] = 'my-agent-plan-reviewer'
         c = ma_host.parse(json.dumps(d))
         inp = c.inps[0]
         self.assertEqual(inp['tool_name'], 'Agent')
         self.assertEqual(inp['tool_input']['subagent_type'], 'my-agent:plan-reviewer')
         self.assertFalse(c.file_change)
+
+    def test_spawn_model_and_effort_pass_through(self):
+        d = json.loads(fixture('hook-pre-tool-use-spawn-agent.json'))
+        d['tool_input'].update(agent_type='my-agent-coder', model='gpt-6-luna', reasoning_effort='medium')
+        ti = ma_host.parse(json.dumps(d)).inps[0]['tool_input']
+        self.assertEqual((ti['model'], ti['effort']), ('gpt-6-luna', 'medium'))
+        ti = ma_host.record_input(d)['tool_input']
+        self.assertEqual((ti['model'], ti['effort']), ('gpt-6-luna', 'medium'))
+        for key in ('model', 'reasoning_effort'):
+            del d['tool_input'][key]
+        for ti in (ma_host.parse(json.dumps(d)).inps[0]['tool_input'], ma_host.record_input(d)['tool_input']):
+            self.assertNotIn('model', ti)
+            self.assertNotIn('effort', ti)
 
     def test_spawn_without_agent_type_raises(self):
         d = json.loads(fixture('hook-pre-tool-use-spawn-agent.json'))
@@ -90,8 +115,8 @@ class HostTest(unittest.TestCase):
                     ma_host.parse(codex_file(text))
         for bad in ({'tool_name': 'apply_patch'}, {'tool_name': 'apply_patch', 'tool_input': {'command': 3}},
                     {'tool_name': 'apply_patch', 'tool_input': 'x'},
-                    {'tool_name': 'Bash', 'agent_type': 'my_agent_coder', 'tool_input': {}},
-                    {'tool_name': 'Bash', 'agent_type': 'my_agent_coder'}):
+                    {'tool_name': 'Bash', 'agent_type': 'my-agent-coder', 'tool_input': {}},
+                    {'tool_name': 'Bash', 'agent_type': 'my-agent-coder'}):
             with self.subTest(bad=bad):
                 with self.assertRaises(ValueError):
                     ma_host.parse(json.dumps(bad))

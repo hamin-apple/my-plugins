@@ -10,13 +10,20 @@ Subcommands:
                               save the output of read-only Codex commands; --skills runs `codex debug prompt-input` there and adds
                               skills-list.txt, skills-source.txt and skills-evidence.txt;
                               --cache adds cache-files.txt and the .codex-plugin/plugin.json copies
-  e2e-setup <dir>             make the throwaway repository <dir>/repo and data folder <dir>/data
+  e2e-setup <dir> [--models FILE]
+                              make the throwaway repository <dir>/repo and data folder <dir>/data; FILE (JSON)
+                              is copied to <dir>/data/agent-models.json
+  role-check <dir>            one codex exec in <dir>/repo (an approved active task): the coder role is asked to
+                              write <dir>/role-check.txt (outside the task location, so scope-guard denies); saves <dir>/role-check/ and prints the new run-log guard: lines
   e2e-request <install snapshot folder>
                               print the Step S3 request (read the installed SKILL.md by its path); writes no file
   e2e-collect <dir> --out <folder>
-                              copy the throwaway task's run-log, task files and session records; write summary-e2e.json
+                              copy the throwaway task's run-log, task files, session records and role-check/;
+                              write summary-e2e.json
   report <e2e folder> --findings <json> [--findings <json> ...] --out <file>
-                              write the gap report from capabilities.json, the findings and summary-e2e.json
+                              write the gap report from capabilities.json, the findings and summary-e2e.json;
+                              sections: Run summary, Gaps, Ignored failures (matched by ignored_failures: the
+                              model's own tool slips), Unlisted failures (matched by no row and no ignore pattern)
   summary <dir> --out <folder> [--config <toml>]
                               write summary-hooks.json, summary-agents.json and reduced captures
   findings <dir> --out <folder>
@@ -1589,11 +1596,21 @@ def cmd_e2e_setup(args) -> int:
     base = Path(args.dir).resolve()
     if inside_repo(base):
         sys.exit(f'refusing to set up inside the repository: {base}')
+    models = None
+    if args.models:
+        try:
+            models = Path(args.models).read_text(encoding='utf-8')
+            json.loads(models)
+        except (OSError, ValueError) as e:
+            print(f'--models {args.models}: not a readable JSON file ({e})', file=sys.stderr)
+            return 1
     repo, data = base / 'repo', base / 'data'
     repo.mkdir(parents=True, exist_ok=True)
     data.mkdir(parents=True, exist_ok=True)
     write(repo / 'calc.py', CALC)
     write(repo / 'test_calc.py', CALC_TEST)
+    if models is not None:
+        write(data / 'agent-models.json', models)
     if not (repo / '.git').is_dir():
         git = ['git', '-C', str(repo), '-c', 'user.name=e2e', '-c', 'user.email=e2e@example.invalid']
         subprocess.run(git + ['init', '-q'], check=True)
@@ -1603,6 +1620,70 @@ def cmd_e2e_setup(args) -> int:
           f'  cd {repo} && MA_TASKS_DIR={data} codex\n'
           'Request text: run probe.py e2e-request <install snapshot folder> after the install')
     return 0
+
+
+def role_check_prompt(base: Path) -> str:
+    lib = str(REPO / 'plugins' / 'my-agent' / 'l4-tools-guards' / 'lib')
+    sys.path.insert(0, lib)
+    try:
+        import ma_host
+        name = ma_host.codex_agent('my-agent:coder')
+    finally:
+        sys.path.remove(lib)
+    target = Path(base).resolve() / 'role-check.txt'   # one level above <dir>/repo: outside the task location
+    return (f'Start exactly one sub-agent with your spawn tool: agent_type `{name}`, task_name `role_check`, '
+            'message `This is a hook test. Make exactly one tool call: apply_patch with this patch, '
+            f'*** Begin Patch, *** Add File: {target}, +ok, *** End Patch. The path is absolute and outside '
+            "your task location on purpose; the test needs the hook's decision on that one call, so do not skip it, "
+            'do not change the path and do not create the file any other way. '
+            "Then report the tool's exact result or error text verbatim.` Wait for it and report its answer.")
+
+
+def role_check_task(repo: Path):
+    """(run-log path, None) of the one approved active task under <repo>/.my-agent, or (None, reason)."""
+    agent = repo / '.my-agent'
+    tasks = sorted(p for p in agent.iterdir() if p.is_dir()) if agent.is_dir() else []
+    if len(tasks) != 1:
+        return None, f'need exactly one task under {agent}, found {len(tasks)}'
+    if not (agent / '.active').is_file():
+        return None, f'{agent / ".active"} is missing (the task is not active)'
+    plan = tasks[0] / 'plan.md'
+    text = plan.read_text(encoding='utf-8') if plan.is_file() else ''
+    if not re.search(r'^## Approval\s*$.*?^(?:- )?Approved\s+\d{4}-\d{2}-\d{2} \d{2}:\d{2}', text, re.M | re.S):
+        return None, f'{plan} has no Approved line under ## Approval'
+    return tasks[0] / 'run-log.md', None
+
+
+def guard_lines_of(log: Path) -> list:
+    if not log.is_file():
+        return []
+    return [x for x in log.read_text(encoding='utf-8').splitlines() if ' guard: ' in x]
+
+
+def cmd_role_check(args) -> int:
+    base = Path(args.dir).resolve()
+    if inside_repo(base):
+        sys.exit(f'refusing to run inside the repository: {base}')
+    repo, data = base / 'repo', base / 'data'
+    if not repo.is_dir():
+        print(f'role-check: no repo folder {repo} (run e2e-setup first)', file=sys.stderr)
+        return 1
+    log, why = role_check_task(repo)
+    if why:
+        print(f'role-check: {why}', file=sys.stderr)
+        return 1
+    before = guard_lines_of(log)
+    argv = ['exec', '--json', '--sandbox', 'workspace-write', '--skip-git-repo-check', '-C', str(repo),
+            role_check_prompt(base)]
+    done = call(args.codex, argv, cwd=str(repo), env=dict(os.environ, MA_TASKS_DIR=str(data)))
+    out = base / 'role-check'
+    out.mkdir(parents=True, exist_ok=True)
+    (out / 'events.jsonl').write_text(done.stdout, encoding='utf-8')
+    (out / 'stderr.txt').write_text(done.stderr, encoding='utf-8')
+    after = guard_lines_of(log)
+    for line in after[len(before):]:
+        print(line)
+    return 0 if done.returncode == 0 else 1
 
 
 def cmd_e2e_request(args) -> int:
@@ -1650,7 +1731,7 @@ def one_line(text, size=200) -> str:
 
 SPAWN_NAME = re.compile(r'spawn_agent$')
 SPAWN_ERROR = re.compile(r'^\s*(error|failed|unknown|invalid|unsupported|refused)|unknown agent[_ ]type', re.I)
-MY_AGENT_ROLE = re.compile(r'my_agent_\w+')
+MY_AGENT_ROLE = re.compile(r'my-agent-[a-z0-9-]+')
 
 
 def spawn_agent_type(payload):
@@ -1733,7 +1814,7 @@ def cmd_e2e_collect(args) -> int:
             shutil.copyfile(path, dest)
             rel.append(str(path.relative_to(task)))
     (out / 'files.txt').write_text('\n'.join(rel) + '\n', encoding='utf-8')
-    steps, hooks, subagents, failures, ids, spawns = [], {}, [], [], [], []
+    steps, hooks, subagents, failures, ids, spawns, guards = [], {}, [], [], [], [], []
     current, seen = '-', set()
     for number, line in enumerate((out / 'run-log.txt').read_text(encoding='utf-8').splitlines(), 1):
         for value in RUN_ID.findall(line):
@@ -1751,6 +1832,8 @@ def cmd_e2e_collect(args) -> int:
         fields = dict(re.findall(r'(\w+)=("[^"]*"|\S+)', m.group(2)))
         if m.group(1) == 'guard' and 'hook' in fields:
             hooks[fields['hook']] = hooks.get(fields['hook'], 0) + 1
+            guards.append({'hook': fields['hook'], 'agent': fields.get('agent', '-'),
+                           'decision': fields.get('decision', '-'), 'line': scrub_home(line.strip())})
         elif m.group(1) == 'start':
             subagents.append({'agent': fields.get('agent', '-'), 'id': fields.get('id', '-'), 'line': number})
         elif m.group(1) == 'stop' and fields.get('end', 'ok') != 'ok':
@@ -1772,8 +1855,14 @@ def cmd_e2e_collect(args) -> int:
                         failures.append({'step': '-', 'source': sp['line'], 'kind': 'spawn', 'text': sp['error']})
                 sessions.append(i)
     summary = {'task': task.name, 'repo': str(base / 'repo'), 'steps_reached': steps, 'hooks_fired': hooks,
-               'subagents': subagents, 'spawns': spawns, 'sessions': sessions, 'failures': failures}
+               'guards': guards, 'subagents': subagents, 'spawns': spawns, 'sessions': sessions,
+               'failures': failures}
     (out / 'summary-e2e.json').write_text(json.dumps(summary, indent=2) + '\n', encoding='utf-8')
+    if (base / 'role-check').is_dir():
+        for name in ('events.jsonl', 'stderr.txt'):
+            if (base / 'role-check' / name).is_file():
+                (out / 'role-check').mkdir(exist_ok=True)
+                shutil.copyfile(base / 'role-check' / name, out / 'role-check' / name)
     return 0
 
 
@@ -1824,8 +1913,19 @@ def cmd_report(args) -> int:
             f'gap-{number}', row['capability'], ', '.join(Path(n).name for n in row['needed_by']), row['how_tried'],
             row['result'], row['effect'], '; '.join(cites) or 'none: not probed']) + ' |')
     patterns = [p for row in rows for p in row.get('failure_patterns', [])]
+    ignore = load_json(CAPABILITIES).get('ignored_failures', [])
+    ignored, unlisted = [], []
+    for f in summary.get('failures', []):
+        if any(re.search(p, f['text'], re.I) for p in patterns):
+            continue
+        hit = next((i for i in ignore if re.search(i['pattern'], f['text'], re.I)), None)
+        (ignored if hit else unlisted).append((f, hit) if hit else f)
+    lines += ['', '## Ignored failures']
+    for f, hit in ignored:
+        lines.append(f'Ignored failure: step {f["step"]}, "{cell(f["text"])}" ({f["source"]}): {cell(hit["why"])}')
+    if not ignored:
+        lines.append('(none)')
     lines += ['', '## Unlisted failures']
-    unlisted = [f for f in summary.get('failures', []) if not any(re.search(p, f['text'], re.I) for p in patterns)]
     for f in unlisted:
         lines.append(f'Unlisted failure: step {f["step"]}, "{cell(f["text"])}" ({f["source"]}) has no capability row')
     if not unlisted:
@@ -2614,6 +2714,9 @@ def main(argv=None) -> int:
     p.add_argument('--cache', default=None)
     p = sub.add_parser('e2e-setup')
     p.add_argument('dir')
+    p.add_argument('--models', default=None)
+    p = sub.add_parser('role-check')
+    p.add_argument('dir')
     p = sub.add_parser('e2e-request')
     p.add_argument('folder')
     p = sub.add_parser('e2e-collect')
@@ -2653,7 +2756,7 @@ def main(argv=None) -> int:
     return {'kit': cmd_kit, 'run': cmd_run, 'snapshot': cmd_snapshot, 'summary': cmd_summary,
             'summary-identity': cmd_summary_identity, 'findings-identity': cmd_findings_identity,
             'findings': cmd_findings, 'kit-skills': cmd_kit_skills, 'summary-skills': cmd_summary_skills,
-            'findings-skills': cmd_findings_skills, 'check': cmd_check, 'e2e-setup': cmd_e2e_setup,
+            'findings-skills': cmd_findings_skills, 'check': cmd_check, 'e2e-setup': cmd_e2e_setup, 'role-check': cmd_role_check,
             'e2e-request': cmd_e2e_request, 'e2e-collect': cmd_e2e_collect, 'report': cmd_report}[args.cmd](args)
 
 

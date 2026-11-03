@@ -22,14 +22,14 @@
     {
       "id": "subagent-start",
       "capability": "Subagent start with per-agent model, tools and turn limit",
-      "status": "partial",
+      "status": "available",
       "needed_by": [
         "plugins/my-agent/l3-workers/agents/coder.md",
-        "plugins/my-agent/codex/agents/my_agent_coder.toml"
+        "plugins/my-agent/codex/agents/my-agent-coder.toml"
       ],
-      "how_tried": "S1 agents scenario (agent forms and locations; project agent TOML); S7 identity scenario (renamed agents); e2e run (Step S3)",
-      "result": "Codex loads no plugin agent definition in any tried place; in the e2e run the main session made 6 spawn_agent calls; the first, named `my_agent_explorer`, was refused by Codex as an unknown agent_type, and the other 5 started as Codex's built-in `explorer` (1) and `worker` (4) agents without my-agent roles; the run-log has no start or stop line for them",
-      "effect": "in Codex, subagents run without my-agent role definitions: no subagent start/stop records, no per-role tools, model or turn limit, and the role-based checks of scope-guard do not apply to them; the main session follows the role text of the phase files",
+      "how_tried": "e2e run (Step S3, Codex TUI, codex-cli 0.166.0): run-log start and stop lines; role-check spawns from separate codex exec sessions",
+      "result": "the nine my-agent-<role> agents installed in ~/.codex/agents/ start by their Codex role names; the e2e run-log has 8 start lines and 8 stop lines, each start id with a matching stop id: the task session started explorer, architect, coder, verifier and reviewer (start lines 6, 10, 19, 24 and 28; stop lines 7, 11, 20, 25 and 29), and the role-check codex exec sessions started explorer twice and coder once (start lines 32, 35 and 38; stop lines 33, 36 and 40); the stop lines name the model actually used (gpt-6-luna)",
+      "effect": "per-role tools and turn limits have no Codex counterpart; the scope-guard role checks apply instead (decision 8): the read-only explorer refused to write (lines 33 and 36) and the coder was denied a write outside the task location (guard line 39)",
       "facts": [
         "Tool name and input fields used to start an agent",
         "Which renamed agents Codex loaded, and where each was placed"
@@ -40,7 +40,7 @@
         "agent_type",
         "unknown agent",
         "agent_name",
-        "my_agent_"
+        "my-agent-"
       ]
     },
     {
@@ -50,15 +50,16 @@
       "needed_by": [
         "plugins/my-agent/SKILL.md"
       ],
-      "how_tried": "S1 agents scenario: fields of the start tool call",
-      "result": "no model or effort argument on the start tool",
-      "effect": "presets apply in Claude Code only (D4)",
+      "how_tried": "S1 agents scenario: fields of the start tool call; e2e run (Step S3): call lines in the run-log",
+      "result": "the e2e call lines (5, 9, 18, 23, 27, 31, 34 and 37) carry model=- effort=-: the Codex TUI session was started without MA_TASKS_DIR, so the data folder was the person's own one, whose agent-models.json has no codex section and agent-models.py presets printed none; no call line carries model=gpt-6-luna in this run, so the preset pass-through is not shown by the e2e (it is covered by the unit tests of agent-models, host and codex records); the Codex L1 also ran show --plan without a Models: line on plan cells that said definition, which the Codex parser rejects by design",
+      "effect": "presets apply in Claude Code; on Codex they reach a spawn only when the data folder has a codex section, which this run did not have",
       "facts": [
         "Per-call model or effort argument on start"
       ],
       "failure_patterns": [
         "effort",
-        "model preset"
+        "model preset",
+        "agent-models: plan\\.md ## Models/.*unknown model"
       ]
     },
     {
@@ -103,13 +104,13 @@
     {
       "id": "subagent-hooks",
       "capability": "Subagent hooks (SubagentStart, SubagentStop)",
-      "status": "partial",
+      "status": "available",
       "needed_by": [
         "plugins/my-agent/l4-tools-guards/hooks/subagent-log.py"
       ],
-      "how_tried": "S1 agents scenario (two parallel subagents); e2e run (Step S3): run-log start and stop lines",
-      "result": "SubagentStart and SubagentStop fire with agent_id, agent_type and (stop) agent_transcript_path for the S1 agents; in the e2e run there were 6 spawn_agent calls; the first, named `my_agent_explorer`, was refused by Codex as an unknown agent_type, and the other 5 started as Codex's built-in `explorer` (1) and `worker` (4) agents without my-agent roles, the matcher for my-agent agents did not match them, and the run-log has no start or stop line",
-      "effect": "in Codex, subagents run without my-agent role definitions: subagent-log.py records no start or stop line for them",
+      "how_tried": "e2e run (Step S3): run-log start, stop and guard lines",
+      "result": "SubagentStart and SubagentStop fire with agent_id and agent_type for the my-agent-<role> agents; the e2e run-log has 8 start lines and 8 stop lines with matching ids (start lines 6, 10, 19, 24, 28, 32, 35 and 38), and one guard line, guard line 39: hook=scope-guard agent=my-agent:coder tool=Write decision=deny",
+      "effect": "in Codex, subagent-log.py records start and stop lines for my-agent agents, and the role checks of scope-guard see the agent role",
       "facts": [
         "Subagent start/stop events and their fields"
       ],
@@ -351,13 +352,14 @@
         "plugins/my-agent/SKILL.md"
       ],
       "how_tried": "u22 e2e run: Intake item 9 ran git log and git status on the plugin folder; the session record shows both exit 128 and task/intake.md has `my-agent: none`",
-      "result": "the plugin folder is Codex's install copy (plugins/cache/<marketplace>/<plugin>/<version>/), which is not a git repository, so both git calls fail",
+      "result": "the plugin folder is Codex's install copy (plugins/cache/<marketplace>/<plugin>/<version>/), which is not a git repository, so both git calls fail; in the e2e run the Codex L1 ran git -C on the cache path from inside the throwaway repository, and git failed with \"is outside repository at\" instead",
       "effect": "in Codex the rules version is always `none`, so the rules-changed check of continue item 2 cannot detect a rules change; the installed version folder name is the only version marker",
       "facts": [
         "Plugin folder is a git repository"
       ],
       "failure_patterns": [
-        "fatal: not a git repository \\(or any of the parent directories\\)"
+        "fatal: not a git repository \\(or any of the parent directories\\)",
+        "fatal: .* is outside repository at"
       ]
     },
     {
@@ -377,6 +379,20 @@
       "failure_patterns": [
         "run-log: no active my-agent task"
       ]
+    }
+  ],
+  "ignored_failures": [
+    {
+      "pattern": "rg: .*l4-tools-guards/scripts/ma_active\\.py: IO error",
+      "why": "the model guessed a wrong path for ma_active.py, which is under lib/; a tool slip of the model, not a host capability"
+    },
+    {
+      "pattern": "run-log: unknown kind 'codex-agents'",
+      "why": "the model tried to record the Codex agents check as a run-log line because of the old hosts.md wording, fixed in this version; a tool slip, not a host capability"
+    },
+    {
+      "pattern": "ERROR: test_calc \\(unittest\\.loader\\._FailedTest",
+      "why": "a coder's test-first red run inside its own session, before the code existed; expected, not a host capability"
     }
   ]
 }

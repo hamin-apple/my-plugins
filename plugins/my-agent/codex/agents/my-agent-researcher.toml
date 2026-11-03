@@ -1,4 +1,4 @@
-name = "my_agent_researcher"
+name = "my-agent-researcher"
 description = "my-agent L3 web researcher. L1 calls it in step 5 Execute, after G1b, to answer one sub-question from the web into one cited note under work/."
 developer_instructions = """
 

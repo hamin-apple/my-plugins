@@ -1,4 +1,4 @@
-name = "my_agent_gate_analyst"
+name = "my-agent-gate-analyst"
 description = "my-agent L2 gate decision analyst. L1 calls it in the ④ accept retrospective to interpret the gate decision tally and write gate-report.md."
 developer_instructions = """
 

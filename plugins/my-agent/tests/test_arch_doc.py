@@ -65,9 +65,10 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v044(self):
+    def test_status_line_starts_with_v045(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.44 ('), line[:60])
+        self.assertTrue(line.startswith('- Status: design draft v0.45 (2026-11-03, plugin 0.10.0:'), line[:60])
+        self.assertIn('v0.44 (2026-11-03, plugin 0.9.0:', line)
         self.assertIn('v0.43 (', line)
         self.assertIn('plugin 0.8.0', line)
         self.assertIn('plugin 0.9.0', line)
@@ -232,8 +233,12 @@ class ArchDocTest(unittest.TestCase):
         differences = section[a:].lower()
         for word in ('fallback', 'workaround'):
             self.assertNotIn(word, differences)
-        self.assertIn('refuses `my_agent_<role>`', differences)
-        self.assertIn('loads no agent definition', differences)
+        self.assertIn('<codex home>/agents/', differences)
+        self.assertIn('`my-agent-<role>`', differences)
+        self.assertIn('--install-agents', section)
+        self.assertIn('`[a-z0-9_]`', differences)
+        self.assertNotIn('my_agent' + '_<role>', section)
+        self.assertNotIn('not used: the main session', differences)
 
     def test_host_differences_name_the_question_tool(self):
         section = self.section('### 4.14 ', '## 5. ')

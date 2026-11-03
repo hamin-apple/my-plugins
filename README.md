@@ -6,7 +6,7 @@ A Claude Code plugin marketplace by hamin-apple.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.9.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent` | 0.10.0 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
 | `my-agent-tray` | 0.1.3 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
@@ -48,9 +48,10 @@ codex plugin add my-agent@my-plugins
 
 - Codex does not run a plugin's hooks until you trust them. Start Codex once; on the `Hooks need review` screen, trust the my-agent hooks (`t` trusts all). Before that, Intake names the hooks that did not run.
 - Codex does not list the main skill yet, because it lists no plugin-root `SKILL.md`. Start my-agent by asking Codex to read and follow the installed `SKILL.md` by its path: `~/.codex/plugins/cache/my-plugins/my-agent/<version>/SKILL.md`, followed by your request. A generated Codex entry skill that Codex lists is planned for a later task.
-- Codex loads no agent definition from the plugin, so it does not run subagents as my-agent roles: it refuses `my_agent_<role>`, and subagents started otherwise run without roles, so the subagent start and stop records and the role-based checks do not apply. Making Codex load them is planned for a later task.
+- Codex loads agent definitions from `~/.codex/agents/`, not from the plugin. Intake installs the nine my-agent roles there as `my-agent-<role>`, so Codex runs subagents as my-agent roles. Until they are installed, Codex refuses the names, and the subagent start and stop records and the role-based checks do not apply.
+- At the start of a task Intake checks the nine my-agent agents in `~/.codex/agents/` and, when they are missing or stale, asks before installing them (`build-codex.py --install-agents`). A file without the my-agent version comment is never overwritten. New agents show in a new Codex session.
 - `/my-agent:monitor` is the skill `my-agent:monitor` in Codex, and Codex lists it.
-- Codex differs in some places: no per-agent model or effort, no coder worktree, no background start, no G2 permission dialog, and the plugin settings are not passed. `plugins/my-agent/l1-orchestration/hosts.md` maps each name, and section 4.14 of `plugins/my-agent/docs/build-guide/my-agent-architecture.md` lists the limits.
+- Codex differs in some places: no coder worktree, no background start, no G2 permission dialog, and the plugin settings are not passed. Model presets apply on Codex through the `codex` section of `agent-models.json`; agent `tools` and `maxTurns` are not available. `plugins/my-agent/l1-orchestration/hosts.md` maps each name, and section 4.14 of `plugins/my-agent/docs/build-guide/my-agent-architecture.md` lists the limits.
 
 ## my-agent
 

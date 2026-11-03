@@ -1,4 +1,4 @@
-name = "my_agent_reviewer"
+name = "my-agent-reviewer"
 description = "my-agent L2 quality judge. L1 calls it in step 8 Review to judge the deliverable's quality and write review.md."
 developer_instructions = """
 

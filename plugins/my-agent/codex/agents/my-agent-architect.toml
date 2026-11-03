@@ -1,4 +1,4 @@
-name = "my_agent_architect"
+name = "my-agent-architect"
 description = "my-agent L2 planner. L1 calls it in step 3 Plan and for G1b revisions to write the task's plan.md from intake.md, explore.md and the scope."
 developer_instructions = """
 

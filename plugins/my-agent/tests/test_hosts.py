@@ -32,8 +32,7 @@ class HostsTest(unittest.TestCase):
         self.assertIn(f'`{ma_host.SPAWN_TOOL}`', self.find('`Agent`')[1])
         self.assertIn(f'`{ma_host.FILE_TOOL}`', self.find('`Edit`')[1])
         role = self.find('subagent_type')
-        self.assertEqual(role[1], 'not available in Codex')
-        self.assertIn(f'`{ma_host.CODEX_PREFIX}<role>`', role[2])
+        self.assertEqual(role[1], f'`agent_type` `{ma_host.CODEX_PREFIX}<role>`')
         self.assertEqual(ma_host.claude_agent(ma_host.codex_agent('my-agent:coder')), 'my-agent:coder')
 
     def test_skill_pointer(self):
@@ -53,8 +52,11 @@ class HostsTest(unittest.TestCase):
             self.assertNotIn(word, text)
 
     def test_model_effort_and_identity_rows(self):
-        self.assertEqual(self.find('`model`')[1], 'not available in Codex')
-        self.assertIn('`effort`', self.find('`model`')[0])
+        row = self.find('`model`')
+        self.assertEqual(row[1], '`model`, `reasoning_effort`')
+        self.assertIn('`effort`', row[0])
+        self.assertNotIn('not available', row[1])
+        self.assertIn('`reasoning_effort`', self.find('`Agent`')[2])
         ident = self.find('Agent identity')
         self.assertIn('`agent_type`', ident[1])
         self.assertIn('`agent_id`', ident[1])
@@ -70,11 +72,43 @@ class HostsTest(unittest.TestCase):
         self.assertIn('Codex lists no plugin-root `SKILL.md`', row[2])
         self.assertIn('`my-agent:monitor` is listed', row[2])
 
-    def test_role_row_is_not_available(self):
+    def test_role_row_names_the_installed_agent(self):
         row = self.find('`my-agent:<role>`')
-        self.assertEqual(row[1], 'not available in Codex')
+        self.assertEqual(row[1], '`agent_type` `my-agent-<role>`')
         self.assertIn('unknown agent_type', row[2])
-        self.assertIn('`my_agent_<role>`', row[2])
+        self.assertIn('`agent_type` `my-agent-<role>`', row[1])
+        self.assertIn('<codex home>/agents/', row[2])
+        self.assertIn('next session', row[2])
+
+    def test_name_rule_is_for_task_name(self):
+        text = HOSTS.read_text(encoding='utf-8')
+        preamble = text.split('\n\n')[1]
+        self.assertIn('`task_name`', preamble)
+        self.assertIn('`[a-z0-9_]`', preamble)
+        self.assertIn('agent names are not restricted', preamble)
+        self.assertIn('colon in an agent name is unverified', preamble)
+        self.assertNotIn('agent names allow only', text)
+        self.assertNotRegex(text, r'(?i)fallback|workaround')
+        self.assertIn('`task_name` allows only `[a-z0-9_]`', self.find('`Agent`')[2])
+
+    def test_intake_codex_agents_row(self):
+        row = self.find('Intake item 8')
+        self.assertEqual(row[1], 'item 8, then the Codex agents check')
+        note = row[2]
+        self.assertIn('build-codex.py --check-agents', note)
+        self.assertIn('build-codex.py --install-agents', note)
+        self.assertIn('`Install (Recommended)` / `Skip`', note)
+        self.assertIn('Like the item 1\u20135 popups, this popup goes to the person: L1 never answers it, '
+                      'also under delegated approval.', note)
+        self.assertIn('Its popup is recorded in item 10 as ask/answer lines; the check line itself is not a run-log line.', note)
+        self.assertNotIn('It is recorded in item 10.', note)
+        self.assertIn('New agents show in a new Codex session.', note)
+        self.assertIn('Codex agents: installed 9 (<version>)', note)
+
+    def test_tools_maxturns_row(self):
+        row = self.find('`maxTurns`')
+        self.assertEqual(row[1], 'not available in Codex')
+        self.assertIn('carry neither', row[2])
 
     def test_question_row_names_the_codex_tool(self):
         row = self.find('AskUserQuestion')

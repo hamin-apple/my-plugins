@@ -47,7 +47,7 @@ class CodexRecordsTest(unittest.TestCase):
 
     def test_call_line_from_spawn_tool(self):
         inp = fixture('hook-pre-tool-use-spawn-agent.json')
-        inp['tool_input'] = dict(inp['tool_input'], agent_type='my_agent_coder',
+        inp['tool_input'] = dict(inp['tool_input'], agent_type='my-agent-coder',
                                  message='Work unit: u3 Make it\nbody')
         self.hook('subagent-log.py', 'call', inp)
         f = self.last()
@@ -57,6 +57,27 @@ class CodexRecordsTest(unittest.TestCase):
         task2 = make_task(self.root / 'proj2', session=SESSION)
         run_hook('subagent-log.py', 'call', claude, self.root / 'proj2', env=dict(self.env, MA_HOST='claude'))
         self.assertEqual(set(parse(log_lines(task2)[-1])), set(f))
+
+    def test_call_line_carries_model_and_effort(self):
+        inp = fixture('hook-pre-tool-use-spawn-agent.json')
+        inp['tool_input'] = dict(inp['tool_input'], agent_type='my-agent-coder', message='Work unit: u3 Make it',
+                                 model='gpt-6-luna', reasoning_effort='medium')
+        self.hook('subagent-log.py', 'call', inp)
+        f = self.last()
+        self.assertEqual((f['agent'], f['model'], f['effort']), ('my-agent:coder', 'gpt-6-luna', 'medium'))
+        inp['tool_input'] = {k: v for k, v in inp['tool_input'].items() if k not in ('model', 'reasoning_effort')}
+        self.hook('subagent-log.py', 'call', inp)
+        f = self.last()
+        self.assertEqual((f['model'], f['effort']), ('-', '-'))
+
+    def test_start_takes_configured_from_the_call(self):
+        inp = fixture('hook-pre-tool-use-spawn-agent.json')
+        inp['tool_input'] = dict(inp['tool_input'], agent_type='my-agent-coder', message='x',
+                                 model='gpt-6-luna', reasoning_effort='medium')
+        self.hook('subagent-log.py', 'call', inp)
+        self.hook('subagent-log.py', 'start', fixture('hook-subagent-start-worker-a.json'))
+        f = self.last()
+        self.assertEqual((f['configured'], f['effort']), ('gpt-6-luna', 'medium'))
 
     def test_non_my_agent_spawn_is_not_recorded(self):
         self.hook('subagent-log.py', 'call', fixture('hook-pre-tool-use-spawn-agent.json'))
@@ -75,6 +96,10 @@ class CodexRecordsTest(unittest.TestCase):
         for key in ('actual', 'tokens', 'in', 'out', 'cw', 'cr', 'secs', 'end', 'mode', 'effort'):
             self.assertIn(key, f)
 
+    def test_start_line_maps_hyphen_name(self):
+        self.hook('subagent-log.py', 'start', fixture('hook-subagent-start-worker-a.json'))
+        self.assertEqual(self.last()['agent'], 'my-agent:coder')
+
     def test_stop_reads_tokens_from_codex_record(self):
         rec = self.root / 'sub.jsonl'
         rec.write_text('\n'.join(json.dumps(e) for e in [
@@ -92,7 +117,7 @@ class CodexRecordsTest(unittest.TestCase):
 
     def test_permission_ask_and_answer(self):
         base = fixture('hook-pre-tool-use-worker-bash.json', hook_event_name='PermissionRequest')
-        self.assertEqual(base['agent_type'], 'my_agent_coder')
+        self.assertEqual(base['agent_type'], 'my-agent-coder')
         self.hook('permission-log.py', 'ask', base)
         f = self.last()
         self.assertEqual((f['gate'], f['agent'], f['id'], f['tool'], f['session']),

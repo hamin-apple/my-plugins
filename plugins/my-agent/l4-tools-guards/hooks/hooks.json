@@ -46,7 +46,7 @@
     ],
     "SubagentStart": [
       {
-        "matcher": "^my-agent:|^my_agent_",
+        "matcher": "^my-agent:|^my-agent-",
         "hooks": [
           {
             "type": "command",
@@ -58,7 +58,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "^my-agent:|^my_agent_",
+        "matcher": "^my-agent:|^my-agent-",
         "hooks": [
           {
             "type": "command",

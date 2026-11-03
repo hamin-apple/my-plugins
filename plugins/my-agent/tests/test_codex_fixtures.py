@@ -135,7 +135,7 @@ class CodexSubagentFixtures(unittest.TestCase):
         for start, stop in ((start_a, stop_a), (start_b, stop_b)):
             self.assertEqual(start['agent_id'], stop['agent_id'])
             self.assertEqual(start['agent_type'], stop['agent_type'])
-            self.assertRegex(start['agent_type'], r'^my_agent_[a-z0-9_]+$')
+            self.assertRegex(start['agent_type'], r'^my-agent-[a-z-]+$')
         # session_id is shared by main and workers, so it is not the link
         self.assertEqual(start_a['session_id'], start_b['session_id'])
         for name in ('hook-pre-tool-use-worker-bash.json', 'hook-pre-tool-use-worker-file-change.json'):

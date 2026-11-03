@@ -1,9 +1,9 @@
 {"type": "session_meta", "payload": {"id": "sess4444-dddd"}}
 {"type": "response_item", "payload": {"type": "function_call", "name": "spawn_agent", "arguments": "{\"agent_type\": \"worker\", \"message\": \"secret task prose\"}", "call_id": "c1"}}
 {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "c1", "output": "{\"agent_id\": \"a1\", \"nickname\": \"x\"}"}}
-{"type": "response_item", "payload": {"type": "function_call", "name": "collaborationspawn_agent", "arguments": "{\"agent_type\": \"my_agent_coder\", \"message\": \"secret task prose\"}", "call_id": "c2"}}
-{"type": "response_item", "payload": {"type": "function_call_output", "call_id": "c2", "output": "unknown agent_type my_agent_coder\nsecond line"}}
-{"type": "response_item", "payload": {"type": "function_call", "name": "spawn_agent", "arguments": "{\"agent_type\": \"my_agent_coder\", \"message\": \"secret task prose\"}", "call_id": "c3"}}
+{"type": "response_item", "payload": {"type": "function_call", "name": "collaborationspawn_agent", "arguments": "{\"agent_type\": \"my-agent-coder\", \"message\": \"secret task prose\"}", "call_id": "c2"}}
+{"type": "response_item", "payload": {"type": "function_call_output", "call_id": "c2", "output": "unknown agent_type my-agent-coder\nsecond line"}}
+{"type": "response_item", "payload": {"type": "function_call", "name": "spawn_agent", "arguments": "{\"agent_type\": \"my-agent-coder\", \"message\": \"secret task prose\"}", "call_id": "c3"}}
 {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "c3", "output": "{\"agent_id\": \"a3\"}"}}
 {"type": "response_item", "payload": {"type": "function_call", "name": "shell", "arguments": "{\"cmd\": \"ls\"}", "call_id": "c4"}}
 {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "c4", "output": "fine"}}

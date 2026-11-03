@@ -47,7 +47,7 @@ class Base(unittest.TestCase):
     def run_it(self, script, payload):
         return run_hook(script, None, payload, self.L, env=self.env)
 
-    def worker_file(self, text, agent='my_agent_coder'):
+    def worker_file(self, text, agent='my-agent-coder'):
         d = fixture('hook-pre-tool-use-worker-file-change.json', agent_type=agent)
         d['tool_input'] = {'command': text}
         return d
@@ -93,22 +93,30 @@ class ScopeGuardCodexTest(Base):
         self.assertEqual(len(self.guard_lines()), 1)
 
     def test_read_only_roles_and_secrets(self):
-        r = self.scope(self.worker_file(patch('*** Add File: src/new.txt', '+x'), agent='my_agent_explorer'))
+        r = self.scope(self.worker_file(patch('*** Add File: src/new.txt', '+x'), agent='my-agent-explorer'))
         self.assertEqual(r.returncode, 2)
         r = self.scope(self.worker_file(patch('*** Add File: src/.env', '+x')))
         self.assertEqual(r.returncode, 2)
 
     def test_role_with_hyphen_maps(self):
-        r = self.scope(self.worker_file(patch(f'*** Add File: {self.T}/plan-review.md', '+x'), agent='my_agent_plan_reviewer'))
+        r = self.scope(self.worker_file(patch(f'*** Add File: {self.T}/plan-review.md', '+x'), agent='my-agent-plan-reviewer'))
         self.assertEqual((r.returncode, r.stdout), (0, ''), r.stderr)
-        r = self.scope(self.worker_file(patch(f'*** Add File: {self.T}/plan.md', '+x'), agent='my_agent_plan_reviewer'))
+        r = self.scope(self.worker_file(patch(f'*** Add File: {self.T}/plan.md', '+x'), agent='my-agent-plan-reviewer'))
+        self.assertEqual(r.returncode, 2)
+
+    def test_claude_input_with_my_agent_dash_passes(self):
+        r = self.scope({'tool_name': 'Bash', 'tool_input': {'command': 'ls plugins/my-agent-tray'}, 'cwd': str(self.L)})
+        self.assertEqual((r.returncode, r.stdout), (0, ''), r.stderr)
+
+    def test_explorer_patch_outside_scope_is_denied(self):
+        r = self.scope(self.worker_file(patch('*** Add File: src/new.txt', '+x'), agent='my-agent-explorer'))
         self.assertEqual(r.returncode, 2)
 
     def test_fail_closed(self):
         bad = [
-            'my_agent_ not json',
-            json.dumps({'agent_type': 'my_agent_coder', 'tool_name': 'Bash'}),
-            json.dumps({'agent_type': 'my_agent_coder', 'tool_name': 'apply_patch', 'tool_input': {}}),
+            'my-agent- not json',
+            json.dumps({'agent_type': 'my-agent-coder', 'tool_name': 'Bash'}),
+            json.dumps({'agent_type': 'my-agent-coder', 'tool_name': 'apply_patch', 'tool_input': {}}),
             json.dumps(self.worker_file('no patch here')),
             json.dumps(self.worker_file(patch('+names no target'))),
             json.dumps(self.worker_file(patch('*** Add File: '))),
@@ -142,8 +150,8 @@ class PlanApprovedCodexTest(Base):
         return d
 
     def test_spawn_before_approval(self):
-        for agent, want in (('my_agent_coder', 'deny'), ('default', 'deny'), ('my_agent_explorer', None),
-                            ('my_agent_plan_reviewer', None)):
+        for agent, want in (('my-agent-coder', 'deny'), ('default', 'deny'), ('my-agent-explorer', None),
+                            ('my-agent-plan-reviewer', None)):
             with self.subTest(agent=agent):
                 self.assertEqual(decision(self.gate(self.spawn(agent))), (0, want))
         self.assertEqual(len(self.guard_lines()), 2)
@@ -167,7 +175,7 @@ class PlanApprovedCodexTest(Base):
     def test_worker_call_and_other_session_pass(self):
         r = self.gate(fixture('hook-pre-tool-use-worker-bash.json', tool_input={'command': 'echo x > /etc/y'}))
         self.assertEqual((r.returncode, r.stdout), (0, ''))
-        r = self.gate(dict(self.spawn('my_agent_coder'), session_id='019a0000-0000-7000-8000-0000000000ff'))
+        r = self.gate(dict(self.spawn('my-agent-coder'), session_id='019a0000-0000-7000-8000-0000000000ff'))
         self.assertEqual((r.returncode, r.stdout), (0, ''))
         r = self.gate(dict(self.main_file(patch('*** Add File: src/x.py', '+x')), session_id='other'))
         self.assertEqual((r.returncode, r.stdout), (0, ''))

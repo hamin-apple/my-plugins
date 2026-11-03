@@ -41,12 +41,25 @@ class CodexBuild(unittest.TestCase):
         names = [tomllib.loads(f.read_text())['name'] for f in files]
         self.assertEqual(len(set(names)), 9)
         for n in names:
-            self.assertRegex(n, r'^my_agent_[a-z0-9_]+$')
+            self.assertRegex(n, r'^my-agent-[a-z-]+$')
+
+    def test_write_removes_stray_agent_file(self):
+        tmp = copy_tree()
+        try:
+            stray = tmp / 'codex/agents/old.toml'
+            stray.write_text('name = "old"\n')
+            self.assertEqual(run('--check', root=tmp).returncode, 1)
+            self.assertEqual(run('--write', root=tmp).returncode, 0)
+            self.assertFalse(stray.exists())
+            self.assertEqual(run('--check', root=tmp).returncode, 0)
+            self.assertEqual(len(list((tmp / 'codex/agents').glob('*.toml'))), 9)
+        finally:
+            shutil.rmtree(tmp)
 
     def test_body_verbatim_and_no_unread_keys(self):
         src = (REPO / 'l3-workers/agents/coder.md').read_text()
         body = src.split('\n---\n', 1)[1]
-        d = tomllib.loads((REPO / 'codex/agents/my_agent_coder.toml').read_text())
+        d = tomllib.loads((REPO / 'codex/agents/my-agent-coder.toml').read_text())
         self.assertEqual(d['developer_instructions'], body)
         self.assertEqual(set(d), {'name', 'description', 'developer_instructions'})
 
@@ -63,7 +76,7 @@ class CodexBuild(unittest.TestCase):
             p.write_text(p.read_text() + '\nextra line\n')
             r = run('--check', root=tmp)
             self.assertEqual(r.returncode, 1)
-            self.assertIn('my_agent_coder.toml', r.stdout + r.stderr)
+            self.assertIn('my-agent-coder.toml', r.stdout + r.stderr)
         finally:
             shutil.rmtree(tmp)
 

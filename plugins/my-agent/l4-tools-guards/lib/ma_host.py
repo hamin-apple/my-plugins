@@ -11,8 +11,8 @@ turned into the same shape:
   architect's plan.md checks see what the hunk changes. The caller denies the call if any of them is denied. A patch
   whose targets cannot be read raises.
 - The spawn tool `collaborationspawn_agent` becomes `Agent` with `subagent_type` from its `agent_type`.
-- Codex agent names `my_agent_<role>` (Codex allows only `[a-z0-9_]`) map to `my-agent:<role>` in `agent_type` and in
-  `subagent_type`. The identity of a subagent call is its own `agent_id`/`agent_type` (identity findings: Outcome I).
+- Codex agent names `my-agent-<role>` (the installed agent files of `codex/agents/`) map to `my-agent:<role>` in
+  `agent_type` and in `subagent_type`. The identity of a subagent call is its own `agent_id`/`agent_type` (identity findings: Outcome I).
 
 A Codex input with a missing or differently shaped field raises, so the scripts' fail-closed path runs (exit 2).
 `emit()` writes the decision in the host's form: JSON on stdout as in Claude, except for a deny or ask on the Codex
@@ -30,7 +30,7 @@ from typing import NamedTuple, Optional
 import ma_schema
 
 CLAUDE_PREFIX = 'my-agent:'
-CODEX_PREFIX = 'my_agent_'
+CODEX_PREFIX = 'my-agent-'
 FILE_TOOL = 'apply_patch'
 SPAWN_TOOL = 'collaborationspawn_agent'
 CODEX_TOOLS = (FILE_TOOL, SPAWN_TOOL)
@@ -47,16 +47,16 @@ class Call(NamedTuple):
 
 
 def claude_agent(name: str) -> str:
-    """`my_agent_plan_reviewer` -> `my-agent:plan-reviewer`; any other name unchanged."""
+    """`my-agent-plan-reviewer` -> `my-agent:plan-reviewer`; any other name unchanged."""
     if isinstance(name, str) and name.startswith(CODEX_PREFIX) and len(name) > len(CODEX_PREFIX):
-        return CLAUDE_PREFIX + name[len(CODEX_PREFIX):].replace('_', '-')
+        return CLAUDE_PREFIX + name[len(CODEX_PREFIX):]
     return name
 
 
 def codex_agent(name: str) -> str:
-    """`my-agent:plan-reviewer` -> `my_agent_plan_reviewer`; any other name unchanged."""
+    """`my-agent:plan-reviewer` -> `my-agent-plan-reviewer`; any other name unchanged."""
     if isinstance(name, str) and name.startswith(CLAUDE_PREFIX):
-        return CODEX_PREFIX + name[len(CLAUDE_PREFIX):].replace('-', '_')
+        return CODEX_PREFIX + name[len(CLAUDE_PREFIX):]
     return name
 
 
@@ -118,6 +118,13 @@ def patch_calls(text: str) -> list:
     return out
 
 
+def _spawn_models(ti: dict) -> dict:
+    """`model` and `effort` of the Claude-shaped Agent input, from the spawn input's `model` and `reasoning_effort`
+    (only those given as text)."""
+    return {k: ti[src] for k, src in (('model', 'model'), ('effort', 'reasoning_effort'))
+            if isinstance(ti.get(src), str) and ti[src]}
+
+
 def _adapt(inp: dict) -> Call:
     ti = inp.get('tool_input')
     tool = inp.get('tool_name')
@@ -136,8 +143,9 @@ def _adapt(inp: dict) -> Call:
         if not isinstance(agent, str) or not agent or not isinstance(message, str):
             raise ValueError('spawn input has no agent_type text')
         return Call('codex', [dict(base, tool_name='Agent',
-                                   tool_input={'subagent_type': claude_agent(agent), 'prompt': message,
-                                               'description': ti.get('task_name', '')})], False)
+                                   tool_input=dict({'subagent_type': claude_agent(agent), 'prompt': message,
+                                                    'description': ti.get('task_name', '')},
+                                                   **_spawn_models(ti)))], False)
     if tool == 'Bash' and not isinstance(ti.get('command'), str):
         raise ValueError('Bash input has no command text')
     return Call('codex', [dict(base, tool_input=ti)], False)
@@ -351,7 +359,7 @@ def health_message(problems) -> str:
 
 def record_input(inp):
     """Claude-shaped copy of a record hook's input (`call`, `start`, `stop`, `ask`, `answer`, SessionStart). On
-    Codex the hook is marked, `my_agent_<role>` becomes `my-agent:<role>` and the spawn tool `collaborationspawn_agent`
+    Codex the hook is marked, `my-agent-<role>` becomes `my-agent:<role>` and the spawn tool `collaborationspawn_agent`
     becomes `Agent`; Claude input is returned as it is."""
     if not isinstance(inp, dict) or hook_host(inp) != 'codex':
         return inp
@@ -365,7 +373,7 @@ def record_input(inp):
         out.update(tool_name='Agent', tool_input={
             'subagent_type': claude_agent(agent) if isinstance(agent, str) else '',
             'prompt': ti.get('message') if isinstance(ti.get('message'), str) else '',
-            'description': ti.get('task_name', '')})
+            'description': ti.get('task_name', ''), **_spawn_models(ti)})
     return out
 
 

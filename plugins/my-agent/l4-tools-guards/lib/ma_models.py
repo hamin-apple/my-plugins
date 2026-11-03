@@ -3,6 +3,11 @@
 File shape: {"<profile>": {"<preset>": {"<agent>": {"model": ..., "effort": ...}}}}. Both keys of an agent entry are
 optional; a missing key (or a missing agent) keeps the definition value. A missing, empty or `{}` file means "no file".
 The main session (L1) has no entry: it stays opus.
+
+An optional top-level key `"codex"` holds the presets of the Codex host with the same nesting:
+{"codex": {"<profile>": {"<preset>": {"<agent>": {"model": <one of CODEX_MODELS>, "effort": ...}}}}}. On Codex the
+installed agent files carry no model or effort, so the "definition" is `-` (Codex chooses) and `pass=` lists the
+fields an entry sets. The Claude host ignores the section.
 """
 import json
 import re
@@ -14,6 +19,8 @@ FILE_NAME = 'agent-models.json'
 PROFILES = ('general', 'research', 'dev')
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 MODELS = ('opus', 'sonnet', 'haiku', 'fable')   # the families of ma_schema.FAMILY
+CODEX_MODELS = ('gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna')   # the ids the spawn tool lists
+CODEX_KEY = 'codex'
 STANDARD = 'standard'
 KEYS = ('model', 'effort')
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
@@ -47,11 +54,16 @@ def definitions(root=None) -> dict:
     return out
 
 
-def _check_entry(where, entry):
+def codex_definitions(defs) -> dict:
+    """`defs` with the Codex no-argument values (`-`, `-`): the installed agent files set no model or effort."""
+    return {a: dict(d, model='-', effort='-') for a, d in defs.items()}
+
+
+def _check_entry(where, entry, models=MODELS):
     if not isinstance(entry, dict):
         raise ModelsError(f'{where}: agent entry is not a dictionary')
-    if 'model' in entry and entry['model'] not in MODELS:
-        raise ModelsError(f'{where}: unknown model "{entry["model"]}" (one of: {", ".join(MODELS)})')
+    if 'model' in entry and entry['model'] not in models:
+        raise ModelsError(f'{where}: unknown model "{entry["model"]}" (one of: {", ".join(models)})')
     if 'effort' in entry and entry['effort'] not in EFFORTS:
         raise ModelsError(f'{where}: unknown effort "{entry["effort"]}" (one of: {", ".join(EFFORTS)})')
 
@@ -62,6 +74,9 @@ def validate(data, agents=None) -> dict:
     if not isinstance(data, dict):
         raise ModelsError('the file is not a JSON object')
     for profile, presets in data.items():
+        if profile == CODEX_KEY:
+            _validate_codex(presets, agents)
+            continue
         if profile not in PROFILES:
             raise ModelsError(f'unknown profile "{profile}" (profiles: {", ".join(PROFILES)})')
         if not isinstance(presets, dict):
@@ -77,6 +92,31 @@ def validate(data, agents=None) -> dict:
                     raise ModelsError(f'{profile}/{preset}: unknown agent "{agent}"')
                 _check_entry(f'{profile}/{preset}/{agent}', entry)
     return data
+
+
+def _validate_codex(section, agents):
+    if not isinstance(section, dict):
+        raise ModelsError(f'{CODEX_KEY}: section is not a dictionary')
+    for profile, presets in section.items():
+        if profile not in PROFILES:
+            raise ModelsError(f'{CODEX_KEY}: unknown profile "{profile}" (profiles: {", ".join(PROFILES)})')
+        if not isinstance(presets, dict):
+            raise ModelsError(f'{CODEX_KEY}/{profile}: profile is not a dictionary')
+        for preset, entries in presets.items():
+            if not isinstance(entries, dict):
+                raise ModelsError(f'{CODEX_KEY}/{profile}/{preset}: preset is not a dictionary')
+            for agent, entry in entries.items():
+                if agent == 'main':
+                    raise ModelsError(f'{CODEX_KEY}/{profile}/{preset}: unknown agent "main" '
+                                      '(the main session has no entry)')
+                if agent not in agents:
+                    raise ModelsError(f'{CODEX_KEY}/{profile}/{preset}: unknown agent "{agent}"')
+                _check_entry(f'{CODEX_KEY}/{profile}/{preset}/{agent}', entry, CODEX_MODELS)
+
+
+def codex_section(data) -> dict:
+    """The `codex` section of the loaded file ({} when there is none)."""
+    return (data or {}).get(CODEX_KEY) or {}
 
 
 def load(data_dir, agents=None):
@@ -147,10 +187,11 @@ def summary(defs, values) -> str:
     return ', '.join(parts)
 
 
-def parse_plan(text, defs) -> tuple:
+def parse_plan(text, defs, codex=False) -> tuple:
     """(preset name, {agent: (model, effort)}) from the `## Models` section of a plan.md. A model or effort cell
     that is empty or `-` keeps the definition value, as does an agent missing from the table.
-    Raises ModelsError when the section, the `Preset:` line or a value is not usable."""
+    Raises ModelsError when the section, the `Preset:` line or a value is not usable. `codex`: the model cells are
+    Codex models (`defs` then holds the `-` no-argument values)."""
     lines = ma_schema.section_lines(text, 'Models')
     if lines is None:
         raise ModelsError('plan.md has no ## Models section')
@@ -173,7 +214,7 @@ def parse_plan(text, defs) -> tuple:
         if agent not in defs:
             raise ModelsError(f'plan.md ## Models: unknown agent "{agent}"')
         entry = {k: v for k, v in (('model', model), ('effort', effort)) if v not in ('', '-')}
-        _check_entry(f'plan.md ## Models/{agent}', entry)
+        _check_entry(f'plan.md ## Models/{agent}', entry, CODEX_MODELS if codex else MODELS)
         entries[agent] = entry
     if name is None:
         raise ModelsError('plan.md ## Models has no "Preset:" line')

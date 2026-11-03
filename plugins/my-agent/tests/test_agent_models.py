@@ -43,8 +43,8 @@ class AgentModelsTest(unittest.TestCase):
     def use_example(self):
         self.file.write_text(EXAMPLE.read_text(encoding='utf-8'), encoding='utf-8')
 
-    def run_cli(self, *args):
-        return run_script(SCRIPT, *args, '--data-dir', str(self.data), drop=('MA_TASKS_DIR',))
+    def run_cli(self, *args, host='claude'):
+        return run_script(SCRIPT, *args, '--data-dir', str(self.data), env={'MA_HOST': host}, drop=('MA_TASKS_DIR',))
 
     def show(self, profile, preset):
         r = self.run_cli('show', '--profile', profile, '--preset', preset)
@@ -197,11 +197,123 @@ class AgentModelsTest(unittest.TestCase):
 
     def test_example_file_loads(self):
         data = json.loads(EXAMPLE.read_text(encoding='utf-8'))
-        self.assertEqual(list(data), ['general', 'research', 'dev'])
-        for profile in data.values():
+        self.assertEqual(list(data), ['general', 'research', 'dev', 'codex'])
+        for profile in (data[k] for k in ('general', 'research', 'dev')):
             self.assertEqual(list(profile), ['standard', 'economy', 'max'])
             self.assertEqual(list(profile['standard']), list(AGENTS))
         ma_models.validate(data)   # raises ModelsError on a bad file
+
+    # --- Codex host: the `codex` section of the file ---
+
+    def codex(self, *args):
+        return self.run_cli(*args, host='codex')
+
+    def codex_show(self, profile, preset):
+        r = self.codex('show', '--profile', profile, '--preset', preset)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stderr, '')
+        return r.stdout
+
+    def test_codex_show_with_example_file(self):
+        self.use_example()
+        self.assertEqual(self.codex_show('dev', 'standard'), (
+            f'preset: dev/standard (file {self.file}, codex section)\n'
+            'architect      model=-          effort=high    pass=effort\n'
+            'plan-reviewer  model=gpt-6-luna effort=high    pass=model,effort\n'
+            'verifier       model=-          effort=high    pass=effort\n'
+            'reviewer       model=gpt-6-luna effort=high    pass=model,effort\n'
+            'gate-analyst   model=gpt-6-luna effort=high    pass=model,effort\n'
+            'explorer       model=gpt-6-luna effort=low     pass=model,effort\n'
+            'researcher     model=gpt-6-luna effort=medium  pass=model,effort\n'
+            'writer         model=gpt-6-luna effort=medium  pass=model,effort\n'
+            'coder          model=gpt-6-luna effort=medium  pass=model,effort\n'))
+
+    def test_codex_without_section_is_no_override(self):
+        for content in (None, '{}', {'dev': {'standard': {'coder': {'effort': 'low'}}}}):
+            with self.subTest(content=content):
+                if content is None:
+                    self.file.unlink(missing_ok=True)
+                else:
+                    self.write(content)
+                header, got = rows(self.codex_show('dev', 'standard'))
+                self.assertEqual(header, 'preset: dev/standard (no codex section: no override)')
+                self.assertEqual(list(got), list(AGENTS))
+                self.assertEqual(set(got.values()), {('-', '-', '-')})
+        r = self.codex('show', '--profile', 'dev', '--preset', 'fast')
+        self.assertRejected(r, 'dev has no preset "fast" (presets: none)')
+        self.assertEqual(self.codex('presets', '--profile', 'dev').stdout, 'none\n')
+
+    def test_codex_rejects_unknown_models_and_efforts(self):
+        cases = [
+            ('gpt-9', 'codex/dev/economy/coder: unknown model "gpt-9" (one of: gpt-6-luna, gpt-5.6-terra, gpt-5.6-luna)'),
+            ('codex-auto-review', 'codex/dev/economy/coder: unknown model "codex-auto-review"'),
+            ('sonnet', 'codex/dev/economy/coder: unknown model "sonnet"'),
+        ]
+        for model, cause in cases:
+            with self.subTest(model=model):
+                self.write({'codex': {'dev': {'economy': {'coder': {'model': model}}}}})
+                for host in ('codex', 'claude'):
+                    self.assertRejected(self.run_cli('show', '--profile', 'dev', '--preset', 'standard', host=host), cause)
+        self.write({'codex': {'dev': {'economy': {'coder': {'effort': 'ultra'}}}}})
+        self.assertRejected(self.codex('presets', '--profile', 'dev'), 'codex/dev/economy/coder: unknown effort "ultra"')
+        self.write({'codex': {'devv': {}}})
+        self.assertRejected(self.codex('presets', '--profile', 'dev'), 'codex: unknown profile "devv"')
+        self.write({'codex': {'dev': {'economy': {'codr': {}}}}})
+        self.assertRejected(self.codex('presets', '--profile', 'dev'), 'codex/dev/economy: unknown agent "codr"')
+
+    def test_claude_output_ignores_codex_section(self):
+        self.use_example()
+        with_section = json.loads(self.file.read_text(encoding='utf-8'))
+        self.assertIn('codex', with_section)
+        outs = {}
+        for key, data in (('with', with_section), ('without', {k: v for k, v in with_section.items() if k != 'codex'})):
+            self.write(data)
+            outs[key] = [self.run_cli(*a).stdout for a in (
+                ('show', '--profile', 'dev', '--preset', 'standard'), ('show', '--profile', 'general', '--preset', 'max'),
+                ('presets', '--profile', 'dev'), ('presets', '--profile', 'research'))]
+        self.assertEqual(outs['with'], outs['without'])
+        self.assertTrue(all(outs['with']))
+
+    def test_codex_show_plan(self):
+        head = '## Models\n\nPreset: economy\n\n| Agent | Model | Effort | Note |\n|---|---|---|---|\n'
+        p = self.plan(head + '| coder | gpt-6-luna | low | |\n| architect | - | high | |\n')
+        r = self.codex('show', '--plan', str(p))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        header, got = rows(r.stdout)
+        self.assertEqual(header, 'preset: economy (plan.md ## Models)')
+        self.assertEqual(got['coder'], ('gpt-6-luna', 'low', 'model,effort'))
+        self.assertEqual(got['architect'], ('-', 'high', 'effort'))
+        self.assertEqual(got['verifier'], ('-', '-', '-'))
+        r = self.codex('show', '--plan', str(self.plan(head + '| coder | sonnet | low | |\n')))
+        self.assertRejected(r, 'unknown model "sonnet" (one of: gpt-6-luna, gpt-5.6-terra, gpt-5.6-luna)')
+
+    def test_codex_presets(self):
+        self.use_example()
+        r = self.codex('presets', '--profile', 'dev')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual([x.split(':')[0] for x in lines], ['standard', 'economy', 'max'])
+        self.assertTrue(all(': ' in x for x in lines), lines)
+        self.write({'codex': {'dev': {'lean': {'coder': {'model': 'gpt-5.6-terra'}}}}, 'dev': {'x': {}}})
+        self.assertEqual(self.codex('presets', '--profile', 'dev').stdout, 'lean: coder gpt-5.6-terra/-\n')
+        self.assertEqual(self.codex('presets', '--profile', 'general').stdout, 'none\n')
+
+    def test_example_codex_section_follows_the_rule(self):
+        data = json.loads(EXAMPLE.read_text(encoding='utf-8'))
+        section = data['codex']
+        self.assertEqual(list(section), ['general', 'research', 'dev'])
+        for profile, presets in data.items():
+            if profile == 'codex':
+                continue
+            self.assertEqual(list(section[profile]), list(presets), profile)
+            for preset, entries in presets.items():
+                got = section[profile][preset]
+                self.assertEqual(list(got), list(AGENTS), f'{profile}/{preset}')
+                for agent in AGENTS:
+                    model, effort = ma_models.merge(
+                        {a: {'model': m, 'effort': e} for a, (m, e) in DEFINITION.items()}, entries)[agent]
+                    want = {'effort': effort} if model == 'opus' else {'model': 'gpt-6-luna', 'effort': effort}
+                    self.assertEqual(got[agent], want, f'{profile}/{preset}/{agent}')
 
 
 if __name__ == '__main__':

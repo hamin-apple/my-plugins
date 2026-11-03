@@ -6,8 +6,9 @@ scratchpad, the files listed under `## Reference files` in plan.md and, for the 
 reads only gate-tally.md and gate-report.md. Secret files and environment reads are checked first, so no added root
 reaches them.
 
-Runs in every session with the plugin on (F18), so anything whose input has no `my-agent:` agent_type exits 0 before
-the JSON is even parsed. For a my-agent agent: secrets are denied for everyone, reads must stay in the agent's read
+Runs in every session with the plugin on (F18), so an input that holds neither `my-agent:` nor `ma_host.CODEX_PREFIX`
+exits 0 before the JSON is even parsed; an input that holds only `my-agent-` is parsed and let through when it names no
+my-agent agent. For a my-agent agent: secrets are denied for everyone, reads must stay in the agent's read
 roots, writes in its write roots. The rules start from the agent's level (ma_schema.AGENTS): an L2 agent writes only
 its own file and its Bash only reads; an L3 agent writes nothing. Roles then widen or narrow that: the verifier and
 researcher may use the web, the researcher and writer write `work/` (writer also `prototype/`), the coder writes the

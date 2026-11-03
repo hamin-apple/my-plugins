@@ -5,124 +5,226 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>my-agent at a glance</title>
 <style>
-/* Tokens first. Layout: one 760px column; header, sticky tab bar, one panel at a time, closed Sources footer. */
+/* macOS content look (the my-mockup doc type): SF type with tight tracking, Apple system colors, filled cards,
+   grouped lists, pill buttons, .5px hairlines. Tokens first (light, then dark). Layout: top bar; hero, highlight
+   cards, gate split and the detail tabs in one 1120px column; install card; Sources footer. */
 :root {
-  --bg: #f1f3f1;
-  --surface: #fbfcfb;
-  --surface-2: #e6eae7;
-  --fg: #1b2224;
-  --muted: #566267;
-  --line: #c4cdc9;
-  --accent: #0e5a61;
-  --accent-fg: #ffffff;
-  --accent-soft: #d3e6e6;
-  --focus: #b4560a;
-  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif KR", AppleMyungjo, Georgia, serif;
-  --lv1-bg: #1b2224; --lv1-fg: #f1f3f1;
-  --lv2-bg: #0e5a61; --lv2-fg: #ffffff;
-  --lv3-bg: #d3e6e6; --lv3-fg: #0b3f44;
-  --lv4-bg: #e6eae7; --lv4-fg: #34403f;
-  --gate-a-bg: #dbe4f3; --gate-a-fg: #1d3763;
-  --gate-b-bg: #f6e0b8; --gate-b-fg: #5a3500;
-  --gate-g-bg: #d3ebd6; --gate-g-fg: #17481f;
-  --gate-r-bg: #f5d5d2; --gate-r-fg: #6d1a14;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "D2Coding", monospace;
+  --page: #ffffff;
+  --label: #1d1d1f;
+  --label-2: #6e6e73;
+  --label-3: #86868b;
+  --card: #f5f5f7;
+  --grouped: #f2f2f7;
+  --cell: #ffffff;
+  --seg-on: #ffffff;
+  --separator: rgba(60,60,67,.18);
+  --fill: rgba(120,120,128,.12);
+  --accent: #0066cc;
+  --accent-fill: #0071e3;
+  --tint: rgba(0,113,227,.11);
+  --bar: rgba(255,255,255,.82);
+  --shadow: 0 1px 3px rgba(0,0,0,.07), 0 0 0 .5px rgba(0,0,0,.06);
+  --float: 0 14px 36px rgba(0,0,0,.16), 0 0 0 .5px rgba(0,0,0,.06);
+  --vis-a: #e8f1ff; --vis-b: #f1e9ff;
+  --blue: #007aff; --orange: #ff9500; --green: #34c759; --purple: #af52de;
+  --lv1-bg: #1d1d1f; --lv1-fg: #ffffff;
+  --lv2-bg: #0071e3; --lv2-fg: #ffffff;
+  --lv3-bg: #dceafb; --lv3-fg: #0a4f9e;
+  --lv4-bg: #e8e8ed; --lv4-fg: #3a3a3c;
+  --gate-a-bg: rgba(0,122,255,.13); --gate-a-fg: #0a4f9e;
+  --gate-b-bg: rgba(255,149,0,.17); --gate-b-fg: #8a4b00;
+  --gate-g-bg: rgba(52,199,89,.16); --gate-g-fg: #1d6b32;
+  --gate-r-bg: rgba(255,59,48,.13); --gate-r-fg: #a4261d;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #121719;
-    --surface: #1a2123;
-    --surface-2: #232c2f;
-    --fg: #e3e8e6;
-    --muted: #96a3a6;
-    --line: #35413f;
-    --accent: #62c3c9;
-    --accent-fg: #0b2326;
-    --accent-soft: #1d3a3d;
-    --focus: #f0a35e;
-    --lv1-bg: #e3e8e6; --lv1-fg: #121719;
-    --lv2-bg: #62c3c9; --lv2-fg: #0b2326;
-    --lv3-bg: #1d3a3d; --lv3-fg: #b9e3e6;
-    --lv4-bg: #2a3437; --lv4-fg: #c4cfcf;
-    --gate-a-bg: #1f2e4a; --gate-a-fg: #bcd0f2;
-    --gate-b-bg: #4a3512; --gate-b-fg: #f3d9a4;
-    --gate-g-bg: #1c3a21; --gate-g-fg: #b8e3bd;
-    --gate-r-bg: #4a1f1b; --gate-r-fg: #f3beb9;
+    --page: #000000;
+    --label: #f5f5f7;
+    --label-2: #a1a1a6;
+    --label-3: #8d8d93;
+    --card: #1c1c1e;
+    --grouped: #1c1c1e;
+    --cell: #2c2c2e;
+    --seg-on: #636366;
+    --separator: rgba(84,84,88,.65);
+    --fill: rgba(118,118,128,.24);
+    --accent: #2997ff;
+    --accent-fill: #0a84ff;
+    --tint: rgba(10,132,255,.2);
+    --bar: rgba(0,0,0,.72);
+    --shadow: 0 0 0 .5px rgba(255,255,255,.1);
+    --float: 0 14px 36px rgba(0,0,0,.5), 0 0 0 .5px rgba(255,255,255,.12);
+    --vis-a: #0f1d33; --vis-b: #201632;
+    --blue: #0a84ff; --orange: #ff9f0a; --green: #30d158; --purple: #bf5af2;
+    --lv1-bg: #f5f5f7; --lv1-fg: #000000;
+    --lv2-bg: #0a84ff; --lv2-fg: #ffffff;
+    --lv3-bg: #10345c; --lv3-fg: #a9d1ff;
+    --lv4-bg: #3a3a3c; --lv4-fg: #e5e5ea;
+    --gate-a-bg: rgba(10,132,255,.24); --gate-a-fg: #a9d1ff;
+    --gate-b-bg: rgba(255,159,10,.22); --gate-b-fg: #ffc874;
+    --gate-g-bg: rgba(48,209,88,.2); --gate-g-fg: #8ae6a2;
+    --gate-r-bg: rgba(255,69,58,.22); --gate-r-fg: #ffa49d;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #121719;
-  --surface: #1a2123;
-  --surface-2: #232c2f;
-  --fg: #e3e8e6;
-  --muted: #96a3a6;
-  --line: #35413f;
-  --accent: #62c3c9;
-  --accent-fg: #0b2326;
-  --accent-soft: #1d3a3d;
-  --focus: #f0a35e;
-  --lv1-bg: #e3e8e6; --lv1-fg: #121719;
-  --lv2-bg: #62c3c9; --lv2-fg: #0b2326;
-  --lv3-bg: #1d3a3d; --lv3-fg: #b9e3e6;
-  --lv4-bg: #2a3437; --lv4-fg: #c4cfcf;
-  --gate-a-bg: #1f2e4a; --gate-a-fg: #bcd0f2;
-  --gate-b-bg: #4a3512; --gate-b-fg: #f3d9a4;
-  --gate-g-bg: #1c3a21; --gate-g-fg: #b8e3bd;
-  --gate-r-bg: #4a1f1b; --gate-r-fg: #f3beb9;
+  --page: #000000;
+  --label: #f5f5f7;
+  --label-2: #a1a1a6;
+  --label-3: #8d8d93;
+  --card: #1c1c1e;
+  --grouped: #1c1c1e;
+  --cell: #2c2c2e;
+  --seg-on: #636366;
+  --separator: rgba(84,84,88,.65);
+  --fill: rgba(118,118,128,.24);
+  --accent: #2997ff;
+  --accent-fill: #0a84ff;
+  --tint: rgba(10,132,255,.2);
+  --bar: rgba(0,0,0,.72);
+  --shadow: 0 0 0 .5px rgba(255,255,255,.1);
+  --float: 0 14px 36px rgba(0,0,0,.5), 0 0 0 .5px rgba(255,255,255,.12);
+  --vis-a: #0f1d33; --vis-b: #201632;
+  --blue: #0a84ff; --orange: #ff9f0a; --green: #30d158; --purple: #bf5af2;
+  --lv1-bg: #f5f5f7; --lv1-fg: #000000;
+  --lv2-bg: #0a84ff; --lv2-fg: #ffffff;
+  --lv3-bg: #10345c; --lv3-fg: #a9d1ff;
+  --lv4-bg: #3a3a3c; --lv4-fg: #e5e5ea;
+  --gate-a-bg: rgba(10,132,255,.24); --gate-a-fg: #a9d1ff;
+  --gate-b-bg: rgba(255,159,10,.22); --gate-b-fg: #ffc874;
+  --gate-g-bg: rgba(48,209,88,.2); --gate-g-fg: #8ae6a2;
+  --gate-r-bg: rgba(255,69,58,.22); --gate-r-fg: #ffa49d;
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; background: var(--page); }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", system-ui, sans-serif;
-  font-size: 15px;
-  line-height: 1.6;
-  padding-block: 20px 48px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  overflow-x: hidden;
+  margin: 0; background: var(--page); color: var(--label);
+  font-family: var(--font); font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
 }
-.wrap { max-width: 760px; margin: 0 auto; min-width: 0; }
-.mono, code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "D2Coding", monospace; }
-code { font-size: .9em; background: var(--surface-2); padding: 0 4px; border-radius: 2px; overflow-wrap: anywhere; }
+html[lang="ko"] body { word-break: keep-all; overflow-wrap: break-word; }
+.wrap {
+  max-width: 1200px; margin: 0 auto; min-width: 0;
+  padding-left: max(40px, env(safe-area-inset-left, 0px));
+  padding-right: max(40px, env(safe-area-inset-right, 0px));
+}
+.mono, code { font-family: var(--mono); }
+code { font-size: .86em; background: var(--fill); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
 button { font: inherit; color: inherit; cursor: pointer; }
-a { color: var(--accent); }
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent-fill) 55%, transparent); outline-offset: 2px; border-radius: 6px; }
 [hidden] { display: none !important; }
 p { margin: 0; }
+noscript p { max-width: 1120px; margin: 12px auto; padding: 12px 16px; background: var(--card); border-radius: 12px; }
 
-header { padding-bottom: 14px; }
-.title-row { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
-h1 { font-family: var(--display); font-size: 32px; line-height: 1.15; margin: 0; letter-spacing: -0.015em; font-weight: 700; }
-.ver { font-size: 12px; border: 1px solid var(--line); padding: 1px 8px; color: var(--muted); border-radius: 2px; }
-.lede { margin-top: 6px; color: var(--muted); overflow-wrap: anywhere; }
+/* top bar: translucent, hairline below */
+header.top { background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: .5px solid var(--separator); }
+header.top .wrap { min-height: 56px; display: flex; align-items: center; gap: 24px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; font-size: 19px; font-weight: 700; letter-spacing: -.02em; white-space: nowrap; }
+.ver { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--label-2); background: var(--fill); padding: 2px 8px; border-radius: 6px; }
+header.top nav { display: flex; align-items: center; gap: 22px; font-size: 14px; white-space: nowrap; }
+header.top nav a:not(.cta) { color: var(--label-2); }
+header.top nav a:not(.cta):hover { color: var(--label); text-decoration: none; }
 
-.tabbar {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
-  background: var(--bg);
-  border-bottom: 2px solid var(--fg);
-  display: flex; gap: 0; overflow-x: auto; scrollbar-width: none;
-  margin-bottom: 16px;
+/* pill buttons: filled accent, tinted secondary */
+.cta {
+  display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 20px; border-radius: 20px;
+  font-size: 15px; font-weight: 500; background: var(--accent-fill); color: #fff; white-space: nowrap;
 }
+.cta:hover { text-decoration: none; filter: brightness(1.06); }
+.cta.sm { height: 32px; padding: 0 14px; font-size: 13.5px; border-radius: 16px; }
+.cta.tint { background: var(--tint); color: var(--accent); }
+
+/* hero: copy left, key figures (grouped list) right */
+.hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: center; padding: 84px 0 72px; }
+.eyebrow { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: .01em; margin-bottom: 14px; }
+.hero h1 { margin: 0; font-size: 64px; line-height: 1.04; font-weight: 700; letter-spacing: -.04em; }
+html[lang="ko"] .hero h1 { font-size: 54px; line-height: 1.12; letter-spacing: -.035em; }
+.hero .lead { margin-top: 20px; font-size: 19px; line-height: 1.5; color: var(--label-2); max-width: 38ch; }
+html[lang="ko"] .hero .lead { max-width: 34em; font-size: 18px; }
+.hero .row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.hero .meta { margin-top: 20px; font-size: 13px; color: var(--label-3); overflow-wrap: anywhere; }
+
+.group { background: var(--grouped); border-radius: 16px; padding: 0 10px 10px; min-width: 0; }
+.group-h { display: flex; justify-content: space-between; gap: 12px; padding: 14px 10px 10px; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--label-2); }
+.cells { background: var(--cell); border-radius: 10px; overflow: hidden; }
+.cell { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 18px; }
+.cell + .cell { border-top: .5px solid var(--separator); }
+.cell .no { flex: 0 0 22px; font-size: 12px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+.cell .lab { flex: 1; min-width: 0; font-size: 16px; }
+.cell .lab small { display: block; font-size: 12.5px; color: var(--label-2); }
+.cell .val { font-size: 28px; font-weight: 600; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+
+/* section header */
+.sec { padding: 16px 0 72px; }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 24px; }
+.sec-h h2 { margin: 0; font-size: 36px; line-height: 1.12; font-weight: 700; letter-spacing: -.03em; }
+.sec-h > span { font-size: 15px; color: var(--label-2); }
+
+/* highlight cards: filled, rounded, colored icon tile (display:block, or it collapses) */
+.hl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.hl-card { display: flex; flex-direction: column; min-width: 0; background: var(--card); border-radius: 18px; padding: 26px 28px 22px; }
+.tile { display: block; position: relative; flex: 0 0 auto; width: 44px; height: 44px; border-radius: 11px; margin-bottom: 18px; }
+.tile svg { position: absolute; inset: 10px; width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hl-card h3 { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.02em; }
+.hl-card .sum { margin-top: 6px; font-size: 15px; color: var(--label-2); }
+.hl-card ul { list-style: none; margin: 16px 0 0; padding: 0; }
+.hl-card li { position: relative; padding: 10px 0 10px 20px; font-size: 14.5px; line-height: 1.5; border-top: .5px solid var(--separator); }
+.hl-card li::before { content: ""; position: absolute; left: 2px; top: 18px; width: 7px; height: 7px; border-radius: 50%; background: var(--dot, var(--accent-fill)); }
+.hl-card .src { margin-top: auto; padding-top: 14px; }
+
+/* split: CSS-drawn gate report and popup + copy */
+.split { display: grid; grid-template-columns: 7fr 5fr; gap: 56px; align-items: center; padding: 8px 0 88px; }
+.visual { display: flex; flex-direction: column; margin: 0; min-width: 0; border-radius: 18px; background: linear-gradient(135deg, var(--vis-a), var(--vis-b)); padding: 30px 30px 18px; }
+.chat { width: calc(100% - 48px); background: var(--cell); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px 24px; }
+.chat .who { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--label-2); }
+.chat h4 { margin: 14px 0 3px; font-size: 14.5px; font-weight: 700; }
+.chat p { font-size: 13.5px; line-height: 1.45; color: var(--label-2); }
+.kv { margin-top: 12px; border-radius: 9px; overflow: hidden; background: var(--grouped); }
+.kv div { display: flex; justify-content: space-between; gap: 14px; padding: 7px 12px; font-size: 13px; }
+.kv div + div { border-top: .5px solid var(--separator); }
+.kv b { font-weight: 500; color: var(--label-2); }
+.kv span { text-align: right; }
+.ask { align-self: flex-end; width: 330px; max-width: calc(100% - 24px); margin-top: -18px; background: var(--cell); border-radius: 14px; box-shadow: var(--float); padding: 16px 14px 12px; position: relative; }
+.ask .q { margin: 8px 4px 6px; font-size: 15px; font-weight: 600; }
+.opt { display: flex; align-items: flex-start; gap: 10px; margin-top: 4px; padding: 9px 10px; border-radius: 9px; font-size: 13.5px; line-height: 1.35; }
+.opt small { display: block; margin-top: 1px; font-size: 12px; color: var(--label-2); }
+.opt .k { display: grid; place-items: center; flex: 0 0 20px; height: 20px; border-radius: 6px; background: var(--fill); font-size: 11.5px; font-weight: 600; }
+.opt.on { background: var(--tint); }
+.opt.on .k { background: var(--accent-fill); color: #fff; }
+.visual figcaption { margin-top: 14px; font-size: 12px; color: var(--label-2); }
+.split .copy { min-width: 0; }
+.split h2 { margin: 0; font-size: 36px; line-height: 1.12; font-weight: 700; letter-spacing: -.03em; }
+.split .copy > p:not(.src) { margin-top: 14px; font-size: 17px; line-height: 1.55; color: var(--label-2); }
+.gates { margin: 22px 0 12px; background: var(--grouped); border-radius: 14px; padding: 6px; }
+.gates div { display: flex; align-items: baseline; gap: 12px; padding: 11px 12px; background: var(--cell); }
+.gates div:first-child { border-radius: 10px 10px 0 0; }
+.gates div:last-child { border-radius: 0 0 10px 10px; }
+.gates div + div { border-top: .5px solid var(--separator); }
+.gates .chip { flex: 0 0 auto; min-width: 38px; text-align: center; }
+.gates span:last-child { min-width: 0; font-size: 14.5px; }
+.gates small { display: block; font-size: 12.5px; color: var(--label-2); }
+
+/* detail: segmented tab control, one panel at a time */
+.detail { padding: 8px 0 72px; }
+.tabdock { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; margin: 0 0 22px; padding: 10px 0; background: var(--bar); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: .5px solid var(--separator); }
+.tabbar { display: inline-flex; gap: 2px; max-width: 100%; padding: 2px; border-radius: 9px; background: var(--fill); overflow-x: auto; scrollbar-width: none; vertical-align: top; }
 .tabbar::-webkit-scrollbar { display: none; }
-.tab {
-  flex: 0 0 auto; background: none; border: 0; padding: 10px 14px; font-weight: 600;
-  color: var(--muted); border-bottom: 4px solid transparent; margin-bottom: -2px; white-space: nowrap;
-}
-.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
-.tab:hover { color: var(--fg); }
+.tab { flex: 0 0 auto; min-height: 32px; padding: 5px 16px; border: 0; border-radius: 7px; background: none; color: var(--label); font-size: 13.5px; font-weight: 500; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04); font-weight: 600; }
+.tab:not([aria-selected="true"]):hover { background: color-mix(in srgb, var(--label) 6%, transparent); }
 
-h2 { font-family: var(--display); font-size: 24px; line-height: 1.25; letter-spacing: -0.01em; color: var(--fg); margin: 4px 0 14px; font-weight: 700; }
-h3.sub { font-family: var(--display); font-size: 18px; color: var(--fg); margin: 22px 0 8px; font-weight: 700; }
+[role="tabpanel"] { min-width: 0; }
+[role="tabpanel"] > h2 { margin: 2px 0 14px; font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: -.025em; }
+h3.sub { margin: 30px 0 10px; font-size: 19px; font-weight: 600; letter-spacing: -.015em; }
 
-.chip {
-  display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 0 7px;
-  border-radius: 2px; white-space: nowrap; vertical-align: 1px;
-}
+.chip { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; line-height: 1.5; white-space: nowrap; vertical-align: 1px; }
 .lv1 { background: var(--lv1-bg); color: var(--lv1-fg); }
 .lv2 { background: var(--lv2-bg); color: var(--lv2-fg); }
 .lv3 { background: var(--lv3-bg); color: var(--lv3-fg); }
@@ -131,121 +233,166 @@ h3.sub { font-family: var(--display); font-size: 18px; color: var(--fg); margin:
 .gb { background: var(--gate-b-bg); color: var(--gate-b-fg); }
 .gg { background: var(--gate-g-bg); color: var(--gate-g-fg); }
 .gr { background: var(--gate-r-bg); color: var(--gate-r-fg); }
-.kind { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 500; white-space: normal; }
-.axis-tag { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+.kind { background: var(--fill); color: var(--label-2); font-weight: 500; white-space: normal; }
+.axis-tag { background: var(--tint); color: var(--accent); }
 
-/* disclosure */
-.disc { margin-top: 10px; border-top: 1px solid var(--line); }
-.disc-btn {
-  width: 100%; text-align: left; background: none; border: 0; padding: 10px 0; display: flex; gap: 8px;
-  align-items: baseline; font-weight: 600;
-}
-.disc-btn .mark { display: inline-block; width: 1em; color: var(--accent); transition: transform .15s; flex: 0 0 auto; }
+/* disclosure rows */
+.disc { margin-top: 12px; }
+.disc-btn { display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 12px 0; border: 0; background: none; text-align: left; font-size: 15px; font-weight: 600; color: var(--label); }
+.disc-btn .mark { display: inline-block; flex: 0 0 auto; width: 1em; font-size: 14px; color: var(--label-3); transition: transform .2s; }
 .disc-btn[aria-expanded="true"] .mark { transform: rotate(90deg); }
 .disc-btn .lab { min-width: 0; }
-.disc-body { padding: 0 0 12px 1.4em; }
-.disc-body > * + * { margin-top: 8px; }
+.disc-body { padding: 0 0 16px 1.7em; max-width: 84ch; }
+.disc-body > * + * { margin-top: 10px; }
 .disc-body ul { margin: 0; padding-left: 1.1em; }
-.disc-body li + li { margin-top: 4px; }
-.src { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.disc-body li + li { margin-top: 5px; }
+#ov-note .disc-btn, #flow-note .disc-btn, #cmp-note .disc-btn { color: var(--accent); font-size: 14px; font-weight: 500; }
+.src { font-size: 12.5px; color: var(--label-2); overflow-wrap: anywhere; }
 .src b { font-weight: 600; }
-.card { background: var(--surface); border: 1px solid var(--line); padding: 4px 14px 6px; min-width: 0; }
-.card + .card { margin-top: 10px; }
-.card .disc { margin-top: 0; border-top: 0; }
-.note { color: var(--muted); font-size: 13px; margin-top: 8px; overflow-wrap: anywhere; }
-.intro { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.note { margin-top: 8px; font-size: 13px; color: var(--label-2); overflow-wrap: anywhere; }
+.intro { font-size: 15px; color: var(--label-2); overflow-wrap: anywhere; max-width: 84ch; }
+
+/* overview: the four levels as filled tiles, then one grouped list of items */
+.hero-h { max-width: 26em; }
+.levels { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 22px; padding: 0; }
+.levels li { min-width: 0; padding: 18px 18px 18px; border-radius: 16px; }
+.levels .code { display: block; margin-bottom: 10px; font-size: 30px; line-height: 1; font-weight: 700; letter-spacing: -.03em; }
+.levels b { display: block; font-size: 15px; font-weight: 600; }
+.levels .d { display: block; margin-top: 2px; font-size: 13px; opacity: .86; overflow-wrap: anywhere; }
+#ov-list { background: var(--card); border-radius: 16px; padding: 0 20px; }
+.card { min-width: 0; }
+.card + .card { border-top: .5px solid var(--separator); }
+.card .disc { margin-top: 0; }
+.card .disc-btn { padding: 15px 0; font-size: 16px; }
 
 /* small tables inside details */
-.mini-box { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); max-width: 100%; }
-table.mini { border-collapse: collapse; min-width: 560px; font-size: 13px; }
-table.mini th, table.mini td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; min-width: 90px; font-weight: 400; position: static; }
-table.mini th { background: var(--surface-2); font-weight: 700; }
+.mini-box { max-width: 100%; overflow-x: auto; border-radius: 12px; background: var(--cell); box-shadow: 0 0 0 .5px var(--separator); }
+table.mini { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13px; }
+table.mini th, table.mini td { min-width: 90px; padding: 8px 10px; border: 0; border-top: .5px solid var(--separator); text-align: left; vertical-align: top; font-weight: 400; position: static; }
+table.mini thead th { border-top: 0; background: var(--grouped); font-size: 12px; font-weight: 600; color: var(--label-2); }
 
 /* flow */
-.arrow-line { font-weight: 700; overflow-wrap: anywhere; }
-.track { display: flex; gap: 0; align-items: center; overflow-x: auto; padding: 8px 0 10px; scrollbar-width: thin; }
-.node {
-  flex: 0 0 auto; min-width: 44px; height: 44px; border: 2px solid var(--line); background: var(--surface);
-  font-weight: 700; display: grid; place-items: center; padding: 0 6px; border-radius: 50%; font-size: 13px;
-}
-.node.gate { border-radius: 2px; }
-.node.done { border-color: var(--accent); color: var(--accent); }
-.node[aria-current="step"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.link { flex: 0 0 12px; height: 2px; background: var(--line); }
-.link.done { background: var(--accent); }
-.step-card { background: var(--surface); border: 1px solid var(--line); padding: 14px; min-height: 150px; }
-.step-card .count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.step-card h3 { margin: 2px 0 6px; font-family: var(--display); font-size: 20px; }
-.nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; }
-.btn { background: var(--surface); border: 1px solid var(--fg); padding: 8px 16px; font-weight: 600; border-radius: 2px; min-height: 40px; }
-.btn.primary { background: var(--fg); color: var(--bg); }
-.btn:disabled { opacity: .4; cursor: default; }
+.arrow-line { margin-bottom: 4px; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.track { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 14px 4px 16px; scrollbar-width: thin; }
+.node { display: grid; place-items: center; flex: 0 0 auto; min-width: 44px; height: 44px; padding: 0 10px; border: 0; border-radius: 22px; background: var(--card); box-shadow: inset 0 0 0 1px var(--separator); color: var(--label); font-size: 13px; font-weight: 600; }
+.node.gate { border-radius: 12px; background: var(--gate-b-bg); color: var(--gate-b-fg); box-shadow: none; }
+.node.done { background: var(--tint); color: var(--accent); box-shadow: none; }
+.node[aria-current="step"] { background: var(--accent-fill); color: #fff; box-shadow: 0 0 0 4px var(--tint); }
+.link { flex: 0 0 14px; height: 2px; border-radius: 1px; background: var(--separator); }
+.link.done { background: var(--accent-fill); }
+.step-card { min-height: 170px; padding: 22px 24px; border-radius: 18px; background: var(--card); }
+.step-card .count { font-size: 12px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+.step-card h3 { margin: 4px 0 8px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.step-card p { max-width: 80ch; }
+.nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.btn { min-height: 36px; padding: 0 18px; border: 0; border-radius: 18px; background: var(--tint); color: var(--accent); font-size: 14px; font-weight: 500; }
+.btn.primary { background: var(--accent-fill); color: #fff; }
+.btn:disabled { opacity: .35; cursor: default; }
 
-/* accordions */
-.acc { border: 1px solid var(--line); background: var(--surface); }
-.acc + .acc { border-top: 0; }
-.acc-head { width: 100%; text-align: left; background: none; border: 0; padding: 12px 14px; display: flex; gap: 10px; align-items: baseline; font-weight: 700; }
-.acc-head .mark { color: var(--accent); flex: 0 0 1em; transition: transform .15s; }
+/* features: one filled card per theme */
+#acc-list { display: grid; gap: 12px; }
+.acc { overflow: hidden; border-radius: 16px; background: var(--card); }
+.acc-head { display: flex; align-items: baseline; gap: 12px; width: 100%; padding: 16px 20px; border: 0; background: none; text-align: left; font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--label); }
+.acc-head .mark { flex: 0 0 1em; font-size: 14px; color: var(--label-3); transition: transform .2s; }
 .acc-head[aria-expanded="true"] .mark { transform: rotate(90deg); }
-.acc-body { padding: 0 14px 12px 14px; }
-.feat { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
-.feat:first-child { border-top: 0; margin-top: 0; }
-.feat .ft { font-weight: 700; }
-.feat .fs { color: var(--muted); font-size: 14px; }
-.feat .disc { margin-top: 2px; border-top: 0; }
-.feat .disc-btn { padding: 4px 0; color: var(--accent); font-size: 14px; }
+.acc-body { padding: 0 20px 14px; }
+.feat { margin-top: 12px; padding-top: 12px; border-top: .5px solid var(--separator); }
+.feat:first-child { margin-top: 0; }
+.feat .ft { font-weight: 600; }
+.feat .fs { margin-top: 2px; font-size: 14px; color: var(--label-2); }
+.feat .disc { margin-top: 2px; }
+.feat .disc-btn { padding: 6px 0; font-size: 14px; font-weight: 500; color: var(--accent); }
 
 /* compare */
-.row-ctl { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
-.row-ctl .lbl { font-size: 12px; color: var(--muted); font-weight: 700; margin-right: 2px; }
-.pill { background: var(--surface); border: 1px solid var(--line); padding: 5px 12px; border-radius: 2px; min-height: 34px; font-weight: 600; font-size: 14px; }
-.pill[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.axis-name { margin: 2px 0 10px; }
-.axis-name b { font-size: 16px; }
-.axis-name p { color: var(--muted); font-size: 14px; }
-.cmp { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); background: var(--surface); }
-.cmp li { border-top: 1px solid var(--line); }
-.cmp li:first-child { border-top: 0; }
-.cmp .line { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; }
-.cmp .sys { flex: 0 0 38%; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
-.cmp .sys .chip { display: block; width: max-content; max-width: 100%; margin-top: 2px; font-weight: 500; }
-.cmp .val { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
-.cmp .more { flex: 0 0 auto; min-width: 36px; min-height: 36px; background: none; border: 1px solid var(--line); border-radius: 2px; color: var(--accent); }
-.cmp .more[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
-.cmp .srcbox { padding: 0 12px 10px 12px; }
-.cmp li.mine { background: var(--accent-soft); }
-.tbl-toggle { margin-top: 12px; }
-.tbl-box { margin-top: 10px; overflow-x: auto; border: 1px solid var(--line); background: var(--surface); max-width: 100%; }
-table.full { border-collapse: collapse; min-width: 1100px; font-size: 13px; }
-table.full th, table.full td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; min-width: 130px; }
-table.full th { background: var(--surface-2); position: sticky; top: 0; }
-table.full td:first-child, table.full th:first-child { position: sticky; left: 0; background: var(--surface-2); min-width: 110px; font-weight: 700; }
+.row-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
+.row-ctl .lbl { margin-right: 4px; font-size: 12px; font-weight: 600; color: var(--label-2); }
+.pill { min-height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: var(--card); box-shadow: inset 0 0 0 .5px var(--separator); color: var(--label); font-size: 13.5px; font-weight: 500; }
+.pill:not([aria-pressed="true"]):hover { background: var(--fill); }
+.pill[aria-pressed="true"] { background: var(--label); color: var(--page); box-shadow: none; }
+.axis-name { margin: 4px 0 12px; }
+.axis-name b { font-size: 17px; font-weight: 600; }
+.axis-name p { font-size: 14px; color: var(--label-2); }
+.cmp { list-style: none; margin: 0; padding: 0; overflow: hidden; border-radius: 16px; background: var(--card); }
+.cmp li + li { border-top: .5px solid var(--separator); }
+.cmp .line { display: flex; align-items: flex-start; gap: 14px; padding: 12px 16px; }
+.cmp .sys { flex: 0 0 32%; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.cmp .sys .chip { display: block; width: max-content; max-width: 100%; margin-top: 4px; font-weight: 500; }
+.cmp .val { flex: 1 1 auto; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.cmp .more { flex: 0 0 auto; width: 32px; min-width: 32px; height: 32px; border: 0; border-radius: 16px; background: var(--fill); color: var(--accent); font-size: 17px; line-height: 1; }
+.cmp .more[aria-expanded="true"] { background: var(--tint); }
+.cmp .srcbox { padding: 0 16px 12px; }
+.cmp li.mine { background: color-mix(in srgb, var(--accent-fill) 8%, var(--card)); }
+.tbl-toggle { margin-top: 14px; }
+.tbl-box { max-width: 100%; margin-top: 12px; overflow-x: auto; border-radius: 12px; background: var(--cell); box-shadow: 0 0 0 .5px var(--separator); }
+table.full { min-width: 1100px; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+table.full th, table.full td { min-width: 130px; padding: 8px 10px; border-top: .5px solid var(--separator); text-align: left; vertical-align: top; }
+table.full thead th { position: sticky; top: 0; border-top: 0; background: var(--grouped); font-size: 12px; font-weight: 600; color: var(--label-2); }
+table.full td:first-child, table.full th:first-child { position: sticky; left: 0; min-width: 110px; background: var(--grouped); font-weight: 600; color: var(--label); }
 
-/* diff cards */
-.diffs { display: grid; gap: 10px; margin-top: 10px; }
-.diff { background: var(--surface); border: 1px solid var(--line); padding: 12px 14px 4px; }
-.diff h3 { margin: 6px 0 0; font-family: var(--display); font-size: 18px; }
-.diff .disc { margin-top: 4px; }
+/* what sets it apart */
+.diffs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; margin-top: 16px; }
+.diff { min-width: 0; padding: 20px 22px 8px; border-radius: 18px; background: var(--card); }
+.diff h3 { margin: 10px 0 0; font-size: 18px; line-height: 1.3; font-weight: 600; letter-spacing: -.015em; }
+.diff .disc { margin-top: 6px; }
+.diff .disc-btn { padding: 8px 0; font-size: 14px; font-weight: 500; color: var(--accent); }
 
-footer { margin-top: 28px; border-top: 2px solid var(--fg); padding-top: 4px; }
-footer ol { margin: 8px 0 0; padding-left: 1.8em; font-size: 13px; }
+/* planned + install */
+.bottom { display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; padding-bottom: 64px; }
+.plan-card { min-width: 0; padding: 30px 32px; border-radius: 18px; background: var(--page); box-shadow: 0 0 0 .5px var(--separator); }
+.plan-card h3, .close h3 { margin: 0; font-size: 24px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em; }
+.plan-card > p { margin-top: 8px; font-size: 15px; color: var(--label-2); }
+.reads { margin-top: 22px; }
+.reads-h { padding-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: .02em; color: var(--label-2); border-bottom: .5px solid var(--separator); }
+.reads a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: .5px solid var(--separator); color: var(--label); }
+.reads a:hover { text-decoration: none; }
+.reads a:hover > span:first-child { color: var(--accent); }
+.reads small { display: block; font-size: 12.5px; color: var(--label-2); }
+.reads .go { color: var(--accent); }
+.close { display: flex; flex-direction: column; min-width: 0; padding: 30px 32px; border-radius: 18px; background: linear-gradient(135deg, #0a84ff, #5e5ce6); color: #fff; }
+.close > p { margin-top: 6px; font-size: 15px; opacity: .88; }
+.close pre { margin: 18px 0 0; padding: 12px 14px; border-radius: 10px; background: rgba(0,0,0,.22); color: #fff; font: 12.5px/1.65 var(--mono); white-space: pre; overflow-x: auto; }
+.close .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 22px; }
+.close .cta { background: #fff; color: #0058b9; }
+.close .cta.tint { background: rgba(255,255,255,.2); color: #fff; }
+
+footer { border-top: .5px solid var(--separator); }
+footer .disc { margin-top: 0; }
+footer .disc-btn { padding: 16px 0 12px; }
+footer ol { margin: 8px 0 0; padding-left: 1.8em; font-size: 13px; color: var(--label-2); }
 footer li { margin-top: 4px; overflow-wrap: anywhere; }
-footer .disc { border-top: 0; }
+.foot-line { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; padding: 16px 0 28px; border-top: .5px solid var(--separator); font-size: 13px; color: var(--label-2); }
 
-/* overview hero: the four levels, in the level colors used by the chips */
-.hero-h { font-size: 28px; line-height: 1.2; margin: 6px 0 18px; max-width: 24em; }
-.levels { list-style: none; margin: 0 0 22px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); }
-.levels li { padding: 12px 12px 14px; min-width: 0; }
-.levels .code { display: block; font-family: var(--display); font-size: 30px; line-height: 1; font-weight: 700; margin-bottom: 8px; }
-.levels b { display: block; font-size: 14px; }
-.levels .d { display: block; font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; }
-
-@media (max-width: 480px) {
-  .cmp .sys { flex-basis: 34%; }
-  h1 { font-size: 27px; }
-  h2 { font-size: 21px; }
-  .hero-h { font-size: 23px; }
+@media (max-width: 1000px) {
+  .hero, .split, .bottom { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .hero { padding: 56px 0 56px; }
+}
+@media (max-width: 720px) {
+  .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .hl-grid, .diffs { grid-template-columns: minmax(0, 1fr); }
   .levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  header.top nav { gap: 16px; font-size: 13.5px; }
+  .hide-md { display: none; }
+  .hero h1 { font-size: 44px; }
+  html[lang="ko"] .hero h1 { font-size: 38px; }
+  .sec-h h2, .split h2 { font-size: 28px; }
+  .hl-card { padding: 22px 20px 18px; }
+  .visual { padding: 16px 16px 14px; }
+  .chat { width: calc(100% - 20px); }
+  .plan-card, .close { padding: 24px 22px; }
+  .cmp .sys { flex-basis: 34%; }
+}
+@media (max-width: 480px) {
+  .hide-sm { display: none; }
+  .brand { font-size: 17px; gap: 8px; }
+  .hero h1 { font-size: 38px; }
+  html[lang="ko"] .hero h1 { font-size: 34px; }
+  .hero .lead { font-size: 17px; }
+  .cell { padding: 10px 14px; }
+  .cell .val { font-size: 24px; }
+  [role="tabpanel"] > h2 { font-size: 23px; }
+  #ov-list { padding: 0 14px; }
+  .kv div { flex-direction: column; gap: 0; }
+  .kv span { text-align: left; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
@@ -253,91 +400,223 @@ footer .disc { border-top: 0; }
 </style>
 </head>
 <body>
-<noscript><p>This page needs scripts turned on to show its content. The repository is described in its <a href="https://github.com/hamin-apple/my-plugins#readme">README on GitHub</a>.</p></noscript>
-<div class="wrap">
-  <header>
-    <div class="title-row">
-      <h1>my-agent at a glance</h1>
-      <span class="ver mono">v0.4.5</span>
-    </div>
-    <p class="lede">A human-in-the-loop (HITL) multi-agent orchestration skill, a Claude Code plugin · version 0.4.5 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)</p>
-    <nav class="lede" aria-label="Page links"><a href="index-ko.html" hreflang="ko" lang="ko">한국어</a> · <a href="architecture.html">Architecture</a></nav>
-  </header>
-
-  <div class="tabbar" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true">Overview</button>
-    <button class="tab" role="tab" id="tab-flow" aria-controls="p-flow" aria-selected="false" tabindex="-1">Flow</button>
-    <button class="tab" role="tab" id="tab-features" aria-controls="p-features" aria-selected="false" tabindex="-1">Features</button>
-    <button class="tab" role="tab" id="tab-compare" aria-controls="p-compare" aria-selected="false" tabindex="-1">Compare</button>
-    <button class="tab" role="tab" id="tab-diff" aria-controls="p-diff" aria-selected="false" tabindex="-1">What sets it apart</button>
+<noscript><p>The detail tabs on this page need scripts turned on. The repository is described in its <a href="https://github.com/hamin-apple/my-plugins#readme">README on GitHub</a>.</p></noscript>
+<header class="top">
+  <div class="wrap">
+    <span class="brand">my-agent <span class="ver mono">v0.8.1</span></span>
+    <nav aria-label="Page links"><a class="hide-md" href="#highlights">Highlights</a><a class="hide-md" href="#detail">Details</a><a href="index-ko.html" hreflang="ko" lang="ko">한국어</a><a href="architecture.html">Architecture</a><a class="cta sm hide-sm" href="https://github.com/hamin-apple/my-plugins">GitHub</a></nav>
   </div>
+</header>
 
-  <main>
-    <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
-      <h2 class="hero-h">Multi-step work in four levels, with a person approving at fixed points</h2>
-      <ul class="levels" aria-label="The four levels">
-        <li class="lv1"><span class="code">L1</span><b>Main session</b><span class="d">Runs the phases, asks you, records</span></li>
-        <li class="lv2"><span class="code">L2</span><b>Judges</b><span class="d">Plans, reviews, interprets decisions</span></li>
-        <li class="lv3"><span class="code">L3</span><b>Workers</b><span class="d">Each does one work unit</span></li>
-        <li class="lv4"><span class="code">L4</span><b>Tools and hooks</b><span class="d">Run, record, block</span></li>
-      </ul>
-      <div id="ov-list"></div>
-      <div id="ov-note"></div>
-    </section>
-
-    <section id="p-flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
-      <h2>The flow of one task (general profile example)</h2>
-      <p class="arrow-line">① Define → ② Plan → G1b approval → ③ Build → ④ Accept → G3 approval</p>
-      <div id="flow-note"></div>
-      <div class="track" id="track" role="group" aria-label="Choose a step"></div>
-      <div class="step-card" id="step-card" aria-live="polite"></div>
-      <div class="nav">
-        <button class="btn" type="button" id="prev">◀ Previous</button>
-        <button class="btn primary" type="button" id="next">Next ▶</button>
+<main class="wrap">
+  <section class="hero" aria-labelledby="hero-title">
+    <div>
+      <div class="eyebrow">Claude Code plugin · human-in-the-loop multi-agent orchestration</div>
+      <h1 id="hero-title">Agents do the work.<br>You approve it.</h1>
+      <p class="lead">my-agent runs a request through four phases, hands each piece to its own agent, and stops at set gates for you to decide. Every question is a popup, and every step leaves a record.</p>
+      <div class="row"><a class="cta" href="#detail">See how it works</a><a class="cta tint" href="architecture.html">Architecture</a></div>
+      <p class="meta">Version 0.8.1 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Also runs in Codex, with limits (Overview › Codex support)</p>
+    </div>
+    <div class="group" role="group" aria-labelledby="glance-h">
+      <div class="group-h"><span id="glance-h">AT A GLANCE</span><span>my-agent 0.8.1</span></div>
+      <div class="cells">
+        <div class="cell"><span class="no">01</span><span class="lab">Levels<small>orchestration · judges · workers · tools</small></span><span class="val">4</span></div>
+        <div class="cell"><span class="no">02</span><span class="lab">Phases<small>Define · Plan · Build · Accept, in 8 steps</small></span><span class="val">4</span></div>
+        <div class="cell"><span class="no">03</span><span class="lab">Agents<small>5 judges (L2) · 4 workers (L3)</small></span><span class="val">9</span></div>
+        <div class="cell"><span class="no">04</span><span class="lab">Gates where you answer<small>G1a · G1b · G2 · G3 · E</small></span><span class="val">5</span></div>
+        <div class="cell"><span class="no">05</span><span class="lab">Profiles<small>general · research · dev</small></span><span class="val">3</span></div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section id="p-features" role="tabpanel" aria-labelledby="tab-features" hidden>
-      <h2>Features by topic</h2>
-      <p class="intro" style="margin-bottom:10px">Each feature has a one-line summary, 2 to 4 lines of detail, and its sources, in that order.</p>
-      <div id="acc-list"></div>
-    </section>
+  <section class="sec" id="highlights" aria-labelledby="hl-title">
+    <div class="sec-h"><h2 id="hl-title">Built for the person in the loop.</h2><span>Four ideas, grouped in fours by design</span></div>
+    <div class="hl-grid">
+      <article class="hl-card" style="--dot: var(--blue)">
+        <i class="tile" style="background: var(--blue)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h13"/><path d="M12 6.5l5.5 5.5-5.5 5.5"/></svg></i>
+        <h3>A flow you can predict</h3>
+        <p class="sum">The same skeleton every time, so you know what comes next.</p>
+        <ul>
+          <li>Four phases in eight steps: ① Define → ② Plan → ③ Build → ④ Accept, with a gate at the end of each phase.</li>
+          <li>Four levels with separate jobs: L1 orchestration, L2 design and judging, L3 work, L4 tools, MCP, hooks and rules.</li>
+          <li>Three profiles, general, research and dev, adapt the same skeleton to the kind of work.</li>
+          <li>Optional model presets per profile set each agent's model and effort, so you can pick a lighter or a stronger setup for the task.</li>
+        </ul>
+        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md, README.md</span></p>
+      </article>
+      <article class="hl-card" style="--dot: var(--orange)">
+        <i class="tile" style="background: var(--orange)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-7.5L7 20v-3.5H5A1.5 1.5 0 0 1 3.5 15V7A1.5 1.5 0 0 1 5 5.5z"/></svg></i>
+        <h3>Less load on you</h3>
+        <p class="sum">Questions are few, short and hard to miss.</p>
+        <ul>
+          <li>Every question is an <code>AskUserQuestion</code> popup with 2 to 4 choices, the recommended one first, so nothing gets lost in the chat.</li>
+          <li>The scope and plan reports open with an Overview (background and goal) and a Takeaway, then a table of 5 to 8 rows; the details are in the monitor's Report tab.</li>
+          <li>The structure comes in groups of about four (Cowan's 4±1 working-memory limit), so a person can hold it at a glance.</li>
+          <li>Delegated approval (<code>--auto</code>) answers routine popups with the recommended choice; G2, G3 and E still come to you. The recommended permission mode is auto, with the ask and deny rules and the hooks still in force.</li>
+        </ul>
+        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md, plugins/my-agent/l4-tools-guards/permissions/permissions.json</span></p>
+      </article>
+      <article class="hl-card" style="--dot: var(--green)">
+        <i class="tile" style="background: var(--green)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5l7 2.8v5.2c0 4.3-2.9 7.6-7 9.5-4.1-1.9-7-5.2-7-9.5V6.3z"/><path d="M8.7 12.2l2.3 2.3 4.4-4.6"/></svg></i>
+        <h3>Checked by someone else</h3>
+        <p class="sum">The agent that made the work does not judge it.</p>
+        <ul>
+          <li>Plan review, verification and review are separate subagents with their own context; the author's explanation is not passed along.</li>
+          <li>Hooks enforce the key rules in code: before plan approval, delegation is denied and writes outside the task folder are asked; delivery without a fresh verdict is blocked and a stale commit is asked; each agent has a read and write scope.</li>
+          <li>Work can run in a git worktree under <code>.claude/worktrees/</code> instead of the main tree: a task worktree on its own branch, and the first parallel group of coders in dev.</li>
+        </ul>
+        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/phases/accept.md, plugins/my-agent/l4-tools-guards/hooks/hooks.json, plugins/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/profiles/dev.md</span></p>
+      </article>
+      <article class="hl-card" style="--dot: var(--purple)">
+        <i class="tile" style="background: var(--purple)" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="12" rx="2"/><path d="M8.5 20h7"/><path d="M7 13l3-3 2.2 2.2L17 7.5"/></svg></i>
+        <h3>Easy to look after</h3>
+        <p class="sum">Every task leaves a trail you can read later.</p>
+        <ul>
+          <li>A read-only local monitor shows each task as it runs; its Report tab puts one task on one page, with the phase timeline, the gate marks and the G3 wait.</li>
+          <li>run-log records phases, popups and subagent calls with the model, tokens and time; the retrospective tallies gate decisions and cost per stretch.</li>
+          <li>Improvements pile up in a feedback list, each marked with its level, L1 to L4.</li>
+          <li>In dev, the coder writes the tests first, and the commit carries the code with its tests.</li>
+        </ul>
+        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/monitor/README.md, plugins/my-agent/l4-tools-guards/scripts/run-log.py, plugins/my-agent/l4-tools-guards/scripts/gate-report.py, plugins/my-agent/l4-tools-guards/scripts/feedback.py, plugins/my-agent/l3-workers/agents/coder.md</span></p>
+      </article>
+    </div>
+  </section>
 
-    <section id="p-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
-      <h2>Comparison with other multi-agent systems</h2>
-      <div id="cmp-note"></div>
-      <h3 class="sub">Comparison axes (A1–A7)</h3>
-      <div class="row-ctl" id="axis-ctl" role="group" aria-label="Comparison axes">
-        <span class="lbl">Axis</span>
+  <section class="split" aria-labelledby="gate-title">
+    <figure class="visual">
+      <div class="chat">
+        <div class="who"><span class="chip gb">G1b</span>Plan approval · general profile</div>
+        <h4>Overview</h4>
+        <p>A three-part onboarding guide for new support staff, written from the current help-center articles.</p>
+        <h4>Takeaway</h4>
+        <p>4 work units in 2 parallel groups; the writer merges them in the last unit.</p>
+        <div class="kv">
+          <div><b>Approving</b><span>plan.md and its mock-up</span></div>
+          <div><b>Work units</b><span>4 (2 groups)</span></div>
+          <div><b>Models</b><span>standard (definition values)</span></div>
+          <div><b>Open risks</b><span>none</span></div>
+        </div>
       </div>
-      <div class="axis-name" id="axis-name"></div>
-      <p class="note">The "Kind" column is not an axis.</p>
-      <h3 class="sub">Comparison table</h3>
-      <p class="intro" style="margin-bottom:10px">The superscript number in each cell leads to the same number in the Sources list at the bottom of the page. <code>Not in the docs</code> means the checked documents do not contain that information; its number points to the URLs that were checked.</p>
-      <div class="row-ctl" id="kind-ctl" role="group" aria-label="Kind filter">
-        <span class="lbl">Kind</span>
-        <button class="pill" type="button" data-kind="all" aria-pressed="true">All</button>
-        <button class="pill" type="button" data-kind="cc" aria-pressed="false">Claude Code based</button>
-        <button class="pill" type="button" data-kind="gen" aria-pressed="false">General-purpose</button>
+      <div class="ask">
+        <span class="chip ga">Plan</span>
+        <p class="q">Approve this plan?</p>
+        <div class="opt on"><span class="k">1</span><span>Approve (Recommended)<small>Start the build with these 4 units</small></span></div>
+        <div class="opt"><span class="k">2</span><span>Request changes<small>Say what to change; the plan is revised</small></span></div>
+        <div class="opt"><span class="k">3</span><span>Stop<small>End the task here</small></span></div>
       </div>
-      <ul class="cmp" id="cmp-list"></ul>
-      <button class="btn tbl-toggle" type="button" id="tbl-toggle" aria-expanded="false" aria-controls="tbl-box">Show full table</button>
-      <div class="tbl-box" id="tbl-box" tabindex="0" role="region" aria-label="Full comparison table (scroll sideways)" hidden></div>
-      <div id="tbl-notes">
-        <p class="note"><code>*</code> 10x-Team: not a replacement plugin. The documents were found in a public repository (Jaan-Mustafa/10x-Team). It works by switching roles inside one conversation rather than starting separate agents, so comparing it as a "multi-agent" system has limits.</p>
-        <p class="note"><code>**</code> AutoGen: the repository is archived and no longer maintained by Microsoft, which points to Microsoft Agent Framework as the successor.⁵⁷</p>
-        <p class="note">Agent teams in the Claude Code built-in row are an experimental feature and are off by default.⁸</p>
+      <figcaption>Illustration: a plan approval report and its popup</figcaption>
+    </figure>
+    <div class="copy">
+      <div class="eyebrow">Human in the loop</div>
+      <h2 id="gate-title">Decisions come to you at fixed gates.</h2>
+      <p>my-agent stops at set points, shows a short report in the chat and asks by popup. At plan approval it pastes the whole mock-up of the deliverable; when the result has to be seen to be judged, like a screen, a prototype HTML file can be opened in the browser first.</p>
+      <div class="gates">
+        <div><span class="chip ga">G1a</span><span>Scope: what will and will not be done<small>Confirm / edit / stop</small></span></div>
+        <div><span class="chip ga">G1b</span><span>Plan: the work units and the mock-up<small>Approve / request changes / stop</small></span></div>
+        <div><span class="chip gg">G3</span><span>Result: the deliverable and where it goes<small>Accept / rework / stop</small></span></div>
       </div>
-    </section>
+      <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/phases/accept.md</span></p>
+    </div>
+  </section>
 
-    <section id="p-diff" role="tabpanel" aria-labelledby="tab-diff" hidden>
-      <h2>What sets it apart</h2>
-      <p class="intro">These are things that can be said from the values in the comparison table alone. Each item ends with the axis and table cells it rests on. Points that other systems share are stated as well.</p>
-      <div class="diffs" id="diffs"></div>
-    </section>
-  </main>
+  <section class="detail" id="detail" aria-labelledby="detail-title">
+    <div class="sec-h"><h2 id="detail-title">In detail</h2><span>Every item names the files it rests on</span></div>
+    <div class="tabdock">
+      <div class="tabbar" role="tablist" aria-label="Sections">
+        <button class="tab" role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true">Overview</button>
+        <button class="tab" role="tab" id="tab-flow" aria-controls="p-flow" aria-selected="false" tabindex="-1">Flow</button>
+        <button class="tab" role="tab" id="tab-features" aria-controls="p-features" aria-selected="false" tabindex="-1">Features</button>
+        <button class="tab" role="tab" id="tab-compare" aria-controls="p-compare" aria-selected="false" tabindex="-1">Compare</button>
+        <button class="tab" role="tab" id="tab-diff" aria-controls="p-diff" aria-selected="false" tabindex="-1">What sets it apart</button>
+      </div>
+    </div>
+      <section id="p-overview" role="tabpanel" aria-labelledby="tab-overview">
+        <h2 class="hero-h">Multi-step work in four levels, with a person approving at fixed points</h2>
+        <ul class="levels" aria-label="The four levels">
+          <li class="lv1"><span class="code">L1</span><b>Main session</b><span class="d">Runs the phases, asks you, records</span></li>
+          <li class="lv2"><span class="code">L2</span><b>Judges</b><span class="d">Plans, reviews, interprets decisions</span></li>
+          <li class="lv3"><span class="code">L3</span><b>Workers</b><span class="d">Each does one work unit</span></li>
+          <li class="lv4"><span class="code">L4</span><b>Tools and hooks</b><span class="d">Run, record, block</span></li>
+        </ul>
+        <div id="ov-list"></div>
+        <div id="ov-note"></div>
+      </section>
 
-  <footer>
+      <section id="p-flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
+        <h2>The flow of one task (general profile example)</h2>
+        <p class="arrow-line">① Define → ② Plan → G1b approval → ③ Build → ④ Accept → G3 approval</p>
+        <div id="flow-note"></div>
+        <div class="track" id="track" role="group" aria-label="Choose a step"></div>
+        <div class="step-card" id="step-card" aria-live="polite"></div>
+        <div class="nav">
+          <button class="btn" type="button" id="prev">◀ Previous</button>
+          <button class="btn primary" type="button" id="next">Next ▶</button>
+        </div>
+      </section>
+
+      <section id="p-features" role="tabpanel" aria-labelledby="tab-features" hidden>
+        <h2>Features by topic</h2>
+        <p class="intro" style="margin-bottom:10px">Each feature has a one-line summary, 2 to 4 lines of detail, and its sources, in that order.</p>
+        <div id="acc-list"></div>
+      </section>
+
+      <section id="p-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+        <h2>Comparison with other multi-agent systems</h2>
+        <div id="cmp-note"></div>
+        <h3 class="sub">Comparison axes (A1–A7)</h3>
+        <div class="row-ctl" id="axis-ctl" role="group" aria-label="Comparison axes">
+          <span class="lbl">Axis</span>
+        </div>
+        <div class="axis-name" id="axis-name"></div>
+        <p class="note">The "Kind" column is not an axis.</p>
+        <h3 class="sub">Comparison table</h3>
+        <p class="intro" style="margin-bottom:10px">The superscript number in each cell leads to the same number in the Sources list at the bottom of the page. <code>Not in the docs</code> means the checked documents do not contain that information; its number points to the URLs that were checked.</p>
+        <div class="row-ctl" id="kind-ctl" role="group" aria-label="Kind filter">
+          <span class="lbl">Kind</span>
+          <button class="pill" type="button" data-kind="all" aria-pressed="true">All</button>
+          <button class="pill" type="button" data-kind="cc" aria-pressed="false">Claude Code based</button>
+          <button class="pill" type="button" data-kind="gen" aria-pressed="false">General-purpose</button>
+        </div>
+        <ul class="cmp" id="cmp-list"></ul>
+        <button class="btn tbl-toggle" type="button" id="tbl-toggle" aria-expanded="false" aria-controls="tbl-box">Show full table</button>
+        <div class="tbl-box" id="tbl-box" tabindex="0" role="region" aria-label="Full comparison table (scroll sideways)" hidden></div>
+        <div id="tbl-notes">
+          <p class="note"><code>*</code> 10x-Team: not a replacement plugin. The documents were found in a public repository (Jaan-Mustafa/10x-Team). It works by switching roles inside one conversation rather than starting separate agents, so comparing it as a "multi-agent" system has limits.</p>
+          <p class="note"><code>**</code> AutoGen: the repository is archived and no longer maintained by Microsoft, which points to Microsoft Agent Framework as the successor.⁵⁷</p>
+          <p class="note">Agent teams in the Claude Code built-in row are an experimental feature and are off by default.⁸</p>
+        </div>
+      </section>
+
+      <section id="p-diff" role="tabpanel" aria-labelledby="tab-diff" hidden>
+        <h2>What sets it apart</h2>
+        <p class="intro">These are things that can be said from the values in the comparison table alone. Each item ends with the axis and table cells it rests on. Points that other systems share are stated as well.</p>
+        <div class="diffs" id="diffs"></div>
+      </section>
+  </section>
+
+  <section class="bottom" aria-label="What comes next">
+    <div class="plan-card">
+      <div class="eyebrow">Planned</div>
+      <h3>Routine answers from a surrogate model</h3>
+      <p>A model that knows a team's conventions and domain could answer routine gate questions on the person's behalf. It is not built yet.</p>
+      <div class="reads">
+        <div class="reads-h">BACKGROUND READING</div>
+        <a href="https://docs.langchain.com/oss/python/langchain/multi-agent/index#handoffs-2" target="_blank" rel="noopener"><span>Multi-agent patterns: subagents and handoffs<small>LangChain docs</small></span><span class="go" aria-hidden="true">↗</span></a>
+        <a href="https://github.com/hamin-apple/my-plugins/blob/main/plugins/my-agent/docs/build-guide/hitl-orchestration-guide.md" target="_blank" rel="noopener"><span>HITL orchestration guide<small>Design principles and role structure (sections 3.1 and 3.2)</small></span><span class="go" aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+    <div class="close">
+      <h3>Install in two commands</h3>
+      <p>Add the marketplace, then install the plugin. The menu bar app is optional.</p>
+      <pre>claude plugin marketplace add hamin-apple/my-plugins
+claude plugin install my-agent@my-plugins</pre>
+      <div class="row"><a class="cta" href="https://github.com/hamin-apple/my-plugins#readme">Read the README</a><a class="cta tint" href="architecture.html">Architecture page</a></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
     <div class="disc">
       <button class="disc-btn" type="button" id="src-btn" aria-expanded="false" aria-controls="src-body"><span class="mark" aria-hidden="true">▸</span><span class="lab">Sources</span></button>
       <div class="disc-body" id="src-body" hidden>
@@ -345,8 +624,9 @@ footer .disc { border-top: 0; }
         <ol id="src-list"></ol>
       </div>
     </div>
-  </footer>
-</div>
+    <div class="foot-line"><span>© 2026 hamin-apple · MIT License</span><span><a href="https://github.com/hamin-apple/my-plugins#readme">README</a> · <a href="architecture.html">Architecture</a></span></div>
+  </div>
+</footer>
 
 <script>
 (function () {
@@ -440,6 +720,9 @@ footer .disc { border-top: 0; }
      src('plugins/my-agent/SKILL.md') +
      `<p>The main session (L1) has four jobs: Router, which classifies the request; Orchestrator, which leads the phases and delegates; Gatekeeper, which guards every question and gate; and Recorder, which keeps the record. Subagents cannot ask the person; they return only result files and reports.</p>` +
      src('plugins/my-agent/SKILL.md')],
+    ['Codex support',
+     `<p>my-agent also runs in Codex. The rules stay the same Claude Code text; a name table (<code>l1-orchestration/hosts.md</code>), one code adapter for the gate hooks (<code>l4-tools-guards/lib/ma_host.py</code>) and generated Codex files carry the difference. The gate questions go through Codex's question tool, and <code>my-agent:monitor</code> is listed as a Codex skill. Codex lists no plugin-root <code>SKILL.md</code>, so the main skill is not listed yet: start it by asking Codex to read and follow the installed <code>SKILL.md</code> by its path. A generated Codex entry skill is planned for a later task. Codex loads no agent definition from the plugin, so it does not run subagents as my-agent roles (it refuses <code>my_agent_&lt;role&gt;</code>), and the subagent start and stop records and the role-based checks do not apply; making Codex load them is planned for a later task. There is no per-agent model or effort, no coder worktree, no background start and no G2 dialog in Codex.</p>` +
+     src('plugins/my-agent/docs/build-guide/my-agent-architecture.md, plugins/my-agent/l1-orchestration/hosts.md, README.md')],
     ['Why groups of four',
      `<p>According to the design document, a person takes part directly in maintaining this system, so it applies Cowan's theory that people hold about four things in memory at a time across the whole structure: 4 levels, 4 components per level, 4 phases, 4 kinds of gates (G1·G2·G3·E, counting G1a and G1b as one G1; section 3.2 lists them as five), and at most 4 popup choices. The document states that this theory is about human memory, not a basis for agent performance.</p>` +
      src('plugins/my-agent/docs/build-guide/my-agent-architecture.md')]
@@ -676,7 +959,7 @@ footer .disc { border-top: 0; }
        'plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/run-log.py · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py · plugins/my-agent/l4-tools-guards/hooks/permission-log.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json'],
       ['A read-only monitor and a menu bar app.',
        'A local web page shows all my-agent tasks; it only reads and writes nothing.',
-       ['The screens are Dashboard, Architecture, Deliverables, and Log replay. It does not write to the project\'s task folder (<code>.my-agent/</code> by default), the conversation records, or the data folder.',
+       ['The screens are Dashboard, Architecture, Deliverables, Log replay, and Report (one task on one page). It does not write to the project\'s task folder (<code>.my-agent/</code> by default), the conversation records, or the data folder.',
         'The server listens only on 127.0.0.1, and the page refreshes every 2 seconds. When a task starts, my-agent opens the monitor automatically.',
         'The menu bar app shows the number of running tasks on its icon and lists each task\'s status, elapsed time, and progress bar in a small window. It handles only status and launching the monitor, and writes no task data; clicking a task goes to the detail screen (the web monitor) with that task selected.',
         'The main-session tokens of a finished task are read from a file saved at the end of the task (<code>main-usage.json</code>), because Claude Code deletes conversation records after a while. Old finished tasks can be moved into the <code>.archived/</code> folder by a script the person runs, which takes them out of the monitor list (tasks in progress are not moved).'],

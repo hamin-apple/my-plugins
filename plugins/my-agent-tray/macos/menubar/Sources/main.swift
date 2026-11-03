@@ -91,6 +91,13 @@ if let i = args.firstIndex(of: "--comp-frame") {
     exit(0)
 }
 
+if let i = args.firstIndex(of: "--print-scheme") {
+    // the saved value (none when left out), then: scheme, the next one on click, window appearance, header symbol
+    let s = Scheme(saved: i + 1 < args.count ? args[i + 1] : nil)
+    print([s.rawValue, s.next.rawValue, s.appearance, s.symbol].joined(separator: "\t"))
+    exit(0)
+}
+
 if args.contains("--print-palette") {
     for p in statusPalette { print("\(p.tone.rawValue)\t\(p.light)\t\(p.dark)") }
     exit(0)

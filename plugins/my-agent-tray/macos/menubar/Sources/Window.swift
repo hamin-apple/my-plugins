@@ -58,6 +58,16 @@ final class FirstClickWindow: NSWindow {
     }
 }
 
+/// The window appearance for a scheme: nil inherits macOS (auto). Set on the mini window and the Components window
+/// only, not on NSApp: the menu and the menu bar icon keep following the system.
+func windowAppearance(_ s: Scheme) -> NSAppearance? {
+    switch s {
+    case .auto: return nil
+    case .light: return NSAppearance(named: .aqua)
+    case .dark: return NSAppearance(named: .darkAqua)
+    }
+}
+
 /// AppKit drops the first click on an inactive window unless the clicked view accepts it.
 /// The filter, the List/Detail switch and the pin are SwiftUI taps directly in this view.
 final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
@@ -165,7 +175,9 @@ final class WindowController: NSObject, NSWindowDelegate {
         applyFrame(store.mode)
         applyingFrame = false
         win.level = store.pinned ? .floating : .normal
+        win.appearance = windowAppearance(store.scheme)
         store.$pinned.dropFirst().sink { [weak self] on in self?.window?.level = on ? .floating : .normal }.store(in: &cancellables)
+        store.$scheme.dropFirst().sink { [weak self] s in self?.window?.appearance = windowAppearance(s) }.store(in: &cancellables)
         store.$mode.dropFirst().sink { [weak self] m in self?.switchMode(m) }.store(in: &cancellables)
         // The row count comes from the two published values themselves: @Published emits before it stores,
         // so reading store.filter or store.listState inside the sink would give the old value.

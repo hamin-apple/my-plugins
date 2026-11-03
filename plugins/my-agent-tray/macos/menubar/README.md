@@ -6,12 +6,12 @@ A small menu bar app for the my-agent monitor (plugin `my-agent-tray`). It only 
 
 The menu bar icon shows the number of running tasks (`off` when the monitor server is off). It reacts to the click:
 
-- **Left click** shows or hides the mini window. If the window is in front (no other window covers any part of it, or it is pinned) the click hides it; otherwise (closed, hidden, minimized, covered or on another space) it opens it or brings it to the front. The first click works even when another app is active. The app does not open the window by itself at start. In the mini window, too, the first click acts right away: on the filter, the List/Detail switch, the pin and a row.
+- **Left click** shows or hides the mini window. If the window is in front (no other window covers any part of it, or it is pinned) the click hides it; otherwise (closed, hidden, minimized, covered or on another space) it opens it or brings it to the front. The first click works even when another app is active. The app does not open the window by itself at start. In the mini window, too, the first click acts right away: on the filter, the List/Detail switch, the scheme button, the pin and a row.
 - **Right click or Ctrl+left click** shows the menu described below.
 
 ### Mini window
 
-A window with a thin title-less header: a `List | Detail` switch and a pin button. Drag the background to move it.
+A window with a thin title-less header: a `List | Detail` switch, a scheme button and a pin button. Drag the background to move it.
 
 - **List** (default width 300, height set by the number of lines, up to 7 lines) is native. One line per task: status mark (`?` waiting for an answer, a dot for running, `✓` done, `■` stopped or unknown), task ID (one line), elapsed time (`38m`, `1h 5m`, `2d 3h`) and an 8-cell progress bar. The step name is not shown in the window; the status shows in the mark color and the bar. The elapsed time takes only the width of its text, the ID gets all the remaining width and is shortened in the middle only when it still does not fit. Running and waiting tasks come first; the rest keep the server order (newest first).
 - The List height fits the visible lines (after the filter) up to 7: header + filter row + lines x line height, at most 7 lines. With more than 7 lines the window stays 7 lines tall and the list scrolls; every line stays in the list. The top edge stays fixed; the bottom edge grows or shrinks (a short animation) when the number of lines changes, by a refresh or by the filter. A refresh that keeps the same number of lines does not touch the window. If the height is more than the visible height of the screen the window is only as tall as the screen and the list scrolls. With no lines (no tasks, no match, server off) it shrinks to the one-line notice. If the window sits so near the bottom of the screen that the header, filter row and one line would not show, the top edge is moved up. Moving the window to another screen fits it to that screen. Fitting waits while you drag the window.
@@ -32,11 +32,12 @@ A window with a thin title-less header: a `List | Detail` switch and a pin butto
 - Clicking a line switches the same window to **Detail** with that task selected. Clicking the same line again selects it again.
 - **Detail** (default about 1000x700) is the web monitor itself in a web view, so it looks the same as in the browser. Choosing Detail with the switch keeps the task already shown. With the server off it shows `Monitor server is off`; when the server comes back (even on another port) the page is loaded again. The web state of Detail (selection, scroll) is not kept across app restarts; only the frame is.
 - **Components window:** in Detail, `4 · Log`, the button `↗ Components` opens one extra window, "Components · my-agent" (first time 560x640), that follows the replay. Clicking the button again brings it to front. It floats above other apps while the main window is pinned and stops floating when unpinned. Its size and position are remembered across restarts (key `frame.components`). Closing it, or closing the main window, closes it; the next click opens it again. In the browser the page opens its own popup as before.
+- **Scheme** (the button left of the pin) cycles `Auto` (half-filled circle), `Light` (sun) and `Dark` (moon), the same order as the web monitor's theme button; its tooltip names the current and the next value. Auto follows macOS; Light and Dark force it. It applies to List, Detail and the Components window at once and is kept across restarts (key `scheme`, default Auto). The right-click menu and the menu bar icon keep following macOS. Detail's page follows the window (`prefers-color-scheme`): the app hides the page's own theme button (`#theme-btn`), so the page stays on its Auto and there is one control.
 - **Pin** keeps the window above other apps' windows; unpinned it is a normal window.
 - The frame is remembered separately for List (position and width) and Detail (position and size). Switching mode moves to that mode's frame. A saved frame that is off every connected screen is moved back inside the visible screen, and one larger than the screen is shrunk to it.
 - The list refreshes every 5 s, in the same poll as the menu, with the same server lookup (`monitor.json`, then ports 8765 to 8775).
 
-Only screen settings are stored, in the defaults domain `my-agent.monitor-menubar`: `mode`, `pinned`, `frame.list`, `frame.detail`, `frame.components`. Task data is never written. Check them with `defaults read my-agent.monitor-menubar`.
+Only screen settings are stored, in the defaults domain `my-agent.monitor-menubar`: `mode`, `pinned`, `scheme`, `frame.list`, `frame.detail`, `frame.components`. Task data is never written. Check them with `defaults read my-agent.monitor-menubar`.
 
 ### Menu (right click)
 
@@ -74,6 +75,8 @@ macos/menubar/build/my-agent-menubar --print-list --tones
 macos/menubar/build/my-agent-menubar --list-frame 1180,220,300,640 12 0,0,1512,944
                                                # saved frame, number of lines, then screens; print the fitted frame (at most 7 lines tall) and fit or scroll (scroll: not every line fits, more than 7 lines or cut by the screen)
 macos/menubar/build/my-agent-menubar --print-palette # print tone, light, dark for the status colors
+macos/menubar/build/my-agent-menubar --print-scheme [auto|light|dark]
+                                               # saved scheme (unknown or left out: auto); print scheme, next on click, window appearance, symbol
 macos/menubar/build/my-agent-menubar --fit-frame 3000,100,300,640 0,0,1512,944
                                                # saved frame first, then screens (x,y,w,h); print the frame moved inside a screen
 macos/menubar/build/my-agent-menubar --print-detail loaded=8765 port=8765 applied=1 seq=2 key=<key>
@@ -99,7 +102,7 @@ If Safari is the default browser, the first window opened through the app (or `m
 ```sh
 sh macos/menubar/login-item.sh uninstall
 rm -r macos/menubar/build
-defaults delete my-agent.monitor-menubar    # forget mode, pin and window frames
+defaults delete my-agent.monitor-menubar    # forget mode, pin, scheme and window frames
 ```
 
 Then quit the running app from its menu (`Quit`).

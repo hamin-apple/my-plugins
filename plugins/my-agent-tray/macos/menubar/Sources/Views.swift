@@ -7,7 +7,7 @@ enum Mode: String {
     case list, detail
 }
 
-/// Screen settings only: mode, pinned and the three frames (list, detail, components). No task data is written anywhere.
+/// Screen settings only: mode, pinned, scheme and the three frames (list, detail, components). No task data is written anywhere.
 let settings = UserDefaults(suiteName: "my-agent.monitor-menubar") ?? .standard
 
 /// Owns the one web view so it survives switching to List and back (no reload when only the row changes).
@@ -25,6 +25,9 @@ final class DetailHost: NSObject, WKUIDelegate, WKScriptMessageHandler {
         web.uiDelegate = self
         comp.detailWeb = web
         web.configuration.userContentController.add(self, name: "compFocus")   // the page asks to bring the Components window to front
+        // the header's scheme button is the only control: the page stays on auto and follows the window's appearance
+        web.configuration.userContentController.addUserScript(
+            WKUserScript(source: hidePageThemeButtonJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
@@ -75,6 +78,12 @@ final class Store: ObservableObject {
             detail.comp.pinned = pinned
         }
     }
+    @Published var scheme: Scheme {
+        didSet {
+            settings.set(scheme.rawValue, forKey: "scheme")
+            detail.comp.scheme = scheme
+        }
+    }
     @Published var filter = ListFilter.all
     @Published var listState = ListState.off
     @Published var port: Int?
@@ -85,7 +94,9 @@ final class Store: ObservableObject {
     init() {
         mode = Mode(rawValue: settings.string(forKey: "mode") ?? "") ?? .list
         pinned = settings.bool(forKey: "pinned")
+        scheme = Scheme(saved: settings.string(forKey: "scheme"))
         detail.comp.pinned = pinned
+        detail.comp.scheme = scheme
     }
 
     /// Called from the 5 s poll with the result of the same server lookup the menu uses.
@@ -201,6 +212,18 @@ struct Header: View {
             HStack(spacing: 8) {
                 Seg(items: [(Mode.list, "List"), (Mode.detail, "Detail")], selection: $store.mode)
                 Spacer()
+                Button {
+                    store.scheme = store.scheme.next
+                } label: {
+                    Image(systemName: store.scheme.symbol)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .focusable(false)
+                .frame(width: 16, height: 16)
+                .help("Scheme: \(store.scheme.title) (click for \(store.scheme.next.title))")
+                .accessibilityLabel("Scheme: \(store.scheme.title)")
                 Button {
                     store.pinned.toggle()
                 } label: {

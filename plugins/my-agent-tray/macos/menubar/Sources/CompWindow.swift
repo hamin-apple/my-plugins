@@ -24,6 +24,10 @@ final class CompWindowController: NSObject, NSWindowDelegate {
     var pinned = false {
         didSet { window?.level = pinned ? .floating : .normal }
     }
+    /// Follows the main window's scheme; the page inside follows the window through prefers-color-scheme.
+    var scheme = Scheme.auto {
+        didSet { window?.appearance = windowAppearance(scheme) }
+    }
 
     /// Called from the Detail web view's createWebViewWith. A second call replaces the web view in the same window.
     func host(_ web: WKWebView, features: WKWindowFeatures) -> WKWebView {
@@ -51,6 +55,7 @@ final class CompWindowController: NSObject, NSWindowDelegate {
             applyingFrame = false
         }
         win.level = pinned ? .floating : .normal
+        win.appearance = windowAppearance(scheme)
         child = web
         win.contentView = web
         front()

@@ -25,6 +25,11 @@ class WebContractTest(unittest.TestCase):
         self.assertIn("window.webkit?.messageHandlers?.compFocus?.postMessage('')", m.group(1))
         self.assertIn('compWin.focus()', m.group(1))
 
+    def test_theme_button_contract(self):
+        # the menu bar app hides #theme-btn in Detail; the page's auto then follows the window (prefers-color-scheme)
+        self.assertIn('id="theme-btn"', self.html)
+        self.assertIn('@media (prefers-color-scheme: dark) { :root:not([data-theme="light"])', self.html)
+
     def test_hash_selects_task_and_tab(self):
         self.assertIn('URLSearchParams', self.html)
         self.assertIn(".get('task')", self.html)

@@ -1,6 +1,6 @@
 // Pure List/Detail logic (Foundation only, no AppKit/SwiftUI/WebKit): rows, sort, filter, step display,
-// window fitting and the Detail view's load/select decision. Used by the mini window and by
-// --print-list, --fit-frame and --print-detail, so the tests see the logic the window really runs.
+// window fitting, the color scheme and the Detail view's load/select decision. Used by the mini window and by
+// --print-list, --fit-frame, --print-scheme and --print-detail, so the tests see the logic the window really runs.
 import Foundation
 
 struct TaskRow: Equatable {
@@ -206,6 +206,48 @@ func toneChar(_ t: Tone) -> Character {
     default: return "-"
     }
 }
+
+// MARK: color scheme (the mini window and the Components window)
+
+/// Auto follows macOS; light and dark force both windows. The header button cycles auto, light, dark
+/// (the same order as the web monitor's theme button). Detail's page stays on its own auto, so it follows the window.
+enum Scheme: String, CaseIterable {
+    case auto, light, dark
+
+    /// A missing or unknown saved value is auto.
+    init(saved: String?) { self = Scheme(rawValue: saved ?? "") ?? .auto }
+
+    var next: Scheme {
+        let all = Scheme.allCases
+        return all[(all.firstIndex(of: self)! + 1) % all.count]
+    }
+
+    var title: String { rawValue.capitalized }
+
+    /// The window appearance: none (inherit macOS), aqua or darkAqua.
+    var appearance: String {
+        switch self {
+        case .auto: return "none"
+        case .light: return "aqua"
+        case .dark: return "darkAqua"
+        }
+    }
+
+    /// SF Symbol of the header button.
+    var symbol: String {
+        switch self {
+        case .auto: return "circle.lefthalf.filled"
+        case .light: return "sun.max"
+        case .dark: return "moon"
+        }
+    }
+}
+
+/// Detail hides the page's own theme button (id `theme-btn` in web/index.html), so the header button is the only
+/// control and the page stays on auto. Runs at document end in the main frame.
+let hidePageThemeButtonJS =
+    "(function(){var s=document.createElement('style');s.textContent='#theme-btn{display:none!important}';" +
+    "(document.head||document.documentElement).appendChild(s);})();"
 
 // MARK: Detail (the web monitor in a web view)
 

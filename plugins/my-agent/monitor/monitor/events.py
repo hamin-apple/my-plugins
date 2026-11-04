@@ -56,6 +56,7 @@ def build_events(lines) -> Events:
     by_id = {}        # agent id -> item
     asks = {}         # (gate, qn or None) -> open popup item (G1a/G1b/G3/E/Q); one per question of a popup
     g2_open = []      # open G2 popup items
+    g2_keys = {}      # id(item) -> the ask's key= (kept out of the item, which the page gets)
     revs, back_wanted = [], None
     verdicts = []     # True per FAIL; None marks a revision, which starts the count again (D5)
     stops = {}        # (rev, unit) -> worker stops; a stop without unit= (not a plan unit) counts on its own id
@@ -142,15 +143,24 @@ def build_events(lines) -> Events:
             if gate == 'G2':
                 g2_open.append(item(l, 'popup', 'perms', f"G2 {f.get('q', '')}".strip(), sub=None,
                                     id=f.get('id'), tool=f.get('tool'), agent=f.get('agent')))
+                if f.get('key'):
+                    g2_keys[id(g2_open[-1])] = f['key']
             elif gate:
                 asks[(gate, f.get('qn'))] = item(l, 'popup', 'gatekeeper', f"{gate} {f.get('q', '')}".strip(), sub=None)
         elif l.kind == 'answer':
             gate = f.get('gate')
             if gate == 'G2':
-                for g in reversed(g2_open):
-                    if g['sub'] in (None, 'not run (denied?)') and (not f.get('id') or g.get('id') == f.get('id')):
-                        g['sub'] = f.get('result') or f.get('choice')
-                        break
+                res = f.get('result') or f.get('choice')
+                opened = [g for g in g2_open if g['sub'] in (None, 'not run (denied?)')]
+                same_key = [g for g in opened if g2_keys.get(id(g)) == f.get('key')] if f.get('key') and not f.get('id') else []
+                if same_key:     # an id-less keyed answer closes every ask of that call (ma_g2.scan)
+                    for g in same_key:
+                        g['sub'] = res
+                else:
+                    for g in reversed(opened):
+                        if not f.get('id') or g.get('id') == f.get('id'):
+                            g['sub'] = res
+                            break
                 e.answered['G2'] = f.get('result') or f.get('choice')
             elif any(g == gate for g, _ in asks):
                 key = (gate, f.get('qn'))     # no qn on the answer: the latest open ask of the gate

@@ -444,6 +444,44 @@ class SkillMdTest(unittest.TestCase):
         i = self.text.index(f'\n{n}. **') + 1
         return self.text[i:self.text.index(f'\n{n + 1}. ', i)]
 
+    # --- codex review fixes (task 261104-codex-review-fixes, u6) ---
+    def test_intake_items_in_order(self):
+        section = self.section('## Intake (step 1, Router)', '\n## status')
+        self.assertEqual(re.findall(r'^(\d+)\. \*\*', section, re.M), [str(n) for n in range(1, 12)])
+        self.assertIsNone(re.search(r'\.\d+\. \*\*', section))
+
+    def test_record_popups_bullet_is_its_own_line(self):
+        lines = self.text.splitlines()
+        self.assertTrue(any(l.startswith('- Record these popups only when a new task starts') for l in lines))
+        self.assertNotIn('.- Record these popups', self.text)
+
+    def test_e_choices_match_accept(self):
+        accept = (L1 / 'phases' / 'accept.md').read_text(encoding='utf-8')
+        rows = [l for l in self.text.splitlines() if l.startswith('| E Escalation |') or l.startswith('| Verify FAIL 3 times in a row |')]
+        self.assertEqual(len(rows), 2)
+        for row in rows:
+            for choice in ('Give direction', 'Change scope', 'Abort'):
+                self.assertIn(choice, row)
+        self.assertIn('`Give direction` / `Change scope` / `Abort`', accept)
+        for text in rows + [accept]:
+            self.assertNotIn('Keep fixing', text)
+        self.assertNotIn('Keep fixing', self.text)
+
+    def test_chosen_cuts_applied(self):
+        for gone in ('- The monitor and the Claude Code permission dialog (G2) are outside the levels.',
+                     'The baseline line makes the stretch holding',
+                     '(scope-guard blocks writes that delete or change those lines)',
+                     'the G1b hook asks for a relative path after `cd`',
+                     'An aborted task is not resumed with `continue`',
+                     'separators inside quotes',
+                     'A command with the word `git` but no such shape'):
+            self.assertNotIn(gone, self.text)
+        for kept in ('write `Follows:`', 'the verdict hook cannot tell whether it is a commit',
+                     'run `git rev-parse HEAD` first', '("Tool choice")'):
+            self.assertIn(kept, self.text)
+        row = next(l for l in self.text.splitlines() if l.startswith('| L4 |'))
+        self.assertIn('the monitor and the G2 dialog are outside the levels', row)
+
     def test_tool_choice_rule(self):
         self.assertLess(self.text.index('### Tool choice'), self.text.index('## Arguments'))
         rule = self.section('### Tool choice', '### Change requests')

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import L4, clean_task_env, make_task, records, rel, run_hook
+from helpers import CLAUDE_HOOK_ENV, L4, clean_task_env, make_task, records, rel, run_hook
 import ma_logline
 
 TASK = '261025-probe-task'
@@ -20,7 +20,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.tasks_dir = self.root / 'agent-tasks'
         self.tasks_dir.mkdir()
         self.reports = self.root / 'my-surrogate' / 'gate-report'
-        self.env = {'MA_TASKS_DIR': str(self.tasks_dir), 'MA_GATE_REPORT_DIR': str(self.reports)}
+        self.env = dict(CLAUDE_HOOK_ENV, MA_TASKS_DIR=str(self.tasks_dir), MA_GATE_REPORT_DIR=str(self.reports))
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -265,7 +265,7 @@ class PlanApprovedCheckTest(unittest.TestCase):
         """Env with only the plugin setting (what a plugin hook gets): no MA_* overrides."""
         env = {k: '' for k in os.environ if k.startswith('MA_') and k != 'MA_TASK_DIR'}   # run_script merges os.environ; empty = not set
         env.update({k: '' for k in ('MA_TASKS_DIR', 'MA_PROJECTS_FILE', 'MA_FEEDBACK_FILE', 'MA_GATE_REPORT_DIR')})
-        return dict(env, CLAUDE_PLUGIN_OPTION_DATA_DIR=str(data))
+        return dict(env, CLAUDE_PLUGIN_OPTION_DATA_DIR=str(data), **CLAUDE_HOOK_ENV)
 
     def test_other_session_passes(self):
         self.assertPassed(self.hook('Edit', {'file_path': str(self.proj / 'src/a.py')}, session_id='s-other'))
@@ -343,6 +343,19 @@ class PlanApprovedCheckTest(unittest.TestCase):
         self.assertPassed(r)
         r = self.hook('Write', {'file_path': str(sib)}, env=env)
         self.assertEqual(json.loads(r.stdout)['hookSpecificOutput']['permissionDecision'], 'ask')
+
+    def test_claude_ask_without_host_override(self):
+        plugin_root = str(L4.parent)
+        env = {'MA_HOST': '', 'CLAUDE_PLUGIN_ROOT': plugin_root, 'CLAUDE_PROJECT_DIR': str(self.proj),
+               'MA_TASKS_DIR': str(self.tasks_dir), 'MA_GATE_REPORT_DIR': str(self.reports)}
+        payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'session_id': 's-test',
+                   'tool_input': {'command': f'echo x > {self.proj}/src/a.py'}}
+        r = run_hook('plan-approved-check.py', None, payload, self.proj, env=env,
+                     drop=('CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_SESSION_ID'))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('"permissionDecision": "ask"', r.stdout)
+        self.assertEqual(r.stderr, '')
+        self.assertFalse((self.task / 'run-log.md').exists())
 
     def test_script_error_exits_nonzero(self):
         r = run_hook('plan-approved-check.py', None, 'not json', self.proj, env=self.env)

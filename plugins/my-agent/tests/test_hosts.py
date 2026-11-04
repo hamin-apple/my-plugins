@@ -140,7 +140,7 @@ class HostsTest(unittest.TestCase):
         self.assertEqual(row[1], "a G2 popup after a gate hook's exit 2")
         for text in ('request_user_input', 'Allow once', 'Deny', 'answer gate=G2', 'q=', 'key=',
                      'retry the same call unchanged', 'never answers it', 'hookSpecificOutput.decision.behavior',
-                     'my-agent G2', '`release`'):
+                     'my-agent G2', '`release`', 'paths only'):
             self.assertIn(text, row[2])
         self.assertNotIn('not available', row[1])
 

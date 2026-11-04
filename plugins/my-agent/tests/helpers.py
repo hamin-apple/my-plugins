@@ -15,6 +15,8 @@ import ma_data  # noqa: E402
 from monitor.events import build_events  # noqa: E402  (monitor oracle)
 from monitor.runlog import parse_line, read_lines  # noqa: E402
 
+CLAUDE_HOOK_ENV = {'MA_HOST': '', 'CLAUDECODE': '1'}   # a Claude Code hook run: no host override, Claude Code marker set
+
 
 def records(root, sub=None) -> Path:
     """The records folder of the project at `root`: `<root>/<task_dir>` (follows $MA_TASK_DIR)."""

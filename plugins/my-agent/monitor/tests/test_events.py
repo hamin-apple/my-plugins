@@ -133,6 +133,31 @@ class EventsTest(unittest.TestCase):
         self.assertEqual(e2.gates['G2'], 'ok')
         self.assertIsNone(e2.waiting)
 
+    def test_codex_g2_two_keyed_asks_one_answer(self):
+        head = ['2026-11-04 14:00:00 step: n=5 name=Execute rev=0 session=s',
+                '2026-11-04 14:02:11 ask: gate=G2 agent=main id=- tool=apply_patch q=/x/todo.md key=5c1e09a4b7d2f388 hook=plan-approved-check session=019a',
+                '2026-11-04 14:02:11 ask: gate=G2 agent=main id=- tool=apply_patch q=/x/todo.md key=5c1e09a4b7d2f388 hook=verdict-fresh-check session=019a',
+                '2026-11-04 14:02:40 answer: gate=G2 tool=apply_patch q=/x/todo.md key=5c1e09a4b7d2f388 result=allowed session=019a']
+        rel = ['2026-11-04 14:02:41 release: gate=G2 hook=plan-approved-check tool=apply_patch key=5c1e09a4b7d2f388 session=019a',
+               '2026-11-04 14:02:41 release: gate=G2 hook=verdict-fresh-check tool=apply_patch key=5c1e09a4b7d2f388 session=019a']
+        for lines in (head, head + rel):
+            e = synth(*lines)
+            g2 = [x for x in e.log if x['k'] == 'popup' and x['a'] == 'perms']
+            self.assertEqual([x['sub'] for x in g2], ['allowed', 'allowed'])
+            self.assertNotEqual((e.waiting or {}).get('gate'), 'G2')
+            self.assertNotEqual(e.gates['G2'], 'wait')
+            self.assertNotIn('key', g2[0])
+
+    def test_codex_g2_other_key_stays_open(self):
+        e = synth('2026-11-04 14:00:00 step: n=5 name=Execute rev=0 session=s',
+                  '2026-11-04 14:02:11 ask: gate=G2 agent=main id=- tool=apply_patch q=/x/a.md key=aaaa hook=plan-approved-check session=019a',
+                  '2026-11-04 14:02:12 ask: gate=G2 agent=main id=- tool=apply_patch q=/x/b.md key=bbbb hook=plan-approved-check session=019a',
+                  '2026-11-04 14:02:40 answer: gate=G2 tool=apply_patch q=/x/a.md key=aaaa result=allowed session=019a')
+        g2 = [x for x in e.log if x['k'] == 'popup' and x['a'] == 'perms']
+        self.assertEqual([x['sub'] for x in g2], ['allowed', None])
+        self.assertEqual(e.waiting['gate'], 'G2')
+        self.assertEqual(e.gates['G2'], 'wait')
+
     def test_g2_denied_guess(self):
         e = synth('2026-10-24 16:00:00 call: agent=my-agent:coder model=- effort=- isolation=- background=false',
                   '2026-10-24 16:00:01 start: agent=my-agent:coder id=a1 configured=sonnet effort=medium',

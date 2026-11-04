@@ -65,15 +65,29 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v046(self):
+    def test_status_line_starts_with_v047(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.46 ('), line[:60])
-        self.assertIn('plugin 0.11.0:', line[:line.index('v0.45 (')])
+        self.assertTrue(line.startswith('- Status: design draft v0.47 ('), line[:60])
+        self.assertIn('plugin 0.11.1:', line[:line.index('v0.46 (')])
+        self.assertIn('v0.46 (2026-11-04, plugin 0.11.0:', line)
         self.assertIn('v0.45 (2026-11-03, plugin 0.10.0:', line)
         self.assertIn('v0.44 (2026-11-03, plugin 0.9.0:', line)
         self.assertIn('v0.43 (', line)
         self.assertIn('plugin 0.8.0', line)
         self.assertIn('plugin 0.9.0', line)
+
+    def test_codex_ask_bullet_does_not_list_scope_guard(self):
+        bullet = next(l for l in self.text.splitlines() if l.startswith('- **On Codex (plugin 0.11.0):**'))
+        self.assertNotIn('scope-guard.py', bullet)
+
+    def test_inline_text_says_first_non_empty_line(self):
+        self.assertIn('first non-empty line of the result file', self.text)
+
+    def test_host_layer_notes_grant_share_and_paths_only_key(self):
+        sec = self.text[self.text.index('### 4.14 Host layer'):self.text.index('## 5. Out of scope')]
+        self.assertIn('one share per asking hook', sec)
+        self.assertIn('paths only', sec)
+        self.assertIn('not the patch text', sec)
 
     def test_skill_layout_and_manifest_have_no_skills_key(self):
         manifest = self.section('**Plugin manifest (`.claude-plugin/plugin.json`)**', '**Marketplace file')

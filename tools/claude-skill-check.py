@@ -51,7 +51,8 @@ def log_line(base: Path, text: str):
 
 
 def call(claude: str, argv: list, cwd=None, env=None):
-    return subprocess.run([claude] + argv, capture_output=True, text=True, timeout=TIMEOUT, cwd=cwd, env=env)
+    return subprocess.run([claude] + argv, capture_output=True, text=True, timeout=TIMEOUT,
+                          cwd=cwd, env=env, stdin=subprocess.DEVNULL)
 
 
 def first_line(text: str) -> str:
@@ -151,6 +152,8 @@ def execute(base: Path, args, plugin: Path):
     write(base / 'init.json', json.dumps(event, indent=2) + '\n')
     if 'plugins' not in event:
         raise NotRun('init event lacks plugins')
+    if not isinstance(event['plugins'], list):
+        raise NotRun('init event plugins is not a list')
     if 'skills' not in event and 'slash_commands' not in event:
         raise NotRun('init event lacks skills and slash_commands')
     return version.stdout.strip(), validate, done.stdout, number, event

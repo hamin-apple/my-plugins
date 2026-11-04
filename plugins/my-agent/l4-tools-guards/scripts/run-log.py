@@ -15,7 +15,7 @@ session= is refused): it reads `cost_usd` from the statusline file `<session>.js
 unreadable file prints `run-log: no cost line (<reason>)` and writes nothing (exit 0); a value below the previous
 `cost:` line of that session gets reset=1. `cost` also refuses baseline=.
 `inline` records a role that ran in the main session (the inline pass of agent-models.py): agent=my-agent:<role> of the nine
-roles and file= (the result file, or `-` for my-agent:coder) are needed, unit= is optional (`-`). result= is the first line of
+roles and file= (the result file, or `-` for my-agent:coder) are needed, unit= is optional (`-`). result= is the first non-empty line of
 the file (cut to 200 characters); for `file=-` (coder only) it is given as result=, and for every other role it is refused. A missing
 result file prints `run-log: inline needs the result file <path> (missing)`, exit 1, nothing written. Fields: agent unit file
 result model (--model gives model=).
@@ -120,7 +120,7 @@ def inline_fields(fields, given, cwd):
         except OSError:
             print(f'run-log: inline needs the result file {path} (missing)')
             return 1
-        result = (text.splitlines() or [''])[0].strip()[:RESULT_CHARS] or '-'
+        result = next((ln.strip() for ln in text.splitlines() if ln.strip()), '-')[:RESULT_CHARS]
     return [('agent', given['agent']), ('unit', given.get('unit') or '-'), ('file', path), ('result', result)]
 
 

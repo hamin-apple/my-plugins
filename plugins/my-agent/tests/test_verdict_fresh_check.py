@@ -7,7 +7,7 @@ import time
 import unittest
 from pathlib import Path
 
-from helpers import clean_task_env, make_task, records, rel, run_hook
+from helpers import CLAUDE_HOOK_ENV, clean_task_env, make_task, records, rel, run_hook
 
 TASK = '261025-probe-task'
 
@@ -22,7 +22,7 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.T = make_task(self.L, task=TASK, git=False)
         (self.L / 'src').mkdir()
         self.t0 = time.time() - 1000
-        self.env = {'MA_TASKS_DIR': str(self.root / 'agent-tasks')}
+        self.env = dict(CLAUDE_HOOK_ENV, MA_TASKS_DIR=str(self.root / 'agent-tasks'))
 
     def tearDown(self):
         self.tmp.cleanup()

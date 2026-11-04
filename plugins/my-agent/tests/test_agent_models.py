@@ -428,6 +428,10 @@ class AgentModelsTest(unittest.TestCase):
         want = (Path(__file__).parent / 'fixtures' / 'agent-models-0.10.0.txt').read_text(encoding='utf-8')
         self.assertEqual('\n'.join(out), want)
 
+    def test_no_line_of_ma_models_is_longer_than_121_characters(self):
+        for n, line in enumerate((L4 / 'lib' / 'ma_models.py').read_text(encoding='utf-8').splitlines(), 1):
+            self.assertLessEqual(len(line), 121, f'ma_models.py:{n} is {len(line)} characters')
+
 
 if __name__ == '__main__':
     unittest.main()

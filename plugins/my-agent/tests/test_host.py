@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 import helpers  # noqa: F401  (puts lib on sys.path)
+import ma_g2
 import ma_host
 
 FIX = Path(__file__).resolve().parent / 'fixtures' / 'codex'
@@ -183,6 +184,21 @@ class HostTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {'MA_HOST': 'claude'}), contextlib.redirect_stdout(o), \
                 contextlib.redirect_stderr(e):
             self.assertEqual(ma_host.emit(ma_host.parse(claude), ask), 0)
+        self.assertEqual((o.getvalue(), e.getvalue()), (json.dumps(ask) + '\n', ''))
+
+    def test_claude_ask_without_host_override_keeps_json(self):
+        ask = {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'ask',
+                                      'permissionDecisionReason': 'why'}}
+        claude = json.dumps({'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'session_id': 's',
+                             'tool_input': {'command': 'ls'}})
+        env = {'MA_HOST': '', 'CLAUDE_PLUGIN_ROOT': str(helpers.REPO), 'CLAUDE_PROJECT_DIR': '/tmp/claude-proj'}
+        o, e = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, env), mock.patch.object(ma_g2,'codex_ask') as codex_ask:
+            for k in ('CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_SESSION_ID'):
+                os.environ.pop(k, None)
+            with contextlib.redirect_stdout(o), contextlib.redirect_stderr(e):
+                self.assertEqual(ma_host.emit(ma_host.parse(claude), ask), 0)
+        codex_ask.assert_not_called()
         self.assertEqual((o.getvalue(), e.getvalue()), (json.dumps(ask) + '\n', ''))
 
     def test_scratch_base_per_host(self):

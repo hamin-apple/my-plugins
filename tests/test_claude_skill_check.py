@@ -7,6 +7,7 @@ import stat
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -17,10 +18,12 @@ check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check)
 
 FAKE = '''#!{py}
-import json, os, sys
+import json, os, stat, sys, time
 argv = sys.argv[1:]
+st0, null = os.fstat(0), os.stat(os.devnull)
+stdin_null = stat.S_ISCHR(st0.st_mode) and st0.st_rdev == null.st_rdev
 with open({log!r}, 'a') as f:
-    f.write(json.dumps({{'argv': argv, 'cwd': os.getcwd(), 'env': dict(os.environ)}}) + '\\n')
+    f.write(json.dumps({{'argv': argv, 'cwd': os.getcwd(), 'env': dict(os.environ), 'stdin_null': stdin_null}}) + '\\n')
 if argv[:1] == ['--version']:
     print('9.9.9 (Claude Code)')
 elif argv[:1] == ['--help']:
@@ -31,6 +34,8 @@ elif argv[:2] == ['plugin', 'validate']:
         sys.exit(1)
     print('Validation passed')
 elif '-p' in argv:
+    if {sleep!r}:
+        time.sleep({sleep!r})
     if {refuse!r}:
         sys.stderr.write('Error: nested session not allowed\\nmore\\n')
         sys.exit(1)
@@ -63,10 +68,10 @@ class SkillCheckTest(unittest.TestCase):
         self.log = self.tmp / 'fake-calls.jsonl'
         self.out = self.parent / 'out'
 
-    def fake(self, validate_fail=False, refuse=False):
+    def fake(self, validate_fail=False, refuse=False, sleep=0):
         path = self.tmp / 'fake-claude'
         path.write_text(FAKE.format(py=sys.executable, log=str(self.log), stdout=str(self.stdout_file),
-                                    validate_fail=validate_fail, refuse=refuse), encoding='utf-8')
+                                    validate_fail=validate_fail, refuse=refuse, sleep=sleep), encoding='utf-8')
         path.chmod(path.stat().st_mode | stat.S_IEXEC)
         return path
 
@@ -162,6 +167,39 @@ class SkillCheckTest(unittest.TestCase):
     def test_start_refusal(self):
         self.assert_not_run('claude refused to start: Error: nested session not allowed',
                             self.run_tool(self.fake(refuse=True)))
+
+    def test_plugins_not_a_list_is_not_run(self):
+        for value in (None, {}, 'my-agent'):
+            with self.subTest(plugins=value):
+                event = {'type': 'system', 'subtype': 'init', 'plugins': value, 'skills': GOOD, 'slash_commands': GOOD}
+                self.emit(json.dumps(event))
+                code = self.run_tool()
+                self.assert_not_run('init event plugins is not a list', code)
+                self.assertEqual(self.outcome().splitlines()[0], 'Outcome: not run init event plugins is not a list')
+
+    def test_timeout_is_not_run(self):
+        self.emit(init_event(self.plugin, GOOD))
+        with mock.patch.object(check, 'TIMEOUT', 1):
+            code = self.run_tool(self.fake(sleep=5))
+        self.assertEqual(code, 3)
+        self.assertEqual(self.outcome().splitlines()[0], 'Outcome: not run timeout after 1 s')
+
+    def test_claude_gets_no_stdin(self):
+        self.emit(init_event(self.plugin, GOOD))
+        pipe_r, pipe_w = os.pipe()
+        saved = os.dup(0)
+
+        def restore():
+            os.dup2(saved, 0)
+            for fd in (saved, pipe_r, pipe_w):
+                os.close(fd)
+        self.addCleanup(restore)
+        os.dup2(pipe_r, 0)
+        self.assertEqual(self.run_tool(), 0)
+        calls = self.calls()
+        self.assertTrue(calls)
+        for call in calls:
+            self.assertTrue(call['stdin_null'], call['argv'])
 
     def test_inside_repo_refused(self):
         target = REPO / 'tmp-claude-skill-check-refused'

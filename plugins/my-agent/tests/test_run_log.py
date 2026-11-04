@@ -226,6 +226,18 @@ class RunLogTest(unittest.TestCase):
         self.assertEqual(self.inline('agent=my-agent:reviewer', f'file={vf}').returncode, 0)
         self.assertEqual(len(parse(log_lines(self.task)[-1])['result']), 200)
 
+    def test_inline_result_is_first_non_empty_line(self):
+        vf = self.task / 'write.md'
+        vf.write_text('\n\n  First line  \nSecond\n')
+        self.assertEqual(self.inline('agent=my-agent:writer', f'file={vf}').returncode, 0)
+        self.assertEqual(parse(log_lines(self.task)[-1])['result'], 'First line')
+
+    def test_inline_result_of_blank_lines_only_is_dash(self):
+        vf = self.task / 'write.md'
+        vf.write_text('\n  \n\t\n')
+        self.assertEqual(self.inline('agent=my-agent:writer', f'file={vf}').returncode, 0)
+        self.assertEqual(parse(log_lines(self.task)[-1])['result'], '-')
+
     def test_inline_coder_has_no_file_and_gives_result(self):
         r = self.inline('agent=my-agent:coder', 'unit=u2', 'file=-', 'result=DONE')
         self.assertEqual(r.returncode, 0, r.stderr)

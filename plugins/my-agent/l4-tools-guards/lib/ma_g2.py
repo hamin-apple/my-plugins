@@ -128,8 +128,9 @@ def grant_for(grants, tool: str, key: str, hook: str):
 def reason_text(why: str, hook: str, tool: str, q: str, key: str, cwd: str, note: str) -> str:
     """The hook's stderr text (Mock-up Part 5)."""
     script = ma_host.plugin_root(PLUGIN) / 'l4-tools-guards' / 'scripts' / 'run-log.py'
-    command = (f'python3 "{script}" answer gate=G2 tool={tool} q={shlex.quote(q)} key={key} result=allowed '
-               f'--cwd "{cwd}" --data-dir "{ma_data.data_dir()}" --task-dir "{ma_data.task_dir()}"')
+    sq = shlex.quote
+    command = (f'python3 {sq(str(script))} answer gate=G2 tool={sq(tool)} q={sq(q)} key={sq(key)} result=allowed '
+               f'--cwd {sq(cwd)} --data-dir {sq(str(ma_data.data_dir()))} --task-dir {sq(ma_data.task_dir())}')
     text = (f'my-agent G2 ({hook}): {why.rstrip(".")}. Codex shows no permission dialog: ask the person in a G2 popup '
             f'(Allow once / Deny) that names the tool {tool} and the target {q}. Then record the answer with {command} '
             f'(result=denied for Deny), and after Allow once retry the same call unchanged.')

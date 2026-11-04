@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from helpers import clean_task_env, make_task, records, rel, run_hook
+from helpers import CLAUDE_HOOK_ENV, clean_task_env, make_task, records, rel, run_hook
 import ma_logline
 
 TASK = '261025-probe-task'
@@ -23,7 +23,7 @@ class ScopeGuardTest(unittest.TestCase):
         self.L = self.root / 'proj'
         self.T = make_task(self.L, task=TASK)
         (self.L / 'src').mkdir()
-        self.env = {'MA_TASKS_DIR': str(self.root / 'agent-tasks')}
+        self.env = dict(CLAUDE_HOOK_ENV, MA_TASKS_DIR=str(self.root / 'agent-tasks'))
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -458,7 +458,7 @@ class ScopeGuardTest(unittest.TestCase):
         loc = self.root / 'cased'
         with clean_task_env():
             make_task(loc, task=TASK, sub='Notes/Agent')
-        env = {'MA_TASKS_DIR': str(self.root / 'agent-tasks'), 'CLAUDE_PLUGIN_OPTION_TASK_DIR': 'Notes/Agent'}
+        env = dict(CLAUDE_HOOK_ENV, MA_TASKS_DIR=str(self.root / 'agent-tasks'), CLAUDE_PLUGIN_OPTION_TASK_DIR='Notes/Agent')
 
         def hook(agent, path):
             payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Write', 'tool_input': {'file_path': str(path)},
@@ -474,7 +474,7 @@ class ScopeGuardTest(unittest.TestCase):
         with clean_task_env():
             make_task(loc, task=TASK, sub='docs/agent')
         (loc / '.my-agent').symlink_to('docs/agent')
-        env = {'MA_TASKS_DIR': str(self.root / 'agent-tasks')}
+        env = dict(CLAUDE_HOOK_ENV, MA_TASKS_DIR=str(self.root / 'agent-tasks'))
 
         def hook(agent, path):
             payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Write', 'tool_input': {'file_path': str(path)},

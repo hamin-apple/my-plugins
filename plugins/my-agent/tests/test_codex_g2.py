@@ -6,10 +6,12 @@ import os
 import re
 import shlex
 import subprocess
+import tempfile
 import time
 import unittest
+from pathlib import Path
 
-from helpers import log_lines, parse, run_hook
+from helpers import clean_task_env, log_lines, make_task, parse, run_hook
 from test_codex_guards import Base, fixture, patch
 
 import ma_logline
@@ -81,7 +83,7 @@ class AskIsExit2Test(G2Base):
         r = self.gate(self.patch_in())
         err = self.blocked(r)
         for text in ('G2 popup', 'Allow once', 'Deny', 'plan gate: write outside the task folder',
-                     'gate=G2 tool=apply_patch q=src/x.py key=', f'--cwd "{self.L}"', '--data-dir "', '--task-dir ".my-agent"',
+                     'gate=G2 tool=apply_patch q=src/x.py key=', f'--cwd {shlex.quote(str(self.L))}', '--data-dir ', '--task-dir .my-agent',
                      'retry the same call unchanged'):
             self.assertIn(text, err)
         ask = self.lines('ask')
@@ -152,6 +154,38 @@ class AskIsExit2Test(G2Base):
         self.assertIn('"permissionDecisionReason": "my-agent plan gate:', r.stdout)
         self.assertEqual(r.stderr, '')
         self.assertEqual(log_lines(self.T), [])
+
+
+class PrintedCommandShellTest(G2Base):
+    ODD = 'a b$x`y"z\'q'
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix=self.ODD)
+        self.root = Path(self.tmp.name).resolve()
+        self.L = self.root / f'proj {self.ODD}'
+        self.L.mkdir()
+        subprocess.run(['git', 'init', '-q', str(self.L)], check=True)
+        # ma_data.task_dir accepts one odd segment, so the task subfolder carries the odd characters too
+        sub = f'sub {self.ODD}'
+        with clean_task_env(MA_TASK_DIR=sub):
+            self.T = make_task(self.L, task='261025-probe-task', git=False, session=SID)
+        (self.L / 'src').mkdir()
+        self.env = {'MA_TASKS_DIR': str(self.root / f'agent-tasks {self.ODD}'), 'MA_TASK_DIR': sub,
+                    'MA_GATE_REPORT_DIR': str(self.root / 'gate-report')}
+        self.t0 = time.time() - 1000
+
+    def test_printed_command_runs_through_a_shell(self):
+        err = self.blocked(self.gate(self.bash('echo x > src/y.txt')))
+        elsewhere = self.root / 'elsewhere'
+        elsewhere.mkdir()
+        r = subprocess.run(command_of(err), shell=True, cwd=elsewhere, capture_output=True, text=True,
+                           env=dict(os.environ, **self.env))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        ask, ans = self.lines('ask'), self.lines('answer')
+        self.assertEqual((len(ask), len(ans)), (1, 1))
+        self.assertEqual((ans[0]['q'], ans[0]['key']), (ask[0]['q'], ask[0]['key']))
+        self.passed(self.gate(self.bash('echo x > src/y.txt')))
+        self.assertEqual(len(self.lines('release')), 1)
 
 
 class OneAnswerOneCallTest(G2Base):

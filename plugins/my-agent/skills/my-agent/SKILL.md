@@ -48,9 +48,8 @@ The main session that runs this skill is L1 (Router · Orchestrator · Gatekeepe
 | L1 | main session (this skill) | runs phases, delegates, merges, asks all questions, records | make deliverables (code, notes, drafts, plans) itself. Only exception: small fixes a judgment pointed out (2 files or fewer, about 10 lines), and small `plan.md` edits before G1b (Plan Review findings, G1b `Request changes`), and the work of an inline role (below). A small fix that changes a decision the person made is asked in a popup first; after an L1 edit in an HTML file, run a syntax check. |
 | L2 | architect · plan-reviewer · verifier · reviewer · gate-analyst | plans, judges, interprets decisions | change deliverables, delegate further |
 | L3 | explorer · researcher · writer · coder | the one work unit assigned | touch files outside the scope, delegate further |
-| L4 | tools·MCP · hooks · permission rules · scripts | run, record, block | judge |
+| L4 | tools·MCP · hooks · permission rules · scripts; the monitor and the G2 dialog are outside the levels | run, record, block | judge |
 
-- The monitor and the Claude Code permission dialog (G2) are outside the levels.
 - **Inline role:** when `agent-models.py` shows a role as `model=inline … pass=inline`, do not start that agent. Where the phase file or the plan hands work to it, read its definition (`${CLAUDE_PLUGIN_ROOT}/l2-design-judge/agents/<role>.md` or `${CLAUDE_PLUGIN_ROOT}/l3-workers/agents/<role>.md`) and follow it yourself in this session with the hand-off's inputs; write its result file where the agent would, inside its write scope, then record the `inline` line (Recorder rules). A role the phase does not start (explorer when `explore.md` says `Skipped:`) has no inline run and no line.
 - L1 hands work to L2 and L3 directly, passing only paths and criteria. Never pass the author's explanation to a judge.
 
@@ -104,7 +103,8 @@ If called with no argument, ask in a popup: `New task (Recommended)` / `continue
 - Invalid: a name that does not exist (`--foo`), a different case (`--Dev`, `--Auto`), two profile flags, `--auto` twice, or a flag before `continue`, `status` or a phase name. Show the valid flags and popup: `Let the Router pick (Recommended)` / `Abort`. `Let the Router pick` drops every flag, `--auto` included, and treats the rest as a call without flags (`continue` runs `continue`; an empty rest shows the no-argument popup).
 - Valid flags with no request: popup with the question "Type the request in the Other field": `Type the request in Other (Recommended)` / `Abort`. Read the request from the Other field, then start the new task with those flags.
 - In these three popups, `Abort` stops the call and creates nothing.
-- `Request:` keeps the leading flags as written. The label rule looks for a profile flag among the leading flags.- Record these popups only when a new task starts, in Intake item 10 with the item 1–5 popups, as `ask gate=Q … rec=…` / `answer gate=Q …` lines. Always give `rec=`; do not start the `q=` value with `--` (e.g. `q="dev flag outside a git repository"`). After `Let the Router pick` leads to `continue` or `status`, write none.
+- `Request:` keeps the leading flags as written. The label rule looks for a profile flag among the leading flags.
+- Record these popups only when a new task starts, in Intake item 10 with the item 1–5 popups, as `ask gate=Q … rec=…` / `answer gate=Q …` lines. Always give `rec=`; do not start the `q=` value with `--` (e.g. `q="dev flag outside a git repository"`). After `Let the Router pick` leads to `continue` or `status`, write none.
 
 ## Intake (step 1, Router)
 
@@ -120,7 +120,8 @@ Do these in order. If any item fails, show the reason and ask in a popup: `Retry
    - `dev`: requests that change code in a git repository (feature, bug fix, refactoring). The deliverable is a commit. If the task location is not a git repository, do not pick `dev`; pick `general` and write the reason in the Intake report.
    - `research`: requests to research a topic into a note or report with sources (mainly web research).
    - `general`: any other multi-step task.
-   - **Models preset:** see "Models preset" below item 11.4. **Task ID:** `<YYMMDD>-<slug>`. Set the date once with `date +%y%m%d`. The slug is 2–4 English words for the request without the profile flag: lowercase letters, digits and hyphens, 30 characters or fewer. If the same folder exists, add `-b`, `-c`. Do not ask; show it in the first gate popup.
+   - **Models preset:** see "Models preset" below item 11.
+4. **Task ID:** `<YYMMDD>-<slug>`. Set the date once with `date +%y%m%d`. The slug is 2–4 English words for the request without the profile flag: lowercase letters, digits and hyphens, 30 characters or fewer. If the same folder exists, add `-b`, `-c`. Do not ask; show it in the first gate popup.
 5. **`.gitignore`:** Only when the task location is a git repository and `<task_dir>/.gitignore` does not exist, popup: `Don't commit (Recommended)` / `Commit`. Skip it also when `git check-ignore -q <task location>/<task_dir>/` exits 0. The question says what `Commit` means: task records go into the project's commits. For Don't commit, write the line `*`; for Commit, the line `# my-agent: commit`.
 6. **`.active` and index:** Create the task folder. Run `date '+%Y-%m-%d %H:%M'` first, then write the four lines of `.active` (`phase: 1`, `started:` with that value) with the Write tool, without command substitution. If the task location differs from the folder you ran in (or its git root), add one line to `<data folder>/active-index.json` (`{"<run folder>": "<task location>"}`). Keep other lines.
 7. **Project list:** If `<data folder>/projects.txt` lacks the task location's absolute path, add one line. Never delete lines.
@@ -183,11 +184,11 @@ When `Abort` was picked in a popup, or Intake decided to abort the previous task
 4. Leave the task folder as is. Report the leftover worktrees and the list of uncommitted changes this task left in the main tree.
 5. Popup: `Leave as is (Recommended)` / `Clean up worktrees`. Do not revert changes in the main tree.
 
-- An aborted task is not resumed with `continue`. To do it again, create a new task and write `Follows:`.
+- To do an aborted task again, create a new task and write `Follows:`.
 
 ## Recorder rules
 
-The run-log is `run-log.md` in the task folder, and only `run-log.py` writes its lines. Do not edit it directly. The script adds the time. Hooks record subagent `call:`/`start:`/`stop:` and G2 `ask:`/`answer:` automatically, so L1 does not write them; an inline role's run is L1's `inline` line. Values (`q=`, `choice=`, `why=`, etc.) follow "Tool choice": the shell runs backticks and `$(`, and before approval the G1b hook asks (the G2 dialog) for such commands. Even after approval, if a command cannot be parsed (for example it has `$(` or backticks) and has the shape `git … commit` (a `git` word, then `commit`, in one simple command; separators inside quotes or `$( )` do not split it), the verdict hook cannot tell whether it is a commit, so it asks (the G2 dialog) before Verify·Review. A command with the word `git` but no such shape is not asked. Get values by running a command separately (e.g. run `git rev-parse HEAD` first). If you need the time, run `date` first and write the value. For `--model`, use the exact model ID of the current session given in the system prompt.
+The run-log is `run-log.md` in the task folder, and only `run-log.py` writes its lines. Do not edit it directly. The script adds the time. Hooks record subagent `call:`/`start:`/`stop:` and G2 `ask:`/`answer:` automatically, so L1 does not write them; an inline role's run is L1's `inline` line. Values (`q=`, `choice=`, `why=`, etc.) follow "Tool choice": the shell runs backticks and `$(`, and before approval the G1b hook asks (the G2 dialog) for such commands. Even after approval, for a `git … commit` command with `$(` or backticks the verdict hook cannot tell whether it is a commit, so it asks (the G2 dialog) before Verify·Review. Get values by running a command separately (e.g. run `git rev-parse HEAD` first). If you need the time, run `date` first and write the value. For `--model`, use the exact model ID of the current session given in the system prompt.
 
 | When | Command |
 |---|---|
@@ -222,7 +223,7 @@ Read the lines the command prints:
 - `PARTIAL: <agent> <id> unit=<u…> …` — that worker ended without a final answer (maxTurns, `end=partial`; not the same as the first line `PARTIAL <reason>` a worker writes itself). Handle it as "worker stopped once" (Failure handling below).
 - `run-log: no active my-agent task …` — `.active` is missing or was not found. Fix `.active` first.
 
-**Cost (for reference):** the script reads `cost_usd` from `~/.cache/claude-sessions/statusline/<session ID>.json` and writes the `cost` line itself (`reset=1` if the value fell); L1 never types a cost. If the file is missing it prints `run-log: no cost line (…)`, writes nothing, and L1 continues. The baseline line makes the stretch holding `1 Intake` show the gain over it; a run-log without a baseline (older tasks, or no statusline file at Intake) shows `not recorded` there. In the G3 report, write it only as "about $N (reference, estimated at list price)", and use it for no decision.
+**Cost (for reference):** the script reads `cost_usd` from `~/.cache/claude-sessions/statusline/<session ID>.json` and writes the `cost` line itself (`reset=1` if the value fell); L1 never types a cost. If the file is missing it prints `run-log: no cost line (…)`, writes nothing, and L1 continues. In the G3 report, write it only as "about $N (reference, estimated at list price)", and use it for no decision.
 
 ## Failure handling
 
@@ -232,7 +233,7 @@ Read the lines the command prints:
 | Worker stopped once (`PARTIAL`, `end=partial`) | Retry on opus as a new call (never a resume) with the same input and the stop report (call argument `model: "opus"`, which beats the preset) |
 | Worker stopped twice | If it is a small fix L1 can make directly, make it; otherwise E. If the plan was wrong, go back to Plan |
 | Verify FAIL 1–2 times | Archive the judgment files, go back to Execute, and pass the list of failed criteria (`accept.md` "Back to Execute"); after the second FAIL on the same criterion, the fixer's new call must give a structural argument (why no other failing form remains) before the fix, or offer `Change scope` through E |
-| Verify FAIL 3 times in a row | E: `Keep fixing` / `Change scope·criteria` / `Abort` |
+| Verify FAIL 3 times in a row | E: `Give direction` / `Change scope` / `Abort` |
 | A workflow ends as completed | Do not treat it as success until you check its "could not handle" list |
 
 **Model and effort per call:** they come from the task's preset. Before G1b approval run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/agent-models.py" show --profile <p> --preset <name> --data-dir "<data folder>"`; after approval run `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/agent-models.py" show --plan <task folder>/plan.md` (the `## Models` rows). Pass the Agent call arguments `model`/`effort` only for the fields listed under `pass=`. With no `Models:` line, pass none. When `continue` reported the preset gone (`continue` item 4), do not run `show --plan` and pass none for the rest of the task. The retry on opus passes `model: "opus"` for that call and beats the preset; an `effort` listed under `pass=` is still passed. A role whose line shows `pass=inline` gets no Agent call ("Inline role").
@@ -270,7 +271,7 @@ G1a, G1b and G3 (general and dev) are read on the task's Report tab; the chat re
 
 ## In-flight revision (before G3 acceptance)
 
-The record of revisions is the run-log's `revision` lines. `## Revisions` at the very end of `plan.md` (after `## Approval`) is a secondary record for people to read; when architect rewrites `plan.md`, it carries the section over as is (scope-guard blocks writes that delete or change those lines). Below, "current rev" is the last `rev=` in the run-log `revision` lines (0 if none). "Archive" means copying the whole task folder (except `archive/`) to `archive/<name>/` with `cp -pR` and comparing all of it with `cmp`. If the comparison differs, stop and report. Use absolute paths without `cd` for `mkdir`·`cp` ("Tool choice"; before approval, the G1b hook asks for a relative path after `cd`, as it may point outside the task folder). Get the time in the name by running `date +%y%m%d-%H%M%S` first.
+The record of revisions is the run-log's `revision` lines. `## Revisions` at the very end of `plan.md` (after `## Approval`) is a secondary record for people to read; when architect rewrites `plan.md`, it carries the section over as is. Below, "current rev" is the last `rev=` in the run-log `revision` lines (0 if none). "Archive" means copying the whole task folder (except `archive/`) to `archive/<name>/` with `cp -pR` and comparing all of it with `cmp`. If the comparison differs, stop and report. Use absolute paths without `cd` for `mkdir`·`cp` ("Tool choice"). Get the time in the name by running `date +%y%m%d-%H%M%S` first.
 
 - **Rewrite before approval** (every case where architect rewrites `plan.md` before G1b approval: G1b `Request changes`, Plan Review `REVISE`, applying Plan Review findings, prototype popup `Plan change`): Do not ask the kind. Before handing it back to architect, archive to `archive/<time>-rev<current rev>-draft/` and write a `revision rev=<current rev> before=G1b why=… archive=…` line; if L1 edits it itself instead, the same archive but a `fix` line (see the variant below). The rev does not go up, and nothing is written to `## Revisions`. If the request changes the confirmed scope (`scope.md`), it is `Revise this task` below.
   - **L1 edit variant:** a small change (level-table size: 2 task files or fewer, about 10 lines) can be made by L1 with the Edit tool instead. Same archive, but write a `fix … files=plan.md before=G1b archive=…` line instead of `revision`. Plan Review again only after a BLOCKER fix, never after `READY FOR APPROVAL`. A NITPICK that turns out larger goes to architect.

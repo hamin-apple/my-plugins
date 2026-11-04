@@ -168,8 +168,11 @@ def merge(defs, entries) -> dict:
 
 def diff(defs, values) -> dict:
     """{agent: [fields that differ from the definition]} (the `pass=` column), in `defs` order."""
-    return {a: [INLINE] if values[a][0] == INLINE else [k for k, v, d in (('model', values[a][0], defs[a]['model']), ('effort', values[a][1], defs[a]['effort']))
-                if v != d] for a in defs}
+    return {a: [INLINE] if values[a][0] == INLINE
+            else [k for k, v, d in (('model', values[a][0], defs[a]['model']),
+                                    ('effort', values[a][1], defs[a]['effort']))
+                  if v != d]
+            for a in defs}
 
 
 def resolve(data, profile, preset, defs):

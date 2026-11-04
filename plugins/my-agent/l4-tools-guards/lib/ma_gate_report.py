@@ -20,6 +20,7 @@ SCOPE_CHANGE = 'Scope change:'   # a `fix` line that records an in-scope adjustm
 NOTE_BY_L1 = 'answered by L1'
 VERIFIER = 'my-agent:verifier'   # the `agent=` value of the verifier's `start:` line
 PLAN_REVIEWER = 'my-agent:plan-reviewer'   # the `agent=` value subagent-log.py writes on `start:` lines
+INLINE = 'inline'   # L1 line kind of a role that ran in the main session (run-log.py inline): one run of its role
 BASELINE = 'baseline'   # `cost:` field (value 1): the cost before the task's first step, not a cut
 PLUGIN_AGENT = 'my-agent:'   # `agentType` prefix of this plugin's subagents
 RECOMMENDED = re.compile(r'\s*\(recommended\)\s*$', re.I)
@@ -165,6 +166,9 @@ def judge_misses(lines) -> int:
         elif kind == 'stop' and f.get('id') in verifiers:
             result = f.get('result')
             pending = isinstance(result, str) and result.startswith(ma_schema.VERIFY_PASS)
+        elif kind == INLINE and f.get('agent') == VERIFIER:
+            result = f.get('result')
+            pending = isinstance(result, str) and result.startswith(ma_schema.VERIFY_PASS)
         elif kind == 'step' and f.get('name') == 'Verify':
             pending = False
         elif kind == 'answer' and f.get('gate') == 'G3' and _bare(f.get('choice')) == 'Rework':
@@ -187,6 +191,7 @@ def tally_text(lines) -> str:
     count = lambda kind, **want: sum(1 for k, f in kinds if k == kind and all(f.get(a) == b for a, b in want.items()))  # noqa: E731
     main = len({(f.get('session'), f.get('model')) for k, f in kinds if k == 'step' and f.get('model') not in (None, '-')
                 and ma_host.main_mismatch(f.get('model'))})
+    inline = count(INLINE)
     sub = count('stop', mismatch='1')
     opus = sum(1 for k, f in kinds if k == 'call' and 'opus' in (f.get('model') or ''))
     scope = sum(1 for k, f in kinds if k == 'fix' and (f.get('what') or '').startswith(SCOPE_CHANGE))
@@ -198,10 +203,10 @@ def tally_text(lines) -> str:
     drafts = sum(1 for k, f in kinds if k == 'revision' and f.get('before'))
     revs = len({f.get('rev') for k, f in kinds if k == 'revision' and not f.get('before') and f.get('rev')})
     out += ['', '## Metrics', '| Item | Value |', '|---|---|',
-            f"| Verify runs | {count('start', agent=VERIFIER)} |",
+            f"| Verify runs | {count('start', agent=VERIFIER) + count(INLINE, agent=VERIFIER)} |",
             f'| Judge misses | {judge_misses(lines)} |',
-            f"| Plan Review runs | {count('start', agent=PLAN_REVIEWER)} |",
-            f"| Subagents | {count('start')} |",
+            f"| Plan Review runs | {count('start', agent=PLAN_REVIEWER) + count(INLINE, agent=PLAN_REVIEWER)} |",
+            f"| Subagents | {count('start') + inline}{f' (inline {inline})' if inline else ''} |",
             f'| Model mismatches | {main + sub} (main session {main} · per session and model, subagents {sub}) |',
             f'| L1 small fixes | {fixes} |',
             f'| Adjustments within the approved scope | {scope} |',

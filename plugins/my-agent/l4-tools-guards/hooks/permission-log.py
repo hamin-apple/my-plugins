@@ -10,6 +10,12 @@ answer  PostToolUse: `answer: gate=G2 id= result=allowed`, only when this call i
 The ask's agent and id come from the input's `agent_type`/`agent_id` (present for a subagent request); without
 `agent_id` the line is `agent=main id=-`. The hook never guesses a running subagent.
 
+PermissionRequest on Codex (documented output: `hookSpecificOutput.decision.behavior`): this hook prints nothing and
+exits 0 on every input, so it gives no decision and Codex's own approval flow runs as without it; it reads only
+`tool_name`, `tool_input`, `agent_type`, `agent_id`, `session_id` and `cwd`. Codex shows no permission dialog for the
+gate hooks' asks, which stop the call with exit 2 and write their own keyed `ask` line (`ma_g2`); `answer` leaves those
+open, so on Codex a PostToolUse after a released call writes no `answer` line.
+
 Both lines carry `session=<session_id>` when the input has it. Writes nothing when no `.active` is found, or
 when the input's `session_id` differs from `.active` `session:` (another session of the same repo, ma_active.owns).
 Always exits 0 with no output.
@@ -46,7 +52,8 @@ def open_asks(lines):
         if f.get('gate') != 'G2':
             continue
         if kind == 'ask':
-            out.append(f)
+            if not f.get('key'):   # a keyed ask is a Codex gate-hook ask (ma_g2): L1's answer closes it, not PostToolUse
+                out.append(f)
         elif kind == 'answer':
             for i in range(len(out) - 1, -1, -1):
                 if out[i].get('id') == f.get('id'):

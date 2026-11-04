@@ -34,6 +34,7 @@ sys.path.insert(0, str(L4 / 'lib'))
 import ma_schema  # noqa: E402
 import ma_usage  # noqa: E402
 
+SKILL = 'skills/my-agent/SKILL.md'   # the main skill, relative to the plugin
 PROFILES = ('general', 'research', 'dev')
 LOC, TASK = Path('/LOC'), Path('/LOC/.my-agent/TASK')   # stand-ins for scope-guard's rules()
 
@@ -42,9 +43,9 @@ LOC, TASK = Path('/LOC'), Path('/LOC/.my-agent/TASK')   # stand-ins for scope-gu
 # 'fence' = the fenced block holding `key`, 'item' = numbered list item under heading key[0] starting with key[1],
 # 'doc' = a Python file's docstring.
 ARTIFACTS = [
-    ('.active', ['1'], 'L1', [('SKILL.md', 'h', '`.active` rules')]),
-    ('.gitignore', ['1'], 'L1', [('SKILL.md', 'item', ('Intake (step 1, Router)', '5.'))]),
-    ('intake.md', ['1'], 'L1 Router', [('SKILL.md', 'fence', 'Status: active')]),
+    ('.active', ['1'], 'L1', [(SKILL, 'h', '`.active` rules')]),
+    ('.gitignore', ['1'], 'L1', [(SKILL, 'item', ('Intake (step 1, Router)', '5.'))]),
+    ('intake.md', ['1'], 'L1 Router', [(SKILL, 'fence', 'Status: active')]),
     ('run-log.md', ['1', '2', '3', '4', '5', '6', '7', '8'], 'L1 Recorder · L4 hooks',
      [(ARCH, 'b', 'line format'), (ARCH, 'b', 'who records what')]),
     ('explore.md', ['2'], 'my-agent:explorer (L1 saves the report)',
@@ -71,7 +72,7 @@ ARTIFACTS = [
 
 # The L1 procedure for each step, as the phase files write it.
 STEP_RULES = {
-    '1': [('SKILL.md', 'Intake (step 1, Router)')],
+    '1': [(SKILL, 'Intake (step 1, Router)')],
     '2': [('l1-orchestration/phases/define.md', '2. Explore → Scope')],
     '3': [('l1-orchestration/phases/plan.md', '3. Plan')],
     '4': [('l1-orchestration/phases/plan.md', '4. Plan Review'), ('l1-orchestration/phases/plan.md', 'G1b plan approval')],
@@ -86,10 +87,10 @@ STEP_RULES = {
 
 # Where each L1 component's rules are written (besides the steps it leads in the 4.3 table).
 L1_SOURCES = {
-    'Router': [('SKILL.md', 'h', 'Arguments')],
-    'Orchestrator': [('SKILL.md', 'h', 'Phase files'), ('SKILL.md', 'h', 'Change requests'),
-                     ('SKILL.md', 'h', 'Data and instructions')],
-    'Gatekeeper': [('SKILL.md', 'h', 'Question rules'), ('SKILL.md', 'h', 'Gates')],
+    'Router': [(SKILL, 'h', 'Arguments')],
+    'Orchestrator': [(SKILL, 'h', 'Phase files'), (SKILL, 'h', 'Change requests'),
+                     (SKILL, 'h', 'Data and instructions')],
+    'Gatekeeper': [(SKILL, 'h', 'Question rules'), (SKILL, 'h', 'Gates')],
     'Recorder': [(ARCH, 'b', 'who records what'), (ARCH, 'b', 'Popup records')],
 }
 
@@ -494,7 +495,7 @@ def l4_details(agent_list) -> dict:
 
 
 def frontmatter_skill():
-    m = re.match(r'---\n(.*?)\n---\n(.*)', read('SKILL.md'), re.S)
+    m = re.match(r'---\n(.*?)\n---\n(.*)', read(SKILL), re.S)
     return m.group(1), m.group(2)
 
 
@@ -625,8 +626,8 @@ def build() -> str:
         'agents': agent_list, 'l1': l1_details(steps), 'l4': l4_details(agent_list),
         'flow': flow, 'steps': steps, 'retro': retro, 'skip': skip, 'gates': gates,
         'profiles': profiles(), 'artifacts': artifacts(arch), 'vocab': vocab(),
-        'skillLevels': md(cut(read('SKILL.md'), 'Levels', 'SKILL.md')),
-        'l1DoesNot': inline(next(r[3] for r in table(cut(read('SKILL.md'), 'Levels', 'SKILL.md'), 'SKILL.md') if r[0] == 'L1')),
+        'skillLevels': md(cut(read(SKILL), 'Levels', rel(SKILL))),
+        'l1DoesNot': inline(next(r[3] for r in table(cut(read(SKILL), 'Levels', rel(SKILL)), rel(SKILL)) if r[0] == 'L1')),
     }
     payload = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
     page = TEMPLATE.read_text(encoding='utf-8')

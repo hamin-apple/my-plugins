@@ -66,8 +66,10 @@ class CodexBuild(unittest.TestCase):
     def test_manifest_version(self):
         a = json.loads((REPO / '.claude-plugin/plugin.json').read_text())
         b = json.loads((REPO / '.codex-plugin/plugin.json').read_text())
-        for k in ('name', 'version', 'description', 'author', 'skills', 'hooks'):
+        for k in ('name', 'version', 'description', 'author', 'hooks'):
             self.assertEqual(a[k], b[k])
+        self.assertNotIn('skills', a)
+        self.assertNotIn('skills', b)
 
     def test_changed_body_fails_check(self):
         tmp = copy_tree()

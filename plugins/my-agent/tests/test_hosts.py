@@ -6,7 +6,7 @@ import helpers
 import ma_host
 
 HOSTS = helpers.REPO / 'l1-orchestration' / 'hosts.md'
-SKILL = helpers.REPO / 'SKILL.md'
+SKILL = helpers.REPO / 'skills' / 'my-agent' / 'SKILL.md'
 SHARED = (sorted((helpers.REPO / 'l1-orchestration' / 'phases').glob('*.md'))
           + sorted((helpers.REPO / 'l1-orchestration' / 'profiles').glob('*.md'))
           + sorted((helpers.REPO / 'l2-design-judge' / 'agents').glob('*.md'))
@@ -37,7 +37,7 @@ class HostsTest(unittest.TestCase):
 
     def test_skill_pointer(self):
         text = SKILL.read_text(encoding='utf-8')
-        self.assertIn('- Codex: read `l1-orchestration/hosts.md`', text)
+        self.assertIn('- Codex: read `l1-orchestration/hosts.md` in the plugin folder, two levels above the folder of this `SKILL.md`.', text)
         self.assertLess(text.index('l1-orchestration/hosts.md'), 16000)
         self.assertLess(text.index('## Arguments'), 16000)
 
@@ -62,15 +62,32 @@ class HostsTest(unittest.TestCase):
         self.assertIn('`agent_id`', ident[1])
 
     def test_variable_rows_do_not_claim_expansion(self):
-        for word in ('CLAUDE_PLUGIN_ROOT', 'CLAUDE_SKILL_DIR', 'user_config'):
+        for word in ('CLAUDE_PLUGIN_ROOT', 'user_config'):
             row = self.find(word)
             self.assertIn('literally, not expanded', ' '.join(row[1:]))
 
     def test_my_agent_row(self):
         row = self.find('`/my-agent`')
-        self.assertEqual(row[1], 'not available in Codex')
-        self.assertIn('Codex lists no plugin-root `SKILL.md`', row[2])
-        self.assertIn('`my-agent:monitor` is listed', row[2])
+        self.assertEqual(row[1], 'the skill `my-agent:my-agent`')
+        self.assertIn('Codex lists it from `skills/my-agent/SKILL.md`', row[2])
+        self.assertIn('`my-agent:monitor`', row[2])
+
+    def test_plugin_root_row_names_the_session_line(self):
+        row = self.find('`${CLAUDE_PLUGIN_ROOT}`')
+        self.assertEqual(row[1], 'the plugin folder of the session line')
+        self.assertIn('`my-agent on Codex: plugin folder <path> \u2026`', row[2])
+        self.assertIn('When that line is absent, the plugin folder is two levels above the folder of the skill\'s '
+                      '`SKILL.md` (`<plugin folder>/skills/my-agent/SKILL.md`).', row[2])
+        self.assertIn('Hooks get `CLAUDE_PLUGIN_ROOT` expanded.', row[2])
+
+    def test_data_and_task_rows_name_the_session_line(self):
+        row = self.find('`${user_config.data_dir}`')
+        self.assertEqual(row[1], 'the data and task folders of the session line')
+        self.assertIn('the data folder and task folder the session line names', row[2])
+        self.assertIn('without that line, `data-dir.py` gives them', row[2])
+
+    def test_no_skill_dir_row(self):
+        self.assertNotIn('CLAUDE_SKILL_DIR', HOSTS.read_text(encoding='utf-8'))
 
     def test_role_row_names_the_installed_agent(self):
         row = self.find('`my-agent:<role>`')
@@ -109,11 +126,23 @@ class HostsTest(unittest.TestCase):
         row = self.find('`maxTurns`')
         self.assertEqual(row[1], 'not available in Codex')
         self.assertIn('carry neither', row[2])
+        self.assertIn('inline role', row[2])
+        self.assertIn('pass=inline', row[2])
+        self.assertIn('main session', row[2])
 
     def test_question_row_names_the_codex_tool(self):
         row = self.find('AskUserQuestion')
         self.assertIn('`request_user_input`', row[1])
         self.assertIn('`request_user_input_async`', row[1])
+
+    def test_g2_row_describes_the_codex_flow(self):
+        row = self.find('G2 permission dialog')
+        self.assertEqual(row[1], "a G2 popup after a gate hook's exit 2")
+        for text in ('request_user_input', 'Allow once', 'Deny', 'answer gate=G2', 'q=', 'key=',
+                     'retry the same call unchanged', 'never answers it', 'hookSpecificOutput.decision.behavior',
+                     'my-agent G2', '`release`'):
+            self.assertIn(text, row[2])
+        self.assertNotIn('not available', row[1])
 
     def test_rows_present(self):
         for word in ('AskUserQuestion', '`Workflow`', '`SendMessage`', 'hand-back', '`Bash`', 'WebFetch',

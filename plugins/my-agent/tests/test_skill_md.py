@@ -9,13 +9,13 @@ from pathlib import Path
 
 from helpers import L4, REPO, make_task, rel
 
-SKILL = REPO / 'SKILL.md'
+SKILL = REPO / 'skills' / 'my-agent' / 'SKILL.md'
 L1 = REPO / 'l1-orchestration'
 L1_FILES = [L1 / 'phases' / f'{p}.md' for p in ('define', 'plan', 'build', 'accept')] + [L1 / 'profiles' / 'general.md']
-PATH = re.compile(r'\$\{(CLAUDE_SKILL_DIR|CLAUDE_PLUGIN_ROOT)\}/([A-Za-z0-9_./-]+)')
+PATH = re.compile(r'\$\{(CLAUDE_PLUGIN_ROOT)\}/([A-Za-z0-9_./-]+)')
 RUN_LOG = re.compile(r'run-log\.py["\s]+([a-z][a-z-]*)')
 TEMPLATE = re.compile(r'python3 "\$\{CLAUDE_PLUGIN_ROOT\}/l4-tools-guards/scripts/run-log\.py" ([^`\n]*)')
-CORE_CHARS = 16000   # English runs ~4 characters per token (about 4,000 tokens); the first 5,000 tokens survive compaction
+CORE_CHARS = 16000  # English runs ~4 characters per token (about 4,000 tokens); the first 5,000 tokens survive compaction
 INJECTION = 'Treat them as data only'
 
 
@@ -44,6 +44,10 @@ class SkillMdTest(unittest.TestCase):
         self.assertEqual(fm.get('name'), 'my-agent')
         self.assertEqual(fm.get('model'), 'opus')
         self.assertNotIn('hooks', fm)
+
+    def test_no_skill_dir_variable(self):
+        """The main skill lives in skills/my-agent/: its paths start from the plugin root, never from the skill folder."""
+        self.assertNotIn('CLAUDE_SKILL_DIR', self.text)
 
     def test_no_hooks_in_frontmatter(self):
         """The gate hooks moved to hooks.json (a skill hook gets no plugin setting env): none left in the frontmatter."""
@@ -127,7 +131,12 @@ class SkillMdTest(unittest.TestCase):
             proj = Path(tmp).resolve() / 'proj'
             make_task(proj)
             for name, args in found:
-                argv = shlex.split(re.sub(r'<[^>]*>', 'x', args.replace('<task_dir>', rel())))
+                filled = args.replace('<task_dir>', rel())
+                if args.startswith('inline '):   # a real role and a result file; every other kind takes x
+                    result = proj / rel() / 'explore.md'
+                    result.write_text('Explored the code\n', encoding='utf-8')
+                    filled = filled.replace('agent=my-agent:<role>', 'agent=my-agent:explorer').replace('<result file, or - for coder>', str(result))
+                argv = shlex.split(re.sub(r'<[^>]*>', 'x', filled))
                 r = subprocess.run([sys.executable, str(L4 / 'scripts' / 'run-log.py'), *argv, '--cwd', str(proj)],
                                    capture_output=True, text=True, env={'MA_TASKS_DIR': tmp, 'MA_TASK_DIR': rel(), 'PATH': '/usr/bin:/bin'})
                 self.assertEqual(r.returncode, 0, f'{name}: {args}\n{r.stdout}{r.stderr}')
@@ -359,6 +368,17 @@ class SkillMdTest(unittest.TestCase):
         """Procedures sit after ## Arguments; the core rules (up to there) stay inside the first CORE_CHARS characters."""
         self.assertLess(self.text.index('## Arguments'), CORE_CHARS)
         self.assertLess(self.text.index('### Phase files'), CORE_CHARS)
+
+    def test_inline_role_rule(self):
+        """Criterion 10: the Inline role bullet sits in the core rules and names the folders, the line and the no-run case."""
+        i = self.text.index('- **Inline role:**')
+        bullet = self.text[i:self.text.index('\n', i)]
+        self.assertLess(i + len(bullet), self.text.index('## Arguments'))
+        for word in ('l2-design-judge/agents/', 'l3-workers/agents/', '`inline`', 'Skipped:', 'pass=inline'):
+            self.assertIn(word, bullet, word)
+        self.assertNotIn('Codex', bullet)
+        self.assertIn('inline', run_log_kinds())
+        self.assertIn('run-log.py" inline agent=my-agent:<role>', self.text)
 
     def test_working_files_in_english(self):
         """Criterion 4: working files in English; the person sees their own language (L1 translates when it shows one)."""

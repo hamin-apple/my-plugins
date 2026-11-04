@@ -14,6 +14,11 @@ session= is refused): it reads `cost_usd` from the statusline file `<session>.js
 ~/.cache/claude-sessions/statusline), session from .active first, else $CLAUDE_CODE_SESSION_ID. A missing or
 unreadable file prints `run-log: no cost line (<reason>)` and writes nothing (exit 0); a value below the previous
 `cost:` line of that session gets reset=1. `cost` also refuses baseline=.
+`inline` records a role that ran in the main session (the inline pass of agent-models.py): agent=my-agent:<role> of the nine
+roles and file= (the result file, or `-` for my-agent:coder) are needed, unit= is optional (`-`). result= is the first line of
+the file (cut to 200 characters); for `file=-` (coder only) it is given as result=, and for every other role it is refused. A missing
+result file prints `run-log: inline needs the result file <path> (missing)`, exit 1, nothing written. Fields: agent unit file
+result model (--model gives model=).
 After the `step` line with n=1 the script writes a second line `cost: session=<sid> usd=<value> baseline=1` (the
 baseline the tally measures the Intake stretch against), when the statusline file gives a value (same lookup as `cost`)
 and the run-log has no `cost:` line yet; otherwise it writes and prints nothing extra. Other `step` lines never do.
@@ -46,7 +51,8 @@ import ma_subagent  # noqa: E402
 import ma_usage  # noqa: E402
 
 KINDS = ('step', 'ask', 'answer', 'revision', 'cost', 'stale', 'base', 'abort', 'deliver', 'resume',
-         'rules-changed', 'merge', 'fix', 'delegate', 'profile', 'models')
+         'rules-changed', 'merge', 'fix', 'delegate', 'profile', 'models', 'inline')
+RESULT_CHARS = 200   # longest `result=` an inline line takes from its result file
 
 
 def statusline_cost(session):
@@ -86,6 +92,36 @@ def subagent_mismatches(lines) -> list:
             s = starts.get(f.get('id'), {})
             out.append(f"MISMATCH: {s.get('agent', '?')} configured {s.get('configured', '?')}, actual {f.get('actual', '?')}")
     return out
+
+
+def inline_fields(fields, given, cwd):
+    """The ordered fields of an `inline` line, or the exit code (message printed) when the arguments are refused."""
+    role = (given.get('agent') or '').partition(':')[2]
+    if not given.get('agent', '').startswith('my-agent:') or role not in ma_schema.AGENTS or 'file' not in given:
+        print('run-log: inline needs agent=my-agent:<role> (one of the nine roles) and file=', file=sys.stderr)
+        return 2
+    extra = {k for k, _ in fields} - {'agent', 'unit', 'file', 'result'}
+    if extra:
+        print(f"run-log: inline takes agent=, unit=, file= and result=, not {', '.join(sorted(extra))}=", file=sys.stderr)
+        return 2
+    path = given['file']
+    if role == 'coder' and path == '-':
+        if not given.get('result'):
+            print('run-log: inline for my-agent:coder with file=- needs result= (the first line of its report)', file=sys.stderr)
+            return 2
+        result = given['result']
+    elif path == '-' or 'result' in given:
+        print('run-log: inline takes file=- and result= for my-agent:coder only; other roles give the result file', file=sys.stderr)
+        return 2
+    else:
+        full = Path(path) if os.path.isabs(path) else Path(cwd) / path
+        try:
+            text = full.read_text(encoding='utf-8', errors='replace')
+        except OSError:
+            print(f'run-log: inline needs the result file {path} (missing)')
+            return 1
+        result = (text.splitlines() or [''])[0].strip()[:RESULT_CHARS] or '-'
+    return [('agent', given['agent']), ('unit', given.get('unit') or '-'), ('file', path), ('result', result)]
 
 
 def main(argv=None) -> int:
@@ -128,6 +164,11 @@ def main(argv=None) -> int:
     if args.kind == 'models' and not {'preset', 'source'} <= keys:
         print('run-log: models needs preset= and source=', file=sys.stderr)
         return 2
+    if args.kind == 'inline':
+        code = inline_fields(fields, fields_d, args.cwd)
+        if isinstance(code, int):
+            return code
+        fields = code
     active = ma_active.find_active(args.cwd, ma_data.data_dir(args.data_dir), sub=args.task_dir)
     if active is None:
         print(f'run-log: no active my-agent task under {args.cwd}')

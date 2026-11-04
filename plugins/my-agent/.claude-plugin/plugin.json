@@ -1,13 +1,10 @@
 {
   "name": "my-agent",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks",
   "author": {
     "name": "hamin-apple"
   },
-  "skills": [
-    "./"
-  ],
   "agents": [
     "./l2-design-judge/agents/architect.md",
     "./l2-design-judge/agents/plan-reviewer.md",

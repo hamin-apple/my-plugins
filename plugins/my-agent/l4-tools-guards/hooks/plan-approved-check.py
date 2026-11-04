@@ -20,8 +20,9 @@ After approval, a write outside the location, the data folder and the result pat
 declare (`- Deliverable location: `…`` or `- Save path: `…``) gets `ask`: auto mode lets such a write through without a
 prompt (probe 2026-10-25); the same holds for the ask before approval. A Bash write whose target cannot be told
 passes, as before (git commit asks via G2). A deny appends one `guard:` line (hook=plan-approved-check agent=main
-id=-, ma_schema.GUARD_FIELDS, `cwd` the input's) to the task's run-log; an ask writes none, and a failed write never changes the
-decision.
+id=-, ma_schema.GUARD_FIELDS, `cwd` the input's) to the task's run-log; on Claude Code an ask writes none. On Codex an ask
+stops the call with exit 2 and writes a G2 `ask` line (`ma_g2`, via `ma_host.emit`); one `answer gate=G2` line releases one
+call. A failed `guard:` write never changes the decision.
 The gate-report copy folder (`ma_gate_report.report_dir()`, $MA_GATE_REPORT_DIR) counts as a place too; G1b is unchanged.
 """
 import os

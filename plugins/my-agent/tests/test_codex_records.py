@@ -133,7 +133,9 @@ class CodexRecordsTest(unittest.TestCase):
 
     def test_session_notice(self):
         r = self.hook('session-notice.py', None, fixture('hook-session-start.json'))
-        text = json.loads(r.stdout)['hookSpecificOutput']['additionalContext']
+        text = r.stdout
+        self.assertTrue(text.startswith('my-agent on Codex: plugin folder '))
+        self.assertEqual(text.count('\n'), 1)
         self.assertIn('Run `/my-agent continue` before doing anything else.', text)
 
     def test_hooks_leave_marks_on_codex_only(self):

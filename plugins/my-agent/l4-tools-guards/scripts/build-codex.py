@@ -11,7 +11,7 @@ back to `my-agent:<role>`), `description` and `developer_instructions` (the `.md
 turn-limit key is written: the identity findings show Codex reading none of them, and the per-role model difference is
 a gap row (decision D4). Nothing is read from `<data folder>/agent-models.json`.
 
-The manifest copies name, version, description, author, skills and hooks (the shared `hooks.json`). It has no
+The manifest copies name, version, description, author and hooks (the shared `hooks.json`). It has no
 `agents` key: the findings show no plugin place Codex loads agents from.
 
 `--check` exits 1 and prints each file that differs or is missing, and each `codex/agents/*.toml` the build does not
@@ -33,7 +33,7 @@ from pathlib import Path
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[2]
 COMMENT_RE = re.compile(r'^# my-agent (\S+) \(build-codex\.py --install-agents\)$')
-MANIFEST_KEYS = ('name', 'version', 'description', 'author', 'skills', 'hooks')
+MANIFEST_KEYS = ('name', 'version', 'description', 'author', 'hooks')
 
 
 def split_md(text: str):

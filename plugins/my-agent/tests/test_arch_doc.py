@@ -65,13 +65,49 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v045(self):
+    def test_status_line_starts_with_v046(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.45 (2026-11-03, plugin 0.10.0:'), line[:60])
+        self.assertTrue(line.startswith('- Status: design draft v0.46 ('), line[:60])
+        self.assertIn('plugin 0.11.0:', line[:line.index('v0.45 (')])
+        self.assertIn('v0.45 (2026-11-03, plugin 0.10.0:', line)
         self.assertIn('v0.44 (2026-11-03, plugin 0.9.0:', line)
         self.assertIn('v0.43 (', line)
         self.assertIn('plugin 0.8.0', line)
         self.assertIn('plugin 0.9.0', line)
+
+    def test_skill_layout_and_manifest_have_no_skills_key(self):
+        manifest = self.section('**Plugin manifest (`.claude-plugin/plugin.json`)**', '**Marketplace file')
+        self.assertNotIn('"skills"', manifest)
+        self.assertIn('`skills/` folder scan', manifest)
+        self.assertIn('tools/claude-skill-check.py', self.section('### 4.13 ', '### 4.14 '))
+        sec = self.section('### 4.7.1 ', '### 4.7.2 ')
+        self.assertIn('skills/my-agent/SKILL.md', sec)
+        self.assertIn('two levels above the folder of this `SKILL.md`', sec)
+        self.assertNotIn('${CLAUDE_SKILL_DIR}', sec)
+
+    def test_run_log_section_names_inline_and_release_lines(self):
+        sec = self.section('### 4.7.2 ', '### 4.7.3 ')
+        self.assertIn('inline: agent=', sec)
+        self.assertIn('release: gate=G2', sec)
+        self.assertIn('answer: gate=G2 tool=', sec)
+        self.assertIn('(inline k)', sec)
+
+    def test_agent_section_describes_inline_roles(self):
+        sec = self.section('### 4.5 ', '### 4.5.1 ')
+        self.assertIn('**Inline roles', sec)
+        self.assertIn('"model": "inline"', sec)
+        self.assertIn('scope-guard', sec[sec.index('**Inline roles'):])
+
+    def test_host_section_has_g2_row_and_listed_main_skill(self):
+        sec = self.section('### 4.14 ', '\n---')
+        row = [l for l in sec.splitlines() if l.startswith('| G2 permission dialog')]
+        self.assertEqual(len(row), 1)
+        self.assertIn('exit 2', row[0])
+        self.assertIn('`release`', row[0])
+        self.assertIn('`my-agent:my-agent`', sec)
+        self.assertNotIn('The main skill is not listed', sec)
+        self.assertNotIn('no G2 dialog', sec)
+        self.assertIn('my-agent on Codex: plugin folder', sec)
 
     def test_monitor_section_names_gate_view(self):
         section = self.section('### 4.7.4 ', '### 4.8 ')

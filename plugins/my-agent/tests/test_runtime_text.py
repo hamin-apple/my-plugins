@@ -4,7 +4,7 @@ import unittest
 
 from helpers import L4, REPO
 
-RUNTIME = [REPO / 'SKILL.md', REPO / 'skills', REPO / 'l1-orchestration', REPO / 'l2-design-judge', REPO / 'l3-workers',
+RUNTIME = [REPO / 'skills', REPO / 'l1-orchestration', REPO / 'l2-design-judge', REPO / 'l3-workers',
            L4 / 'hooks', L4 / 'scripts', L4 / 'lib', L4 / 'permissions']
 BANNED = ['my-dev', 'build step']   # a note about build steps in a runtime file is a stage fallback
 
@@ -28,7 +28,7 @@ class RuntimeTextTest(unittest.TestCase):
         self.assertGreater(seen, 20)
 
     def test_gate_texts_say_ask_or_block(self):
-        skill = (REPO / 'SKILL.md').read_text(encoding='utf-8')
+        skill = (REPO / 'skills' / 'my-agent' / 'SKILL.md').read_text(encoding='utf-8')
         plan = (REPO / 'l1-orchestration/phases/plan.md').read_text(encoding='utf-8')
         accept = (REPO / 'l1-orchestration/phases/accept.md').read_text(encoding='utf-8')
         for text in (skill, plan, accept):

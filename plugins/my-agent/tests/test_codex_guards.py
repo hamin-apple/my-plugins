@@ -168,9 +168,10 @@ class PlanApprovedCodexTest(Base):
         mixed = self.gate(self.main_file(patch(f'*** Add File: {self.T}/work/n.md', '+x', '*** Add File: src/x.py', '+x')))
         self.assertEqual(mixed.returncode, 2)
 
-    def test_bash_ask_keeps_json(self):
+    def test_bash_ask_is_exit2(self):
         r = self.gate(fixture('hook-pre-tool-use-bash.json', tool_input={'command': 'echo x > src/y.txt'}))
-        self.assertEqual(decision(r), (0, 'ask'))
+        self.assertEqual((r.returncode, r.stdout), (2, ''))   # Codex ignores an ask: exit 2, the G2 flow (test_codex_g2.py)
+        self.assertIn('G2 popup', r.stderr)
 
     def test_worker_call_and_other_session_pass(self):
         r = self.gate(fixture('hook-pre-tool-use-worker-bash.json', tool_input={'command': 'echo x > /etc/y'}))
@@ -210,11 +211,12 @@ class VerdictFreshCodexTest(Base):
     def vfc(self, payload):
         return self.run_it('verdict-fresh-check.py', payload)
 
-    def test_commit_with_stale_verdict_asks_in_json(self):
+    def test_commit_with_stale_verdict_asks_with_exit2(self):
         self.verdicts()
         self.file(self.L / 'src/a.py', 'x', 30)
         r = self.vfc(fixture('hook-pre-tool-use-bash.json', tool_input={'command': 'git commit -m x'}))
-        self.assertEqual(decision(r), (0, 'ask'))
+        self.assertEqual((r.returncode, r.stdout), (2, ''))   # Codex ignores an ask: exit 2, the G2 flow (test_codex_g2.py)
+        self.assertIn('G2 popup', r.stderr)
         self.verdicts(verify_at=40, review_at=40)
         r = self.vfc(fixture('hook-pre-tool-use-bash.json', tool_input={'command': 'git commit -m x'}))
         self.assertEqual((r.returncode, r.stdout), (0, ''))

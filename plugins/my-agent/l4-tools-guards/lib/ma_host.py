@@ -15,9 +15,10 @@ turned into the same shape:
   `agent_type` and in `subagent_type`. The identity of a subagent call is its own `agent_id`/`agent_type` (identity findings: Outcome I).
 
 A Codex input with a missing or differently shaped field raises, so the scripts' fail-closed path runs (exit 2).
-`emit()` writes the decision in the host's form: JSON on stdout as in Claude, except for a deny or ask on the Codex
+`emit()` writes the decision in the host's form: JSON on stdout as in Claude, except for a deny on the Codex
 file-change tool, where Codex ignored the deny JSON and honored exit 2 (identity findings: `file-deny=exit2`), so the
-reason goes to stderr with exit 2. `scratch_base()` is the scratchpad base of the host.
+reason goes to stderr with exit 2; and an ask on Codex (any tool), which Codex ignores: `ma_g2.codex_ask` makes it exit 2
+and lets one G2 answer line release one call. Only the two hooks that emit `ask` reach it (scope-guard only denies). `scratch_base()` is the scratchpad base of the host.
 """
 import json
 import os
@@ -176,9 +177,13 @@ def stronger(a: Optional[dict], b: Optional[dict]) -> Optional[dict]:
 
 
 def emit(call: Call, out: Optional[dict]) -> int:
-    """Write the decision in the host's form; returns the exit code."""
+    """Write the decision in the host's form; returns the exit code. A Codex ask is exit 2 and one G2 answer releases
+    one call (`ma_g2`); a Codex main-session Bash input is not reshaped, so its host comes from `hook_host`."""
     if not out:
         return 0
+    if decision(out) == 'ask' and (call.host == 'codex' or (call.inps and hook_host(call.inps[0]) == 'codex')):
+        import ma_g2
+        return ma_g2.codex_ask(call, out, Path(sys.argv[0]).stem)
     if call.file_change and decision(out):
         print(out['hookSpecificOutput'].get('permissionDecisionReason') or 'blocked', file=sys.stderr)
         return 2

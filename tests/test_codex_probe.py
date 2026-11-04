@@ -1373,7 +1373,7 @@ class E2eToolingTest(unittest.TestCase):
             self.assertTrue(any(re.search(p, text, re.I) for p in row['failure_patterns']))
 
     def install_folder(self, root='/Users/x/repo', status='installed, enabled', version='0.8.0', cache=True,
-                       skills='my-agent:monitor\n', cached=None, cache_version='0.8.0', source='prompt-input'):
+                       skills='my-agent:my-agent\nmy-agent:monitor\n', cached=None, cache_version='0.8.0', source='prompt-input'):
         folder = self.tmp / 'install'
         shutil.rmtree(folder, True)
         (folder / 'cache' / cache_version).mkdir(parents=True)
@@ -1403,6 +1403,7 @@ class E2eToolingTest(unittest.TestCase):
         self.assertEqual(self.check_install(ok, '/Users/x/other'), 1)
         self.assertEqual(self.check_install(self.install_folder(root=str(root), status='installed, disabled'), root), 1)
         self.assertEqual(self.check_install(self.install_folder(root=str(root), skills='my-agent\n'), root), 1)
+        self.assertEqual(self.check_install(self.install_folder(root=str(root), skills='my-agent:monitor\n'), root), 1)
         self.assertEqual(self.check_install(self.install_folder(root=str(root), cache=False), root), 1)
         self.assertEqual(self.check_install(self.install_folder(root=str(root), cached={**MANIFEST, 'description': 'x'}), root), 1)
         old = self.install_folder(root=str(root), version='0.7.0', cache_version='0.7.0', cached={**MANIFEST, 'version': '0.7.0'})
@@ -1458,7 +1459,7 @@ import re
 from contextlib import redirect_stdout
 
 FIXS = REPO / 'tests' / 'fixtures' / 'codex-probe'
-ROOT_SKILL = REPO / 'plugins' / 'my-agent' / 'SKILL.md'
+ROOT_SKILL = REPO / 'plugins' / 'my-agent' / 'skills' / 'my-agent' / 'SKILL.md'
 VARIANTS = ['s0', 's1', 's2', 's3', 's4', 's5']
 
 
@@ -2115,6 +2116,12 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
     def read(self, out, name):
         return (out / name).read_text(encoding='utf-8')
 
+    def test_root_description_read_from_the_skills_folder_of_a_new_version(self):
+        new = self.home / 'plugins' / 'cache' / 'my-plugins' / 'my-agent' / '0.8.0' / 'skills' / 'my-agent'
+        new.mkdir(parents=True)
+        (new / 'SKILL.md').write_text('---\nname: my-agent\ndescription: New layout root.\n---\nbody\n', encoding='utf-8')
+        self.assertEqual(sorted(probe.my_agent_descriptions(self.home)['root']), sorted([ROOT_DESC, 'New layout root.']))
+
     def test_monitor_entry_writes_name_and_prompt_input(self):
         out, _ = self.snapshot(PI_LISTING.format(name='my-agent:monitor', desc=MONITOR_DESC))
         self.assertEqual(self.read(out, 'skills-list.txt').split(), ['my-agent:monitor'])
@@ -2179,14 +2186,12 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
         folder = t.install_folder(root=str(root), **kw)
         return run_main(['check', 'install', str(folder), '--root', str(root)])
 
-    GAP = ('expected gap: my-agent:my-agent not listed (Codex lists no plugin-root SKILL.md; '
-           'capability plugin-skill-discovery)')
-
-    def test_check_install_passes_with_monitor_and_prints_gap(self):
+    def test_check_install_passes_with_both_skills_listed_once(self):
         for source in ('prompt-input', 'session-record'):
             code, out = self.check(source=source)
             self.assertEqual(code, 0, out)
-            self.assertEqual([l for l in out.splitlines() if l.startswith('expected gap')], [self.GAP])
+            self.assertEqual(out.strip(), 'listed: my-agent:my-agent, my-agent:monitor')
+            self.assertNotIn('expected gap', out)
 
     def test_check_install_fails(self):
         for kw, text in (({'source': None}, 'skills evidence is not from a hard source'),
@@ -2194,14 +2199,16 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
                          ({'source': 'model-answer'}, 'skills evidence is not from a hard source'),
                          ({'skills': 'my-agent\nmonitor\n'}, 'my-agent:monitor'),
                          ({'skills': 'other:monitor\n'}, 'my-agent:monitor'),
-                         ({'skills': 'my-agent:monitor\nmy-agent:monitor\n'}, '2'),
-                         ({'skills': 'my-agent:monitor\nmy-agent:my-agent\n'},
-                          'my-agent:my-agent is listed, which contradicts work/codex-findings-skills.md')):
+                         ({'skills': 'my-agent:my-agent\nmy-agent:monitor\nmy-agent:monitor\n'}, '2'),
+                         ({'skills': 'my-agent:monitor\n'},
+                          'skills-list.txt holds my-agent:my-agent 0 time(s), not exactly once'),
+                         ({'skills': 'my-agent:my-agent\nmy-agent:my-agent\nmy-agent:monitor\n'},
+                          'skills-list.txt holds my-agent:my-agent 2 time(s), not exactly once')):
             code, out = self.check(**kw)
             self.assertEqual(code, 1, (kw, out))
             self.assertIn(text, out, kw)
-        code, out = self.check(skills='my-agent:monitor\nmy-agent:my-agent\n')
-        self.assertNotIn('expected gap', out)
+            self.assertNotIn('expected gap', out, kw)
+            self.assertNotIn('listed:', out, kw)
 
     def test_check_install_missing_skills_list_fails(self):
         t = self.helper()
@@ -2212,14 +2219,15 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
 
     # e2e-request
 
-    def request_folder(self, files='0.7.0/SKILL.md\n0.7.0/skills/monitor/SKILL.md', skill=True):
+    def request_folder(self, files='0.7.0/skills/my-agent/SKILL.md\n0.7.0/skills/monitor/SKILL.md', skill=True):
         folder = self.tmp / 'install'
         folder.mkdir(exist_ok=True)
         (folder / 'plugin-list.txt').write_text(LIST_FORM.format(root='/x/repo', status='installed, enabled', version='0.7.0'),
                                                 encoding='utf-8')
         (folder / 'cache-files.txt').write_text(files, encoding='utf-8')
-        target = self.home / 'plugins' / 'cache' / 'my-plugins' / 'my-agent' / '0.7.0' / 'SKILL.md'
+        target = self.home / 'plugins' / 'cache' / 'my-plugins' / 'my-agent' / '0.7.0' / 'skills' / 'my-agent' / 'SKILL.md'
         if skill:
+            target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text('x', encoding='utf-8')
         elif target.exists():
             target.unlink()
@@ -2230,7 +2238,7 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
         before = sorted(self.tmp.rglob('*'))
         code, out = run_main(['--codex-home', str(self.home), 'e2e-request', str(folder)])
         self.assertEqual(code, 0)
-        path = f'{self.home}/plugins/cache/my-plugins/my-agent/0.7.0/SKILL.md'
+        path = f'{self.home}/plugins/cache/my-plugins/my-agent/0.7.0/skills/my-agent/SKILL.md'
         self.assertEqual(out, f'Read the file {path} and follow it as your instructions, with these arguments: '
                               '--dev add a function add(a, b) in calc.py that returns the sum of two numbers, with a test\n')
         self.assertNotIn('$my-agent', out)
@@ -2238,7 +2246,7 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
 
     def test_e2e_request_fails_naming_the_gap(self):
         from contextlib import redirect_stderr
-        for kw, text in (({'files': '0.7.0/skills/monitor/SKILL.md'}, '0.7.0/SKILL.md'),
+        for kw, text in (({'files': '0.7.0/skills/monitor/SKILL.md'}, '0.7.0/skills/my-agent/SKILL.md'),
                          ({'skill': False}, 'SKILL.md')):
             folder = self.request_folder(**kw)
             err = io.StringIO()
@@ -2259,11 +2267,14 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
     def test_plugin_skill_discovery_row(self):
         rows = {r['id']: r for r in json.loads(CAPS.read_text(encoding='utf-8'))['rows']}
         row = rows['plugin-skill-discovery']
-        self.assertEqual(row['status'], 'gap')
+        self.assertEqual(row['status'], 'available')
+        self.assertEqual(row['effect'], 'the main skill is started by name on both hosts; no start by path (hosts.md)')
         self.assertEqual(row['facts'], ['Plugin skill discovery outcome', 'Skill listing source'])
-        self.assertEqual(row['needed_by'], ['plugins/my-agent/.codex-plugin/plugin.json', 'plugins/my-agent/SKILL.md'])
+        self.assertEqual(row['needed_by'], ['plugins/my-agent/.codex-plugin/plugin.json',
+                                             'plugins/my-agent/skills/my-agent/SKILL.md'])
         self.assertEqual(rows['skill-path-variables']['effect'],
-                         'the plugin and skill folders are the folder of the SKILL.md file Codex read (hosts.md)')
+                         'the session line names the plugin, data and task folders; without it the plugin folder is '
+                         'two levels above the SKILL.md folder (hosts.md)')
         written = set(re.findall(r"add\('[\w ]+', '([^']+)'", PROBE.read_text(encoding='utf-8')))
         for fact in row['facts']:
             self.assertIn(fact, written)
@@ -2272,11 +2283,32 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
             self.assertTrue(any(re.search(p, text, re.I) for p in row['failure_patterns']), text)
             self.assertFalse(any(re.search(p, text, re.I) for p in others), text)
 
+    def test_ask_asymmetry_row(self):
+        rows = {r['id']: r for r in json.loads(CAPS.read_text(encoding='utf-8'))['rows']}
+        row = rows['ask-asymmetry']
+        self.assertEqual(row['status'], 'gap')
+        self.assertEqual(row['needed_by'], ['plugins/my-agent/l4-tools-guards/lib/ma_g2.py',
+                                             'plugins/my-agent/l4-tools-guards/lib/ma_host.py'])
+        self.assertEqual(row['effect'], 'every ask of the gate hooks is exit 2 on Codex; L1 asks the person in a G2 '
+                                        'popup and writes answer gate=G2, which releases exactly one call (hosts.md)')
+        ids = list(rows)
+        self.assertEqual(ids.index('ask-asymmetry'), ids.index('permission-dialog') + 1)
+        self.assertIn("hookSpecificOutput.decision.behavior", rows['permission-dialog']['effect'])
+        self.assertIn("exit 2", rows['permission-dialog']['effect'])
+        others = [p for r in rows.values() if r is not row for p in r['failure_patterns']]
+        for text in ('hook returned permissionDecision ask, which is not supported',
+                     'ask is unsupported for PreToolUse hooks'):
+            self.assertTrue(any(re.search(p, text, re.I) for p in row['failure_patterns']), text)
+            self.assertFalse(any(re.search(p, text, re.I) for p in others), text)
+        for text in ('G2 dialog was skipped', 'PermissionRequest shown'):
+            self.assertFalse(any(re.search(p, text, re.I) for p in row['failure_patterns']), text)
+
     def test_unlisted_intake_failures_have_rows(self):
         rows = {r['id']: r for r in json.loads(CAPS.read_text(encoding='utf-8'))['rows']}
         for rid, text, needed in (
-                ('plugin-rules-version', NOT_GIT, ['plugins/my-agent/SKILL.md']),
-                ('intake-order', NO_ACTIVE, ['plugins/my-agent/SKILL.md', 'plugins/my-agent/l4-tools-guards/scripts/run-log.py'])):
+                ('plugin-rules-version', NOT_GIT, ['plugins/my-agent/skills/my-agent/SKILL.md']),
+                ('intake-order', NO_ACTIVE, ['plugins/my-agent/skills/my-agent/SKILL.md',
+                                       'plugins/my-agent/l4-tools-guards/scripts/run-log.py'])):
             row = rows[rid]
             self.assertEqual(row['status'], 'gap')
             self.assertEqual(row['needed_by'], needed)
@@ -2294,15 +2326,15 @@ class SkillsInstallEvidenceTest(unittest.TestCase):
                                      '--findings', str(E2E_PROBE / 'findings-identity.json'),
                                      '--findings', str(E2E_PROBE / 'findings-skills.json'), '--out', str(report)]), 0)
         text = report.read_text(encoding='utf-8')
-        row = next(l for l in text.splitlines() if l.startswith('|') and 'Plugin skill discovery' in l)
-        self.assertRegex(row, r'probe-skills/captures/skills-live-prompt-input\.txt line \d+')
+        self.assertFalse(any(l.startswith('|') and 'Plugin skill discovery' in l for l in text.splitlines()))
+        self.assertIn('probe/captures/a.json', text)
         root = self.tmp / 'proot'
         shutil.copytree(E2E_PROBE, root)
         self.assertEqual(run_main(['check', 'report', str(report), '--e2e', str(e2e), '--probe-root', str(root)])[0], 0)
-        (root / 'probe-skills' / 'captures' / 'skills-live-prompt-input.txt').unlink()
+        (root / 'probe' / 'captures' / 'a.json').unlink()
         code, out = run_main(['check', 'report', str(report), '--e2e', str(e2e), '--probe-root', str(root)])
         self.assertEqual(code, 1)
-        self.assertIn('probe-skills/captures/skills-live-prompt-input.txt', out)
+        self.assertIn('probe/captures/a.json', out)
 
     def test_no_home_path_in_fixtures(self):
         user = 'jahoon' + 'jin'

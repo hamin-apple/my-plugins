@@ -6,7 +6,7 @@ import unittest
 from helpers import L4, REPO
 
 PROFILES = REPO / 'l1-orchestration' / 'profiles'
-SKILL = REPO / 'SKILL.md'
+SKILL = REPO / 'skills' / 'my-agent' / 'SKILL.md'
 FIXTURES = REPO / 'tests' / 'judge-fixtures'
 
 
@@ -25,7 +25,7 @@ class ProfilesTest(unittest.TestCase):
     def test_router_names_every_profile(self):
         text = SKILL.read_text(encoding='utf-8')
         for name in ('general', 'research', 'dev'):
-            self.assertIn(f'${{CLAUDE_SKILL_DIR}}/l1-orchestration/profiles/{name}.md', text)
+            self.assertIn(f'${{CLAUDE_PLUGIN_ROOT}}/l1-orchestration/profiles/{name}.md', text)
             self.assertRegex(text, rf'`{name}`')
         self.assertIn('Profile: <', text)
 

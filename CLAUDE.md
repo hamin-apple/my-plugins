@@ -15,7 +15,7 @@ There is no build step (Python standard library + static HTML). Exception: the S
 
 - Write all documents, comments, prompts and messages in this repository in English. Exceptions: `README-ko.md` (the Korean README), `docs/index-ko.html` (the Korean feature page) and the Korean UI strings of the monitor (`plugins/my-agent/monitor/web/index.html`, `plugins/my-agent/monitor/tools/build-web.py`).
 - `plugins/my-agent/docs/ref/` holds local copies of reference documents and is excluded from git (the repository is public; do not commit copies of other people's documents). List each source in `plugins/my-agent/docs/reference.md` instead.
-- Keep the core rules of `plugins/my-agent/SKILL.md` within its first 16,000 characters (about 4,000 tokens of English; `test_skill_md` checks this).
+- Keep the core rules of `plugins/my-agent/skills/my-agent/SKILL.md` within its first 16,000 characters (about 4,000 tokens of English; `test_skill_md` checks this).
 - `plugins/my-agent/maintenance-notes.md`: when you change something, add it to the matching section with the date.
 - Version: each plugin has its own version. When you raise one, change all these places of that plugin together, in the same commit. All these values must always match.
   - my-agent: `"version"` in `plugins/my-agent/.claude-plugin/plugin.json` and in `plugins/my-agent/.codex-plugin/plugin.json` (`build-codex.py` generates the Codex one from the Claude one, so regenerate it after raising the version), and the `my-agent` rows of the plugin tables in `README.md` and `README-ko.md`

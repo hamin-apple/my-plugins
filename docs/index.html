@@ -403,7 +403,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
 <noscript><p>The detail tabs on this page need scripts turned on. The repository is described in its <a href="https://github.com/hamin-apple/my-plugins#readme">README on GitHub</a>.</p></noscript>
 <header class="top">
   <div class="wrap">
-    <span class="brand">my-agent <span class="ver mono">v0.10.0</span></span>
+    <span class="brand">my-agent <span class="ver mono">v0.11.0</span></span>
     <nav aria-label="Page links"><a class="hide-md" href="#highlights">Highlights</a><a class="hide-md" href="#detail">Details</a><a href="index-ko.html" hreflang="ko" lang="ko">한국어</a><a href="architecture.html">Architecture</a><a class="cta sm hide-sm" href="https://github.com/hamin-apple/my-plugins">GitHub</a></nav>
   </div>
 </header>
@@ -415,10 +415,10 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
       <h1 id="hero-title">Agents do the work.<br>You approve it.</h1>
       <p class="lead">my-agent runs a request through four phases, hands each piece to its own agent, and stops at set gates for you to decide. Every question is a popup, and every step leaves a record.</p>
       <div class="row"><a class="cta" href="#detail">See how it works</a><a class="cta tint" href="architecture.html">Architecture</a></div>
-      <p class="meta">Version 0.10.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Also runs in Codex, with limits (Overview › Codex support)</p>
+      <p class="meta">Version 0.11.0 (<code>plugins/my-agent/.claude-plugin/plugin.json</code>)<br>Also runs in Codex, with limits (Overview › Codex support)</p>
     </div>
     <div class="group" role="group" aria-labelledby="glance-h">
-      <div class="group-h"><span id="glance-h">AT A GLANCE</span><span>my-agent 0.10.0</span></div>
+      <div class="group-h"><span id="glance-h">AT A GLANCE</span><span>my-agent 0.11.0</span></div>
       <div class="cells">
         <div class="cell"><span class="no">01</span><span class="lab">Levels<small>orchestration · judges · workers · tools</small></span><span class="val">4</span></div>
         <div class="cell"><span class="no">02</span><span class="lab">Phases<small>Define · Plan · Build · Accept, in 8 steps</small></span><span class="val">4</span></div>
@@ -442,7 +442,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
           <li>Three profiles, general, research and dev, adapt the same skeleton to the kind of work.</li>
           <li>Optional model presets per profile set each agent's model and effort, so you can pick a lighter or a stronger setup for the task.</li>
         </ul>
-        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md, README.md</span></p>
+        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md, README.md</span></p>
       </article>
       <article class="hl-card" style="--dot: var(--orange)">
         <i class="tile" style="background: var(--orange)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-7.5L7 20v-3.5H5A1.5 1.5 0 0 1 3.5 15V7A1.5 1.5 0 0 1 5 5.5z"/></svg></i>
@@ -454,7 +454,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
           <li>The structure comes in groups of about four (Cowan's 4±1 working-memory limit), so a person can hold it at a glance.</li>
           <li>Delegated approval (<code>--auto</code>) answers routine popups with the recommended choice; G2, G3 and E still come to you. The recommended permission mode is auto, with the ask and deny rules and the hooks still in force.</li>
         </ul>
-        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md, plugins/my-agent/l4-tools-guards/permissions/permissions.json</span></p>
+        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md, plugins/my-agent/l4-tools-guards/permissions/permissions.json</span></p>
       </article>
       <article class="hl-card" style="--dot: var(--green)">
         <i class="tile" style="background: var(--green)" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5l7 2.8v5.2c0 4.3-2.9 7.6-7 9.5-4.1-1.9-7-5.2-7-9.5V6.3z"/><path d="M8.7 12.2l2.3 2.3 4.4-4.6"/></svg></i>
@@ -465,7 +465,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
           <li>Hooks enforce the key rules in code: before plan approval, delegation is denied and writes outside the task folder are asked; delivery without a fresh verdict is blocked and a stale commit is asked; each agent has a read and write scope.</li>
           <li>Work can run in a git worktree under <code>.claude/worktrees/</code> instead of the main tree: a task worktree on its own branch, and the first parallel group of coders in dev.</li>
         </ul>
-        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/phases/accept.md, plugins/my-agent/l4-tools-guards/hooks/hooks.json, plugins/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/profiles/dev.md</span></p>
+        <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/phases/accept.md, plugins/my-agent/l4-tools-guards/hooks/hooks.json, plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/profiles/dev.md</span></p>
       </article>
       <article class="hl-card" style="--dot: var(--purple)">
         <i class="tile" style="background: var(--purple)" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="12" rx="2"/><path d="M8.5 20h7"/><path d="M7 13l3-3 2.2 2.2L17 7.5"/></svg></i>
@@ -515,7 +515,7 @@ footer li { margin-top: 4px; overflow-wrap: anywhere; }
         <div><span class="chip ga">G1b</span><span>Plan: the work units and the mock-up<small>Approve / request changes / stop</small></span></div>
         <div><span class="chip gg">G3</span><span>Result: the deliverable and where it goes<small>Accept / rework / stop</small></span></div>
       </div>
-      <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/phases/accept.md</span></p>
+      <p class="src"><b>Source:</b> <span class="mono">plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/phases/plan.md, plugins/my-agent/l1-orchestration/phases/accept.md</span></p>
     </div>
   </section>
 
@@ -702,13 +702,13 @@ claude plugin install my-agent@my-plugins</pre>
   var ov = [
     ['What it does',
      `<p>my-agent is a multi-agent work plugin for Claude Code. It is built for requests that need several steps: implementing a feature, fixing a bug, a refactor across many files, researching a topic into notes, or writing a document in several parts. It is set up not to be used for one-line edits, typo fixes, simple factual questions, or questions about how code works.</p>` +
-     src('plugins/my-agent/SKILL.md')],
+     src('plugins/my-agent/skills/my-agent/SKILL.md')],
     ['Who it is for',
      `<p>It is for users who want to approve or answer in person at fixed points during the work. Everything that asks a person goes through an <code>AskUserQuestion</code> popup; written-out questions are not used. The plugin description also calls it a human-in-the-loop (HITL) multi-agent orchestration skill.</p>` +
-     src('plugins/my-agent/SKILL.md, plugins/my-agent/.claude-plugin/plugin.json')],
+     src('plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/.claude-plugin/plugin.json')],
     ['Three profiles for the kind of work',
      `<p>They share the same phase skeleton, and the rules differ by kind of work. <code>dev</code> changes code in a git repository, and the deliverable is a commit. <code>research</code> turns web research into a note or report with sources. <code>general</code> covers any other multi-step work.</p>` +
-     src('plugins/my-agent/SKILL.md')],
+     src('plugins/my-agent/skills/my-agent/SKILL.md')],
     ['Four levels and the role of the main session',
      `<p>The work is split into four levels.</p>` +
      `<div class="mini-box"><table class="mini"><thead><tr><th>Level</th><th>Who</th><th>What it does</th><th>What it does not do</th></tr></thead><tbody>` +
@@ -717,11 +717,11 @@ claude plugin install my-agent@my-plugins</pre>
      `<tr><td><span class="chip lv3">L3</span></td><td>explorer · researcher · writer · coder</td><td>Do one assigned work unit</td><td>Do not touch files out of scope or delegate further down</td></tr>` +
      `<tr><td><span class="chip lv4">L4</span></td><td>Tools and MCP · hooks · permission rules · scripts</td><td>Run, record, and block</td><td>Do not judge</td></tr>` +
      `</tbody></table></div>` +
-     src('plugins/my-agent/SKILL.md') +
+     src('plugins/my-agent/skills/my-agent/SKILL.md') +
      `<p>The main session (L1) has four jobs: Router, which classifies the request; Orchestrator, which leads the phases and delegates; Gatekeeper, which guards every question and gate; and Recorder, which keeps the record. Subagents cannot ask the person; they return only result files and reports.</p>` +
-     src('plugins/my-agent/SKILL.md')],
+     src('plugins/my-agent/skills/my-agent/SKILL.md')],
     ['Codex support',
-     `<p>my-agent also runs in Codex. The rules stay the same Claude Code text; a name table (<code>l1-orchestration/hosts.md</code>), one code adapter for the gate hooks (<code>l4-tools-guards/lib/ma_host.py</code>) and generated Codex files carry the difference. The gate questions go through Codex's question tool, and <code>my-agent:monitor</code> is listed as a Codex skill. Codex lists no plugin-root <code>SKILL.md</code>, so the main skill is not listed yet: start it by asking Codex to read and follow the installed <code>SKILL.md</code> by its path. A generated Codex entry skill is planned for a later task. Codex loads agent definitions from <code>~/.codex/agents/</code>, not from the plugin. At the start of a task Intake checks the nine my-agent roles there and, when they are missing or stale, asks before installing them as <code>my-agent-&lt;role&gt;</code> (<code>build-codex.py --install-agents</code>); a file without the my-agent version comment is never overwritten, and new agents show in a new Codex session. Until they are installed, Codex refuses the names, and the subagent start and stop records and the role-based checks do not apply. Model presets apply on Codex through the <code>codex</code> section of <code>agent-models.json</code>. There is no coder worktree, no background start and no G2 dialog in Codex, and agent <code>tools</code> and <code>maxTurns</code> are not available.</p>` +
+     `<p>my-agent also runs in Codex. The rules stay the same Claude Code text; a name table (<code>l1-orchestration/hosts.md</code>), one code adapter for the gate hooks (<code>l4-tools-guards/lib/ma_host.py</code>) and generated Codex files carry the difference. The gate questions go through Codex's question tool, and <code>my-agent:monitor</code> is listed as a Codex skill. The main skill is listed too, as <code>my-agent:my-agent</code> from <code>skills/my-agent/SKILL.md</code>. At session start the my-agent hook gives Codex one line with the plugin, data and task folders. Codex shows no permission dialog, so a risky action stops the call (exit 2), my-agent asks in its own G2 popup (<code>Allow once</code> / <code>Deny</code>), and after <code>Allow once</code> the same call goes through once. Codex loads agent definitions from <code>~/.codex/agents/</code>, not from the plugin. At the start of a task Intake checks the nine my-agent roles there and, when they are missing or stale, asks before installing them as <code>my-agent-&lt;role&gt;</code> (<code>build-codex.py --install-agents</code>); a file without the my-agent version comment is never overwritten, and new agents show in a new Codex session. Until they are installed, Codex refuses the names, and the subagent start and stop records and the role-based checks do not apply. Model presets apply on Codex through the <code>codex</code> section of <code>agent-models.json</code>. There is no coder worktree and no background start in Codex, and agent <code>tools</code> and <code>maxTurns</code> are not available.</p>` +
      src('plugins/my-agent/docs/build-guide/my-agent-architecture.md, plugins/my-agent/l1-orchestration/hosts.md, README.md')],
     ['Why groups of four',
      `<p>According to the design document, a person takes part directly in maintaining this system, so it applies Cowan's theory that people hold about four things in memory at a time across the whole structure: 4 levels, 4 components per level, 4 phases, 4 kinds of gates (G1·G2·G3·E, counting G1a and G1b as one G1; section 3.2 lists them as five), and at most 4 popup choices. The document states that this theory is about human memory, not a basis for agent performance.</p>` +
@@ -737,13 +737,13 @@ claude plugin install my-agent@my-plugins</pre>
 
   /* ---------- 2. flow ---------- */
   document.getElementById('flow-note').appendChild(disc('Details: the example request',
-    `<p>The example request is "write a document in several parts" (the basis for such requests being my-agent's target is <code>plugins/my-agent/SKILL.md</code>). On the normal path of the general profile, the person answers only twice, at G1b and G3.</p>` +
+    `<p>The example request is "write a document in several parts" (the basis for such requests being my-agent's target is <code>plugins/my-agent/skills/my-agent/SKILL.md</code>). On the normal path of the general profile, the person answers only twice, at G1b and G3.</p>` +
     src('plugins/my-agent/l1-orchestration/profiles/general.md')));
 
   var steps = [
     { n: 'Request', title: 'Request', gate: false,
       text: `The person sends a request. The main session (L1) looks at the request and picks a profile. If the user named a profile, it follows that. Document work counts as general. Then it creates the task folder and sets the task ID.`,
-      src: 'plugins/my-agent/SKILL.md' },
+      src: 'plugins/my-agent/skills/my-agent/SKILL.md' },
     { n: '①', title: '① Define', gate: false,
       text: `If the request relates to existing files or a project, the explorer looks at the relevant files and current behavior and reports back; if the request is enough on its own, nothing is delegated. Then L1 asks, by popup, for the purpose, the completion criteria, what will not be done, and where the deliverable goes. Items the request already answers are not asked. In general, scope confirmation (G1a) is not asked separately: the scope summary goes at the top of the plan and is approved together at G1b.`,
       src: 'plugins/my-agent/l1-orchestration/phases/define.md, plugins/my-agent/l1-orchestration/profiles/general.md' },
@@ -816,24 +816,24 @@ claude plugin install my-agent@my-plugins</pre>
        ['L1 is the main session; L2 has 5 agents and L3 has 4. The design document keeps components to four per level, and explains that the gate-analyst is called only in the retrospective, so it is counted separately as a fifth in L2.',
         'The plugin registers 9 agents in <code>plugin.json</code> and calls them.',
         'L4 (tools and MCP, hooks, permission rules, scripts) does not judge. The monitor and the Claude Code permission dialog (G2) sit outside the levels.'],
-       'plugins/my-agent/SKILL.md, plugins/my-agent/.claude-plugin/plugin.json, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/.claude-plugin/plugin.json, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
       ['The main session delegates directly to L2 and L3.',
        'L2 does not manage L3; L1 gives work to each directly.',
        ['L1 hands work to L2 and L3 directly, and what it hands over is only paths and criteria.',
         'The design document gives two reasons: only L1 can ask the person, so the plan has to pass through L1 for approval; and if the judge (L2) managed the worker (L3), splitting the author from the judge would lose its meaning.',
         'This differs from Gemini\'s four-level model, which is a chain from L1 to L2 to L3.'],
-       'plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
       ['L1 does not produce deliverables itself.',
        'The main session only runs, delegates, and records; making things is left to subagents.',
        ['The only exceptions are a small fix that a verdict points to (2 files or fewer, about 10 lines) and a small edit to <code>plan.md</code> before G1b.',
         'Merging a document deliverable is also done by the last writer work unit, not by L1; L1 only checks.'],
-       'plugins/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/profiles/general.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/l1-orchestration/profiles/general.md'],
       ['The main session is the only channel for asking the person.',
        'Subagents do not ask; they return only result files and reports.',
        ['Every question is an <code>AskUserQuestion</code> popup with 2 to 4 choices, and the recommended choice goes first with <code>(Recommended)</code>.',
         'If the person asks back in writing instead of using the popup, L1 answers and then asks the same decision again by popup.',
         'The subagent definition files say "do not ask the person", and tell the agent to leave what it cannot resolve as <code>To confirm:</code> or report <code>PARTIAL</code>.'],
-       'plugins/my-agent/SKILL.md, plugins/my-agent/l3-workers/agents/coder.md, plugins/my-agent/l3-workers/agents/writer.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/l3-workers/agents/coder.md, plugins/my-agent/l3-workers/agents/writer.md'],
       ['The roles of the 9 agents are split across definition files.',
        'Each agent has one job and a fixed set of tools it may use.',
        ['The L2 architect (opus) writes <code>plan.md</code> from the scope document and the exploration result, and produces no deliverable. The plan-reviewer (sonnet) judges whether <code>plan.md</code> covers the scope well enough and is doable, and writes <code>plan-review.md</code>.',
@@ -846,18 +846,18 @@ claude plugin install my-agent@my-plugins</pre>
        ['Each agent definition file says "do not call other agents".',
         'The design document explains that the <code>Agent</code> tool is removed from the <code>tools</code> of the agent definition.',
         'L3 does not touch files outside its assigned scope, and when blocked it reports instead of working around it.'],
-       'plugins/my-agent/SKILL.md, plugins/my-agent/l2-design-judge/agents/architect.md, plugins/my-agent/l3-workers/agents/coder.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md']
+       'plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/l2-design-judge/agents/architect.md, plugins/my-agent/l3-workers/agents/coder.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md']
     ]},
     { name: 'Phases and gates', feats: [
       ['The work has 4 phases and 8 steps.',
        'It goes ① Define → ② Plan → ③ Build → ④ Accept, with a gate at the end of each phase.',
        ['① Define = 1 Intake · 2 Explore → Scope, ② Plan = 3 Plan · 4 Plan review, ③ Build = 5 Build · 6 Merge, ④ Accept = 7 Verify · 8 Review → Deliver.',
         'When a phase starts, and after <code>continue</code> or compaction, L1 re-reads the phase file and the profile file and follows them.'],
-       'plugins/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md, plugins/my-agent/docs/build-guide/my-agent-architecture.md'],
       ['There are five kinds of gates where the person answers.',
        'Scope (G1a), plan (G1b), risky action (G2), final acceptance (G3), and escalation (E).',
        [],
-       'plugins/my-agent/SKILL.md',
+       'plugins/my-agent/skills/my-agent/SKILL.md',
        `<div class="mini-box"><table class="mini"><thead><tr><th>Gate</th><th>When</th><th>Choices</th></tr></thead><tbody>` +
        `<tr><td>G1a Scope confirmation</td><td>When scope drafting ends (not in general; folded into G1b)</td><td>Confirm / edit / stop</td></tr>` +
        `<tr><td>G1b Plan approval</td><td>After plan review, once the whole mock-up is pasted into the chat</td><td>Approve / request changes / stop</td></tr>` +
@@ -869,7 +869,7 @@ claude plugin install my-agent@my-plugins</pre>
        'Before plan approval, only exploration, planning, and plan review can be delegated.',
        ['The only agents that can be delegated to before approval are the explorer, architect, and plan-reviewer, and they cannot write outside the task folder.',
         'This restriction is not a prompt instruction; a plugin hook (<code>plan-approved-check.py</code>) actually enforces it: delegation is denied, and a write or git change outside the task folder is asked about. The hook\'s detailed rules are in the item \'Before plan approval, a hook denies delegation and asks about writes\' in 3.3. When blocked, the agent goes to G1b instead of working around it.'],
-       'plugins/my-agent/SKILL.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md'],
       ['Every profile handles plan review findings the same way.',
        'If there is a blocking finding (BLOCKER), it is fixed and judged again, and from the third <code>REVISE</code> the person decides.',
        ['On <code>REVISE</code> (when there is even one BLOCKER), L1 fixes it if small, or the architect rewrites it if large, and then it is judged again. The third <code>REVISE</code> is left to the person in the G1b popup.',
@@ -887,18 +887,18 @@ claude plugin install my-agent@my-plugins</pre>
        ['The conditions are: 3 verification FAILs in a row, the same work unit stopping twice, a workflow ending in error, and a merge conflict that reveals a plan error.',
         'E always goes to the person, even when delegated approval is on. L1 shows in the chat where it got stuck and what it tried, then asks by popup (give direction / change scope / stop).',
         'If a worker stops once, it is retried on opus with the same input and the stop report.'],
-       'plugins/my-agent/l1-orchestration/phases/accept.md, plugins/my-agent/SKILL.md'],
+       'plugins/my-agent/l1-orchestration/phases/accept.md, plugins/my-agent/skills/my-agent/SKILL.md'],
       ['If the request changes mid-task, the kind of change is asked first.',
        'A change request after G1b approval is not fixed right away; its kind is settled by popup.',
        ['The choices are "modify this task" / "adjust within the approved scope" / "split into a new task" / "cancel".',
         'Editing the plan before G1b and a request after G3 acceptance (a new task) follow their own set procedures.'],
-       'plugins/my-agent/SKILL.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md'],
       ['Delegated approval answers popups on the person\'s behalf.',
        'When the person turns it on, L1 answers routine popups with the recommended choice.',
        ['It starts with a flag (<code>--auto</code>) or a message like "proceed without asking"; when started by message, it goes through one confirmation popup.',
         'G2, G3, E, the G1b popup after a third <code>REVISE</code>, and popups with no recommended choice still go to the person even when it is on.',
         'If the same loop runs 5 times, it moves to E before the 6th.'],
-       'plugins/my-agent/SKILL.md']
+       'plugins/my-agent/skills/my-agent/SKILL.md']
     ]},
     { name: 'Enforcement and safety', feats: [
       ['Before plan approval, a hook denies delegation and asks about writes (G1b hard gate).',
@@ -907,7 +907,7 @@ claude plugin install my-agent@my-plugins</pre>
         'Before approval, only calls to the explorer, architect, and plan-reviewer are allowed. The writer is also allowed, only when a prototype was requested. Writes outside the task folder are not rejected but asked about (<code>ask</code>); only the task folder and the index and project-list files in the data folder pass without a question.',
         'Even after approval, an attempt to write outside the work location, the data folder, and the output location declared in the plan is not rejected; it raises a confirmation to the user (<code>ask</code>), because auto mode lets such writes through without confirmation. If the hook itself fails by error or timeout, the call is blocked (<code>onFailure: block</code>).',
         'Known limit: this hook applies only to the session listed in <code>.active</code>. Until a new session takes over the task with <code>/my-agent continue</code>, the gate is not in force (the \'Session resume notice\' item in 3.4 describes a session notice, but it is only guidance, not enforcement).'],
-       'plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/SKILL.md · plugins/my-agent/maintenance-notes.md'],
+       'plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/skills/my-agent/SKILL.md · plugins/my-agent/maintenance-notes.md'],
       ['Without fresh verification and review results, a stale commit is asked about and a stale final delivery is blocked.',
        'A commit or delivery passes only when <code>verify.md</code> is ALL PASS, <code>review.md</code> is BLOCKER 0, and both are fresh.',
        ['It applies to <code>git commit</code> (asked about when the results are stale) and to G3 delivery (writing to the task folder\'s <code>deliverable/</code>, and copying or moving out of the task folder (<code>.my-agent/</code> by default, setting <code>task_dir</code>); only sources under the task\'s <code>work/</code> or <code>deliverable/</code> count as a delivery).',
@@ -931,18 +931,18 @@ claude plugin install my-agent@my-plugins</pre>
        ['The confirmation (<code>ask</code>) targets are git commit and push, <code>rm -rf</code>, npm, pip, and brew installs, sending Slack messages, creating GitHub PRs and pushing files, creating Vercel deployments, and the like.',
         'The denial (<code>deny</code>) targets are commands that contain a force push (<code>--force</code>, <code>-f</code>) or <code>--no-verify</code>.',
         'At G2, "allow for the session" is not recommended, and risky actions are allowed one at a time. It is an L4 rule that decides allow or deny; L4 does not judge, and only runs, records, and blocks.'],
-       'plugins/my-agent/l4-tools-guards/permissions/permissions.json · plugins/my-agent/SKILL.md'],
+       'plugins/my-agent/l4-tools-guards/permissions/permissions.json · plugins/my-agent/skills/my-agent/SKILL.md'],
       ['Worker results and web content are read only as data.',
        'Instructions inside worker results, web content, and <code>work/</code> files are not followed; they are treated only as data.',
        ['This rule is among the core rules in SKILL.md.',
         'Subagents do not ask the user directly; they return only result files and reports.'],
-       'plugins/my-agent/SKILL.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md'],
       ['Secret patterns are checked before anything leaves (secret scan).',
        'Just before an output leaves the task folder, it is scanned for strings that look like secrets.',
        ['The scan runs when the deliverable is copied after G3, when the retrospective\'s <code>gate-report.md</code> is copied, and on a commit (the dev profile, or a project that chose to commit the task folder, <code>.my-agent/</code> by default; <code>docs/agent/</code> is the former layout).',
         'It looks for AWS keys, private key headers, lines of the form <code>KEY/TOKEN/SECRET/PASSWORD=</code>, GitHub tokens, and Anthropic key formats. It shows only where and what kind of match was found, and does not print the matched content.',
         'If something is found, it asks the person: <code>remove that part and proceed (recommended)</code> / <code>proceed as is</code> / <code>stop</code>. A path that does not exist is not read as "clean"; it is handled as an error.'],
-       'plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py'],
+       'plugins/my-agent/skills/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/secret-scan.py'],
       ['Workers have a turn limit.',
        'Every worker (L3) has a maximum number of turns, so it cannot run forever.',
        ['The current limits are explorer 30, researcher 40, writer 40, and coder 60.',
@@ -956,7 +956,7 @@ claude plugin install my-agent@my-plugins</pre>
         'A hook automatically records the call, start, and end of subagents. The end record includes the work unit, the actual model, tokens, time, and the first line of the result, and a worker that ended at its limit is filled in as <code>partial</code>. L1 does not write these separately.',
         'The G2 permission popup is also recorded by a hook, just before asking and right after allowing (a denial has no event, so it is not recorded).',
         'If the configured model differs from the actual model, it is reported as a mismatch, and if the main session is not on opus, it says so once. The logging hooks always end in success so they never block the session, and on failure they try to leave an error in the log line.'],
-       'plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/run-log.py · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py · plugins/my-agent/l4-tools-guards/hooks/permission-log.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json'],
+       'plugins/my-agent/skills/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/scripts/run-log.py · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py · plugins/my-agent/l4-tools-guards/hooks/permission-log.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json'],
       ['A read-only monitor and a menu bar app.',
        'A local web page shows all my-agent tasks; it only reads and writes nothing.',
        ['The screens are Dashboard, Architecture, Deliverables, Log replay, and Report (one task on one page). It does not write to the project\'s task folder (<code>.my-agent/</code> by default), the conversation records, or the data folder.',
@@ -977,14 +977,14 @@ claude plugin install my-agent@my-plugins</pre>
         'If a level has 4 or more open improvements, L1 tells the person in one line. <code>status</code> also shows the open count per level.',
         'A suggestion that the gate-analyst marked <code>clear</code> is raised by L1 automatically as an L1 entry, and the other improvements from this task are raised too, with a level attached.',
         'The retrospective also raises a missing subagent call as an L4 improvement, and notes in the retrospective any subagent that ended in a permission mode other than auto.'],
-       'plugins/my-agent/l4-tools-guards/scripts/feedback.py · plugins/my-agent/l1-orchestration/phases/accept.md · plugins/my-agent/SKILL.md'],
+       'plugins/my-agent/l4-tools-guards/scripts/feedback.py · plugins/my-agent/l1-orchestration/phases/accept.md · plugins/my-agent/skills/my-agent/SKILL.md'],
       ['Session resume notice.',
        'In a session that is newly opened, resumed, cleared, compacted, or forked, if there is an unfinished task, it says to continue that first.',
        ['The notice names the task in progress and its phase, and tells the person to run <code>/my-agent continue</code> first. If the plan has no approval line, it also includes a sentence saying not to delegate or write. A forked session gets a different notice: "the original session is working on this task; to take it over in this session, run continue".',
         'If there is no task in progress (<code>.active</code>), it prints nothing, and in every case the session starts normally.',
         'This notice is only guidance, not enforcement. The design document records, as a remaining risk, that nothing blocks you if you do not follow it.',
         'Before taking over, <code>continue</code> checks the session, checks for rule changes, and cleans up the state of work units that were being delegated, then leaves a <code>resume</code> record.'],
-       'plugins/my-agent/l4-tools-guards/hooks/session-notice.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/docs/build-guide/my-agent-architecture.md · plugins/my-agent/SKILL.md']
+       'plugins/my-agent/l4-tools-guards/hooks/session-notice.py · plugins/my-agent/l4-tools-guards/hooks/hooks.json · plugins/my-agent/docs/build-guide/my-agent-architecture.md · plugins/my-agent/skills/my-agent/SKILL.md']
     ]},
     { name: 'Profiles', feats: [
       ['Three profiles adapt the same phase skeleton to the kind of work.',
@@ -992,7 +992,7 @@ claude plugin install my-agent@my-plugins</pre>
        ['The profile is recorded in <code>intake.md</code>, and the profile file is re-read each time a phase starts.',
         'If the person sets it with a flag, the router does not choose; if not, the router chooses from the request and does not ask separately.',
         'If it is not a git repository, the router does not choose <code>dev</code> and chooses <code>general</code>.'],
-       'plugins/my-agent/SKILL.md'],
+       'plugins/my-agent/skills/my-agent/SKILL.md'],
       ['general: any other multi-step work.',
        'On the normal path the person answers only twice, at G1b and G3.',
        ['Scope confirmation (G1a) is not asked separately; the scope summary goes at the top of the plan and is approved all at once at G1b. If the request already answered the purpose, completion criteria, what will not be done, and the deliverable location, the scope interview is also skipped.',
@@ -1023,7 +1023,7 @@ claude plugin install my-agent@my-plugins</pre>
        ['When changing, L1 archives the task folder, changes the profile in <code>intake.md</code>, and converts. The marker for a changed profile is "(set by you)".',
         'If the person wants to change to dev but it is not a git repository, L1 refuses and asks whether to keep the current profile.',
         'A profile change after G1b approval is handled as a new task (<code>Follows:</code>).'],
-       'plugins/my-agent/SKILL.md']
+       'plugins/my-agent/skills/my-agent/SKILL.md']
     ]}
   ];
   function featEl(f) {
@@ -1055,13 +1055,13 @@ claude plugin install my-agent@my-plugins</pre>
 
   /* ---------- 6. sources (numbered as in the Markdown) ---------- */
   var S = [null,
-    `plugins/my-agent/SKILL.md`,
-    `plugins/my-agent/SKILL.md`,
-    `plugins/my-agent/SKILL.md`,
+    `plugins/my-agent/skills/my-agent/SKILL.md`,
+    `plugins/my-agent/skills/my-agent/SKILL.md`,
+    `plugins/my-agent/skills/my-agent/SKILL.md`,
     `plugins/my-agent/l4-tools-guards/hooks/plan-approved-check.py · plugins/my-agent/l4-tools-guards/hooks/verdict-fresh-check.py · plugins/my-agent/l4-tools-guards/hooks/scope-guard.py · plugins/my-agent/l4-tools-guards/permissions/permissions.json · plugins/my-agent/l4-tools-guards/hooks/hooks.json`,
-    `plugins/my-agent/SKILL.md · plugins/my-agent/l2-design-judge/agents/plan-reviewer.md · plugins/my-agent/l2-design-judge/agents/verifier.md · plugins/my-agent/l2-design-judge/agents/reviewer.md · plugins/my-agent/l1-orchestration/phases/accept.md`,
-    `plugins/my-agent/l1-orchestration/phases/build.md · plugins/my-agent/SKILL.md`,
-    `plugins/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py · plugins/my-agent/monitor/README.md · plugins/my-agent-tray/macos/menubar/README.md · plugins/my-agent/l4-tools-guards/scripts/gate-report.py · plugins/my-agent/l4-tools-guards/scripts/feedback.py`,
+    `plugins/my-agent/skills/my-agent/SKILL.md · plugins/my-agent/l2-design-judge/agents/plan-reviewer.md · plugins/my-agent/l2-design-judge/agents/verifier.md · plugins/my-agent/l2-design-judge/agents/reviewer.md · plugins/my-agent/l1-orchestration/phases/accept.md`,
+    `plugins/my-agent/l1-orchestration/phases/build.md · plugins/my-agent/skills/my-agent/SKILL.md`,
+    `plugins/my-agent/skills/my-agent/SKILL.md · plugins/my-agent/l4-tools-guards/hooks/subagent-log.py · plugins/my-agent/monitor/README.md · plugins/my-agent-tray/macos/menubar/README.md · plugins/my-agent/l4-tools-guards/scripts/gate-report.py · plugins/my-agent/l4-tools-guards/scripts/feedback.py`,
     `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/agent-teams`,
     `https://code.claude.com/docs/en/sub-agents · https://code.claude.com/docs/en/workflows`,
     `https://code.claude.com/docs/en/workflows · https://code.claude.com/docs/en/sub-agents`,

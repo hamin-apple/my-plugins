@@ -105,6 +105,34 @@ class EventsTest(unittest.TestCase):
         g2 = [x for x in e.log if x['k'] == 'popup' and x['a'] == 'perms'][0]
         self.assertEqual(g2['sub'], 'allowed')
 
+    def test_inline_line_is_one_finished_agent_item(self):
+        e = synth('2026-11-04 15:00:00 step: n=7 name=Verify rev=0 session=s',
+                  '2026-11-04 15:10:02 inline: agent=my-agent:verifier unit=- file=/t/verify.md result="Verdict: FAIL" model=claude-opus-5-5',
+                  '2026-11-04 15:20:02 inline: agent=my-agent:verifier unit=- file=/t/verify.md result="Verdict: FAIL" model=claude-opus-5-5',
+                  '2026-11-04 15:30:00 inline: agent=my-agent:coder unit=u2 file=- result=DONE model=claude-opus-5-5')
+        v = agents(e, 'verifier')
+        self.assertEqual(len(v), 2)
+        self.assertEqual((v[0]['sub'], v[0]['model'], v[0]['res'], v[0]['end'], v[0]['live']),
+                         ('inline', 'opus', 'Verdict: FAIL', 'ok', False))
+        self.assertEqual((agents(e, 'coder')[0]['res'], agents(e, 'coder')[0]['sub']), ('DONE', 'inline'))
+        self.assertEqual((e.vfail, e.vfail_max), (2, 2))
+        self.assertEqual(e.running, [])
+
+    def test_codex_g2_keyed_ask_closed_by_idless_answer(self):
+        e = synth('2026-11-04 14:00:00 step: n=5 name=Execute rev=0 session=s',
+                  '2026-11-04 14:02:11 ask: gate=G2 agent=main id=- tool=apply_patch q=/Users/x/notes/todo.md key=5c1e09a4b7d2f388 hook=plan-approved-check session=019a',
+                  '2026-11-04 14:02:40 answer: gate=G2 tool=apply_patch q=/Users/x/notes/todo.md key=5c1e09a4b7d2f388 result=allowed session=019a')
+        before = (len(e.log), dict(e.gates), e.answered)
+        g2 = [x for x in e.log if x['k'] == 'popup' and x['a'] == 'perms']
+        self.assertEqual([x['sub'] for x in g2], ['allowed'])
+        e2 = synth('2026-11-04 14:00:00 step: n=5 name=Execute rev=0 session=s',
+                   '2026-11-04 14:02:11 ask: gate=G2 agent=main id=- tool=apply_patch q=/Users/x/notes/todo.md key=5c1e09a4b7d2f388 hook=plan-approved-check session=019a',
+                   '2026-11-04 14:02:40 answer: gate=G2 tool=apply_patch q=/Users/x/notes/todo.md key=5c1e09a4b7d2f388 result=allowed session=019a',
+                   '2026-11-04 14:02:41 release: gate=G2 hook=plan-approved-check tool=apply_patch key=5c1e09a4b7d2f388 session=019a')
+        self.assertEqual((len(e2.log), dict(e2.gates), e2.answered), before)
+        self.assertEqual(e2.gates['G2'], 'ok')
+        self.assertIsNone(e2.waiting)
+
     def test_g2_denied_guess(self):
         e = synth('2026-10-24 16:00:00 call: agent=my-agent:coder model=- effort=- isolation=- background=false',
                   '2026-10-24 16:00:01 start: agent=my-agent:coder id=a1 configured=sonnet effort=medium',

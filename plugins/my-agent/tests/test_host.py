@@ -2,8 +2,12 @@
 import contextlib
 import io
 import json
+import os
+import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import helpers  # noqa: F401  (puts lib on sys.path)
 import ma_host
@@ -142,6 +146,44 @@ class HostTest(unittest.TestCase):
                 self.assertEqual(ma_host.emit(call, deny), code)
             self.assertEqual((o.getvalue(), e.getvalue()), (out, err))
         self.assertEqual(ma_host.emit(ma_host.Call('codex', [], True), None), 0)
+
+    def test_emit_codex_ask_goes_to_ma_g2(self):
+        ask = {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'ask',
+                                      'permissionDecisionReason': 'why'}}
+        deny = {'hookSpecificOutput': {'permissionDecision': 'deny', 'permissionDecisionReason': 'no'}}
+        bash = json.loads(fixture('hook-pre-tool-use-bash.json'))
+        self.assertNotIn('agent_id', bash)
+        self.assertEqual(ma_host.parse(json.dumps(bash)).host, 'claude')   # a main-session Bash input is not reshaped
+        cases = (('apply_patch', codex_file(patch('*** Add File: src/x.py', '+x'))),
+                 ('Bash', json.dumps(dict(bash, tool_input={'command': 'echo x > src/y.txt'}))))
+        for tool, raw in cases:
+            with self.subTest(tool=tool), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                task = helpers.make_task(root, session='019a0000-0000-7000-8000-000000000001')
+                raw = json.dumps(dict(json.loads(raw), cwd=str(root)))
+                env = {'MA_TASKS_DIR': str(root / 'data'), 'MA_HOST': ''}
+                err = io.StringIO()
+                with mock.patch.dict(os.environ, env), mock.patch.object(sys, 'argv', ['plan-approved-check.py']), \
+                        contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(ma_host.emit(ma_host.parse(raw), ask), 2)
+                    self.assertEqual(out.getvalue(), '')
+                    self.assertEqual(ma_host.emit(ma_host.parse(raw), deny), 2 if tool == 'apply_patch' else 0)
+                self.assertTrue(err.getvalue().startswith('my-agent G2 (plan-approved-check): why.'), err.getvalue())
+                lines = helpers.log_lines(task)
+                self.assertEqual(len(lines), 1)   # the ask line; a deny writes none
+                f = helpers.parse(lines[0])
+                self.assertEqual((f['gate'], f['tool'], f['hook']), ('G2', tool, 'plan-approved-check'))
+
+    def test_emit_claude_ask_keeps_json(self):
+        ask = {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'ask',
+                                      'permissionDecisionReason': 'why'}}
+        claude = json.dumps({'hook_event_name': 'PreToolUse', 'tool_name': 'Bash', 'session_id': 's',
+                             'tool_input': {'command': 'ls'}})
+        o, e = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {'MA_HOST': 'claude'}), contextlib.redirect_stdout(o), \
+                contextlib.redirect_stderr(e):
+            self.assertEqual(ma_host.emit(ma_host.parse(claude), ask), 0)
+        self.assertEqual((o.getvalue(), e.getvalue()), (json.dumps(ask) + '\n', ''))
 
     def test_scratch_base_per_host(self):
         self.assertIn('claude-', str(ma_host.scratch_base({})))

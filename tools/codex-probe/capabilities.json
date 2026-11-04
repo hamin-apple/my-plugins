@@ -5,7 +5,7 @@
       "capability": "Question popup (choices)",
       "status": "available",
       "needed_by": [
-        "plugins/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md"
       ],
       "how_tried": "S1 agents scenario, main-session tool list (debug prompt-input); u22 e2e run (Step S3), where the gates were asked",
       "result": "both request_user_input (questions with header, id, question and options of label and description) and request_user_input_async (questions with title and options) take choices; the e2e run called request_user_input_async 4 times and the Codex TUI showed the gate choices (G1b Approve, G3 Commit (Recommended) / Rework / Abort)",
@@ -48,7 +48,7 @@
       "capability": "Per-task model preset (model and effort per call)",
       "status": "gap",
       "needed_by": [
-        "plugins/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md"
       ],
       "how_tried": "S1 agents scenario: fields of the start tool call; e2e run (Step S3): call lines in the run-log",
       "result": "the e2e call lines (5, 9, 18, 23, 27, 31, 34 and 37) carry model=- effort=-: the Codex TUI session was started without MA_TASKS_DIR, so the data folder was the person's own one, whose agent-models.json has no codex section and agent-models.py presets printed none; no call line carries model=gpt-6-luna in this run, so the preset pass-through is not shown by the e2e (it is covered by the unit tests of agent-models, host and codex records); the Codex L1 also ran show --plan without a Models: line on plan cells that said definition, which the Codex parser rejects by design",
@@ -142,7 +142,7 @@
       "capability": "Background start of a subagent",
       "status": "gap",
       "needed_by": [
-        "plugins/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md"
       ],
       "how_tried": "S1 agents scenario: fields of the start tool call; two subagents started together",
       "result": "no run_in_background field; subagents started together overlap",
@@ -159,7 +159,7 @@
       "capability": "Workflow tool",
       "status": "gap",
       "needed_by": [
-        "plugins/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md"
       ],
       "how_tried": "S1 agents scenario: main-session tool list",
       "result": "no Workflow tool in the list",
@@ -176,7 +176,7 @@
       "capability": "SendMessage to a running subagent",
       "status": "available",
       "needed_by": [
-        "plugins/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md"
       ],
       "how_tried": "S1 agents scenario: main-session tool list",
       "result": "send_message, followup_task and wait_agent are listed",
@@ -198,7 +198,7 @@
       ],
       "how_tried": "S1 hooks scenario (PermissionRequest event); u23 in the e2e run",
       "result": "the findings show no Codex permission dialog for G2",
-      "effect": "the G2 dialog step is skipped and said so in one chat line (hosts.md)",
+      "effect": "the gate hooks' asks stop the call with exit 2 and L1 asks the G2 question itself (hosts.md); permission-log.py gives no PermissionRequest decision (hookSpecificOutput.decision.behavior), so Codex's own approvals are unchanged",
       "facts": [
         "Events seen and their input fields"
       ],
@@ -206,6 +206,25 @@
         "PermissionRequest",
         "permission dialog",
         "G2"
+      ]
+    },
+    {
+      "id": "ask-asymmetry",
+      "capability": "Ask decision of a PreToolUse hook (ask ignored, deny honored)",
+      "status": "gap",
+      "needed_by": [
+        "plugins/my-agent/l4-tools-guards/lib/ma_g2.py",
+        "plugins/my-agent/l4-tools-guards/lib/ma_host.py"
+      ],
+      "how_tried": "Codex docs (handoff fact 4); not run live: unit tests with Codex-shaped inputs (test_codex_g2.py)",
+      "result": "Codex parses permissionDecision ask but does not support it: the hook run is marked failed and the call goes on, while a deny on apply_patch is honored as exit 2",
+      "effect": "every ask of the gate hooks is exit 2 on Codex; L1 asks the person in a G2 popup and writes answer gate=G2, which releases exactly one call (hosts.md)",
+      "facts": [
+        "Ask decision handling (docs)"
+      ],
+      "failure_patterns": [
+        "permissionDecision.{0,40}ask",
+        "ask.{0,40}(unsupported|not supported)"
       ]
     },
     {
@@ -231,12 +250,12 @@
       "capability": "Skill path variables in skill text",
       "status": "gap",
       "needed_by": [
-        "plugins/my-agent/SKILL.md",
+        "plugins/my-agent/skills/my-agent/SKILL.md",
         "plugins/my-agent/l1-orchestration/hosts.md"
       ],
       "how_tried": "S7 identity scenario (skill text expansion): CLAUDE_SKILL_DIR, CLAUDE_PLUGIN_ROOT, ARGUMENTS, user_config",
       "result": "Codex passes the variables literally, not expanded",
-      "effect": "the plugin and skill folders are the folder of the SKILL.md file Codex read (hosts.md)",
+      "effect": "the session line names the plugin, data and task folders; without it the plugin folder is two levels above the SKILL.md folder (hosts.md)",
       "facts": [
         "Skill text variables as Codex gave them to the model"
       ],
@@ -325,14 +344,14 @@
     {
       "id": "plugin-skill-discovery",
       "capability": "Plugin skill discovery (root SKILL.md and skills folder)",
-      "status": "gap",
+      "status": "available",
       "needed_by": [
         "plugins/my-agent/.codex-plugin/plugin.json",
-        "plugins/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md"
       ],
-      "how_tried": "u26 skills diagnosis: live install and variants s0-s5 (manifest `skills` forms, root content, symlink folder); e2e Step S3 start by path",
-      "result": "Codex lists no plugin-root SKILL.md under any manifest form tried and drops symlinks from its install copy; my-agent:monitor is listed",
-      "effect": "the main skill is started by asking Codex to read and follow the installed SKILL.md by its path; a generated Codex entry skill is left for a later task",
+      "how_tried": "u26 skills diagnosis: live install and variants s0-s5 (manifest `skills` forms, root content, symlink folder); e2e Step S3 start by path; 261104 u8: probe snapshot and check install of the 0.11.0 install (codex debug prompt-input, no model call); claude-skill-check.py for Claude Code",
+      "result": "with the main skill at skills/my-agent/SKILL.md and no skills key, Codex lists my-agent:my-agent and my-agent:monitor once each (skills-list.txt: my-agent:monitor, my-agent:my-agent; source prompt-input)",
+      "effect": "the main skill is started by name on both hosts; no start by path (hosts.md)",
       "facts": [
         "Plugin skill discovery outcome",
         "Skill listing source"
@@ -349,7 +368,7 @@
       "capability": "Plugin rules version from git (Intake my-agent: value)",
       "status": "gap",
       "needed_by": [
-        "plugins/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md"
       ],
       "how_tried": "u22 e2e run: Intake item 9 ran git log and git status on the plugin folder; the session record shows both exit 128 and task/intake.md has `my-agent: none`",
       "result": "the plugin folder is Codex's install copy (plugins/cache/<marketplace>/<plugin>/<version>/), which is not a git repository, so both git calls fail; in the e2e run the Codex L1 ran git -C on the cache path from inside the throwaway repository, and git failed with \"is outside repository at\" instead",
@@ -367,7 +386,7 @@
       "capability": "Order of Intake steps (.active before the first run-log line)",
       "status": "gap",
       "needed_by": [
-        "plugins/my-agent/SKILL.md",
+        "plugins/my-agent/skills/my-agent/SKILL.md",
         "plugins/my-agent/l4-tools-guards/scripts/run-log.py"
       ],
       "how_tried": "u22 e2e run: the model ran the Intake item 10 run-log call before writing .active (item 6); run-log refused twice, then the call succeeded after .active was written",

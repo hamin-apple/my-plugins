@@ -40,8 +40,14 @@ class AgentModelsTest(unittest.TestCase):
     def write(self, obj):
         self.file.write_text(obj if isinstance(obj, str) else json.dumps(obj), encoding='utf-8')
 
-    def use_example(self):
-        self.file.write_text(EXAMPLE.read_text(encoding='utf-8'), encoding='utf-8')
+    def use_example(self, inline=False):
+        """The example file; by default without its `inline` presets (the 0.10.0 content)."""
+        data = json.loads(EXAMPLE.read_text(encoding='utf-8'))
+        if not inline:
+            for profile, presets in data.items():
+                for section in (presets.values() if profile == 'codex' else [presets]):
+                    section.pop('inline', None)
+        self.write(data)
 
     def run_cli(self, *args, host='claude'):
         return run_script(SCRIPT, *args, '--data-dir', str(self.data), env={'MA_HOST': host}, drop=('MA_TASKS_DIR',))
@@ -199,7 +205,7 @@ class AgentModelsTest(unittest.TestCase):
         data = json.loads(EXAMPLE.read_text(encoding='utf-8'))
         self.assertEqual(list(data), ['general', 'research', 'dev', 'codex'])
         for profile in (data[k] for k in ('general', 'research', 'dev')):
-            self.assertEqual(list(profile), ['standard', 'economy', 'max'])
+            self.assertEqual(list(profile), ['standard', 'economy', 'max', 'inline'])
             self.assertEqual(list(profile['standard']), list(AGENTS))
         ma_models.validate(data)   # raises ModelsError on a bad file
 
@@ -307,6 +313,8 @@ class AgentModelsTest(unittest.TestCase):
                 continue
             self.assertEqual(list(section[profile]), list(presets), profile)
             for preset, entries in presets.items():
+                if preset == 'inline':
+                    continue
                 got = section[profile][preset]
                 self.assertEqual(list(got), list(AGENTS), f'{profile}/{preset}')
                 for agent in AGENTS:
@@ -314,6 +322,111 @@ class AgentModelsTest(unittest.TestCase):
                         {a: {'model': m, 'effort': e} for a, (m, e) in DEFINITION.items()}, entries)[agent]
                     want = {'effort': effort} if model == 'opus' else {'model': 'gpt-6-luna', 'effort': effort}
                     self.assertEqual(got[agent], want, f'{profile}/{preset}/{agent}')
+
+    # --- the `inline` model value (criterion 9) ---
+
+    def inline_lines(self, width):
+        return [f'{a:<13}  model={"inline":<{width}} effort=-       pass=inline' for a in AGENTS]
+
+    def test_example_inline_preset_in_every_profile_and_codex_section(self):
+        data = json.loads(EXAMPLE.read_text(encoding='utf-8'))
+        sections = [data[k] for k in ('general', 'research', 'dev')] + list(data['codex'].values())
+        self.assertEqual(len(sections), 6)
+        for section in sections:
+            self.assertEqual(section['inline'], {a: {'model': 'inline'} for a in AGENTS})
+        ma_models.validate(data)
+
+    def test_show_inline_preset_on_both_hosts(self):
+        self.use_example(inline=True)
+        for host, width in (('claude', 6), ('codex', 10)):
+            with self.subTest(host=host):
+                r = self.run_cli('show', '--profile', 'dev', '--preset', 'inline', host=host)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                where = f'file {self.file}' + (', codex section' if host == 'codex' else '')
+                self.assertEqual(r.stdout.splitlines(), [f'preset: dev/inline ({where})'] + self.inline_lines(width))
+
+    def test_show_inline_preset_exact_claude_text(self):
+        self.use_example(inline=True)
+        r = self.run_cli('show', '--profile', 'dev', '--preset', 'inline')
+        self.assertEqual(r.stdout.splitlines()[1], 'architect      model=inline effort=-       pass=inline')
+
+    def test_mixed_preset_and_presets_lines(self):
+        for host, width, other in (('claude', 6, ('sonnet', 'sonnet')), ('codex', 10, ('gpt-6-luna', '-'))):
+            with self.subTest(host=host):
+                entries = {'architect': {'model': 'inline'}, 'verifier': {'model': 'inline'},
+                           'coder': {'model': other[0]}}
+                self.write({'dev': {'mixed': entries}} if host == 'claude' else {'codex': {'dev': {'mixed': entries}}})
+                r = self.run_cli('show', '--profile', 'dev', '--preset', 'mixed', host=host)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                lines = r.stdout.splitlines()
+                self.assertEqual(lines[1], f'{"architect":<13}  model={"inline":<{width}} effort=-       pass=inline')
+                self.assertEqual(lines[3], f'{"verifier":<13}  model={"inline":<{width}} effort=-       pass=inline')
+                self.assertNotIn('inline', lines[2] + ''.join(lines[4:9]))
+                self.assertEqual(lines[9].split()[1], f'model={other[0]}')
+                out = self.run_cli('presets', '--profile', 'dev', host=host).stdout
+                self.assertTrue(out.startswith('mixed: inline architect, verifier'), out)
+
+    def test_presets_inline_summary(self):
+        self.use_example(inline=True)
+        for host in ('claude', 'codex'):
+            out = self.run_cli('presets', '--profile', 'dev', host=host).stdout.splitlines()
+            self.assertEqual(out[-1], 'inline: all roles inline', host)
+        self.write({'dev': {'p': {'architect': {'model': 'inline'}, 'coder': {'effort': 'low'}}}})
+        self.assertEqual(self.run_cli('presets', '--profile', 'dev').stdout, 'p: inline architect, coder sonnet/low\n')
+        self.write({'dev': {'p': {a: {'model': 'inline'} for a in AGENTS[:5]}}})
+        self.assertEqual(self.run_cli('presets', '--profile', 'dev').stdout, 'p: inline architect, plan-reviewer, '
+                         'verifier, reviewer, gate-analyst\n')
+
+    def test_inline_rejections(self):
+        cases = [
+            ({'dev': {'mixed': {'architect': {'model': 'inline', 'effort': 'high'}}}},
+             'dev/mixed/architect: an inline role takes no effort (it runs in the main session)'),
+            ({'codex': {'dev': {'mixed': {'coder': {'model': 'inline', 'effort': 'low'}}}}},
+             'codex/dev/mixed/coder: an inline role takes no effort (it runs in the main session)'),
+            ({'dev': {'mixed': {'coder': {'model': 'inlin'}}}},
+             'dev/mixed/coder: unknown model "inlin" (one of: opus, sonnet, haiku, fable)'),
+            ({'codex': {'dev': {'mixed': {'coder': {'model': 'inlin'}}}}},
+             'codex/dev/mixed/coder: unknown model "inlin"'),
+            ({'dev': {'mixed': {'main': {'model': 'inline'}}}},
+             'dev/mixed: unknown agent "main" (the main session stays opus and has no entry)'),
+            ({'codex': {'dev': {'mixed': {'main': {'model': 'inline'}}}}},
+             'codex/dev/mixed: unknown agent "main" (the main session has no entry)'),
+        ]
+        for content, cause in cases:
+            with self.subTest(cause=cause):
+                self.write(content)
+                for host in ('claude', 'codex'):
+                    self.assertRejected(self.run_cli('presets', '--profile', 'dev', host=host), cause)
+
+    def test_show_plan_inline_row(self):
+        head = '## Models\n\nPreset: mixed\n\n| Agent | Model | Effort | Note |\n|---|---|---|---|\n'
+        for host in ('claude', 'codex'):
+            for effort in ('-', ''):
+                with self.subTest(host=host, effort=effort):
+                    p = self.plan(head + f'| architect | inline | {effort} | |\n')
+                    r = self.run_cli('show', '--plan', str(p), host=host)
+                    self.assertEqual(r.returncode, 0, r.stderr)
+                    _, got = rows(r.stdout)
+                    self.assertEqual(got['architect'], ('inline', '-', 'inline'))
+            self.assertRejected(self.run_cli('show', '--plan', str(self.plan(head + '| architect | inline | high | |\n')),
+                                             host=host), 'an inline role takes no effort')
+
+    def test_output_without_inline_equals_0_10_0(self):
+        """A file without an inline value prints the 0.10.0 text (fixture captured from the 0.10.0 code)."""
+        self.use_example()
+        out = []
+        for host in ('claude', 'codex'):
+            for profile in ('general', 'research', 'dev'):
+                cmds = [('show', '--profile', profile, '--preset', n) for n in ('standard', 'economy', 'max')]
+                for cmd in cmds + [('presets', '--profile', profile)]:
+                    r = self.run_cli(*cmd, host=host)
+                    out += [f'$ MA_HOST={host} agent-models.py {" ".join(cmd)}', f'[exit {r.returncode}]',
+                            r.stdout.replace(str(self.file), '<data>/agent-models.json').rstrip('\n')]
+                    if r.stderr:
+                        out.append(r.stderr.rstrip('\n'))
+                    out.append('')
+        want = (Path(__file__).parent / 'fixtures' / 'agent-models-0.10.0.txt').read_text(encoding='utf-8')
+        self.assertEqual('\n'.join(out), want)
 
 
 if __name__ == '__main__':

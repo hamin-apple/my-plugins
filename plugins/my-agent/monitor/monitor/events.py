@@ -131,6 +131,12 @@ def build_events(lines) -> Events:
             for g in g2_open:
                 if g.get('id') == it['id'] and g['sub'] is None:
                     g['sub'] = 'not run (denied?)'
+        elif l.kind == 'inline':     # a role run in the main session by L1: one finished agent item (not live)
+            a = f.get('agent', '').removeprefix('my-agent:')
+            item(l, 'agent', a, f.get('agent', ''), sub='inline', model=alias(f.get('model')), actual=None, effort=None,
+                 dur=None, c=None, res=f.get('result'), end='ok', live=False, mm=False, id=None)
+            if a == 'verifier' and f.get('result'):
+                verdicts.append(ma_schema.verify_failed(f['result']))
         elif l.kind == 'ask':
             gate = f.get('gate')
             if gate == 'G2':

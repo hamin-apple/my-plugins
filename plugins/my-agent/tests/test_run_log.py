@@ -205,6 +205,48 @@ class RunLogTest(unittest.TestCase):
             self.assertEqual(self.run_log(*args).returncode, 2, args)
         self.assertEqual(log_lines(self.task), [])
 
+    def inline(self, *args):
+        return self.run_log('inline', *args, '--model', 'claude-opus-5-5')
+
+    def test_inline_verifier_takes_result_from_file(self):
+        vf = self.task / 'verify.md'
+        vf.write_text('Verdict: ALL PASS\nmore\n')
+        r = self.inline('agent=my-agent:verifier', f'file={vf}')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        line = log_lines(self.task)[-1]
+        f = parse(line)
+        self.assertEqual((f['agent'], f['unit'], f['file'], f['result'], f['model']),
+                         ('my-agent:verifier', '-', str(vf), 'Verdict: ALL PASS', 'claude-opus-5-5'))
+        self.assertEqual(list(f)[:5], ['agent', 'unit', 'file', 'result', 'model'])
+        self.assertIn(' inline: agent=my-agent:verifier unit=- file=', line)
+
+    def test_inline_result_is_cut_to_200_characters(self):
+        vf = self.task / 'review.md'
+        vf.write_text('x' * 300 + '\n')
+        self.assertEqual(self.inline('agent=my-agent:reviewer', f'file={vf}').returncode, 0)
+        self.assertEqual(len(parse(log_lines(self.task)[-1])['result']), 200)
+
+    def test_inline_coder_has_no_file_and_gives_result(self):
+        r = self.inline('agent=my-agent:coder', 'unit=u2', 'file=-', 'result=DONE')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        f = parse(log_lines(self.task)[-1])
+        self.assertEqual((f['agent'], f['unit'], f['file'], f['result']), ('my-agent:coder', 'u2', '-', 'DONE'))
+
+    def test_inline_refusals(self):
+        vf = self.task / 'verify.md'
+        vf.write_text('Verdict: ALL PASS\n')
+        cases = [(('file=-',), 2), (('agent=my-agent:verifier',), 2),
+                 (('agent=my-agent:main', f'file={vf}'), 2), (('agent=my-agent:nobody', f'file={vf}'), 2),
+                 (('agent=my-agent:verifier', 'file=-'), 2), (('agent=my-agent:coder', 'file=-'), 2),
+                 (('agent=my-agent:verifier', f'file={vf}', 'result=Verdict: ALL PASS'), 2),
+                 (('agent=my-agent:verifier', f'file={self.task / "missing.md"}'), 1)]
+        for args, code in cases:
+            r = self.inline(*args)
+            self.assertEqual(r.returncode, code, (args, r.stdout, r.stderr))
+        self.assertEqual(log_lines(self.task), [])
+        self.assertIn('inline needs the result file', r.stderr + r.stdout)
+        self.assertIn('(missing)', r.stderr + r.stdout)
+
     def test_models_kind(self):
         self.assertEqual(self.run_log('models', 'preset=economy', 'source=file').returncode, 0)
         f = parse(log_lines(self.task)[-1])

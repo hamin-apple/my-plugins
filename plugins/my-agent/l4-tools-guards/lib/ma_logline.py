@@ -78,7 +78,7 @@ def unreadable(log: Path) -> list:
         return []
 
 
-HOOK_KINDS = {'call', 'start', 'stop', 'log-error', ma_schema.GUARD}
+HOOK_KINDS = {'call', 'start', 'stop', 'log-error', 'release', ma_schema.GUARD}
 
 
 def is_hook_line(kind: str, fields: dict) -> bool:

@@ -1,10 +1,12 @@
 """permission-log.py ask/answer: G2 records (architecture 4.7.2 "G2 records")."""
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from helpers import events, log_lines, make_task, parse, run_hook
 
+FIX = Path(__file__).resolve().parent / 'fixtures' / 'codex'
 CMD = 'echo "a\\b" > x'
 
 
@@ -111,6 +113,28 @@ class PermissionLogTest(unittest.TestCase):
     def test_missing_session_records_as_before(self):
         self.ask()
         self.assertNotIn('session', parse(log_lines(self.task)[-1]))
+
+    def test_codex_permission_request_gives_no_decision(self):
+        """Criterion 8: Codex's documented output is hookSpecificOutput.decision.behavior; this hook prints nothing."""
+        d = json.loads((FIX / 'hook-permission-request-bash.json').read_text(encoding='utf-8'))
+        self.assertEqual(d['hook_event_name'], 'PermissionRequest')
+        self.hook('ask', dict(d, session_id='s-test'))
+        f = parse(log_lines(self.task)[-1])
+        self.assertEqual((f['gate'], f['agent'], f['id'], f['tool'], f['q'], f['session']),
+                         ('G2', 'main', '-', 'Bash', 'echo made-up > notes/made-up.txt', 's-test'))
+        self.assertNotIn('key', f)
+
+    def test_post_tool_use_after_a_keyed_gate_hook_ask_writes_no_answer(self):
+        """A Codex gate hook's ask (ma_g2, with key=) is closed by L1's answer, not by PostToolUse."""
+        self.write_log('2026-10-25 09:00:01 ask: gate=G2 agent=main id=- tool=Bash q=\'echo x\' key=0123456789abcdef '
+                       'hook=plan-approved-check\n')
+        before = log_lines(self.task)
+        self.hook('answer', {'hook_event_name': 'PostToolUse', 'tool_name': 'Bash',
+                             'tool_input': {'command': 'echo x'}, 'tool_response': {}})
+        self.assertEqual(log_lines(self.task), before)
+        self.ask('echo x')   # a Claude-style ask without key= still closes
+        self.answer('echo x')
+        self.assertEqual(parse(log_lines(self.task)[-1])['result'], 'allowed')
 
     def test_bad_stdin(self):
         r = run_hook('permission-log.py', 'ask', '{oops', self.root, env=self.env)

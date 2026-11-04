@@ -12,7 +12,8 @@ the definition values (for the preset `standard`) and `presets` prints `none`.
 
 `show` prints a header and one line per agent (plugin.json order): `<agent> model=<m> effort=<e> pass=<fields>`,
 where `pass=` lists the fields that differ from the definition file (`-` for none): the Agent call arguments L1
-passes. `show --plan` reads the `## Models` table of a plan.md instead of the file. `presets` prints one line per
+passes. An inline role (model value `inline`) prints `model=inline effort=- pass=inline`: `pass=inline` means no Agent
+call, L1 performs the role itself (SKILL.md "Inline role"). `show --plan` reads the `## Models` table of a plan.md instead of the file. `presets` prints one line per
 preset of the profile (`standard` first when present): the name, and after `: ` what differs from the definition.
 Takes no --task-dir.
 

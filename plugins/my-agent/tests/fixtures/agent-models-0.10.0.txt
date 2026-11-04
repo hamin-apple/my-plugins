@@ -1,0 +1,269 @@
+$ MA_HOST=claude agent-models.py show --profile general --preset standard
+[exit 0]
+preset: general/standard (file <data>/agent-models.json)
+architect      model=opus   effort=high    pass=-
+plan-reviewer  model=sonnet effort=high    pass=-
+verifier       model=opus   effort=high    pass=-
+reviewer       model=sonnet effort=high    pass=-
+gate-analyst   model=sonnet effort=high    pass=-
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=medium  pass=-
+
+$ MA_HOST=claude agent-models.py show --profile general --preset economy
+[exit 0]
+preset: general/economy (file <data>/agent-models.json)
+architect      model=sonnet effort=medium  pass=model,effort
+plan-reviewer  model=sonnet effort=medium  pass=effort
+verifier       model=sonnet effort=medium  pass=model,effort
+reviewer       model=sonnet effort=medium  pass=effort
+gate-analyst   model=sonnet effort=medium  pass=effort
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=low     pass=effort
+
+$ MA_HOST=claude agent-models.py show --profile general --preset max
+[exit 0]
+preset: general/max (file <data>/agent-models.json)
+architect      model=opus   effort=xhigh   pass=effort
+plan-reviewer  model=opus   effort=xhigh   pass=model,effort
+verifier       model=opus   effort=xhigh   pass=effort
+reviewer       model=opus   effort=xhigh   pass=model,effort
+gate-analyst   model=opus   effort=xhigh   pass=model,effort
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=medium  pass=-
+
+$ MA_HOST=claude agent-models.py presets --profile general
+[exit 0]
+standard
+economy: judges sonnet/medium, coder sonnet/low
+max: judges opus/xhigh
+
+$ MA_HOST=claude agent-models.py show --profile research --preset standard
+[exit 0]
+preset: research/standard (file <data>/agent-models.json)
+architect      model=opus   effort=high    pass=-
+plan-reviewer  model=sonnet effort=high    pass=-
+verifier       model=opus   effort=high    pass=-
+reviewer       model=sonnet effort=high    pass=-
+gate-analyst   model=sonnet effort=high    pass=-
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=medium  pass=-
+
+$ MA_HOST=claude agent-models.py show --profile research --preset economy
+[exit 0]
+preset: research/economy (file <data>/agent-models.json)
+architect      model=sonnet effort=medium  pass=model,effort
+plan-reviewer  model=sonnet effort=medium  pass=effort
+verifier       model=sonnet effort=medium  pass=model,effort
+reviewer       model=sonnet effort=medium  pass=effort
+gate-analyst   model=sonnet effort=medium  pass=effort
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=low     pass=effort
+
+$ MA_HOST=claude agent-models.py show --profile research --preset max
+[exit 0]
+preset: research/max (file <data>/agent-models.json)
+architect      model=opus   effort=xhigh   pass=effort
+plan-reviewer  model=opus   effort=xhigh   pass=model,effort
+verifier       model=opus   effort=xhigh   pass=effort
+reviewer       model=opus   effort=xhigh   pass=model,effort
+gate-analyst   model=opus   effort=xhigh   pass=model,effort
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=medium  pass=-
+
+$ MA_HOST=claude agent-models.py presets --profile research
+[exit 0]
+standard
+economy: judges sonnet/medium, coder sonnet/low
+max: judges opus/xhigh
+
+$ MA_HOST=claude agent-models.py show --profile dev --preset standard
+[exit 0]
+preset: dev/standard (file <data>/agent-models.json)
+architect      model=opus   effort=high    pass=-
+plan-reviewer  model=sonnet effort=high    pass=-
+verifier       model=opus   effort=high    pass=-
+reviewer       model=sonnet effort=high    pass=-
+gate-analyst   model=sonnet effort=high    pass=-
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=medium  pass=-
+
+$ MA_HOST=claude agent-models.py show --profile dev --preset economy
+[exit 0]
+preset: dev/economy (file <data>/agent-models.json)
+architect      model=sonnet effort=medium  pass=model,effort
+plan-reviewer  model=sonnet effort=medium  pass=effort
+verifier       model=sonnet effort=medium  pass=model,effort
+reviewer       model=sonnet effort=medium  pass=effort
+gate-analyst   model=sonnet effort=medium  pass=effort
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=low     pass=effort
+
+$ MA_HOST=claude agent-models.py show --profile dev --preset max
+[exit 0]
+preset: dev/max (file <data>/agent-models.json)
+architect      model=opus   effort=xhigh   pass=effort
+plan-reviewer  model=opus   effort=xhigh   pass=model,effort
+verifier       model=opus   effort=xhigh   pass=effort
+reviewer       model=opus   effort=xhigh   pass=model,effort
+gate-analyst   model=opus   effort=xhigh   pass=model,effort
+explorer       model=sonnet effort=low     pass=-
+researcher     model=sonnet effort=medium  pass=-
+writer         model=sonnet effort=medium  pass=-
+coder          model=sonnet effort=medium  pass=-
+
+$ MA_HOST=claude agent-models.py presets --profile dev
+[exit 0]
+standard
+economy: judges sonnet/medium, coder sonnet/low
+max: judges opus/xhigh
+
+$ MA_HOST=codex agent-models.py show --profile general --preset standard
+[exit 0]
+preset: general/standard (file <data>/agent-models.json, codex section)
+architect      model=-          effort=high    pass=effort
+plan-reviewer  model=gpt-6-luna effort=high    pass=model,effort
+verifier       model=-          effort=high    pass=effort
+reviewer       model=gpt-6-luna effort=high    pass=model,effort
+gate-analyst   model=gpt-6-luna effort=high    pass=model,effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=medium  pass=model,effort
+
+$ MA_HOST=codex agent-models.py show --profile general --preset economy
+[exit 0]
+preset: general/economy (file <data>/agent-models.json, codex section)
+architect      model=gpt-6-luna effort=medium  pass=model,effort
+plan-reviewer  model=gpt-6-luna effort=medium  pass=model,effort
+verifier       model=gpt-6-luna effort=medium  pass=model,effort
+reviewer       model=gpt-6-luna effort=medium  pass=model,effort
+gate-analyst   model=gpt-6-luna effort=medium  pass=model,effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=low     pass=model,effort
+
+$ MA_HOST=codex agent-models.py show --profile general --preset max
+[exit 0]
+preset: general/max (file <data>/agent-models.json, codex section)
+architect      model=-          effort=xhigh   pass=effort
+plan-reviewer  model=-          effort=xhigh   pass=effort
+verifier       model=-          effort=xhigh   pass=effort
+reviewer       model=-          effort=xhigh   pass=effort
+gate-analyst   model=-          effort=xhigh   pass=effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=medium  pass=model,effort
+
+$ MA_HOST=codex agent-models.py presets --profile general
+[exit 0]
+standard: architect -/high, plan-reviewer gpt-6-luna/high, verifier -/high, reviewer gpt-6-luna/high, gate-analyst gpt-6-luna/high, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/medium
+economy: judges gpt-6-luna/medium, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/low
+max: judges -/xhigh, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/medium
+
+$ MA_HOST=codex agent-models.py show --profile research --preset standard
+[exit 0]
+preset: research/standard (file <data>/agent-models.json, codex section)
+architect      model=-          effort=high    pass=effort
+plan-reviewer  model=gpt-6-luna effort=high    pass=model,effort
+verifier       model=-          effort=high    pass=effort
+reviewer       model=gpt-6-luna effort=high    pass=model,effort
+gate-analyst   model=gpt-6-luna effort=high    pass=model,effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=medium  pass=model,effort
+
+$ MA_HOST=codex agent-models.py show --profile research --preset economy
+[exit 0]
+preset: research/economy (file <data>/agent-models.json, codex section)
+architect      model=gpt-6-luna effort=medium  pass=model,effort
+plan-reviewer  model=gpt-6-luna effort=medium  pass=model,effort
+verifier       model=gpt-6-luna effort=medium  pass=model,effort
+reviewer       model=gpt-6-luna effort=medium  pass=model,effort
+gate-analyst   model=gpt-6-luna effort=medium  pass=model,effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=low     pass=model,effort
+
+$ MA_HOST=codex agent-models.py show --profile research --preset max
+[exit 0]
+preset: research/max (file <data>/agent-models.json, codex section)
+architect      model=-          effort=xhigh   pass=effort
+plan-reviewer  model=-          effort=xhigh   pass=effort
+verifier       model=-          effort=xhigh   pass=effort
+reviewer       model=-          effort=xhigh   pass=effort
+gate-analyst   model=-          effort=xhigh   pass=effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=medium  pass=model,effort
+
+$ MA_HOST=codex agent-models.py presets --profile research
+[exit 0]
+standard: architect -/high, plan-reviewer gpt-6-luna/high, verifier -/high, reviewer gpt-6-luna/high, gate-analyst gpt-6-luna/high, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/medium
+economy: judges gpt-6-luna/medium, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/low
+max: judges -/xhigh, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/medium
+
+$ MA_HOST=codex agent-models.py show --profile dev --preset standard
+[exit 0]
+preset: dev/standard (file <data>/agent-models.json, codex section)
+architect      model=-          effort=high    pass=effort
+plan-reviewer  model=gpt-6-luna effort=high    pass=model,effort
+verifier       model=-          effort=high    pass=effort
+reviewer       model=gpt-6-luna effort=high    pass=model,effort
+gate-analyst   model=gpt-6-luna effort=high    pass=model,effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=medium  pass=model,effort
+
+$ MA_HOST=codex agent-models.py show --profile dev --preset economy
+[exit 0]
+preset: dev/economy (file <data>/agent-models.json, codex section)
+architect      model=gpt-6-luna effort=medium  pass=model,effort
+plan-reviewer  model=gpt-6-luna effort=medium  pass=model,effort
+verifier       model=gpt-6-luna effort=medium  pass=model,effort
+reviewer       model=gpt-6-luna effort=medium  pass=model,effort
+gate-analyst   model=gpt-6-luna effort=medium  pass=model,effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=low     pass=model,effort
+
+$ MA_HOST=codex agent-models.py show --profile dev --preset max
+[exit 0]
+preset: dev/max (file <data>/agent-models.json, codex section)
+architect      model=-          effort=xhigh   pass=effort
+plan-reviewer  model=-          effort=xhigh   pass=effort
+verifier       model=-          effort=xhigh   pass=effort
+reviewer       model=-          effort=xhigh   pass=effort
+gate-analyst   model=-          effort=xhigh   pass=effort
+explorer       model=gpt-6-luna effort=low     pass=model,effort
+researcher     model=gpt-6-luna effort=medium  pass=model,effort
+writer         model=gpt-6-luna effort=medium  pass=model,effort
+coder          model=gpt-6-luna effort=medium  pass=model,effort
+
+$ MA_HOST=codex agent-models.py presets --profile dev
+[exit 0]
+standard: architect -/high, plan-reviewer gpt-6-luna/high, verifier -/high, reviewer gpt-6-luna/high, gate-analyst gpt-6-luna/high, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/medium
+economy: judges gpt-6-luna/medium, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/low
+max: judges -/xhigh, explorer gpt-6-luna/low, researcher gpt-6-luna/medium, writer gpt-6-luna/medium, coder gpt-6-luna/medium

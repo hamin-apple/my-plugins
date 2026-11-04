@@ -191,6 +191,46 @@ class GateReportTest(unittest.TestCase):
         self.assertEqual(self.misses('pass', 'verify', 'rework'), '0')
         self.assertEqual(self.misses(), '0')
 
+    def test_inline_lines_count_as_runs(self):
+        out = self.tally(
+            '2026-11-04 15:00:00 start: agent=my-agent:verifier id=v1 configured=opus',
+            '2026-11-04 15:01:00 stop: id=v1 actual=claude-opus-5-5 tokens=1 result="Verdict: FAIL"',
+            '2026-11-04 15:10:02 inline: agent=my-agent:verifier unit=- file=/t/verify.md result="Verdict: ALL PASS" model=claude-opus-5-5',
+            '2026-11-04 15:11:00 inline: agent=my-agent:plan-reviewer unit=- file=/t/plan-review.md result="Verdict: APPROVE" model=claude-opus-5-5',
+            '2026-11-04 15:12:00 inline: agent=my-agent:coder unit=u2 file=- result=DONE model=claude-opus-5-5')
+        for row in ('| Verify runs | 2 |', '| Plan Review runs | 1 |', '| Subagents | 4 (inline 3) |'):
+            self.assertIn(row, out)
+        self.assertIn('L1 lines 3, hook lines 2,', out)
+
+    def test_without_inline_lines_subagents_row_is_plain(self):
+        out = self.tally('2026-11-04 15:00:00 start: agent=my-agent:coder id=a1 configured=sonnet')
+        self.assertIn('| Subagents | 1 |', out)
+        self.assertNotIn('inline', out)
+
+    def test_inline_verifier_pass_then_rework_is_a_miss(self):
+        out = self.tally(
+            '2026-11-04 15:10:02 inline: agent=my-agent:verifier unit=- file=/t/verify.md result="Verdict: ALL PASS" model=m',
+            '2026-11-04 15:20:00 ask: gate=G3 q="Accept?" rec=Commit',
+            '2026-11-04 15:21:00 answer: gate=G3 choice=Rework')
+        self.assertIn('| Judge misses | 1 |', out)
+        out = self.tally(
+            '2026-11-04 15:10:02 inline: agent=my-agent:verifier unit=- file=/t/verify.md result="Verdict: FAIL" model=m',
+            '2026-11-04 15:21:00 answer: gate=G3 choice=Rework')
+        self.assertIn('| Judge misses | 0 |', out)
+
+    def test_codex_g2_lines_are_hook_lines_for_the_readers(self):
+        """Criterion 7: L1's id-less Codex `answer gate=G2` line is a hook line; the decision table has no G2 row."""
+        import ma_gate_report
+        text = ['2026-11-04 14:00:00 step: n=5 name=Execute rev=0 session=019a',
+                '2026-11-04 14:02:11 ask: gate=G2 agent=main id=- tool=apply_patch q=/Users/x/notes/todo.md key=5c1e09a4b7d2f388 hook=plan-approved-check session=019a',
+                '2026-11-04 14:02:40 answer: gate=G2 tool=apply_patch q=/Users/x/notes/todo.md key=5c1e09a4b7d2f388 result=allowed session=019a',
+                '2026-11-04 14:02:41 release: gate=G2 hook=plan-approved-check tool=apply_patch key=5c1e09a4b7d2f388 session=019a']
+        out = self.tally(*text)
+        self.assertIn('No decisions', out)
+        lines = [(t[11:16], *ma_gate_report.ma_logline.parse_line(t)) for t in text]
+        self.assertEqual(ma_gate_report.counts(lines), (1, 1, 2))
+        self.assertIn('L1 lines 1, hook lines 1, G2 lines 2 left out', out)
+
     def test_delegated_answer_note_and_new_rows(self):
         out = self.tally(
             '2026-10-29 04:00:01 delegate: state=on how=flag',

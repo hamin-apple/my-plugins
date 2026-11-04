@@ -12,6 +12,8 @@ commit shape is scanned leniently on its raw text: a literal cp, mv or rsync wit
 `work/` or `deliverable/` (relative paths resolved against the cwd and every literal `cd`/`pushd` target before it)
 counts as a deliver, so a stale result denies instead of asking. Limits: a relative path after a `cd` to a variable is
 not followed, and an argument containing `$` (such as `cp $F /x`) is skipped, so a variable source is not recognised.
+On Codex an `ask` is not shown as a dialog: it stops the call with exit 2 and writes a G2 `ask` line (`ma_g2`, via
+`ma_host.emit`); one `answer gate=G2` line releases one call. The Claude Code output is unchanged.
 
 Applies while a task is active, to a `git commit` and to the G3 deliver: any write into the task folder's
 `deliverable/` (the default save place, accept.md), and a Bash cp, mv or rsync from the task folder's `work/` or `deliverable/` to a place outside

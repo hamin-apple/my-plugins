@@ -4,6 +4,10 @@ File shape: {"<profile>": {"<preset>": {"<agent>": {"model": ..., "effort": ...}
 optional; a missing key (or a missing agent) keeps the definition value. A missing, empty or `{}` file means "no file".
 The main session (L1) has no entry: it stays opus.
 
+The model value `inline` marks a role that L1 runs itself in the main session (SKILL.md "Inline role"), for any of the
+nine roles on both hosts. An inline entry takes no `effort`; its value is `('inline', '-')` and its `pass=` list is
+`inline` (no Agent call).
+
 An optional top-level key `"codex"` holds the presets of the Codex host with the same nesting:
 {"codex": {"<profile>": {"<preset>": {"<agent>": {"model": <one of CODEX_MODELS>, "effort": ...}}}}}. On Codex the
 installed agent files carry no model or effort, so the "definition" is `-` (Codex chooses) and `pass=` lists the
@@ -20,6 +24,7 @@ PROFILES = ('general', 'research', 'dev')
 EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
 MODELS = ('opus', 'sonnet', 'haiku', 'fable')   # the families of ma_schema.FAMILY
 CODEX_MODELS = ('gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna')   # the ids the spawn tool lists
+INLINE = 'inline'   # a model value valid on both hosts: L1 runs the role in the main session
 CODEX_KEY = 'codex'
 STANDARD = 'standard'
 KEYS = ('model', 'effort')
@@ -62,10 +67,12 @@ def codex_definitions(defs) -> dict:
 def _check_entry(where, entry, models=MODELS):
     if not isinstance(entry, dict):
         raise ModelsError(f'{where}: agent entry is not a dictionary')
-    if 'model' in entry and entry['model'] not in models:
+    if 'model' in entry and entry['model'] != INLINE and entry['model'] not in models:
         raise ModelsError(f'{where}: unknown model "{entry["model"]}" (one of: {", ".join(models)})')
     if 'effort' in entry and entry['effort'] not in EFFORTS:
         raise ModelsError(f'{where}: unknown effort "{entry["effort"]}" (one of: {", ".join(EFFORTS)})')
+    if entry.get('model') == INLINE and 'effort' in entry:
+        raise ModelsError(f'{where}: an inline role takes no effort (it runs in the main session)')
 
 
 def validate(data, agents=None) -> dict:
@@ -152,13 +159,16 @@ def merge(defs, entries) -> dict:
     out = {}
     for agent, d in defs.items():
         entry = (entries or {}).get(agent) or {}
+        if entry.get('model') == INLINE:
+            out[agent] = (INLINE, '-')
+            continue
         out[agent] = (entry.get('model', d['model']), entry.get('effort', d['effort']))
     return out
 
 
 def diff(defs, values) -> dict:
     """{agent: [fields that differ from the definition]} (the `pass=` column), in `defs` order."""
-    return {a: [k for k, v, d in (('model', values[a][0], defs[a]['model']), ('effort', values[a][1], defs[a]['effort']))
+    return {a: [INLINE] if values[a][0] == INLINE else [k for k, v, d in (('model', values[a][0], defs[a]['model']), ('effort', values[a][1], defs[a]['effort']))
                 if v != d] for a in defs}
 
 
@@ -178,8 +188,14 @@ def summary(defs, values) -> str:
     """The popup line for one preset: the agents whose values differ from the definition ('' when none). When
     the five L2 agents end up equal (and differ from the definition) they are named `judges`."""
     changed = {a for a, f in diff(defs, values).items() if f}
+    inline = [a for a in defs if values[a][0] == INLINE]
+    changed -= set(inline)
     judges = [a for a, d in defs.items() if d['level'] == 'L2']
     parts = []
+    if len(inline) == len(defs):
+        return 'all roles inline'
+    if inline:
+        parts.append('inline ' + ', '.join(inline))
     if len(judges) == 5 and len({values[a] for a in judges}) == 1 and changed >= set(judges):
         parts.append('judges %s/%s' % values[judges[0]])
         changed -= set(judges)
@@ -213,6 +229,8 @@ def parse_plan(text, defs, codex=False) -> tuple:
             raise ModelsError('plan.md ## Models: unknown agent "main" (the main session stays opus and has no entry)')
         if agent not in defs:
             raise ModelsError(f'plan.md ## Models: unknown agent "{agent}"')
+        if model == INLINE and effort not in ('', '-'):
+            raise ModelsError(f'plan.md ## Models/{agent}: an inline role takes no effort (it runs in the main session)')
         entry = {k: v for k, v in (('model', model), ('effort', effort)) if v not in ('', '-')}
         _check_entry(f'plan.md ## Models/{agent}', entry, CODEX_MODELS if codex else MODELS)
         entries[agent] = entry

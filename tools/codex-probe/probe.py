@@ -1695,10 +1695,10 @@ def cmd_e2e_request(args) -> int:
         return 1
     version = found[2]
     files = (folder / 'cache-files.txt').read_text(encoding='utf-8').split() if (folder / 'cache-files.txt').is_file() else []
-    if f'{version}/SKILL.md' not in files:
-        print(f'cache-files.txt lacks {version}/SKILL.md', file=sys.stderr)
+    if f'{version}/skills/my-agent/SKILL.md' not in files:
+        print(f'cache-files.txt lacks {version}/skills/my-agent/SKILL.md', file=sys.stderr)
         return 1
-    skill = Path(os.path.abspath(codex_home(args))) / 'plugins' / 'cache' / 'my-plugins' / 'my-agent' / version / 'SKILL.md'
+    skill = Path(os.path.abspath(codex_home(args))) / 'plugins' / 'cache' / 'my-plugins' / 'my-agent' / version / 'skills' / 'my-agent' / 'SKILL.md'
     if not skill.is_file():
         print(f'missing file: {skill}', file=sys.stderr)
         return 1
@@ -2028,11 +2028,8 @@ def check_install(args) -> int:
     listed = [l.strip() for l in skills.read_text(encoding='utf-8').splitlines() if l.strip()] if skills.is_file() else []
     if listed.count('my-agent:monitor') != 1:
         problems.append(f'skills-list.txt holds my-agent:monitor {listed.count("my-agent:monitor")} time(s), not exactly once')
-    if 'my-agent:my-agent' in listed:
-        problems.append('my-agent:my-agent is listed, which contradicts work/codex-findings-skills.md')
-    else:
-        print('expected gap: my-agent:my-agent not listed (Codex lists no plugin-root SKILL.md; '
-              'capability plugin-skill-discovery)')
+    if listed.count('my-agent:my-agent') != 1:
+        problems.append(f'skills-list.txt holds my-agent:my-agent {listed.count("my-agent:my-agent")} time(s), not exactly once')
     cached = folder / 'cache' / version / 'codex-plugin.json' if version else None
     wanted = Path(root) / 'plugins' / 'my-agent' / '.codex-plugin' / 'plugin.json'
     if cached is None or not cached.is_file():
@@ -2048,6 +2045,8 @@ def check_install(args) -> int:
             problems.append(f'the cached manifest version is {load_json(cached).get("version")}, not {args.version}')
     for problem in problems:
         print(problem)
+    if not problems:
+        print('listed: my-agent:my-agent, my-agent:monitor')
     return 1 if problems else 0
 
 
@@ -2353,8 +2352,8 @@ def my_agent_descriptions(codex: Path, market: str = 'my-plugins', plugin: str =
     base = codex / 'plugins' / 'cache' / market / plugin
     out = {'root': [], 'monitor': []}
     for version in sorted(p for p in base.glob('*') if p.is_dir()) if base.is_dir() else []:
-        for key, rel in (('root', 'SKILL.md'), ('monitor', 'skills/monitor/SKILL.md')):
-            desc = frontmatter_description(version / rel)
+        for key, rels in (('root', ('skills/my-agent/SKILL.md', 'SKILL.md')), ('monitor', ('skills/monitor/SKILL.md',))):
+            desc = next((d for d in (frontmatter_description(version / rel) for rel in rels) if d), None)
             if desc:
                 out[key].append(desc)
     return out

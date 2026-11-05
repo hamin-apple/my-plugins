@@ -12,11 +12,6 @@ def read(path: Path) -> str:
         return ''
 
 
-def section(text: str, heading: str) -> str:
-    """Body of `## <heading>` up to the next `## `, or ''."""
-    return ma_schema.section(text, heading)
-
-
 def approved_text(text: str) -> bool:
     return ma_schema.approved_at(text) is not None
 

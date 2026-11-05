@@ -6,8 +6,8 @@ A Claude Code plugin marketplace by hamin-apple.
 
 | Plugin | Version | Description |
 |---|---|---|
-| `my-agent` | 0.11.2 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
-| `my-agent-tray` | 0.1.3 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
+| `my-agent` | 0.11.3 | Multi-agent task skill with human approval (HITL): plan → execute → verify → review |
+| `my-agent-tray` | 0.1.4 | macOS menu bar app for the my-agent monitor (optional; needs my-agent 0.5.0 or later) |
 
 ## Requirements
 
@@ -27,8 +27,6 @@ claude plugin marketplace add hamin-apple/my-plugins
 claude plugin install my-agent@my-plugins
 claude plugin install my-agent-tray@my-plugins   # optional: macOS menu bar app
 ```
-
-The repository is private, so you must be signed in with a GitHub account that has been invited to it.
 
 A plugin cannot ship permission rules. For the risky-action prompts (G2: `git commit`, `git push`, `rm -rf`, package installs) and the denied commands (secret files, `--no-verify`, `git push --force`), merge the `ask` and `deny` lists of `plugins/my-agent/l4-tools-guards/permissions/permissions.json` into `permissions` in `~/.claude/settings.json` by hand. Without them those actions are not asked or blocked.
 
@@ -75,7 +73,7 @@ The whole architecture — each level's components, their roles and permissions,
 | `/my-agent status` | Shows the task in progress and recent tasks. |
 | `/my-agent:monitor` | Opens a local, read-only web page of task records, with a Report tab that sums up the scope, plan and results of the selected task on one page. Also `status`, `stop`. |
 
-Task records are kept in `<task location>/<task_dir>/<task ID>/` (by default `.my-agent/<task ID>/`; `docs/agent` is the former layout).
+Task records are kept in `<task location>/<task_dir>/<task ID>/` (by default `.my-agent/<task ID>/`).
 Finished tasks pile up there and in the monitor's list. To move tasks finished 30 days ago or more to `<task_dir>/.archived/` (out of the list; move a folder back to bring it back):
 
 ```bash

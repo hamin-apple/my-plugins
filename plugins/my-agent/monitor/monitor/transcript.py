@@ -12,8 +12,6 @@ import ma_host
 import ma_schema
 import ma_usage
 
-KEYS = ma_usage.KEYS
-
 
 class _File:
     def __init__(self, path, codex=False):

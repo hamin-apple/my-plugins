@@ -8,8 +8,6 @@ from .runlog import read_lines
 import ma_gate_report
 import ma_schema
 
-KEYS = ('overview', 'timeline', 'criteria', 'units', 'review', 'plan_review', 'decisions', 'gate_report',
-        'verdict', 'gate', 'takeaway', 'review_totals')
 SENTENCE = re.compile(r'^(.*?[.!?])(?:\s|$)')
 TALLY_COST = 'Cost and tokens per stretch'
 PICKED = {'yes': 'yes', 'no': 'no', 'delegated': 'delegated', 'typed (Other)': 'typed', 'prose reply': 'typed'}

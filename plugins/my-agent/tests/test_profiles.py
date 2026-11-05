@@ -3,7 +3,7 @@ import json
 import re
 import unittest
 
-from helpers import L4, REPO
+from helpers import REPO
 
 PROFILES = REPO / 'l1-orchestration' / 'profiles'
 SKILL = REPO / 'skills' / 'my-agent' / 'SKILL.md'

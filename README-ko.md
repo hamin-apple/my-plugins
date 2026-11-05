@@ -6,8 +6,8 @@ hamin-apple의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
-| `my-agent` | 0.11.2 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
-| `my-agent-tray` | 0.1.3 | my-agent 모니터용 macOS 메뉴바 앱 (선택; my-agent 0.5.0 이상 필요) |
+| `my-agent` | 0.11.3 | 사람의 승인(HITL)을 끼운 멀티 에이전트 작업 스킬: 계획 → 실행 → 검증 → 리뷰 |
+| `my-agent-tray` | 0.1.4 | my-agent 모니터용 macOS 메뉴바 앱 (선택; my-agent 0.5.0 이상 필요) |
 
 ## 요구 사항
 
@@ -27,8 +27,6 @@ claude plugin marketplace add hamin-apple/my-plugins
 claude plugin install my-agent@my-plugins
 claude plugin install my-agent-tray@my-plugins   # 선택: macOS 메뉴바 앱
 ```
-
-비공개 저장소이므로 저장소에 초대된 GitHub 계정으로 로그인되어 있어야 합니다.
 
 플러그인은 권한 규칙을 실을 수 없습니다. 위험한 행동 확인(G2: `git commit`, `git push`, `rm -rf`, 패키지 설치)과 막는 명령(비밀값 파일, `--no-verify`, `git push --force`)을 쓰려면 `plugins/my-agent/l4-tools-guards/permissions/permissions.json`의 `ask`·`deny` 목록을 `~/.claude/settings.json`의 `permissions`에 직접 병합합니다. 병합하지 않으면 이 행동들을 묻거나 막지 않습니다.
 
@@ -75,7 +73,7 @@ codex plugin add my-agent@my-plugins
 | `/my-agent status` | 진행 중인 작업과 최근 작업을 보여 줍니다. |
 | `/my-agent:monitor` | 작업 기록을 보는 로컬 웹 페이지(읽기 전용)를 띄웁니다. 선택한 작업의 범위·계획·결과를 한 페이지로 요약하는 Report 탭이 있습니다. `status`, `stop` |
 
-작업 기록은 작업 위치의 `<task location>/<task_dir>/<작업 ID>/`에 남습니다(기본값은 `.my-agent/<작업 ID>/`, `docs/agent`는 이전 구조).
+작업 기록은 작업 위치의 `<task location>/<task_dir>/<작업 ID>/`에 남습니다(기본값은 `.my-agent/<작업 ID>/`).
 끝난 작업은 그곳과 모니터 목록에 계속 쌓입니다. 끝난 지 30일 이상 된 작업을 `<task_dir>/.archived/`로 옮겨 목록에서 빼려면 다음을 실행합니다(되돌리려면 폴더를 다시 옮깁니다):
 
 ```bash

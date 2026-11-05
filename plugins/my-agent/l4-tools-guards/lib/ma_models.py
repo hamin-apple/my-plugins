@@ -27,7 +27,6 @@ CODEX_MODELS = ('gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna')   # the ids the s
 INLINE = 'inline'   # a model value valid on both hosts: L1 runs the role in the main session
 CODEX_KEY = 'codex'
 STANDARD = 'standard'
-KEYS = ('model', 'effort')
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 
 

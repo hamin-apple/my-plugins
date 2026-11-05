@@ -15,7 +15,6 @@ KEYS = {'overview', 'timeline', 'criteria', 'units', 'review', 'plan_review', 'd
         'verdict', 'gate', 'takeaway', 'review_totals'}
 ROUNDS, G1B, G1A, G3, ABORTED, GENERAL = ('261105-review-rounds', '261106-gate-g1b', '261107-gate-g1a', '261108-gate-g3',
                                           '261109-aborted', '261110-general-running')
-SEVS = ('BLOCKER', 'SHOULD-FIX', 'NITPICK')
 
 
 class ReportEnv:

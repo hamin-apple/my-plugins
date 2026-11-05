@@ -48,4 +48,4 @@ A shortcut made of the "Open URLs" action with `http://127.0.0.1:8765/` needs no
 
 ## Conclusion
 
-Shortcuts is enough if you only want a key press that opens the monitor: it needs no build and no code, and `monitor-up.py --open` already starts the server and applies the window or tab setting. It cannot show how many tasks are running or open a particular task. The menu bar app does both and can start the server at login, at the cost of one build. They do not conflict, so use either or both. This task adds the menu bar app and does not create a shortcut file.
+Shortcuts is enough if you only want a key press that opens the monitor: it needs no build and no code, and `monitor-up.py --open` already starts the server and applies the window or tab setting. It cannot show how many tasks are running or open a particular task. The menu bar app does both and can start the server at login, at the cost of one build. They do not conflict, so use either or both.

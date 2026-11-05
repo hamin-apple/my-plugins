@@ -1,6 +1,5 @@
 """ma_usage, usage-snapshot.py and archive-tasks.py (architecture 4.8.2 "Task records over time")."""
 import json
-import os
 import tempfile
 import unittest
 from datetime import datetime

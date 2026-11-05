@@ -38,7 +38,7 @@ If `## Approval` in `plan.md` has no `Approved` line, do not start this phase; g
 2. Combine the results and run the basic checks. For profile-specific content, follow the profile file.
 3. Merge worktree results one at a time, in the plan's work unit order.
    - If a conflict is small (2 files or fewer, about 10 lines), L1 resolves it only when both sides' intent is clear.
-   - If larger, rerun the unit merged later as a new worker call (never a resume of the earlier coder) in the main tree, on top of the merged result. Pass the conflict along.
+   - If larger, rerun the unit merged later as a new worker call in the main tree, on top of the merged result. Pass the conflict along.
    - If both tried to change the same code in different ways, E: `Back to Plan (Recommended)` / `Take one side only` / `Abort`.
    - Record each time: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" merge unit=<work unit> files="<files>" how="<how it was resolved>" by=<L1 or coder> --data-dir "<data folder>" --task-dir "<task_dir>"`
 4. If L1 made a small fix: `python3 "${CLAUDE_PLUGIN_ROOT}/l4-tools-guards/scripts/run-log.py" fix what="<what was fixed>" files="<files>" --data-dir "<data folder>" --task-dir "<task_dir>"`

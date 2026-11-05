@@ -13,7 +13,6 @@ import ma_data
 import ma_usage
 from ma_prices import load_prices, prices_file
 
-ROOT = Path(__file__).resolve().parent.parent
 SUMMARY = ('id', 'key', 'project', 'profile', 'status', 'step', 'title', 'waiting', 'elapsed', 'folder')
 
 

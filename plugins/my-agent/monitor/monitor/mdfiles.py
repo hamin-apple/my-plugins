@@ -21,7 +21,7 @@ def read_intake(p: Path):
     text = _text(p)
     if text is None:
         return None
-    d = {'status': None, 'profile': None, 'location': None, 'title': None, 'delivered': []}
+    d = {'status': None, 'profile': None, 'title': None, 'delivered': []}
     for line in text.splitlines():
         key, sep, val = line.partition(':')
         if not sep:
@@ -31,8 +31,6 @@ def read_intake(p: Path):
             d['status'] = val.split()[0] if val else None
         elif key == 'Profile':
             d['profile'] = val
-        elif key == 'Location':
-            d['location'] = val
         elif key == 'Request' and d['title'] is None:
             d['title'] = val
         elif key == 'Delivered' and val:
@@ -59,7 +57,7 @@ def read_verify(p: Path) -> list:
 
 
 def read_plan(p: Path) -> dict:
-    d = {'approved_at': None, 'mockup': None, 'prototype': None, 'revisions': []}
+    d = {'approved_at': None, 'mockup': None, 'prototype': None}
     text = _text(p)
     if not text:
         return d
@@ -70,7 +68,6 @@ def read_plan(p: Path) -> dict:
         d['mockup'] = body or None
     if ma_schema.prototype_requested_text(text):
         d['prototype'] = 'prototype'
-    d['revisions'] = [l[2:].strip() for l in _section(text, 'Revisions') or [] if l.startswith('- ')]
     return d
 
 

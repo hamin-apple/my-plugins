@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate the Codex forms of the nine agents and the Codex manifest from the Claude sources.
 
-usage: build-codex.py --write | --check | --install-agents | --check-agents [--root DIR] [--codex-home DIR]
+usage: build-codex.py --write | --check | --install-agents | --check-agents | --check-question-tool
+                      [--root DIR] [--codex-home DIR] [--timeout SECONDS]
 
 Sources: the agent `.md` files listed in `.claude-plugin/plugin.json` and that file itself. Outputs, under the plugin
 root: `codex/agents/my-agent-<role>.toml` (one per agent) and `.codex-plugin/plugin.json`.
@@ -23,17 +24,26 @@ produce; `--write` rewrites the files and removes those extra agent files (the f
 named files, never deletes or renames, and leaves any same-named file without that comment (or a link or folder) as it is
 (`skipped:`). `--check-agents` prints the same states without writing. Both end with the line `Codex agents: <form>`; exit 0
 only when nothing was skipped (install) or all nine are up to date (check).
+
+`--check-question-tool` runs `codex features list` (nothing else, so it never changes a Codex setting) and reads the
+feature `default_mode_request_user_input`, which lets `request_user_input` (the question popup) run outside Plan mode.
+It prints one line: `Codex question tool: flag on` (exit 0), `Codex question tool: flag off` (exit 1) or
+`Codex question tool: could not tell (<reason>)` (exit 3; codex not found, a non-zero exit, a timeout after
+`--timeout` seconds (default 10), or the flag not listed).
 """
 import argparse
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[2]
 COMMENT_RE = re.compile(r'^# my-agent (\S+) \(build-codex\.py --install-agents\)$')
 MANIFEST_KEYS = ('name', 'version', 'description', 'author', 'hooks')
+QUESTION_FLAG_RE = re.compile(r'^default_mode_request_user_input\s+.*\s(true|false)\s*$', re.M)
 
 
 def split_md(text: str):
@@ -171,6 +181,31 @@ def agents_mode(root: Path, home: Path, install: bool) -> int:
     return 0 if all(s == 'ok' for s in states) else 1
 
 
+def question_tool_mode(timeout: float) -> int:
+    """One `Codex question tool:` line from `codex features list`; 0 on, 1 off, 3 could not tell."""
+    def cannot(reason: str) -> int:
+        print(f'Codex question tool: could not tell ({reason})')
+        return 3
+    codex = shutil.which('codex')
+    if not codex:
+        return cannot('codex not found')
+    try:
+        r = subprocess.run([codex, 'features', 'list'], stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return cannot('codex features list timed out')
+    except OSError:
+        return cannot('codex not found')
+    if r.returncode != 0:
+        return cannot(f'codex features list exited {r.returncode}')
+    m = QUESTION_FLAG_RE.search(r.stdout)
+    if not m:
+        return cannot('flag not listed')
+    on = m.group(1) == 'true'
+    print(f'Codex question tool: flag {"on" if on else "off"}')
+    return 0 if on else 1
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     mode = ap.add_mutually_exclusive_group(required=True)
@@ -178,9 +213,13 @@ def main(argv=None) -> int:
     mode.add_argument('--check', action='store_true')
     mode.add_argument('--install-agents', action='store_true')
     mode.add_argument('--check-agents', action='store_true')
+    mode.add_argument('--check-question-tool', action='store_true')
     ap.add_argument('--root', type=Path, default=DEFAULT_ROOT)
     ap.add_argument('--codex-home', type=Path, default=None)
+    ap.add_argument('--timeout', type=float, default=10.0)
     args = ap.parse_args(argv)
+    if args.check_question_tool:
+        return question_tool_mode(args.timeout)
     root = args.root
     if args.install_agents or args.check_agents:
         home = args.codex_home or Path(os.environ.get('CODEX_HOME') or '~/.codex').expanduser()

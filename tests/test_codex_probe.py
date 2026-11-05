@@ -1438,10 +1438,21 @@ class E2eToolingTest(unittest.TestCase):
         self.assertNotEqual(by['agent-identity']['status'], 'gap')
         self.assertIn('Outcome I', by['agent-identity']['result'])
         popup = by['question-popup']
-        self.assertEqual(popup['status'], 'available')
-        self.assertEqual(popup['effect'], "gates are asked through Codex's question tool with the same choices (hosts.md, D5)")
+        self.assertEqual(popup['status'], 'partial')
+        self.assertEqual(popup['effect'], 'gates are asked through request_user_input only; when it is unavailable '
+                                          'L1 stops and names the flag (hosts.md)')
         self.assertIn('request_user_input_async', popup['result'])
         self.assertIn('options', popup['result'])
+        self.assertIn('Plan mode', popup['result'])
+        self.assertNotIn('TUI showed the gate choices', popup['result'])
+        self.assertIn('plugins/my-agent/l1-orchestration/hosts.md', popup['needed_by'])
+        mode = by['question-default-mode']
+        self.assertEqual(mode['status'], 'partial')
+        self.assertIn('default_mode_request_user_input', mode['result'])
+        self.assertIn('build-codex.py --check-question-tool', mode['effect'])
+        self.assertIn('plugins/my-agent/l4-tools-guards/scripts/build-codex.py', mode['needed_by'])
+        ids_in_order = [r['id'] for r in rows]
+        self.assertEqual(ids_in_order.index('question-default-mode'), ids_in_order.index('question-popup') + 1)
         self.assertIn('crash ends in exit 2', by['fail-closed-malformed']['effect'])
         self.assertIn('onFailure', by['on-failure-block']['capability'])
 

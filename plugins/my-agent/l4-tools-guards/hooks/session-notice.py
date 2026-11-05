@@ -7,7 +7,9 @@ task and how to take it over. A side without an id counts as the owner (so a for
 gets the owner notice). Always exits 0.
 Codex: always prints exactly one line of plain text, also without an active task: `my-agent on Codex: plugin folder
 <root> (read ${CLAUDE_PLUGIN_ROOT} in the skill text as this folder), data folder <data> (${user_config.data_dir}),
-task folder <task> (${user_config.task_dir}).`, then, with an active task, the notice text after one space. Codex adds
+task folder <task> (${user_config.task_dir}). Before the first my-agent question, read l1-orchestration/hosts.md in
+that plugin folder; ask the person only with request_user_input.`, then, with an active task, the notice text after one
+space. Codex adds
 a SessionStart hook's stdout to the developer context, and Codex does not expand those variables in skill text, so the
 line names the folders. It is plain text, not the JSON of the Claude branch: a plain line cannot be malformed JSON.
 On any failure nothing is printed.
@@ -29,7 +31,9 @@ OTHER = ('The original session is running my-agent task {task} (phase {phase}). 
 
 
 FOLDERS = ('my-agent on Codex: plugin folder {root} (read ${{CLAUDE_PLUGIN_ROOT}} in the skill text as this folder), '
-           'data folder {data} (${{user_config.data_dir}}), task folder {task} (${{user_config.task_dir}}).')
+           'data folder {data} (${{user_config.data_dir}}), task folder {task} (${{user_config.task_dir}}). '
+           'Before the first my-agent question, read l1-orchestration/hosts.md in that plugin folder; '
+           'ask the person only with request_user_input.')
 
 
 def folder_line() -> str:

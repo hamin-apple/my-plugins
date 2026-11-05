@@ -35,11 +35,23 @@ class HostsTest(unittest.TestCase):
         self.assertEqual(role[1], f'`agent_type` `{ma_host.CODEX_PREFIX}<role>`')
         self.assertEqual(ma_host.claude_agent(ma_host.codex_agent('my-agent:coder')), 'my-agent:coder')
 
+    POINTER = ('Codex: before the first question or command, read `l1-orchestration/hosts.md` in the plugin folder, '
+               'two levels above the folder of this `SKILL.md`, and use the Codex names it gives.')
+
     def test_skill_pointer(self):
         text = SKILL.read_text(encoding='utf-8')
-        self.assertIn('- Codex: read `l1-orchestration/hosts.md` in the plugin folder, two levels above the folder of this `SKILL.md`.', text)
+        self.assertIn('\n' + self.POINTER + '\n', text)
+        self.assertEqual(text.count('l1-orchestration/hosts.md'), 1)
+        self.assertLess(text.index(self.POINTER), text.index('## Core rules'))
+        self.assertGreater(text.index(self.POINTER), text.index('# my-agent\n'))
+        phase_files = text[text.index('### Phase files'):text.index('## Arguments')]
+        self.assertNotIn('Codex', phase_files)
         self.assertLess(text.index('l1-orchestration/hosts.md'), 16000)
         self.assertLess(text.index('## Arguments'), 16000)
+
+    def test_skill_has_one_codex_pointer(self):
+        lines = [l for l in SKILL.read_text(encoding='utf-8').splitlines() if l.lstrip('- ').startswith('Codex')]
+        self.assertEqual(lines, [self.POINTER])
 
     def test_no_codex_text_in_shared_files(self):
         self.assertTrue(SHARED)
@@ -132,8 +144,27 @@ class HostsTest(unittest.TestCase):
 
     def test_question_row_names_the_codex_tool(self):
         row = self.find('AskUserQuestion')
-        self.assertIn('`request_user_input`', row[1])
-        self.assertIn('`request_user_input_async`', row[1])
+        self.assertEqual(row[1], '`request_user_input`, with the choices')
+        note = row[2]
+        for text in ('header, id, question and options of label and description', 'Plan mode',
+                     '`default_mode_request_user_input`', '`codex features enable default_mode_request_user_input`',
+                     'new Codex session', '`request_user_input_async` is not used', 'plain text',
+                     'no question in chat text', 'G2 `ask` line'):
+            self.assertIn(text, note)
+        self.assertNotIn('Both Codex tools', note)
+        self.assertNotRegex(note, r'request_user_input_async[^.]*shows the choices')
+
+    def test_question_check_row(self):
+        row = self.find('Intake item 1')
+        self.assertEqual(row[0], 'Intake item 1, `continue` item 1')
+        self.assertEqual(row[1], 'first the Codex question tool check')
+        note = row[2]
+        for text in ('build-codex.py --check-question-tool', '`Codex question tool: flag off`', 'could not tell',
+                     'Plan mode', 'collaboration mode', 'try the first popup once', 'before anything is created',
+                     'not a run-log line'):
+            self.assertIn(text, note)
+        rows_in_order = list(rows())
+        self.assertLess(rows_in_order.index(row[0]), rows_in_order.index('Intake item 8 (Monitor)'))
 
     def test_g2_row_describes_the_codex_flow(self):
         row = self.find('G2 permission dialog')

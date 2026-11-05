@@ -65,10 +65,11 @@ class ArchDocTest(unittest.TestCase):
         self.assertIn('`permissionDecision: ask`', sec)
         self.assertIn('`permissionDecision: deny`', sec)
 
-    def test_status_line_starts_with_v047(self):
+    def test_status_line_starts_with_v048(self):
         line = re.search(r'^- Status: .*$', self.text, re.M).group(0)
-        self.assertTrue(line.startswith('- Status: design draft v0.47 ('), line[:60])
-        self.assertIn('plugin 0.11.1:', line[:line.index('v0.46 (')])
+        self.assertTrue(line.startswith('- Status: design draft v0.48 ('), line[:60])
+        self.assertIn('plugin 0.11.2:', line[:line.index('v0.47 (')])
+        self.assertIn('v0.47 (2026-11-04, plugin 0.11.1:', line)
         self.assertIn('v0.46 (2026-11-04, plugin 0.11.0:', line)
         self.assertIn('v0.45 (2026-11-03, plugin 0.10.0:', line)
         self.assertIn('v0.44 (2026-11-03, plugin 0.9.0:', line)
@@ -292,7 +293,17 @@ class ArchDocTest(unittest.TestCase):
 
     def test_host_differences_name_the_question_tool(self):
         section = self.section('### 4.14 ', '## 5. ')
-        self.assertIn('`request_user_input`', section[section.index('**Host differences**'):])
+        differences = section[section.index('**Host differences**'):]
+        self.assertIn('`request_user_input`', differences)
+        self.assertIn('`default_mode_request_user_input`', differences)
+        self.assertIn('--check-question-tool', section)
+        row = next(l for l in differences.splitlines() if l.startswith('| Question to the person |'))
+        self.assertNotIn('both with the choices', row)
+        part = next(l for l in section.splitlines() if l.startswith('| `l1-orchestration/hosts.md` |'))
+        self.assertIn('before `## Core rules`', part)
+        self.assertIn('before the first question or command', part)
+        variables = next(l for l in differences.splitlines() if l.startswith('| Skill text variables |'))
+        self.assertIn('ask the person only with request_user_input', variables)
 
     def test_reference_articles_list_both_local_copies(self):
         ref = (REPO / 'docs' / 'reference.md').read_text(encoding='utf-8')

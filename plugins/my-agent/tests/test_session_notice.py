@@ -86,7 +86,8 @@ class SessionNoticeTest(unittest.TestCase):
     def folders(self, task='.my-agent'):
         return (f'my-agent on Codex: plugin folder {self.root / "plug"} (read ${{CLAUDE_PLUGIN_ROOT}} in the skill '
                 f'text as this folder), data folder {self.root / "none"} (${{user_config.data_dir}}), '
-                f'task folder {task} (${{user_config.task_dir}}).')
+                f'task folder {task} (${{user_config.task_dir}}). Before the first my-agent question, read '
+                f'l1-orchestration/hosts.md in that plugin folder; ask the person only with request_user_input.')
 
     def test_codex_line_without_task(self):
         out = self.codex()

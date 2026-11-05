@@ -3,13 +3,14 @@
     {
       "id": "question-popup",
       "capability": "Question popup (choices)",
-      "status": "available",
+      "status": "partial",
       "needed_by": [
-        "plugins/my-agent/skills/my-agent/SKILL.md"
+        "plugins/my-agent/skills/my-agent/SKILL.md",
+        "plugins/my-agent/l1-orchestration/hosts.md"
       ],
-      "how_tried": "S1 agents scenario, main-session tool list (debug prompt-input); u22 e2e run (Step S3), where the gates were asked",
-      "result": "both request_user_input (questions with header, id, question and options of label and description) and request_user_input_async (questions with title and options) take choices; the e2e run called request_user_input_async 4 times and the Codex TUI showed the gate choices (G1b Approve, G3 Commit (Recommended) / Rework / Abort)",
-      "effect": "gates are asked through Codex's question tool with the same choices (hosts.md, D5)",
+      "how_tried": "S1 agents scenario, main-session tool list (debug prompt-input); u22 e2e run (Step S3), where the gates were asked; the Codex session record of 2026-11-04 (thread 01a1a72b), where a my-agent task asked its first question",
+      "result": "request_user_input takes questions with header, id, question and options of label and description, and the Codex TUI shows the choices; Codex offers it in Plan mode, and in Default mode only when the feature default_mode_request_user_input is on (otherwise the call returns \"request_user_input is unavailable in Default mode\"). request_user_input_async takes questions with title and options only (an id key fails to parse); on 2026-11-04 it returned {\"accepted\":true} at once and printed the question as plain agent text, with no choices shown and no answer waited for. The e2e run of 2026-11-03 recorded request_user_input_async calls at the gates",
+      "effect": "gates are asked through request_user_input only; when it is unavailable L1 stops and names the flag (hosts.md)",
       "facts": [
         "Question/popup tool"
       ],
@@ -17,6 +18,25 @@
         "request_user_input",
         "AskUserQuestion",
         "popup"
+      ]
+    },
+    {
+      "id": "question-default-mode",
+      "capability": "Question popup in Default mode",
+      "status": "partial",
+      "needed_by": [
+        "plugins/my-agent/l1-orchestration/hosts.md",
+        "plugins/my-agent/l4-tools-guards/scripts/build-codex.py"
+      ],
+      "how_tried": "the Codex session record of 2026-11-04 (thread 01a1a72b, Default mode); codex debug prompt-input with and without -c features.default_mode_request_user_input=true; codex features list (codex-cli 0.166.0)",
+      "result": "in Default mode request_user_input returned \"request_user_input is unavailable in Default mode\"; its tool text reads \"only available in Plan mode\" without the flag and \"only available in Default or Plan mode\" with -c features.default_mode_request_user_input=true; codex features list shows default_mode_request_user_input as under development, off by default, and codex features enable default_mode_request_user_input turns it on in config.toml",
+      "effect": "Intake runs build-codex.py --check-question-tool before item 1 and stops with the notice when the flag is off outside Plan mode; my-agent never turns the flag on (hosts.md)",
+      "facts": [
+        "Question/popup tool"
+      ],
+      "failure_patterns": [
+        "unavailable in Default mode",
+        "default_mode_request_user_input"
       ]
     },
     {

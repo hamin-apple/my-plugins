@@ -71,7 +71,7 @@
 - Produces: a plugin that `claude plugin validate --strict` accepts; later tasks add keys to `plugin.json`.
 
 - [ ] **Step 1:** `git init` in `~/dev/my-agent`. `.gitignore`: `.DS_Store`, `__pycache__/`, `.superpowers/`, `monitor/tests/fixtures/projects/`, `monitor/tests/fixtures/claude-projects/`, `monitor/tests/fixtures/projects.txt`. Confirm no `CLAUDE.md` at the repo root.
-- [ ] **Step 2:** `plugin.json` = §4.5.1 manifest with `"version": "0.1.0"`, `"author": {"name": "hamin-apple"}`, `"skills": ["./"]`, `"hooks": "./l4-tools-guards/hooks/hooks.json"`, and **no `agents` key yet**. `marketplace.json` = §4.5.1 verbatim. `hooks.json` = `{"hooks": {}}`. `SKILL.md` = the §4.7.1 frontmatter **without `hooks:`** and a one-line body "Skeleton; filled in Task 10".
+- [ ] **Step 2:** `plugin.json` = §4.5.1 manifest with `"version": "0.1.0"`, `"author": {"name": "minpple"}`, `"skills": ["./"]`, `"hooks": "./l4-tools-guards/hooks/hooks.json"`, and **no `agents` key yet**. `marketplace.json` = §4.5.1 verbatim. `hooks.json` = `{"hooks": {}}`. `SKILL.md` = the §4.7.1 frontmatter **without `hooks:`** and a one-line body "Skeleton; filled in Task 10".
 - [ ] **Step 3:** Run `claude plugin validate --strict ~/dev/my-agent` and `claude plugin validate --strict ~/dev/my-agent/.claude-plugin/marketplace.json`.
   Expected: `Validation passed` for both. If a warning remains, fix it and ledger the fix.
 - [ ] **Step 4:** Leave uncommitted.

@@ -3,7 +3,7 @@
   "version": "0.12.0",
   "description": "HITL multi-agent orchestration skill with level-based agents and guard hooks",
   "author": {
-    "name": "hamin-apple"
+    "name": "minpple"
   },
   "hooks": "./l4-tools-guards/hooks/hooks.json"
 }

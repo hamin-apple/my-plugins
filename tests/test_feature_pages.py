@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-README_URL = 'https://github.com/hamin-apple/my-plugins#readme'
+README_URL = 'https://github.com/minpple/my-plugins#readme'
 
 
 def read(name: str) -> str:

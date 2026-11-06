@@ -1,8 +1,8 @@
 {
   "name": "my-plugins",
-  "description": "Personal Claude Code plugins of hamin-apple",
+  "description": "Personal Claude Code plugins of minpple",
   "owner": {
-    "name": "hamin-apple"
+    "name": "minpple"
   },
   "plugins": [
     {

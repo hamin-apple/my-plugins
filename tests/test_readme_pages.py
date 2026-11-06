@@ -5,7 +5,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 READMES = [REPO / 'README.md', REPO / 'README-ko.md']
-PAGES_URL = 'https://hamin-apple.github.io/my-plugins/'
+PAGES_URL = 'https://minpple.github.io/my-plugins/'
 
 
 def read(path: Path) -> str:
@@ -38,7 +38,7 @@ class ReadmePagesTest(unittest.TestCase):
             return re.findall(r'docs/[\w-]+\.html', text)
 
         def urls(text):
-            return [u.rstrip('.,;)>') for u in re.findall(r'https://hamin-apple\.github\.io/[^\s>)`]*', text)]
+            return [u.rstrip('.,;)>') for u in re.findall(r'https://minpple\.github\.io/[^\s>)`]*', text)]
 
         en, ko = read(READMES[0]), read(READMES[1])
         self.assertEqual(pages(en), pages(ko))

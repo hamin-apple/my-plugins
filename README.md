@@ -2,7 +2,7 @@
 
 **English** | [한국어](README-ko.md)
 
-A Claude Code plugin marketplace by hamin-apple.
+A Claude Code plugin marketplace by minpple.
 
 | Plugin | Version | Description |
 |---|---|---|
@@ -23,7 +23,7 @@ Nothing else is installed.
 ## Install
 
 ```bash
-claude plugin marketplace add hamin-apple/my-plugins
+claude plugin marketplace add minpple/my-plugins
 claude plugin install my-agent@my-plugins
 claude plugin install my-agent-tray@my-plugins   # optional: macOS menu bar app
 ```
@@ -39,7 +39,7 @@ Optionally, the data folder can hold `agent-models.json`, which defines named mo
 my-agent also runs in Codex. Only a local clone of this repository was tried as the marketplace source:
 
 ```bash
-git clone https://github.com/hamin-apple/my-plugins ~/dev/my-plugins
+git clone https://github.com/minpple/my-plugins ~/dev/my-plugins
 codex plugin marketplace add ~/dev/my-plugins
 codex plugin add my-agent@my-plugins
 ```
@@ -62,7 +62,7 @@ The main session (L1) takes a request, runs plan → execute → verify → revi
 | L3 | `explorer` · `researcher` · `writer` · `coder`: one assigned piece of work each |
 | L4 | Tools·MCP · hooks · permission rules · scripts: running, recording and blocking |
 
-The whole architecture — each level's components, their roles and permissions, the steps and gates, and the format of every task file — is on one page, `docs/architecture.html`, published at <https://hamin-apple.github.io/my-plugins/architecture.html>. The site root <https://hamin-apple.github.io/my-plugins/> shows the feature overview. `python3 tools/build-docs.py` builds the architecture page from the plugin files; run it again after changing them.
+The whole architecture — each level's components, their roles and permissions, the steps and gates, and the format of every task file — is on one page, `docs/architecture.html`, published as [architecture](https://minpple.github.io/my-plugins/architecture.html). The site root, [introduction](https://minpple.github.io/my-plugins/), shows the feature overview. `python3 tools/build-docs.py` builds the architecture page from the plugin files; run it again after changing them.
 
 | Command | What it does |
 |---|---|

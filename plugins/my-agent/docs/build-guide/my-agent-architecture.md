@@ -492,7 +492,7 @@ L2: 5, L3: 4, 9 in all. Every agent drops the `Agent` tool. Definition file fron
 ```json
 {
   "name": "my-plugins",
-  "owner": { "name": "hamin-apple" },
+  "owner": { "name": "minpple" },
   "plugins": [
     { "name": "my-agent", "source": "./plugins/my-agent" }
   ]

@@ -2,7 +2,7 @@
 
 [English](README.md) | **한국어**
 
-hamin-apple의 Claude Code 플러그인 마켓플레이스입니다.
+minpple의 Claude Code 플러그인 마켓플레이스입니다.
 
 | 플러그인 | 버전 | 설명 |
 |---|---|---|
@@ -23,7 +23,7 @@ hamin-apple의 Claude Code 플러그인 마켓플레이스입니다.
 ## 설치
 
 ```bash
-claude plugin marketplace add hamin-apple/my-plugins
+claude plugin marketplace add minpple/my-plugins
 claude plugin install my-agent@my-plugins
 claude plugin install my-agent-tray@my-plugins   # 선택: macOS 메뉴바 앱
 ```
@@ -39,7 +39,7 @@ claude plugin install my-agent-tray@my-plugins   # 선택: macOS 메뉴바 앱
 my-agent는 Codex에서도 돕니다. 마켓플레이스 원본으로는 이 저장소의 로컬 클론만 시험했습니다:
 
 ```bash
-git clone https://github.com/hamin-apple/my-plugins ~/dev/my-plugins
+git clone https://github.com/minpple/my-plugins ~/dev/my-plugins
 codex plugin marketplace add ~/dev/my-plugins
 codex plugin add my-agent@my-plugins
 ```
@@ -62,7 +62,7 @@ codex plugin add my-agent@my-plugins
 | L3 | `explorer` · `researcher` · `writer` · `coder`: 맡은 작업 하나 |
 | L4 | 도구·MCP · hook · 권한 규칙 · 스크립트: 실행, 기록과 차단 |
 
-레벨별 구성 요소, 각 구성의 역할과 권한, 단계와 게이트, 작업 파일마다의 형식까지 전체 구조는 한 페이지 `docs/architecture.html`에 있고, <https://hamin-apple.github.io/my-plugins/architecture.html> 에서 볼 수 있습니다. 사이트 첫 화면 <https://hamin-apple.github.io/my-plugins/> 은 기능 소개 페이지입니다. `python3 tools/build-docs.py`가 플러그인 파일에서 아키텍처 페이지를 만들며, 플러그인 파일을 고친 뒤 다시 실행합니다.
+레벨별 구성 요소, 각 구성의 역할과 권한, 단계와 게이트, 작업 파일마다의 형식까지 전체 구조는 한 페이지 `docs/architecture.html`에 있고, [architecture](https://minpple.github.io/my-plugins/architecture.html) 에서 볼 수 있습니다. 사이트 첫 화면 [introduction](https://minpple.github.io/my-plugins/) 은 기능 소개 페이지입니다. `python3 tools/build-docs.py`가 플러그인 파일에서 아키텍처 페이지를 만들며, 플러그인 파일을 고친 뒤 다시 실행합니다.
 
 | 명령 | 하는 일 |
 |---|---|

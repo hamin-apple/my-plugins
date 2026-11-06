@@ -12,7 +12,7 @@ Multi-step tasks that fit neither the research nor the dev profile. On the norma
 | G1b | Approve the scope summary and the plan at once; the `### Takeaway` carries the scope summary with the plan summary. It is the first gate, so show the task ID with it. |
 | 5 Execute | Use subagents. Do not use a workflow. |
 | 6 Merge | If the deliverable is a document and there are two or more work units, L1 hands the plan's last work unit (`my-agent:writer`) out in 6 Merge, and that writer combines the earlier units' results into one `work/final.md` (or one file under `work/` that fits the deliverable format). L1 does not combine; it only checks. Basic checks: each work unit has a result file, and each completion criterion has a matching part. |
-| 7 Verify | PASS/FAIL per criterion. Not skipped. |
+| 7 Verify | PASS/FAIL per criterion. Not skipped. The changed-file map lists the files under `work/` and `deliverable/`. |
 | 8 Review → Deliver | Result summary and quality judgment. Not skipped. Save location: the deliverable location in the scope summary, or `deliverable/` if none. Do not save to the Obsidian vault. |
 
 ## Agents used

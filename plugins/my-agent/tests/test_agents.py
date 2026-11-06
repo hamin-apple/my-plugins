@@ -273,6 +273,30 @@ class AgentsTest(unittest.TestCase):
         self.assertIn('(carried)', r)
         self.assertIn('the previous `review.md` path', r)
 
+    def test_verifier_run_scope(self):
+        """261106 criteria 2, 3: the verifier reads the changed-file map, runs each command once and carries untouched PASS lines."""
+        v = self._agent('verifier')
+        self.assertIn('`changed-files.md`', v)
+        self.assertIn('## Scope of each run', v)
+        self.assertIn('Never run the same command twice in one run', v)
+        self.assertIn('- <n>. PASS (carried from Run <m>) <the evidence of Run m>', v)
+        self.assertIn("`Re-judge:` line", v)
+        self.assertIn('The full suites still run once in a rerun', v)
+        self.assertIn('First run: judge every criterion; nothing is carried.', v)
+        self.assertIn('`- <command> → <result line>`', v)
+        self.assertIn('`Re-judge: none` means no file changed since that run', v)
+        self.assertIn('A `reverted` row is a file', v)
+
+    def test_reviewer_cites_verify(self):
+        """261106 criterion 1: the reviewer cites verify.md and does not run the suites again."""
+        r = self._agent('reviewer')
+        self.assertIn('`verify.md`, the changed-file map `changed-files.md`', r)
+        self.assertIn('Do not run the full test suites or the check commands again', r)
+        self.assertIn('cited from `verify.md` `## Commands run`', r)
+        self.assertNotIn('Tests and lint run and pass', r)
+        self.assertIn('the files L1 fixed after Verify', r)
+        self.assertIn('is a BLOCKER (verification is missing)', r)
+
     def test_plan_reviewer_counts_and_mockup_colours(self):
         p = self._agent('plan-reviewer')
         self.assertIn('read it back', p)

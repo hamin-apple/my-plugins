@@ -528,6 +528,18 @@ class SkillMdTest(unittest.TestCase):
     def phase(self, name):
         return (L1 / 'phases' / f'{name}.md').read_text(encoding='utf-8')
 
+    def test_korean_copy_before_each_gate(self):
+        """261106 criterion 5: for a Korean request L1 refreshes report-ko.json before G1a, G1b and G3."""
+        section = self.section('## Gate reports', '## In-flight revision')
+        for word in ('**Korean copy.**', 'report-ko.py" --task "<absolute task folder>" todo', '`<task folder>/report-ko.json`',
+                     'In another request language, skip this bullet.', 'the source the judges read'):
+            self.assertIn(word, section, word)
+        self.assertGreater(self.text.index('**Korean copy.**'), 16000)   # outside the core rules
+        self.assertIn('the Korean copy (SKILL.md "Gate reports"', self.phase('define'))
+        self.assertIn('the Korean copy (SKILL.md "Gate reports"', self.phase('plan'))
+        self.assertEqual(self.phase('accept').count('the Korean copy (SKILL.md "Gate reports"'), 2)
+        self.assertTrue((L4 / 'scripts' / 'report-ko.py').is_file())
+
     def test_accept_gate_reports_overview_first(self):
         accept = self.phase('accept')
         general = accept[accept.index('4. **G3 report (chat):**'):accept.index('5. **G3 popup:**')]

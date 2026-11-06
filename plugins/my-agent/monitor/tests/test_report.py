@@ -373,5 +373,81 @@ class ReportTest(unittest.TestCase):
         self.assertEqual(snapshot(PROJECT), before)
 
 
+
+class CarriedVerifyTest(unittest.TestCase):
+    """261106 criterion 4: carried lines of a rerun's verify.md count as PASS in the criteria rows, the G3 gate and the takeaway."""
+
+    def test_carried_rows_are_pass(self):
+        from monitor import report
+        tmp, task, info = temp_copy(FULL, 'done')
+        with tmp:
+            (task / 'verify.md').write_text('Verdict: ALL PASS\nRun: 2\n- 1. PASS (carried from Run 1) report.py:10 keys\n'
+                                            '- 2. PASS (carried from Run 1) server.py:5 endpoint\n- 3. PASS gate-tally.md:4 table\n',
+                                            encoding='utf-8')
+            d = report.build_report(PROJECT, task, info, [])
+        self.assertEqual([c['verdict'] for c in d['criteria']], ['PASS', 'PASS', 'PASS'])
+        self.assertTrue(d['criteria'][0]['evidence'].startswith('(carried from Run 1)'))
+        self.assertEqual(d['takeaway']['scope']['pass'], 3)
+        self.assertEqual(d['takeaway']['scope']['verify_run'], 2)
+
+    def test_carried_rows_count_in_the_g3_gate(self):
+        from monitor import report
+        tmp, task, info = temp_copy(G3)
+        with tmp:
+            (task / 'verify.md').write_text('Verdict: ALL PASS\nRun: 2\n' + ''.join(
+                f'- {n}. PASS (carried from Run 1) a.py:{n} ok\n' for n in (1, 2, 3)) + '- 4. PASS b.py:4 fixed\n',
+                encoding='utf-8')
+            v = report.build_report(PROJECT, task, info, [])['gate']['verify']
+        self.assertEqual(v, {'verdict': 'ALL PASS', 'run': 2, 'pass': 4, 'total': 4, 'failed': []})
+
+
+class KoCopyTest(unittest.TestCase):
+    """261106 criterion 6: the Korean copy adds `*_ko` fields only for items whose sha matches the English source."""
+
+    def build(self, edit=None):
+        import json
+        import ma_schema
+        from monitor import report
+        tmp, task, info = temp_copy(FULL, 'done')
+        with tmp:
+            scope, plan = ((task / n).read_text(encoding='utf-8') for n in ('scope.md', 'plan.md'))
+            src = ma_schema.ko_sources(scope, plan)
+            items = {k: {'sha': ma_schema.text_sha(en), 'ko': '한국어 ' + k + '.'} for k, en in src.items()}
+            if edit is not None:
+                (task / 'report-ko.json').write_text(json.dumps({'items': items}, ensure_ascii=False), encoding='utf-8')
+                edit(task)
+            return report.build_report(PROJECT, task, info, []), src
+
+    def test_no_copy_no_fields(self):
+        d, _src = self.build()
+        self.assertEqual(set(d), KEYS)
+        self.assertNotIn('background_ko', d['overview'])
+        self.assertFalse(any('title_ko' in c for c in d['criteria']))
+        self.assertFalse(any('title_ko' in u for u in d['units']))
+
+    def test_matching_copy(self):
+        d, src = self.build(lambda task: None)
+        self.assertEqual(set(d), KEYS)                              # still twelve keys
+        o = d['overview']
+        self.assertEqual((o['background_ko'], o['purpose_ko']), ('한국어 background.', '한국어 purpose.'))
+        c = d['criteria'][0]
+        self.assertEqual((c['title_ko'], c['short_ko']), ('한국어 c1.', '한국어 c1.'))
+        self.assertEqual(d['units'][0]['title_ko'], '한국어 u1.')
+        self.assertEqual(c['title'], src['c1'])                     # the English stays beside it
+
+    def test_stale_item_falls_back_alone(self):
+        def edit(task):
+            scope = (task / 'scope.md').read_text(encoding='utf-8')
+            (task / 'scope.md').write_text(scope.replace('The report has eight keys.', 'The report has twelve keys.', 1),
+                                           encoding='utf-8')
+        d, _src = self.build(edit)
+        self.assertNotIn('title_ko', d['criteria'][0])              # c1 changed after the copy
+        self.assertEqual(d['criteria'][1]['title_ko'], '한국어 c2.')
+        self.assertEqual(d['units'][0]['title_ko'], '한국어 u1.')
+
+    def test_broken_copy_is_ignored(self):
+        d, _src = self.build(lambda task: (task / 'report-ko.json').write_text('{oops', encoding='utf-8'))
+        self.assertNotIn('purpose_ko', d['overview'])
+
 if __name__ == '__main__':
     unittest.main()

@@ -299,5 +299,32 @@ class ProfilesTest(unittest.TestCase):
         self.assertIn('### Takeaway', row)
 
 
+    def test_verify_and_review_scope(self):
+        """261106 criteria 1-3: L1 writes the changed-file map, the verifier gets it (and the previous verify.md on a rerun),
+        the archive keeps it, and the reviewer gets verify.md instead of running the suites again."""
+        phases = REPO / 'l1-orchestration' / 'phases'
+        accept = (phases / 'accept.md').read_text(encoding='utf-8')
+        self.assertIn('Verify and Review are never skipped', accept)
+        verify = accept[accept.index('## 7. Verify'):accept.index('## Back to Execute')]
+        self.assertIn('l4-tools-guards/scripts/changed-files.py" --task', verify)
+        self.assertIn('--previous', verify)
+        self.assertIn('the previous `verify.md` path', verify)
+        self.assertIn('PASS (carried from Run <m>)', verify)
+        self.assertIn('\n3. Hand it to `my-agent:verifier`. Pass:', verify)   # the handoff is its own item
+        self.assertIn('When only Review is redone, without Verify, do both:', accept)
+        self.assertIn('(on a rerun, a carried criterion is `- <n>. PASS (carried from Run <m>) <evidence>`, read as PASS)', verify)   # item 4 names the carried form
+        back = accept.split('## Back to Execute')[1].split('\n## ')[0]
+        self.assertIn('`changed-files.md`', back)
+        review = accept[accept.index('## 8. Review'):accept.index('## G3 in the dev profile')]
+        self.assertIn('the `verify.md` and `changed-files.md` paths', review)
+        self.assertIn('instead of running the suites again', review)
+        self.assertIn('the list of files L1 fixed', review)
+        profiles = REPO / 'l1-orchestration' / 'profiles'
+        dev = (profiles / 'dev.md').read_text(encoding='utf-8')
+        self.assertIn('changed-file map', dev)
+        self.assertIn('instead of running the suites again', dev)
+        for name in ('general.md', 'research.md'):
+            self.assertIn('changed-file map', (profiles / name).read_text(encoding='utf-8'), name)
+
 if __name__ == '__main__':
     unittest.main()

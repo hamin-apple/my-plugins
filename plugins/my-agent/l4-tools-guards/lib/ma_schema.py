@@ -4,6 +4,8 @@ The L4 hooks and scripts and the monitor (`monitor/monitor/`, which puts this fo
 these values; the agent definitions and L1 files write them. `test_schema` checks that each definition still
 spells the words its parser looks for.
 """
+import hashlib
+import json
 import re
 import shlex
 
@@ -480,3 +482,81 @@ def aborted_reason(intake_text):
     """The reason of `Status: aborted <YYYY-MM-DD HH:MM> <reason>` in intake.md, '' without a reason, None when not aborted."""
     m = ABORTED_LINE.search(intake_text or '')
     return m.group(1) if m else None
+
+
+# --- changed-file map (`changed-files.py` writes it; the verifier and the reviewer read it, accept.md step 7) ---
+
+CHANGED_FILES = 'changed-files.md'
+CHANGED_COLUMNS = ('file', 'units', 'criteria', 'fingerprint', 'since')
+REJUDGE_LINE = re.compile(r'(?m)^Re-judge:\s*(.*?)\s*$')
+ALL_CRITERIA = 'all'
+
+
+def changed_files_rows(text):
+    """([{file, units, criteria, fingerprint, since}], the `Re-judge:` value or None) of a changed-files.md;
+    ([], None) for a missing or empty text."""
+    rows = []
+    for line in (text or '').splitlines():
+        cells = [c.strip() for c in line.strip().strip('|').split('|')]
+        if not line.strip().startswith('|') or len(cells) != len(CHANGED_COLUMNS) or cells[0] in ('File', '') \
+                or set(cells[0]) <= {'-'}:
+            continue
+        rows.append(dict(zip(CHANGED_COLUMNS, cells)))
+    m = REJUDGE_LINE.search(text or '')
+    return rows, (m.group(1) if m else None)
+
+
+# --- Korean copy of the report texts (`report-ko.py` lists what to translate; L1 writes it; the Report tab reads it) ---
+
+KO_COPY = 'report-ko.json'
+
+
+def overview_texts(scope, plan):
+    """(background, purpose) from scope.md, else from the plan's `## Scope summary`; None where neither has it.
+    A one-paragraph section without labels gives that paragraph as both."""
+    for text in (scope, plan):
+        background, purpose_text = background_purpose(text)
+        if background or purpose_text:
+            if purpose_text is None and background == purpose(text):
+                purpose_text = background
+            return background, purpose_text
+    return None, None
+
+
+def ko_sources(scope, plan) -> dict:
+    """{key: English text} of the items the Korean copy covers, in Report order: `background`, `purpose`,
+    `c<n>` (a criterion without its check tag) and `u<n>` (a work unit title)."""
+    out = {}
+    background, purpose_text = overview_texts(scope, plan)
+    if background:
+        out['background'] = background
+    if purpose_text:
+        out['purpose'] = purpose_text
+    for n, text, _tag in criteria(scope) or criteria(plan):
+        out[f'c{n}'] = text
+    for unit in unit_details(plan):
+        if unit['name']:
+            out[unit['id']] = unit['name']
+    return out
+
+
+def text_sha(text) -> str:
+    """The first 8 hex characters of the sha1 of the whitespace-collapsed text: the copy's tie to its English source."""
+    return hashlib.sha1(' '.join(str(text or '').split()).encode('utf-8')).hexdigest()[:8]
+
+
+def ko_copy(text) -> dict:
+    """{key: {sha, ko}} of a report-ko.json text; {} for a missing or broken file, entries without both strings dropped."""
+    try:
+        items = json.loads(text or '').get('items')
+    except (ValueError, AttributeError):
+        return {}
+    if not isinstance(items, dict):
+        return {}
+    return {k: v for k, v in items.items()
+            if isinstance(v, dict) and isinstance(v.get('sha'), str) and isinstance(v.get('ko'), str) and v['ko'].strip()}
+
+
+def ko_current(sources: dict, items: dict) -> dict:
+    """{key: Korean text} of the copy items whose sha still matches their English source."""
+    return {k: items[k]['ko'] for k, en in sources.items() if k in items and items[k]['sha'] == text_sha(en)}

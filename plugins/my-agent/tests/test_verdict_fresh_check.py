@@ -82,6 +82,12 @@ class VerdictFreshCheckTest(unittest.TestCase):
         self.verdicts()
         self.assertPassed(self.bash('git commit -m "feat: x (criteria 1, 2)"'))
 
+    def test_commit_with_carried_rows_passes(self):
+        """261106 criterion 4: a rerun's verify.md with carried PASS lines is a fresh ALL PASS for the hook."""
+        self.file(self.L / 'src/a.py', 'x', 0)
+        self.verdicts(verify='Verdict: ALL PASS\nRun: 2\n- 1. PASS (carried from Run 1) a.py:1 ok\n- 2. PASS b.py:2 ok\n')
+        self.assertPassed(self.bash('git commit -m "feat: x (criteria 1, 2)"'))
+
     def test_wrong_verdict_word_denied(self):
         self.file(self.L / 'src/a.py', 'x', 0)
         self.verdicts(verify='Verdict: FAIL\n')

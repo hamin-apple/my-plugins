@@ -627,10 +627,12 @@ const esc = s => (s == null ? '–' : String(s)).replace(/&/g,'&amp;').replace(/
 const escA = s => esc(s).replace(/"/g,'&quot;').replace(/\n/g,'&#10;');
 const fmt = s =>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 
-/* ---------- language: UI labels only; text read from task files stays as written ---------- */
+/* ---------- language: UI labels; in 한국어 mode the overview, criteria and unit titles use the task's Korean copy
+   (report-ko.json, `*_ko` fields) where it exists; other text read from task files stays as written ---------- */
 let LANG = 'en';
 try { if (localStorage.getItem('ma-lang') === 'ko') LANG = 'ko'; } catch (e) {}
 const L = (en, ko) => LANG === 'ko' ? ko : en;
+const T = (en, ko) => LANG === 'ko' && ko ? ko : en;
 
 /* ---------- theme: auto follows the system; light / dark force it; the choice is kept per browser ---------- */
 const THEMES = ['auto', 'light', 'dark'];
@@ -1188,7 +1190,7 @@ function rpOverview(d) {
   if (rp.ov === 'para') {
     if (!o.background && !o.purpose) return NYW('scope.md');
     const row = (lab, v) => `<dt>${lab}</dt><dd>${v ? rpEsc(v) : '-'}</dd>`;
-    return '<dl class="ov">' + (o.background === o.purpose ? '' : row(L('Background', '배경'), o.background)) + row(L('Purpose', '목적'), o.purpose) + '</dl>';
+    return '<dl class="ov">' + (o.background === o.purpose ? '' : row(L('Background', '배경'), T(o.background, o.background_ko))) + row(L('Purpose', '목적'), T(o.purpose, o.purpose_ko)) + '</dl>';
   }
   const rows = [[L('Task', '작업'), rpEsc(o.task)], [L('Profile', '프로파일'), rpEsc(o.profile)], [L('Status', '상태'), rpEsc(o.status)], [L('Delivered', '전달'), o.delivered ? rpEsc(o.delivered) : L('not delivered yet', '아직 전달 전')], [L('Follows', '이어받는 작업'), o.follows ? rpEsc(o.follows) : L('none', '없음')], [L('Request', '요청'), o.request ? rpEsc(o.request) : L('not written yet', '아직 작성 전')]];
   return '<dl class="ov">' + rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('') + '</dl>';
@@ -1343,16 +1345,18 @@ function rpParts(d, count) {
   h += rpTakeaway(d);
   let cb;
   if (crit) {
-    cb = '<div class="rows">' + crit.map((c, i) => rpRow('rc-' + c.n, i, rpEsc(c.n), c.verdict === 'PASS' ? 'pass' : c.verdict === 'FAIL' ? 'fail' : '', rpEsc(c.short || c.title), c.title, rpEsc(c.verdict || '-'),
-      `<p><b>${rpEsc(c.title)}.</b> ${rpEsc(c.evidence)}</p>`)).join('') + '</div>' + (hasVerdict ? '' : NYW('verify.md'));
+    cb = '<div class="rows">' + crit.map((c, i) => { const title = T(c.title, c.title_ko);
+      return rpRow('rc-' + c.n, i, rpEsc(c.n), c.verdict === 'PASS' ? 'pass' : c.verdict === 'FAIL' ? 'fail' : '', rpEsc(T(c.short, c.short_ko) || title), title, rpEsc(c.verdict || '-'),
+        `<p><b>${rpEsc(title)}.</b> ${rpEsc(c.evidence)}</p>`); }).join('') + '</div>' + (hasVerdict ? '' : NYW('verify.md'));
   } else cb = NYW('scope.md');
   let ub;
   if (units) {
     const fl = a => '<ul class="files">' + a.map(f => `<li><code>${rpEsc(f)}</code></li>`).join('') + '</ul>';
     ub = '<div class="rows">' + units.map((u, i) => {
       const files = u.files || [], tests = files.filter(f => /(^|\/)tests\//.test(f)), other = files.filter(f => tests.indexOf(f) < 0);
-      return rpRow('ru-' + u.id, i, rpEsc(u.id), u.status === 'done' ? 'pass' : 'run', rpEsc(u.title), u.title, `<span class="stt${u.status === 'done' ? '' : ' other'}">${rpEsc(u.status)}</span>`,
-        `<p>${u.group ? 'Group ' + rpEsc(u.group) : ''}${u.secs ? ', ran ' + rpDur(u.secs) : ''}.</p><div class="gh">FILES (${other.length})</div>${fl(other)}<div class="gh">TESTS (${tests.length})</div>${fl(tests)}<div class="gh">CRITERIA</div><p>${(u.criteria || []).map(n => `<span class="rpill">${rpEsc(n)}</span>`).join('')}</p>`);
+      const title = T(u.title, u.title_ko);
+      return rpRow('ru-' + u.id, i, rpEsc(u.id), u.status === 'done' ? 'pass' : 'run', rpEsc(title), title, `<span class="stt${u.status === 'done' ? '' : ' other'}">${rpEsc(u.status)}</span>`,
+        `<p>${u.group ? L('Group ', '그룹 ') + rpEsc(u.group) : ''}${u.secs ? L(', ran ', ', 실행 ') + rpDur(u.secs) : ''}.</p><div class="gh">${L('FILES', '파일')} (${other.length})</div>${fl(other)}<div class="gh">${L('TESTS', '테스트')} (${tests.length})</div>${fl(tests)}<div class="gh">${L('CRITERIA', '기준')}</div><p>${(u.criteria || []).map(n => `<span class="rpill">${rpEsc(n)}</span>`).join('')}</p>`);
     }).join('') + '</div>';
   } else ub = NYW('plan.md');
   const groups = units ? new Set(units.map(u => u.group).filter(Boolean)).size : 0;

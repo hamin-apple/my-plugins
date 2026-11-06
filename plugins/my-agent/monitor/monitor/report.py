@@ -50,7 +50,7 @@ def follows_of(intake_text):
     return _intake_fields(intake_text).get('Follows') or None
 
 
-def _overview(task, task_dir, intake, scope, plan, lines, followed_by):
+def _overview(task, task_dir, intake, scope, plan, lines, followed_by, ko):
     delivered = base = None
     for l in lines:
         if l.kind == 'deliver' and l.f.get('path'):
@@ -61,23 +61,21 @@ def _overview(task, task_dir, intake, scope, plan, lines, followed_by):
         shown = (read_intake(task_dir / 'intake.md') or {}).get('delivered') or []
         delivered = shown[-1] if shown else None
     fields = _intake_fields(intake)
-    background, purpose = _background_purpose(scope, plan)
-    return {'task': task.get('id') or task_dir.name, 'profile': task.get('profile'), 'status': task.get('status'),
-            'delivered': delivered, 'base': base, 'follows': fields.get('Follows') or None,
-            'followed_by': list(followed_by), 'request': fields.get('Request') or None,
-            'background': background, 'purpose': purpose}
+    background, purpose = ma_schema.overview_texts(scope, plan)
+    out = {'task': task.get('id') or task_dir.name, 'profile': task.get('profile'), 'status': task.get('status'),
+           'delivered': delivered, 'base': base, 'follows': fields.get('Follows') or None,
+           'followed_by': list(followed_by), 'request': fields.get('Request') or None,
+           'background': background, 'purpose': purpose}
+    for key in ('background', 'purpose'):
+        if key in ko:
+            out[key + '_ko'] = ko[key]
+    return out
 
 
-def _background_purpose(scope, plan):
-    """(background, purpose) from scope.md, else from the plan's `## Scope summary`; None where neither has it.
-    A one-paragraph section without labels gives that paragraph as both."""
-    for text in (scope, plan):
-        background, purpose = ma_schema.background_purpose(text)
-        if background or purpose:
-            if purpose is None and background == ma_schema.purpose(text):
-                purpose = background
-            return background, purpose
-    return None, None
+def _ko(task_dir, scope, plan):
+    """{key: Korean text} of the task's Korean copy items that still match their English source (`report-ko.json`)."""
+    items = ma_schema.ko_copy(_text(task_dir / ma_schema.KO_COPY))
+    return ma_schema.ko_current(ma_schema.ko_sources(scope, plan), items) if items else {}
 
 
 def _cost_from_tally(text):
@@ -137,17 +135,22 @@ def _short(text):
     return m.group(1) if m else text
 
 
-def _criteria(scope, plan, verify):
+def _criteria(scope, plan, verify, ko=None):
     rows = ma_schema.criteria(scope) or ma_schema.criteria(plan)
     if not rows:
         return None
     verdicts = {n: (v, e) for n, v, e in ma_schema.verify_rows(verify)}
-    return [{'n': n, 'short': _short(text), 'title': text,
-             'verdict': verdicts.get(n, (None, None))[0], 'evidence': verdicts.get(n, (None, None))[1]}
-            for n, text, _tag in rows]
+    out = []
+    for n, text, _tag in rows:
+        item = {'n': n, 'short': _short(text), 'title': text,
+                'verdict': verdicts.get(n, (None, None))[0], 'evidence': verdicts.get(n, (None, None))[1]}
+        if ko and f'c{n}' in ko:
+            item.update(title_ko=ko[f'c{n}'], short_ko=_short(ko[f'c{n}']))
+        out.append(item)
+    return out
 
 
-def _units(plan, lines):
+def _units(plan, lines, ko=None):
     units = ma_schema.unit_details(plan)
     if not units:
         return None
@@ -155,8 +158,12 @@ def _units(plan, lines):
     for l in lines:
         if l.kind == 'stop' and l.f.get('unit'):
             secs[l.f['unit']] = secs.get(l.f['unit'], 0) + _int(l.f.get('secs'))
-    return [{'id': u['id'], 'title': u['name'], 'status': u['status'], 'group': u['group'],
-             'secs': secs.get(u['id'], 0), 'criteria': u['criteria'], 'files': u['files']} for u in units]
+    out = [{'id': u['id'], 'title': u['name'], 'status': u['status'], 'group': u['group'],
+            'secs': secs.get(u['id'], 0), 'criteria': u['criteria'], 'files': u['files']} for u in units]
+    for u in out:
+        if ko and u['id'] in ko:
+            u['title_ko'] = ko[u['id']]
+    return out
 
 
 def _review(text):
@@ -324,7 +331,7 @@ def _gate(task, task_dir, scope, plan, verify, review, lines, totals, open_items
     gate = {'id': ask.f['gate'], 'at': _iso(ask.ts), 'q': ask.f.get('q', '')}
     if gate['id'] == 'G1a':
         rows = ma_schema.criteria(scope) or ma_schema.criteria(plan)
-        gate.update(purpose=_background_purpose(scope, plan)[1], criteria=len(rows),
+        gate.update(purpose=ma_schema.overview_texts(scope, plan)[1], criteria=len(rows),
                     non_goals=ma_schema.section_bullets(scope, 'Non-goals'))
     elif gate['id'] == 'G1b':
         lead = ma_schema.plan_lead(plan)
@@ -374,10 +381,11 @@ def build_report(project, task_dir, task, followed_by):
     has_log = (task_dir / 'run-log.md').is_file()
     lines = read_lines(task_dir / 'run-log.md')
     decisions = _decisions(lines) if has_log else None
-    overview = _overview(task, task_dir, intake, scope, plan, lines, followed_by)
+    ko = _ko(task_dir, scope, plan)
+    overview = _overview(task, task_dir, intake, scope, plan, lines, followed_by, ko)
     timeline = _timeline(task_dir, lines) if has_log else None
-    criteria = _criteria(scope, plan, verify) if scope is not None or plan is not None else None
-    units = _units(plan, lines) if plan is not None else None
+    criteria = _criteria(scope, plan, verify, ko) if scope is not None or plan is not None else None
+    units = _units(plan, lines, ko) if plan is not None else None
     gate_report = _gate_report(report, decisions)
     totals, open_items = _review_state(task_dir, review, lines)
     verdict = _verdict(task, intake, scope, plan, verify, lines, timeline, overview['delivered']) if has_log else None

@@ -305,3 +305,35 @@ class OverviewListFormTest(unittest.TestCase):
         for en in ('Task', 'Profile', 'Status', 'Delivered', 'Follows', 'Request'):
             self.assertIn("L('%s'," % en, fn)
         self.assertNotIn('.ovl', self.html)
+
+
+class KoCopyViewTest(unittest.TestCase):
+    """261106 criterion 6: in 한국어 mode the overview, criteria and unit titles use the Korean copy, else the English."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = (Path(__file__).resolve().parent.parent / 'web' / 'index.html').read_text(encoding='utf-8')
+        a = cls.html.index('/* ---------- report tab ---------- */')
+        b = cls.html.index('/* ---------- end report tab ---------- */')
+        cls.code = cls.html[a:b]
+
+    def test_helper_falls_back_per_item(self):
+        self.assertIn("const T = (en, ko) => LANG === 'ko' && ko ? ko : en;", self.html)
+
+    def test_overview_uses_the_copy(self):
+        fn = re.search(r'function rpOverview\(d\) \{.*?\n\}\n', self.html, re.S).group(0)
+        self.assertIn('T(o.background, o.background_ko)', fn)
+        self.assertIn('T(o.purpose, o.purpose_ko)', fn)
+
+    def test_criteria_and_units_use_the_copy(self):
+        self.assertIn('T(c.short, c.short_ko)', self.code)
+        self.assertIn('T(c.title, c.title_ko)', self.code)
+        self.assertIn('T(u.title, u.title_ko)', self.code)
+        self.assertIn('rpEsc(c.evidence)', self.code)          # the evidence stays as written
+
+    def test_unit_detail_labels(self):
+        for pair in ("L('Group ', '그룹 ')", "L(', ran ', ', 실행 ')", "L('FILES', '파일')", "L('TESTS', '테스트')",
+                     "L('CRITERIA', '기준')"):
+            self.assertIn(pair, self.code)
+        self.assertNotIn('>FILES (', self.code)
+        self.assertNotIn("'Group ' +", self.code)
